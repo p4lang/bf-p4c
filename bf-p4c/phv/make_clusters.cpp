@@ -1431,7 +1431,7 @@ void Clustering::ValidateClusters::validate_deparsed_zero_clusters(
     }
 }
 
-void Clustering::ValidateClusters::validate_exact_container_lists(
+std::optional<cstring> Clustering::ValidateClusters::validate_exact_container_lists(
     const std::list<PHV::SuperCluster*>& clusters, const PhvUse& uses) {
     for (auto* sc : clusters) {
         for (const auto* sl : sc->slice_lists()) {
@@ -1464,11 +1464,12 @@ void Clustering::ValidateClusters::validate_exact_container_lists(
                        << " bits.\n";
                     ss << "This is either a compiler internal bug or you can introduce padding "
                           "fields around them by @padding or @flexible";
-                    fatal_error("%1%", ss.str());
+                    return ss.str();
                 }
             }
         }
     }
+    return std::nullopt;
 }
 
 void Clustering::ValidateClusters::validate_alignments(
@@ -1557,7 +1558,17 @@ void Clustering::ValidateClusters::validate_same_container_group_fields(
 
 Visitor::profile_t Clustering::ValidateClusters::init_apply(const IR::Node* root) {
     // validate_deparsed_zero_clusters(self.cluster_groups());
-    validate_exact_container_lists(self.cluster_groups(), self.uses_i);
+    // It is possible that alt-phv-alloc adds some impossible pa_container_size pragmas that will
+    // fail this check.
+    auto error_msg = validate_exact_container_lists(self.cluster_groups(), self.uses_i);
+    // If it fails, but is in ALT_FINALIZE_TABLE_SAME_ORDER_TABLE_FIXED, just stop table replay and
+    // backtrack.
+    if (error_msg.has_value() && mau_bt.get_table_summary()->getActualState() ==
+        State::ALT_FINALIZE_TABLE_SAME_ORDER_TABLE_FIXED) {
+        mau_bt.get_table_summary()->stop_table_replay_fitting();
+    } else if (error_msg.has_value()){
+        fatal_error("%1%", *error_msg);
+    }
     validate_alignments(self.cluster_groups(), self.uses_i);
     validate_extract_from_flexible(
         self.cluster_groups(),

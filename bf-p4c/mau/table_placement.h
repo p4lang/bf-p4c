@@ -161,8 +161,8 @@ class TablePlacement : public PassManager {
     bool shrink_attached_tbl(Placed *next, bool first_time, bool &done_shrink);
     bool shrink_estimate(Placed *next, int &srams_left, int &tcams_left, int min_entries);
     bool shrink_preferred_lo(Placed *next);
-    bool try_alloc_all(Placed *next, std::vector<Placed *> whole_stage, const char *what,
-        bool no_memory = false);
+    TableSummary::PlacementResult try_alloc_all(Placed *next, std::vector<Placed *> whole_stage,
+        const char *what, bool no_memory = false);
     bool initial_stage_and_entries(TablePlacement::Placed *rv, int &furthest_stage);
     Placed *try_place_table(Placed *rv, const StageUseEstimate &current,
                             const TableSummary::PlacedTable *pt = nullptr);

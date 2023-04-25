@@ -15,6 +15,8 @@ class FileLog;
 }
 
 struct PHVTrigger {
+    // stopTableReplayFitting is only for alt-phv-alloc, if the heuristics for fixing problematic
+    // table during table replay creates impossible phv constraints, fall back to ALT_FINALIZE_TABLE
     struct failure : public Backtrack::trigger {
         ordered_map<cstring, ordered_set<int>> tableAlloc;
         ordered_map<cstring, ordered_set<int>> internalTableAlloc;
@@ -22,16 +24,18 @@ struct PHVTrigger {
         bool metaInitDisable;
         bool ignorePackConflicts;
         bool firstRoundFit;
+        bool stopTableReplayFitting;
         explicit failure(
                 ordered_map<cstring, ordered_set<int>> tables,
                 ordered_map<cstring, ordered_set<int>> internalTables,
                 ordered_map<cstring, std::pair<cstring, cstring>> mergedGateways,
                 bool fit,
                 bool pack = false,
-                bool meta = false)
+                bool meta = false,
+                bool stop = false)
             : trigger(OTHER), tableAlloc(tables), internalTableAlloc(internalTables),
-              mergedGateways(mergedGateways), metaInitDisable(meta),
-              ignorePackConflicts(pack), firstRoundFit(fit) { }
+              mergedGateways(mergedGateways), metaInitDisable(meta), ignorePackConflicts(pack),
+              firstRoundFit(fit), stopTableReplayFitting(stop) { }
     };
 };
 
@@ -105,27 +109,30 @@ struct RerunTablePlacementTrigger {
  *                                 state after that -> FAILURE
  *
  ******************************************************************************************/
+// move the compilation state out of table summary
+namespace State {
+enum state_t {
+    INITIAL,
+    NOCC_TRY1,
+    REDO_PHV1,
+    NOCC_TRY2,
+    REDO_PHV2,
+    FINAL_PLACEMENT,
+    FAILURE,
+    SUCCESS,
+    ALT_INITIAL,
+    ALT_RETRY_ENHANCED_TP,
+    ALT_FINALIZE_TABLE_SAME_ORDER,
+    ALT_FINALIZE_TABLE_SAME_ORDER_TABLE_FIXED,
+    ALT_FINALIZE_TABLE,
+    FINAL,  // always keep as last state for bounds checking
+};
+}
 
 class TableSummary: public MauInspector {
  public:
     static constexpr int NUM_LOGICAL_TABLES_PER_STAGE = 16;
     static constexpr int FIRST_ALT_RETRY_ENHANCED_TP_INVOCATION = 2;
-    enum state_t {
-        INITIAL,
-        NOCC_TRY1,
-        REDO_PHV1,
-        NOCC_TRY2,
-        REDO_PHV2,
-        FINAL_PLACEMENT,
-        FAILURE,
-        SUCCESS,
-        ALT_INITIAL,
-        ALT_RETRY_ENHANCED_TP,
-        ALT_FINALIZE_TABLE_SAME_ORDER,
-        ALT_FINALIZE_TABLE_SAME_ORDER_TABLE_FIXED,
-        ALT_FINALIZE_TABLE,
-        FINAL,  // always keep as last state for bounds checking
-    };
 
     // This struct represents a placed table and its relevant info as necessary
     // for future table placement / phv allocation rounds. It can / should be
@@ -151,17 +158,32 @@ class TableSummary: public MauInspector {
         void add(const IR::MAU::Table *t);
     };
     friend std::ostream &operator<<(std::ostream &out, const PlacedTable &pl);
+    typedef enum {
+        SUCC,
+        FAIL_ON_ADB,  // failure due to action data bus allocation
+        FAIL_ON_MEM,  // failure due to memory allocation
+        FAIL_ON_IXBAR,  // failure due to input xbar allocation
+        FAIL  // other failures
+    } PlacementResult;
+    friend std::ostream &operator<<(std::ostream &out, PlacementResult result) {
+        if (result == SUCC) out << "SUCC";
+        else if (result == FAIL) out << "FAIL";
+        else if (result == FAIL_ON_ADB) out << "FAIL_ON_ADB";
+        else if (result == FAIL_ON_MEM) out << "FAIL_ON_MEM";
+        else
+            out << "FAIL_ON_IXBAR";
+        return out;
+    }
 
  private:
     static constexpr int CRITICAL_PATH_THRESHOLD = 2;
-    static constexpr int ALT_PHV_ALLOC_TABLE_FIX_THRESHOLD = 1;
+    static constexpr int ALT_PHV_ALLOC_TABLE_FIX_THRESHOLD = 3;
     int numInvoked = 0;
     /// true if the first round of table placement resulted in less than Device::numStages() stages.
     bool firstRoundFit = false;
     Logging::FileLog *tsLog = nullptr;
-    state_t state = INITIAL;
     // Save the previous state in case we have to rollback to this one.
-    state_t prev_state = INITIAL;
+    State::state_t prev_state = State::INITIAL;
     /// The total number of stages allocated by Table Placement
     int maxStage = -1;
     int max_stages[3];
@@ -181,6 +203,7 @@ class TableSummary: public MauInspector {
     int pipe_id;
     const DependencyGraph& deps;
     const PhvInfo& phv;
+    State::state_t &state;
 
     /// Map of table name to stage: sent with the backtracking exception to communicate table
     /// placement constraints to PHV allocation
@@ -212,6 +235,9 @@ class TableSummary: public MauInspector {
     ordered_map<cstring, std::pair<cstring, cstring>> trivial_mergedGateways;
     std::map<int, PlacedTable*> trivial_placedTables;
 
+    PlacementResult table_replay_result = FAIL;
+
+    ordered_map<int, const IR::MAU::Table *> trivial_table_info;
     // Map of Global ID -> Table
     std::map<int, const IR::MAU::Table *> order;
     // Map of Stage -> All Tables in stage
@@ -249,9 +275,10 @@ class TableSummary: public MauInspector {
     /// Sum of all resources being used for all stages on last pass
     StageUseEstimate allStages;
 
-    // this is only used for alt-phv-alloc, it indicated a problematic table during table replay
-    // that can be possibly fixed by phv allocation changes.
-    std::optional<cstring> table_replay_failed_table;
+    // this is only used for alt-phv-alloc, it is a set of table candidates that can be the table
+    // to fix so that table replay can progress.
+    ordered_set<const IR::MAU::Table *> table_replay_fix_candidates;
+    const IR::MAU::Table* table_replay_problematic_table = nullptr;
 
     profile_t init_apply(const IR::Node *root) override;
     bool preorder(const IR::MAU::Table* t) override;
@@ -267,8 +294,14 @@ class TableSummary: public MauInspector {
     /// pass
     void generateIxbarBytesInfo();
 
+    // This function finds the problematic table during table replay. If table replay failed, it
+    // returns three different failure reason FAIL_ON_ADB, FAIL_ON_IXBAR and FAIL_ON_MEM. For
+    // different reasons, this function has different heuristics to select the problematic table.
+    bool find_problematic_table();
+
  public:
-    explicit TableSummary(int pipe_id, const DependencyGraph& dg, const PhvInfo &phv);
+    explicit TableSummary(
+        int pipe_id, const DependencyGraph& dg, const PhvInfo &phv, State::state_t &state);
 
     /// @returns the compiler-generated internal name for tables. Other passes should
     /// use this name, instead of  externalName returned by getTableName(),
@@ -309,7 +342,7 @@ class TableSummary: public MauInspector {
     void setPlacementError(const ordered_map<cstring, bool> &tpe) { tablePlacementErrors = tpe; }
     /// set state to INITIAL, or ALT_INITIAL if alt-phv-alloc is enabled.
     void resetPlacement();
-    state_t getActualState() const { return state; }
+    State::state_t getActualState() const { return state; }
     void setPrevState() { state = prev_state; }
     cstring getActualStateStr() const;
     void setAllStagesResources(const StageUseEstimate use) { allStages = use; }
@@ -317,7 +350,8 @@ class TableSummary: public MauInspector {
 
     std::map<int, PlacedTable*>& getPlacedTables() { return placedTables; }
 
-    cstring get_table_replay_failed_table() const { return *table_replay_failed_table; }
+    const IR::MAU::Table* get_table_replay_problematic_table() const
+        { return table_replay_problematic_table; }
     int getNumInvoked() const { return numInvoked; }
 
     // Returns a map of stage and bytes used on ixbar in that stage
@@ -338,8 +372,30 @@ class TableSummary: public MauInspector {
     std::map<int, int> findBytesOnIxbar(const PHV::FieldSlice &slice) const;
     cstring ixbarUsagesStr(const PhvInfo *phv = nullptr) const;
     void printPlacedTables() const;
+    void set_table_replay_result(PlacementResult result) {
+        table_replay_result = result;
+    }
+
+    PlacementResult get_table_replay_result() const { return table_replay_result; }
 
     friend std::ostream &operator<<(std::ostream &out, const TableSummary &ts);
+    friend std::ostream &operator<<(
+        std::ostream &out, ordered_map<int, const IR::MAU::Table *> &order);
+    // this is only for alt-phv-alloc, if progressing table replay is impossible due to adding
+    // phv constraints, stop it and backtrack with stopTableReplayFitting = true.
+    void stop_table_replay_fitting() const {
+        BUG_CHECK(state == State::ALT_FINALIZE_TABLE_SAME_ORDER_TABLE_FIXED,
+            "state is not intened for table replay fitting");
+        throw PHVTrigger::failure(trivial_tableAlloc, trivial_internalTableAlloc,
+            trivial_mergedGateways, firstRoundFit, false, false, true);
+    }
+    // this is only for alt-phv-alloc, some table summary info need to be cleared before going
+    // through phv allocation and table allocation in ALT_FINALIZE_TABLE.
+    void clear_table_alloc_info() {
+        tableAlloc.clear();
+        internalTableAlloc.clear();
+        placedTables.clear();
+    }
 };
 
 #endif /* BF_P4C_MAU_TABLE_SUMMARY_H_ */

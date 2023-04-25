@@ -160,7 +160,7 @@ void PhvLogging::end_apply(const IR::Node *root) {
 
     logHeaders();
 
-    if (tableSummary.getActualState() != TableSummary::ALT_INITIAL) {
+    if (tableSummary.getActualState() != State::ALT_INITIAL) {
         logFields();
         logContainers();
     }

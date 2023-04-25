@@ -105,7 +105,9 @@ class Pragmas : public PassManager {
             &pa_byte_pack_i,
         });
     }
-    Pragmas(PhvInfo& phv, const ordered_map<cstring, std::vector<PHV::Size>> &container_size_constr)
+    Pragmas(PhvInfo& phv,
+        const ordered_map<cstring, std::vector<PHV::Size>> &container_size_constr,
+        const ordered_map<cstring, ordered_set<cstring>> &no_pack_constr)
         :
           pa_container_sizes_i(phv, container_size_constr),
           pa_mutually_exclusive_i(phv),
@@ -115,7 +117,7 @@ class Pragmas : public PassManager {
           pa_container_type_i(phv),
           pa_no_init_i(phv),
           pa_deparser_zero_i(phv),
-          pa_no_pack_i(phv),
+          pa_no_pack_i(phv, no_pack_constr),
           pa_byte_pack_i(phv)
            {
         addPasses({

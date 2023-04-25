@@ -653,7 +653,7 @@ TableFindInjectedDependencies
         new PassIf(
             [options, summary] {
                 return (options && options->alt_phv_alloc && summary
-                        && summary->getActualState() == TableSummary::ALT_FINALIZE_TABLE);
+                        && summary->getActualState() == State::ALT_FINALIZE_TABLE);
             },
             {
                 mutex,

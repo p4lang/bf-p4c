@@ -72,9 +72,18 @@ PHV_AnalysisPass::PHV_AnalysisPass(
       deps_i(deps),
       options_i(options),
       table_alloc(alloc),
-      phv_allocation_result(phv),
-      table_replay_phv_constr(alloc, phv, phv_allocation_result.get_allocation_info()),
-      pragmas(phv, table_replay_phv_constr.get_container_size_constr()),
+      phv_allocation_result(phv, alloc),
+      table_replay_phv_constr(alloc, phv, phv_allocation_result.get_trivial_allocation_info(),
+        phv_allocation_result.get_real_allocation_info()),
+      pragmas(options.alt_phv_alloc
+        ? PHV::Pragmas(
+            phv,
+            // alt-phv-alloc only, table replay fitting may add extra pa_container_size and
+            // pa_no_pack pragmas.
+            table_replay_phv_constr.get_container_size_constr(),
+            table_replay_phv_constr.get_no_pack_constr()
+        )
+        : PHV::Pragmas(phv)),
       field_to_parser_states(phv),
       parser_critical_path(phv),
       critical_path_clusters(parser_critical_path),
@@ -88,7 +97,7 @@ PHV_AnalysisPass::PHV_AnalysisPass(
       meta_init(phv, defuse, deps, pragmas.pa_no_init(), meta_live_range, action_constraints,
                 domTree, alloc),
       clustering(phv, uses, pack_conflicts, pragmas.pa_container_sizes(), pragmas.pa_byte_pack(),
-                 action_constraints, defuse, deps, table_mutex, settings),
+                 action_constraints, defuse, deps, table_mutex, settings, alloc),
       strided_headers(phv),
       tb_keys(phv),
       physical_liverange_db(&alloc, &defuse, phv, clot, pragmas),
@@ -202,7 +211,9 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             options.alt_phv_alloc ? new PassIf (
             [this]() {
                 auto actualState = table_alloc.get_table_summary()->getActualState();
-                return actualState == TableSummary::ALT_INITIAL;
+                return actualState == State::ALT_INITIAL
+                    || actualState == State::ALT_FINALIZE_TABLE_SAME_ORDER
+                    || actualState == State::ALT_FINALIZE_TABLE_SAME_ORDER_TABLE_FIXED;
             },
             {
                 // collect trivial phv allocation result.

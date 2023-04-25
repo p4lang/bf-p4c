@@ -8,7 +8,7 @@
 class PragmaNoPack : public Inspector {
     const PhvInfo& phv_i;
     std::vector<std::pair<const PHV::Field*, const PHV::Field*>> no_packs_i;
-
+    const ordered_map<cstring, ordered_set<cstring>> &no_pack_constr;
     profile_t init_apply(const IR::Node* root) override {
         profile_t rv = Inspector::init_apply(root);
         no_packs_i.clear();
@@ -18,8 +18,11 @@ class PragmaNoPack : public Inspector {
     bool preorder(const IR::BFN::Pipe* pipe) override;
 
  public:
-    explicit PragmaNoPack(const PhvInfo& phv) : phv_i(phv) {}
-
+    explicit PragmaNoPack(const PhvInfo& phv) :
+        phv_i(phv), no_pack_constr(*(new ordered_map<cstring, ordered_set<cstring>>)) {}
+    PragmaNoPack(const PhvInfo& phv,
+        const ordered_map<cstring, ordered_set<cstring>> &no_pack_constr):
+        phv_i(phv), no_pack_constr(no_pack_constr) {}
     const std::vector<std::pair<const PHV::Field*, const PHV::Field*>>& no_packs() const {
         return no_packs_i;
     }

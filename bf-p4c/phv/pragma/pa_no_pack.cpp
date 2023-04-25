@@ -75,6 +75,16 @@ bool PragmaNoPack::preorder(const IR::BFN::Pipe* pipe) {
                 no_packs_i.push_back({f1, f2});
             }
         }
+        // add extra pa_no_pack provided by alt-phv-alloc
+        for (auto [field1_name, fields] : no_pack_constr) {
+            const auto* field1 = phv_i.field(field1_name);
+            BUG_CHECK(field1, "%1% not fonud", field1_name);
+            for (auto field2_name : fields) {
+                const auto* field2 = phv_i.field(field2_name);
+                BUG_CHECK(field2, "%1% not fonud", field2_name);
+                no_packs_i.push_back({field1, field2});
+            }
+        }
     }
     return true;
 }

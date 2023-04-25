@@ -155,8 +155,8 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
     clot(uses),
     defuse(phv),
     decaf(phv, uses, defuse, deps),
-    table_summary(pipe_id, deps, phv),
-    mau_backtracker(&table_summary),
+    table_summary(pipe_id, deps, phv, compilation_state),
+    mau_backtracker(compilation_state, &table_summary),
     table_alloc(options, phv, deps, table_summary, &jsonGraph, mau_backtracker),
     parserHeaderSeqs(phv),
     longBranchDisabled() {
@@ -336,7 +336,7 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
             new PassIf(
                 [this]() {
                     auto actualState = table_summary.getActualState();
-                    return actualState == TableSummary::ALT_INITIAL &&
+                    return actualState == State::ALT_INITIAL &&
                            table_summary.getNumInvoked() == 0;
                 },
                 {
@@ -351,7 +351,7 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
             new PassIf(
                 [this]() {
                     auto actualState = table_summary.getActualState();
-                    return actualState == TableSummary::ALT_INITIAL &&
+                    return actualState == State::ALT_INITIAL &&
                            table_summary.getNumInvoked() != 0;
                 },
                 {
@@ -366,8 +366,8 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
             new PassIf(
                 [this]() {
                     auto actualState = table_summary.getActualState();
-                    return actualState == TableSummary::ALT_FINALIZE_TABLE_SAME_ORDER ||
-                        actualState == TableSummary::ALT_FINALIZE_TABLE_SAME_ORDER_TABLE_FIXED;
+                    return actualState == State::ALT_FINALIZE_TABLE_SAME_ORDER ||
+                        actualState == State::ALT_FINALIZE_TABLE_SAME_ORDER_TABLE_FIXED;
                 },
                 {
                     [=]() {

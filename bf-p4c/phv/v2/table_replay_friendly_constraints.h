@@ -10,6 +10,8 @@
 struct AllocInfo {
     int length;
     size_t container_size;
+    ordered_set<cstring> pack_with;
+    bool perfectly_aligned;
 };
 
 namespace PHV {
@@ -23,34 +25,36 @@ class TableReplayFriendlyPhvConstraints : public Transform {
     MauBacktracker &mau_backtracker;
     PhvInfo &phv;
     const ordered_map<cstring, ordered_map<int, AllocInfo>> &trivial_allocation_info;
+    const ordered_map<cstring, ordered_map<int, AllocInfo>> &real_allocation_info;
+    // extra pa_container_size pragmas to fix table replay
     ordered_map<cstring, std::vector<PHV::Size>> add_pa_container_size;
+    // extra pa_no_pack pragmas to fix table replay
+    ordered_map<cstring, ordered_set<cstring>> add_pa_no_pack;
+    // problematic_table during table replay found by table_summary
+    const IR::MAU::Table* problematic_table;
+    // field candidates to fix in the problematic table
+    ordered_set<const PHV::Field *> field_candidates;
+    // a map from action to a set of fields in this action
+    ordered_map<const IR::MAU::Action *, ordered_set<cstring>> action_to_fields;
+    // a set of field that has the same phv size allocation in both trivial and real phv allocation
+    ordered_set<const PHV::Field *> container_size_ok;
 
  public:
     const ordered_map<cstring, std::vector<PHV::Size>> &get_container_size_constr() {
         return add_pa_container_size;
     }
-    void clear_container_size_constr() {
-        add_pa_container_size.clear();
+    const ordered_map<cstring, ordered_set<cstring>> &get_no_pack_constr() {
+        return add_pa_no_pack;
     }
     TableReplayFriendlyPhvConstraints(
         MauBacktracker &mau_backtracker, PhvInfo &phv,
-        const ordered_map<cstring, ordered_map<int, AllocInfo>> &trivial_allocation_info):
-            mau_backtracker(mau_backtracker), phv(phv),
-            trivial_allocation_info(trivial_allocation_info) {}
+        const ordered_map<cstring, ordered_map<int, AllocInfo>> &trivial_allocation_info,
+        const ordered_map<cstring, ordered_map<int, AllocInfo>> &real_allocation_info):
+        mau_backtracker(mau_backtracker), phv(phv),
+        trivial_allocation_info(trivial_allocation_info),
+        real_allocation_info(real_allocation_info) {}
 
-    Visitor::profile_t init_apply(const IR::Node* root) {
-        add_pa_container_size.clear();
-        return Transform::init_apply(root);
-    }
-
-    const IR::Node *preorder(IR::BFN::Pipe * pipe) {
-        if (mau_backtracker.get_table_summary()->getActualState() !=
-           TableSummary::ALT_FINALIZE_TABLE_SAME_ORDER_TABLE_FIXED) {
-            prune();
-            add_pa_container_size.clear();
-        }
-        return pipe;
-    }
+    const IR::Node *preorder(IR::BFN::Pipe * pipe) override;
     const IR::Node *preorder(IR::Expression *expr) override;
 
     const IR::Node *postorder(IR::BFN::Pipe *pipe) {
@@ -64,6 +68,7 @@ class TableReplayFriendlyPhvConstraints : public Transform {
         }
         return pipe;
     }
+    void end_apply(const IR::Node *) override;
 };
 
 // This table collects PHV allocation results after phv analysis. It provides information for
@@ -75,13 +80,18 @@ class CollectPHVAllocationResult : public Inspector {
     // 8-bit container, another is allocation [8:15] to another 8-bit container. Then one entry of
     // allocation info is f -> { { 0 -> { length = 8, container_size = 8 },
     // { 8 -> { length = 8, container_size = 8 } } }}
-    ordered_map<cstring, ordered_map<int, AllocInfo>> allocation_info;
+    ordered_map<cstring, ordered_map<int, AllocInfo>> trivial_allocation_info;
+    ordered_map<cstring, ordered_map<int, AllocInfo>> real_allocation_info;
     PhvInfo &phv;
+    MauBacktracker &mau_backtracker;
  public:
-    explicit CollectPHVAllocationResult(PhvInfo &phv) : phv(phv) {}
+    CollectPHVAllocationResult(PhvInfo &phv, MauBacktracker &mau_backtracker) :
+        phv(phv), mau_backtracker(mau_backtracker) {}
     void end_apply(const IR::Node *) override;
-    const ordered_map<cstring, ordered_map<int, AllocInfo>> &get_allocation_info()
-        { return allocation_info; }
+    const ordered_map<cstring, ordered_map<int, AllocInfo>> &get_trivial_allocation_info()
+        { return trivial_allocation_info; }
+    const ordered_map<cstring, ordered_map<int, AllocInfo>> &get_real_allocation_info()
+        { return real_allocation_info; }
 };
 
 }  // namespace v2

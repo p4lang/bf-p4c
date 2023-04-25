@@ -482,18 +482,29 @@ bool GreedyAllocator::allocate(std::list<SuperCluster *> clusters_input,
     LOG1("Run GreedyAllocator.");
     // print table ixbar usage
     LOG3(kit_i.mau.get_table_summary()->ixbarUsagesStr(&phv_i));
-
+    bool nonfatal = false;
+    if (kit_i.mau.get_table_summary()->getActualState() ==
+        State::ALT_FINALIZE_TABLE_SAME_ORDER_TABLE_FIXED) {
+        // treat failure as nonfatal if it is on ALT_FINALIZE_TABLE_SAME_ORDER_TABLE_FIXED and
+        // stop table replay fitting.
+        nonfatal = true;
+    }
     // pre-slicing
     LOG1("GreedyAllocator: start pre-slicing");
     ordered_set<const SuperCluster*> invalid_clusters;
     auto pre_sliced = pre_slice_all(ConcreteAllocation(phv_i, kit_i.uses), clusters_input,
                                     invalid_clusters, alloc_metrics);
     if (!invalid_clusters.empty()) {
-        ::error("GreedyAllocation failed because these clusters have unsatisfiable constraints.");
-        for (const auto& sc : invalid_clusters) {
-            ::error("unsat cluster: %1%", cstring::to_cstring(sc));
+        if (nonfatal) {
+            kit_i.mau.get_table_summary()->stop_table_replay_fitting();
+        } else {
+            ::error(
+                "GreedyAllocation failed because these clusters have unsatisfiable constraints.");
+            for (const auto& sc : invalid_clusters) {
+                ::error("unsat cluster: %1%", cstring::to_cstring(sc));
+            }
+            return false;
         }
-        return false;
     }
 
     // create strided clusters.
@@ -560,9 +571,13 @@ bool GreedyAllocator::allocate(std::list<SuperCluster *> clusters_input,
         auto rst = alloc_strided_super_clusters(ctx, alloc, sc, container_groups,
                                                 alloc_metrics, max_slicing_tries_i);
         if (!rst.ok()) {
-            ::error("Failed to allocate stride cluster: %1%, because %2%",
-                    cstring::to_cstring(sc),
-                    rst.err_str());
+            if (nonfatal) {
+                kit_i.mau.get_table_summary()->stop_table_replay_fitting();
+            } else {
+                ::error("Failed to allocate stride cluster: %1%, because %2%",
+                        cstring::to_cstring(sc),
+                        rst.err_str());
+            }
         } else {
             history << "Allocating strided cluster " << sc;
             history << "Allocation Decisions: \n";
@@ -641,11 +656,15 @@ bool GreedyAllocator::allocate(std::list<SuperCluster *> clusters_input,
         PhvKit::sort_and_merge_alloc_slices(phv_i);
         phv_i.set_done(false);
     } else {
-        ::error("PHV fitting failed, %1% clusters cannot be allocated.",
-                unallocated.size());
-        for (const auto& kv : unallocated) {
-            ::error("Cannot allocated %1%, because %2%", cstring::to_cstring(kv.first),
-                    kv.second->str());
+        if (nonfatal) {
+            kit_i.mau.get_table_summary()->stop_table_replay_fitting();
+        } else {
+            ::error("PHV fitting failed, %1% clusters cannot be allocated.",
+                    unallocated.size());
+            for (const auto& kv : unallocated) {
+                ::error("Cannot allocated %1%, because %2%", cstring::to_cstring(kv.first),
+                        kv.second->str());
+            }
         }
     }
 

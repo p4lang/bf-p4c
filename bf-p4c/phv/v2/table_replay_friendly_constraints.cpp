@@ -2,71 +2,172 @@
 
 namespace PHV {
 namespace v2 {
+const IR::Node *TableReplayFriendlyPhvConstraints::preorder(IR::BFN::Pipe * pipe) {
+    field_candidates.clear();
+    action_to_fields.clear();
+    if (mau_backtracker.get_table_summary()->getActualState() !=
+        State::ALT_FINALIZE_TABLE_SAME_ORDER_TABLE_FIXED) {
+        // if it is not in the state for table replay fitting, clear pragmas and return.
+        prune();
+        add_pa_container_size.clear();
+        add_pa_no_pack.clear();
+    } else {
+        problematic_table =
+            mau_backtracker.get_table_summary()->get_table_replay_problematic_table();
+        LOG5("problematic table is " << problematic_table->name);
+    }
+    return pipe;
+}
+
 const IR::Node *TableReplayFriendlyPhvConstraints::preorder(IR::Expression *expr) {
+    auto table_replay_result = mau_backtracker.get_table_summary()->get_table_replay_result();
     const IR::MAU::Table *table = findContext<IR::MAU::Table>();
     if (!table) return expr;
     const IR::MAU::Action *action = findContext<IR::MAU::Action>();
-    if (!action) return expr;
+    // If it failed due to adb or memory, we only care about fields in actions.
+    if ((table_replay_result == TableSummary::FAIL_ON_ADB
+        || table_replay_result == TableSummary::FAIL_ON_MEM) && !action) return expr;
+    // If it failed due to ixbar, we only care about table keys.
+    const IR::MAU::TableKey *key = findContext<IR::MAU::TableKey>();
+    if (table_replay_result == TableSummary::FAIL_ON_IXBAR && !key) return expr;
     LOG5("parent table is " + table->name);
-    if (mau_backtracker.get_table_summary()->get_table_replay_failed_table() !=
-        mau_backtracker.get_table_summary()->getTableIName(table)) {
+    if (problematic_table->name != mau_backtracker.get_table_summary()->getTableIName(table)) {
         return expr;
     }
-    auto *f = phv.field(expr);
+    const auto *f = phv.field(expr);
     if (!f) {
         return expr;
     }
+    // collect fields that are used in the same action.
+    if (action) action_to_fields[action].insert(f->name);
     if (add_pa_container_size.find(f->name) != add_pa_container_size.end()) {
         return expr;
     }
     if (trivial_allocation_info.find(f->name) == trivial_allocation_info.end()) {
         return expr;
     }
-    // for now it works for fieldslice that only occupies only one container.
-    if (trivial_allocation_info.find(f->name)->second.size() > 1) {
+    // For now, we only care about fields that are perfectly aligned in trivial allocation.
+    if (!trivial_allocation_info.at(f->name).at(0).perfectly_aligned) {
         return expr;
     }
-    // TODO(changhao): 16-bit pa_container_size could be helpful. For now, the reason I skip 16-bit
-    // is because it is also possible that 16-bit pa_container_size eliminates some allocation
-    // flexibility, since 16-bit pa_container_size prevents a fieldslice from being allocated to
-    // 8-bit containers. I will need to see more failed test cases to decide if 16-bit
-    // pa_container_size is useful. For now, I just target 8-bit pa_container_size for minimal
-    // impact.
-    if (trivial_allocation_info.at(f->name).at(0).container_size == 32 ||
-        trivial_allocation_info.at(f->name).at(0).container_size == 16) {
-        return expr;
-    }
-    // add pa_container_size pragma for this field
-    std::vector<PHV::Size> size_vec;
-    auto alloc_info = trivial_allocation_info.at(f->name);
-    for (int index = 0; index < f->size;) {
-        BUG_CHECK(alloc_info.find(index) != alloc_info.end(), "index not found");
-        size_vec.push_back(PHV::Size(alloc_info[index].container_size));
-        if (alloc_info[index].length != (int)alloc_info[index].container_size) {
-            break;
-        } else {
-            // have a BUG_CHECK to see alloc_info[index] exist, so cannot put this in the third part
-            // of for loop.
-            index += alloc_info[index].length;
+    // If trivial allocation and real phv allocation is the same, we do not need to add
+    // pa_container_size pragmas for this field.
+    bool container_size_is_same = true;
+    if (trivial_allocation_info.at(f->name).size() == real_allocation_info.at(f->name).size()) {
+        for (auto [index, trivial_alloc] : trivial_allocation_info.at(f->name)) {
+            if (!real_allocation_info.at(f->name).count(index)) {
+                container_size_is_same = false;
+                break;
+            }
+            auto real_alloc = real_allocation_info.at(f->name).at(index);
+            if (!(trivial_alloc.length == real_alloc.length &&
+                trivial_alloc.container_size == real_alloc.container_size)) {
+                container_size_is_same = false;
+                break;
+            }
         }
+    } else {
+        container_size_is_same = false;
     }
-    LOG5(f->name << " added to pa_container_size because of table: " + table->name);
-    LOG5("pa_container_size " << size_vec.front());
-    add_pa_container_size[f->name] = size_vec;
+    if (container_size_is_same) container_size_ok.insert(f);
+    // For now, we only care about field size <= 16
+    if (f->size > 16) {
+        return expr;
+    }
+    field_candidates.insert(f);
     return expr;
 }
 
+void TableReplayFriendlyPhvConstraints::end_apply(const IR::Node *) {
+    auto table_replay_result = mau_backtracker.get_table_summary()->get_table_replay_result();
+    // Create a map from a field to a set of fields that are in the same action. This information
+    // is useful because phv allocation may pack them togethor to save phv space, but have bad
+    // impact on adb allocation. By using pa_no_pack on these relevant fields following the trivial
+    // phv allocation, adb allocation can be better.
+    ordered_map<cstring, ordered_set<cstring>> fields_in_same_action;
+    for (auto packed_fields : Values(action_to_fields)) {
+        for (auto field : packed_fields) {
+            fields_in_same_action[field] = packed_fields;
+        }
+    }
+
+    for (auto field_candidate : field_candidates) {
+        // For this field candidate, fields_pack_with_trivial_alloc records all fields that are
+        // packed with this field in trivial allocation.
+        ordered_set<cstring> fields_pack_with_trivial_alloc;
+        if (!trivial_allocation_info.count(field_candidate->name)) {
+            BUG("trivial allocation not found for %1%", field_candidate->name);
+        }
+        auto alloc_info = trivial_allocation_info.at(field_candidate->name);
+        // add pa_container_size pragma for this field_candidate
+        std::vector<PHV::Size> size_vec;
+        for (int index = 0; index < field_candidate->size;) {
+            BUG_CHECK(alloc_info.find(index) != alloc_info.end(), "index not found");
+            size_vec.push_back(PHV::Size(alloc_info[index].container_size));
+            fields_pack_with_trivial_alloc.insert(
+                alloc_info[index].pack_with.begin(), alloc_info[index].pack_with.end());
+            if (alloc_info[index].length != (int)alloc_info[index].container_size) {
+                break;
+            } else {
+                // have a BUG_CHECK to see alloc_info[index] exist, so cannot put this in the third
+                // part of for loop.
+                index += alloc_info[index].length;
+            }
+        }
+        if (!container_size_ok.count(field_candidate)) {
+            add_pa_container_size[field_candidate->name] = size_vec;
+            std::stringstream size_vec_str;
+            for (auto size : size_vec)
+                size_vec_str << " " << size;
+            LOG3("adding pa_container_size for" << field_candidate << size_vec_str.str());
+        }
+        // pa_no_pack pragmas only for FAIL_ON_ADB and FAIL_ON_MEM
+        if (table_replay_result == TableSummary::FAIL_ON_ADB ||
+            table_replay_result == TableSummary::FAIL_ON_MEM) {
+            // For this field candidate, fields_pack_with_trivial_alloc records all fields that are
+            // packed with this field in trivial allocation.
+            ordered_set<cstring> fields_pack_with_real_alloc;
+            if (!real_allocation_info.count(field_candidate->name)) {
+                BUG("real allocation not found for %1%", field_candidate->name);
+            }
+            auto alloc_info = real_allocation_info.at(field_candidate->name);
+            for (auto it : alloc_info) {
+                fields_pack_with_real_alloc.insert(
+                    it.second.pack_with.begin(), it.second.pack_with.end());
+            }
+            for (auto field : fields_pack_with_real_alloc) {
+                // if a field is packed with field_candidate in real phv allocation and is not
+                // packed with field_candidate in trivial allocation and they are in the same action
+                // apply a pa_no_pack pragma.
+                if (!fields_pack_with_trivial_alloc.count(field)) {
+                    // only no pack field that are in the same action
+                    if (fields_in_same_action[field_candidate->name].count(field)) {
+                        add_pa_no_pack[field_candidate->name].insert(field);
+                        LOG3("adding pa_no_pack for " << field_candidate->name << " and " << field);
+                    }
+                }
+            }
+        }
+    }
+}
+
 void CollectPHVAllocationResult::end_apply(const IR::Node *) {
+    auto state = mau_backtracker.get_table_summary()->getActualState();
+    auto &allocation_info = state == State::ALT_INITIAL ?
+        trivial_allocation_info : real_allocation_info;
     allocation_info.clear();
     for (auto &field : phv) {
         for (auto &alloc : field.get_alloc()) {
             LOG5(alloc.field() << " " << alloc.field_slice() << " is in " << alloc.container());
-            AllocInfo info = {(int)alloc.field_slice().size(), alloc.container().size()};
+            AllocInfo info = {(int)alloc.field_slice().size(), alloc.container().size(), {}, true};
+            auto fields = phv.fields_in_container(alloc.container());
+            for (auto other_field : fields) {
+                info.pack_with.insert(other_field->name);
+            }
             allocation_info[field.name][alloc.field_slice().lo] = info;
         }
     }
 
-    ordered_set<cstring> to_remove;
     // perfectly_aligned means that except for the last AllocSlice, every AllocSlice of a fieldslice
     // can occupy a container entirely.
     for (auto it : allocation_info) {
@@ -93,10 +194,9 @@ void CollectPHVAllocationResult::end_apply(const IR::Node *) {
                 break;
             }
         }
-        if (!perfectly_aligned) to_remove.insert(field_name);
-    }
-    for (auto field_name : to_remove) {
-        allocation_info.erase(field_name);
+        for (auto alloc : Values(allocation_info[field_name])) {
+            alloc.perfectly_aligned = perfectly_aligned;
+        }
     }
 }
 

@@ -1793,8 +1793,8 @@ bool TablePlacement::shrink_estimate(Placed *next, int &srams_left, int &tcams_l
     // mostly because the phv allocation does not allow fitting the same no. of
     // entries as previous round. For now, we exit and continue with the default
     // placement round.
-    if (summary.getActualState() == summary.ALT_FINALIZE_TABLE_SAME_ORDER ||
-        summary.getActualState() == summary.ALT_FINALIZE_TABLE_SAME_ORDER_TABLE_FIXED)
+    if (summary.getActualState() == State::ALT_FINALIZE_TABLE_SAME_ORDER ||
+        summary.getActualState() == State::ALT_FINALIZE_TABLE_SAME_ORDER_TABLE_FIXED)
         return false;
 
     LOG2("Shrinking estimate on table " << next->name << " for min entries: " << min_entries);
@@ -2195,8 +2195,8 @@ bool TablePlacement::try_alloc_imem(const gress_t &gress, std::vector<Placed *> 
     return true;
 }
 
-bool TablePlacement::try_alloc_all(Placed *next, std::vector<Placed *> whole_stage,
-        const char *what, bool no_memory) {
+TableSummary::PlacementResult TablePlacement::try_alloc_all(Placed *next,
+    std::vector<Placed *> whole_stage, const char *what, bool no_memory) {
     LOG3("Try_alloc_all for " << std::string(what));
     bool done_next = false;
     bool add_to_tables_placed = true;
@@ -2244,17 +2244,17 @@ bool TablePlacement::try_alloc_all(Placed *next, std::vector<Placed *> whole_sta
 
     if (!try_pick_layout(next->table->gress, tables_to_allocate, tables_placed)) {
         LOG3("    " << what << " ixbar allocation did not fit");
-        return false; }
+        return TableSummary::FAIL_ON_IXBAR; }
 
     if (!try_alloc_adb(next->table->gress, tables_to_allocate, tables_placed)) {
         LOG3("    " << what << " of action data bus did not fit");
-        return false; }
+        return TableSummary::FAIL_ON_ADB; }
 
     if (!try_alloc_imem(next->table->gress, tables_to_allocate, tables_placed)) {
         LOG3("    " << what << " of instruction memory did not fit");
-        return false; }
+        return TableSummary::FAIL; }
 
-    if (no_memory) return true;
+    if (no_memory) return TableSummary::SUCC;
 #if 0
     // SRAMs/MAPRAMs table consumption can be wrong if table share resources. It is probably
     // better to not stop here but let try_alloc_mem find a solution if one exist. The actual code
@@ -2283,8 +2283,8 @@ bool TablePlacement::try_alloc_all(Placed *next, std::vector<Placed *> whole_sta
 #endif
     if (!try_alloc_mem(next, whole_stage)) {
         LOG3("    " << what << " of memory allocation did not fit");
-        return false; }
-    return true;
+        return TableSummary::FAIL_ON_MEM; }
+    return TableSummary::SUCC;
 }
 
 /** @} */  // end of alloc
@@ -2617,8 +2617,8 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
     attached_entries_t initial_attached_entries = rv->attached_entries;
 
     // Setup stage and entries for Alt Table Placement Round
-    if ((summary.getActualState() == summary.ALT_FINALIZE_TABLE_SAME_ORDER ||
-        summary.getActualState() == summary.ALT_FINALIZE_TABLE_SAME_ORDER_TABLE_FIXED) && pt) {
+    if ((summary.getActualState() == State::ALT_FINALIZE_TABLE_SAME_ORDER ||
+        summary.getActualState() == State::ALT_FINALIZE_TABLE_SAME_ORDER_TABLE_FIXED) && pt) {
         furthest_stage = pt->stage;
         rv->entries = pt->entries;
         rv->stage = pt->stage;
@@ -2717,7 +2717,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
     // data allocations, so the algorithm doesn't have to prefer this allocation across
     // stages
 
-    bool allocated = false;
+    TableSummary::PlacementResult allocated = TableSummary::FAIL;
 
     if (rv->prev && rv->stage != rv->prev->stage)
         stage_current.clear();
@@ -2732,7 +2732,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
 
         auto avail = StageUseEstimate::max();
         bool advance_to_next_stage = false;
-        allocated = false;
+        allocated = TableSummary::FAIL;
         // Rebuild the layout when moving from stage to stage
         rv->use.format_type.invalidate();
         min_placed->use.format_type.invalidate();
@@ -2740,13 +2740,13 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
         // Try to allocate the entire table
         do {
             allocated = try_alloc_all(rv, whole_stage, "Table use");
-            if (allocated)
+            if (allocated == TableSummary::SUCC)
                 break;
             rv->use.preferred_index++;
         } while (rv->use.layout_options.size() &&
                 (rv->use.preferred_index < rv->use.layout_options.size()));
 
-        if (allocated)
+        if (allocated == TableSummary::SUCC)
             break;
 
         // If a table contains initialization for dark containers, it cannot be split into
@@ -2764,16 +2764,16 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
 
         // Not able to allocate the entire table, try the smallest possible size
         if (!advance_to_next_stage) {
-            bool min_allocated = false;
+            TableSummary::PlacementResult min_allocated = TableSummary::FAIL;
             do {
                 min_allocated = try_alloc_all(min_placed, whole_stage, "Min use");
-                if (min_allocated)
+                if (min_allocated == TableSummary::SUCC)
                     break;
                 min_placed->use.preferred_index++;
             } while (min_placed->use.layout_options.size() &&
                     (min_placed->use.preferred_index < min_placed->use.layout_options.size()));
 
-            if (!min_allocated) {
+            if (min_allocated != TableSummary::SUCC) {
                 if (!(rv->stage_advance_log = min_placed->stage_advance_log))
                     rv->stage_advance_log = "repacking previously placed failed";
                 advance_to_next_stage = true;
@@ -2810,7 +2810,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
                     rv->stage_split = -1;
 
                 allocated = try_alloc_all(rv, whole_stage, "Table shrink");
-                if (allocated)
+                if (allocated == TableSummary::SUCC)
                     break;
 
                 // Shrink preferred layout and sort them by prioritizing the number of entries
@@ -2835,7 +2835,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
             stage_current.clear();
             for (auto *p : whole_stage) delete p;  // help garbage collector
             whole_stage.clear(); }
-    } while (!allocated && rv->stage <= furthest_stage);
+    } while (allocated != TableSummary::SUCC && rv->stage <= furthest_stage);
 
     rv->update_need_more(needed_entries);
     rv->update_formats();
@@ -2847,6 +2847,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
         if (error_message == "")
             error_message = "Unknown error for stage advancement?";
         error("Could not place %s: %s", rv->table, error_message);
+        summary.set_table_replay_result(allocated);
         return nullptr;
     }
 
@@ -2919,7 +2920,7 @@ TablePlacement::Placed *DecidePlacement::try_backfill_table(
     if (pl->stage != place_before->stage)
         return nullptr;
     place_before->prev = pl;
-    if (!self.try_alloc_all(pl, whole_stage, "Backfill"))
+    if (self.try_alloc_all(pl, whole_stage, "Backfill") != TableSummary::SUCC)
         return nullptr;
     for (auto &ae : pl->attached_entries)
         if (ae.second.entries == 0 || ae.second.need_more)
@@ -3940,21 +3941,21 @@ class DecidePlacement::BacktrackManagement {
         // This is for the table first approach
         if (BFNContext::get().options().alt_phv_alloc) {
             switch (self.self.summary.getActualState()) {
-                case TableSummary::ALT_INITIAL:
+                case State::ALT_INITIAL:
                     // first round of table placement does not enable resource-based alloc.
                     self.MaxBacktracksPerPipe = 32;
                     break;
-                case TableSummary::ALT_RETRY_ENHANCED_TP:
+                case State::ALT_RETRY_ENHANCED_TP:
                     // retry table placement with resource-based allocation and backtracking ON.
                     ena_resource_mode = true;
                     self.resource_mode = true;
                     self.MaxBacktracksPerPipe = 64;
                     break;
-                case TableSummary::ALT_FINALIZE_TABLE_SAME_ORDER:
-                case TableSummary::ALT_FINALIZE_TABLE_SAME_ORDER_TABLE_FIXED:
+                case State::ALT_FINALIZE_TABLE_SAME_ORDER:
+                case State::ALT_FINALIZE_TABLE_SAME_ORDER_TABLE_FIXED:
                     self.MaxBacktracksPerPipe = -1;
                     break;
-                case TableSummary::ALT_FINALIZE_TABLE:
+                case State::ALT_FINALIZE_TABLE:
                     // final round, enable both resource-based allocation and backtracking.
                     ena_resource_mode = true;
                     self.MaxBacktracksPerPipe = 64;
@@ -3968,17 +3969,17 @@ class DecidePlacement::BacktrackManagement {
 
         // This is to balance compile time with benefit from backtracking
         switch (self.self.summary.getActualState()) {
-            case TableSummary::INITIAL:
+            case State::INITIAL:
                 // Disable backtracking on initial state.
                 self.MaxBacktracksPerPipe = -1;
                 break;
-            case TableSummary::NOCC_TRY1:
-            case TableSummary::NOCC_TRY2:
+            case State::NOCC_TRY1:
+            case State::NOCC_TRY2:
                 ena_resource_mode = true;
                 self.MaxBacktracksPerPipe = 12;
                 break;
-            case TableSummary::REDO_PHV1:
-            case TableSummary::REDO_PHV2:
+            case State::REDO_PHV1:
+            case State::REDO_PHV2:
                 ena_resource_mode = true;
                 self.MaxBacktracksPerPipe = 32;
                 break;
@@ -4528,8 +4529,8 @@ bool DecidePlacement::preorder(const IR::BFN::Pipe *pipe) {
                 self.summary.getActualStateStr() <<
                 (self.ignoreContainerConflicts ? " " : " not ") << "ignoring container conflicts");
     bool alt_finalize_table_same_order =
-        (self.summary.getActualState() == self.summary.ALT_FINALIZE_TABLE_SAME_ORDER ||
-        self.summary.getActualState() == self.summary.ALT_FINALIZE_TABLE_SAME_ORDER_TABLE_FIXED);
+        (self.summary.getActualState() == State::ALT_FINALIZE_TABLE_SAME_ORDER ||
+        self.summary.getActualState() == State::ALT_FINALIZE_TABLE_SAME_ORDER_TABLE_FIXED);
 
     const Placed *placed = nullptr;
     bool success = true;

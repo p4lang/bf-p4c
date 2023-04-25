@@ -448,6 +448,7 @@ class Clustering : public PassManager {
     class ValidateClusters : public Inspector {
      private:
         Clustering& self;
+        const MauBacktracker &mau_bt;
 
         profile_t init_apply(const IR::Node* root) override;
 
@@ -461,8 +462,8 @@ class Clustering : public PassManager {
         static void validate_deparsed_zero_clusters(const std::list<PHV::SuperCluster*>& clusters);
 
         // size % 8 = 0 if exact_containers
-        static void validate_exact_container_lists(const std::list<PHV::SuperCluster*>& clusters,
-                                                   const PhvUse& uses);
+        static std::optional<cstring> validate_exact_container_lists(
+            const std::list<PHV::SuperCluster*>& clusters, const PhvUse& uses);
 
         // alignments of fieldslices in list must be all sat.
         static void validate_alignments(const std::list<PHV::SuperCluster*>& clusters,
@@ -480,7 +481,8 @@ class Clustering : public PassManager {
             const ordered_map<const PHV::Field*, std::list<PHV::FieldSlice>>& field_to_slices);
 
      public:
-        explicit ValidateClusters(Clustering& c) : self(c) { }
+        explicit ValidateClusters(Clustering& c, const MauBacktracker &mau_bt) :
+            self(c), mau_bt(mau_bt) { }
     };
 
     class UpdateSameContainerAllocConstraint : public Inspector {
@@ -497,7 +499,8 @@ class Clustering : public PassManager {
     Clustering(PhvInfo& p, PhvUse& u, const PackConflicts& c, const PragmaContainerSize& pa_sz,
                const PragmaBytePack& pa_byte_pack, const ActionPhvConstraints& a,
                const FieldDefUse& defuse, const DependencyGraph &deps,
-               const TablesMutuallyExclusive& table_mutex, const PHV::AllocSetting& settings)
+               const TablesMutuallyExclusive& table_mutex, const PHV::AllocSetting& settings,
+               const MauBacktracker& mau_bt)
         : phv_i(p), uses_i(u), conflicts_i(c), pa_container_sizes_i(pa_sz),
           pa_byte_pack_i(pa_byte_pack), defuse_i(defuse), deps_i(deps),
           table_mutex_i(table_mutex), settings_i(settings), slice_i(*this, pa_sz) {
@@ -513,7 +516,7 @@ class Clustering : public PassManager {
             new MakeRotationalClusters(*this),  // populates rotational_clusters_i
             inconsistent_extracts, place_togethers,
             new MakeSuperClusters(*this, *place_togethers),  // populates super_clusters_i
-            new ValidateClusters(*this),                     // validate clustering is correct.
+            new ValidateClusters(*this, mau_bt),             // validate clustering is correct.
             new UpdateSameContainerAllocConstraint(*this)    // update SameContainerAllocConstraint
         });
     }

@@ -10,6 +10,7 @@
   */
 class MauBacktracker : public Backtrack {
  private:
+    State::state_t &state;
     static constexpr unsigned NUM_LOGICAL_TABLES_PER_STAGE = 16;
     /// To keep track of the number of times this pass has been invoked
     int numInvoked = 0;
@@ -55,7 +56,7 @@ class MauBacktracker : public Backtrack {
     /// resource allocation on a per stage basis. PHV Allocation Round can use this
     /// information to assist in identifying PHV constraints associated with
     /// input_xbar, live ranges etc.
-    const TableSummary *table_summary;
+    TableSummary *table_summary;
 
     const IR::Node *apply_visitor(const IR::Node *root, const char *) override;
 
@@ -113,8 +114,9 @@ class MauBacktracker : public Backtrack {
 
     /// Constructor takes mutually exclusive to be able to clear it before every
     /// PHV allocation pass
-    explicit MauBacktracker(const TableSummary *table_summary = nullptr)
-        : table_summary(table_summary) {}
+    explicit MauBacktracker(State::state_t &state = *(new State::state_t),
+        TableSummary *table_summary = nullptr)
+        : state(state), table_summary(table_summary) {}
 };
 
 #endif /* BF_P4C_PHV_MAU_BACKTRACKER_H_ */

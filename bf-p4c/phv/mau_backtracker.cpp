@@ -37,6 +37,14 @@ bool MauBacktracker::backtrack(trigger &trig) {
         } else {
             LOG4("IgnorePackConflicts is true, no table placement inserted.");
         }
+        if (t->stopTableReplayFitting) {
+            // stopTableReplayFitting has thrown, jump to ALT_FINALIZE_TABLE and prepare for
+            // normal phv allocation and table allocation.
+            BUG_CHECK(state == State::ALT_FINALIZE_TABLE_SAME_ORDER_TABLE_FIXED,
+                "wrong compilation state");
+            state = State::ALT_FINALIZE_TABLE;
+            table_summary->clear_table_alloc_info();
+        }
         return true;
     }
     return false;

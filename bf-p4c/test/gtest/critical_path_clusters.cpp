@@ -204,7 +204,7 @@ TEST_F(CriticalPathClustersTest, DISABLED_Basic) {
     PHV::AllocSetting settings;
 
     Clustering clustering(phv, uses, conflicts, pragmas->pa_container_sizes(),
-                          pragmas->pa_byte_pack(), actions, defuse, deps, table_mutex, settings);
+        pragmas->pa_byte_pack(), actions, defuse, deps, table_mutex, settings, table_alloc);
 
     auto* post_pm_pipe =
         runMockPasses(test->pipe, phv, uses, defuse, clustering, table_alloc, deps, conflicts,

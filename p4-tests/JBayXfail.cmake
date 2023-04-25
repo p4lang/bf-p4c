@@ -480,12 +480,6 @@ if (TEST_ALT_PHV_ALLOC)
         extensions/p4_tests/p4_16/stf/parser_scratch_reg_3.p4
     )
 
-    # PHV errors
-    p4c_add_xfail_reason("tofino2"
-        "error: PHV fitting failed, [0-9]+ clusters cannot be allocated."
-        testdata/p4_14_samples/02-FullPHV1.p4
-    )
-
     # Actions and constraints errors
     p4c_add_xfail_reason("tofino2"
         "error: PHV allocation creates an invalid container action within a Tofino ALU"

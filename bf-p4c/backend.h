@@ -35,6 +35,9 @@ class Backend : public PassManager {
     FieldDefUse defuse;
     TablesMutuallyExclusive mutex;
     DeparserCopyOpt decaf;
+    // Since both phv allocation or table allocation result may change compilation_state,
+    // compilation_state is moved from table_summary to backend
+    State::state_t compilation_state = State::INITIAL;
     /// Class that represents the resource allocation post table placement round
     TableSummary table_summary;
     /// Class that represents the backtracking point from table placement to PHV allocation.

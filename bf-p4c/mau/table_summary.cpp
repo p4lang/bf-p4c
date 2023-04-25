@@ -62,7 +62,7 @@
 
 #include "lib/hex.h"
 #include "lib/map.h"
-
+using namespace State;
 static std::vector<cstring> state_name = {
     "INITIAL",
     "NOCC_TRY1",
@@ -88,8 +88,9 @@ void TableSummary::resetPlacement() {
     state = BFNContext::get().options().alt_phv_alloc ? ALT_INITIAL : INITIAL;
 }
 
-TableSummary::TableSummary(int pipe_id, const DependencyGraph& dg, const PhvInfo& phv)
-    : pipe_id(pipe_id), deps(dg), phv(phv) {
+TableSummary::TableSummary(
+    int pipe_id, const DependencyGraph& dg, const PhvInfo& phv, state_t &state)
+    : pipe_id(pipe_id), deps(dg), phv(phv), state(state) {
     state = BFNContext::get().options().alt_phv_alloc ? ALT_INITIAL : INITIAL;
     static std::set<int>        ids_seen;
     BUG_CHECK(ids_seen.count(pipe_id) == 0, "Duplicate pipe id %d", pipe_id);
@@ -126,7 +127,7 @@ Visitor::profile_t TableSummary::init_apply(const IR::Node *root) {
     ++numInvoked;
     for (auto gress : { INGRESS, EGRESS }) max_stages[gress] = -1;
     placedTables.clear();
-    table_replay_failed_table = std::nullopt;
+    table_replay_fix_candidates.clear();
     LOG1("Table allocation done " << numInvoked << " time(s), state = " <<
          getActualStateStr());
     return rv;
@@ -298,6 +299,125 @@ std::set<const IR::MAU::Table*> TableSummary::getTablePtr(const cstring t_name){
     return empty;
 }
 
+bool TableSummary::find_problematic_table() {
+    if ((table_replay_result == PlacementResult::FAIL_ON_ADB ||
+        table_replay_result == PlacementResult::FAIL_ON_IXBAR ||
+        table_replay_result == PlacementResult::FAIL_ON_MEM) && order.size() == 0) {
+        // If table replay failed when placing the first table, then this table is problematic.
+        table_replay_problematic_table = trivial_table_info.begin()->second;
+        return true;
+    }
+    LOG1("table replay failed because of " << table_replay_result);
+    // This finds the last placed table.
+    auto it = trivial_table_info.find(order.rbegin()->first);
+    // make it a reverse iterator, reverse_it is pointing to the table before the last placed
+    // table instead of the last placed table.
+    auto reverse_it = std::make_reverse_iterator(it);
+    // move the it. Now it points to the table that cannot be placed.
+    reverse_it--;
+    reverse_it--;
+    auto failed_table = reverse_it->second;
+    // move the it to the last placed table.
+    reverse_it++;
+    int failure_stage = reverse_it->second->stage();
+    // collect all tables on the stage on which failed table is. These are all problematic
+    // table candidates.
+    for (; reverse_it != trivial_table_info.rend() &&
+        reverse_it->second->stage() == failure_stage; reverse_it++) {
+        table_replay_fix_candidates.insert(reverse_it->second);
+    }
+
+    auto select_problem_table_by_score =
+        [](ordered_map<const IR::MAU::Table *, int> table_to_score){
+        const IR::MAU::Table* problem_table = nullptr;
+        int max_diff = -1;
+        for (auto [table, diff] : table_to_score) {
+            if (diff > max_diff) {
+                problem_table = table;
+                max_diff = diff;
+            }
+        }
+        return problem_table;
+    };
+
+    ordered_map<const IR::MAU::Table *, int> problematic_candidates;
+    if (table_replay_result == PlacementResult::FAIL_ON_ADB) {
+        // For FAIL_ON_ADB, the score is the difference of adb size allocated between real table
+        // allocation and table allocation after trivial allocation.
+        for (auto trivial_table_alloc : table_replay_fix_candidates) {
+            BUG_CHECK(trivial_table_alloc->global_id().has_value(),
+                "table %1% is not allocated", trivial_table_alloc->name);
+            int gid = *(trivial_table_alloc->global_id());
+            auto real_table_alloc = order[gid];
+            if (trivial_table_alloc->layout.action_data_bytes <
+                real_table_alloc->layout.action_data_bytes) {
+                problematic_candidates[trivial_table_alloc] =
+                    real_table_alloc->layout.action_data_bytes
+                    - trivial_table_alloc->layout.action_data_bytes;
+            }
+        }
+        if (problematic_candidates.size() == 0) {
+            table_replay_problematic_table = failed_table;
+            LOG1("problem table: " << table_replay_problematic_table->name);
+        } else {
+            table_replay_problematic_table = select_problem_table_by_score(problematic_candidates);
+            LOG1("problem table: " << table_replay_problematic_table->name);
+        }
+        return true;
+    } else if (table_replay_result == PlacementResult::FAIL_ON_IXBAR) {
+        // For FAIL_ON_IXBAR, the score is the different of ixbar size allocated between real
+        // table allocation and table allocation after trivial allocation.
+        for (auto trivial_table_alloc : table_replay_fix_candidates) {
+            BUG_CHECK(trivial_table_alloc->global_id().has_value(),
+                "table %1% is not allocated", trivial_table_alloc->name);
+            int gid = *(trivial_table_alloc->global_id());
+            auto real_table_alloc = order[gid];
+            if (trivial_table_alloc->layout.ixbar_bytes <
+                real_table_alloc->layout.ixbar_bytes) {
+                problematic_candidates[trivial_table_alloc] =
+                    real_table_alloc->layout.ixbar_bytes
+                    - trivial_table_alloc->layout.ixbar_bytes;
+            }
+        }
+        if (problematic_candidates.size() == 0) {
+            table_replay_problematic_table = failed_table;
+            LOG1("problem table: " << table_replay_problematic_table->name);
+        } else {
+            table_replay_problematic_table = select_problem_table_by_score(problematic_candidates);
+            LOG1("problem table: " << table_replay_problematic_table->name);
+        }
+        return true;
+    } else if (table_replay_result == PlacementResult::FAIL_ON_MEM) {
+        // For FAIL_ON_MEM, the score is the different of adb size * #entry between real table
+        // allocation and table allocation after trivial allocation.
+        for (auto trivial_table_alloc : table_replay_fix_candidates) {
+            BUG_CHECK(trivial_table_alloc->global_id().has_value(),
+                "table %1% is not allocated", trivial_table_alloc->name);
+            int gid = *(trivial_table_alloc->global_id());
+            auto real_table_alloc = order[gid];
+            if (trivial_table_alloc->layout.action_data_bytes <
+                real_table_alloc->layout.action_data_bytes) {
+                problematic_candidates[trivial_table_alloc] =
+                    (real_table_alloc->layout.action_data_bytes
+                    - trivial_table_alloc->layout.action_data_bytes)
+                    * real_table_alloc->layout.entries;
+            }
+        }
+        if (problematic_candidates.size() == 0) {
+            table_replay_problematic_table = failed_table;
+            LOG1("problem table: " << table_replay_problematic_table->name);
+        } else {
+            table_replay_problematic_table = select_problem_table_by_score(problematic_candidates);
+            LOG1("problem table: " << table_replay_problematic_table->name);
+        }
+        return true;
+    } else {
+        // For other failures, ignore it for now.
+        table_replay_problematic_table = nullptr;
+        return false;
+    }
+}
+
 void TableSummary::postorder(const IR::BFN::Pipe *pipe) {
     LOG7(pipe);
     const int criticalPathLength = deps.critical_path_length();
@@ -373,6 +493,10 @@ void TableSummary::postorder(const IR::BFN::Pipe *pipe) {
                 trivial_mergedGateways.insert(mergedGateways.begin(), mergedGateways.end());
                 trivial_placedTables.clear();
                 trivial_placedTables.insert(placedTables.begin(), placedTables.end());
+                // record table allocation info after trivial phv allocation.
+                for (auto [gid, table] : order) {
+                    trivial_table_info[gid] = table;
+                }
                 throw PHVTrigger::failure(tableAlloc, internalTableAlloc,
                                           mergedGateways, firstRoundFit);
             } else {
@@ -407,6 +531,11 @@ void TableSummary::postorder(const IR::BFN::Pipe *pipe) {
                 trivial_mergedGateways.insert(mergedGateways.begin(), mergedGateways.end());
                 trivial_placedTables.clear();
                 trivial_placedTables.insert(placedTables.begin(), placedTables.end());
+                // clear the table allocation info allocated in ALT_INITIAL and record it again.
+                trivial_table_info.clear();
+                for (auto [gid, table] : order) {
+                    trivial_table_info[gid] = table;
+                }
                 throw PHVTrigger::failure(tableAlloc, internalTableAlloc,
                                               mergedGateways, firstRoundFit);
             } else {
@@ -431,24 +560,11 @@ void TableSummary::postorder(const IR::BFN::Pipe *pipe) {
                 state = SUCCESS;
             } else {
                 LOG1("Alt phv alloc: Failure post ALT_FINALIZE_TABLE_SAME_ORDER");
-                // if table replay failed when placing the first table, select the first table to
-                // fix.
-                // TODO(Changhao): this is a very naive selection method. Eventually, we should
-                // select tables that, due to difference between trivial allocation and real phv
-                // allocation, do not fit in ixbar, do not fit on the same stage, or cause other
-                // tables not fit on the same stage. This requires we check the table layout and
-                // ixbar usage information. We need to check more profiles that fail during table
-                // replay stage to find out what is the best heuristic to select these problematic
-                // tables.
-                if (placedTables.size() == 0) {
-                    table_replay_failed_table =
-                        trivial_placedTables.begin()->second->internalTableName;
-                }
                 // if ALT_FINALIZE_TABLE_SAME_ORDER failed, jump to
                 // ALT_FINALIZE_TABLE_SAME_ORDER_TABLE_FIXED and also restore the table placement
                 // result after trivial phv allocation.
-                if (table_replay_failed_table != std::nullopt &&
-                    alt_phv_alloc_table_fixed < ALT_PHV_ALLOC_TABLE_FIX_THRESHOLD){
+                if (alt_phv_alloc_table_fixed < ALT_PHV_ALLOC_TABLE_FIX_THRESHOLD &&
+                    find_problematic_table()){
                     alt_phv_alloc_table_fixed++;
                     state = ALT_FINALIZE_TABLE_SAME_ORDER_TABLE_FIXED;
                     placedTables.clear();
@@ -471,8 +587,8 @@ void TableSummary::postorder(const IR::BFN::Pipe *pipe) {
             if (!criticalPlacementFailure && maxStage <= deviceStages) {
                 state = SUCCESS;
             } else {
-                if (table_replay_failed_table != std::nullopt &&
-                    alt_phv_alloc_table_fixed < ALT_PHV_ALLOC_TABLE_FIX_THRESHOLD) {
+                if (alt_phv_alloc_table_fixed < ALT_PHV_ALLOC_TABLE_FIX_THRESHOLD &&
+                    find_problematic_table()) {
                     alt_phv_alloc_table_fixed++;
                     state = ALT_FINALIZE_TABLE_SAME_ORDER_TABLE_FIXED;
                 } else {
