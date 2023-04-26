@@ -1629,11 +1629,6 @@ if (TEST_ALT_PHV_ALLOC)
       "error: table allocation [(]alt-phv-alloc enabled[)] failed to allocate tables for pipe .* within 12 stages. Allocation state: ALT_FINALIZE_TABLE, stage used:"
       extensions/p4_tests/p4_16/customer/arista/obfuscated-stateless_load_balance_v4v6.p4
     )
-
-    p4c_add_xfail_reason("tofino"
-      "error: ALU ops cannot operate on slices"
-      ba102_20-simple_l2_simple_l2
-    )
 endif (TEST_ALT_PHV_ALLOC)
 
 # P4C-4689: On Tofino1, this test compiles incorrectly but we only report a warning

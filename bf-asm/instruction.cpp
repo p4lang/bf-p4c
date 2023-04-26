@@ -735,6 +735,14 @@ static bool will_pad_with_zeros(const Phv::Slice &dest, Table::Actions::Action *
     if (ad->field->bits.size() != 1) {
         // punt for split fields.  Not sure this can ever happen
         return false; }
+    // If Operand::Action is for immediate, check if the immediate is at the top end of the
+    // immediate overhead. The immediate extract mask in these cases will set the additional bits to
+    // zero (zero extend). Hence we dont need to check if the size is the same as destination
+    // register size.
+    // This check will be false for cases when Operand::Action is not immediate as immed_size will
+    // be zero
+    if (ad->field->immed_bit(ad->field->size) == ad->field->fmt->immed_size)
+        return true;
     if (ad->field->size < dest.reg.size) {
         // field not big enough
         return false; }
@@ -776,7 +784,8 @@ Instruction *AluOP::pass1(Table *tbl, Table::Actions::Action *act) {
                 return this; }
             auto *ad = src1.to<Operand::Action>();
             if (ad && will_pad_with_zeros(*dest, act, ad))
-                return this; }
+                return this;
+        }
         error(lineno, "ALU ops cannot operate on slices");
     }
     return this;
