@@ -1,6 +1,8 @@
 #ifndef BF_P4C_PHV_V2_ALLOCATOR_BASE_H_
 #define BF_P4C_PHV_V2_ALLOCATOR_BASE_H_
 
+#include <chrono>
+
 #include "bf-p4c/phv/phv.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/utils/utils.h"
@@ -54,15 +56,84 @@ struct SomeContScopeAllocResult {
 
 /// AllocatorMetrics contains metrics useful in tracking Allocator efficiency and debug
 class AllocatorMetrics {
+ public:
+    enum ctype { ALL = 0, TEST = 1, ALLOC = 2 };
+
  private:
-    unsigned long overall_containers_tried = 0;
+    // Allocation
+    typedef std::map<PHV::Type, std::pair<unsigned long, unsigned long>> ContainerMetricsMap;
+    ContainerMetricsMap test_containers;
+    ContainerMetricsMap alloc_containers;
+
+    // Compilation Time
+    std::chrono::time_point<std::chrono::steady_clock> start_time;
+    std::chrono::time_point<std::chrono::steady_clock> stop_time;
 
  public:
     AllocatorMetrics() {}
-    void update_containers_tried() { ++overall_containers_tried; }
-    int get_overall_containers_tried() const { return overall_containers_tried; }
+
+    // Allocation
+    void update_containers_metrics(const PHV::Container &c, const ContScopeAllocResult *result) {
+        if (!result) return;
+        if (c.index() == TEST_CONTAINER_INDEX) {
+            ++test_containers[c.type()].first;
+            if (result->ok()) ++test_containers[c.type()].second;
+            // Test containers not considered for any other metrics since they are not actually used
+            // for allocation
+            return;
+        }
+        ++alloc_containers[c.type()].first;
+        if (result->ok()) ++alloc_containers[c.type()].second;
+    }
+
+    unsigned long get_containers(const ctype ct = ALL, const PHV::Kind *kind = nullptr,
+                                 const PHV::Size *size = nullptr, bool succ = false) const {
+        if (ct == ALL)
+            return get_containers(TEST, kind, size, succ) + get_containers(ALLOC, kind, size, succ);
+
+        unsigned long containers = 0;
+
+        const ContainerMetricsMap *cmap = nullptr;
+        if (ct == TEST)
+            cmap = &test_containers;
+        else if (ct == ALLOC)
+            cmap = &alloc_containers;
+        else
+            return 0;
+
+        for (auto ct : *cmap) {
+            if (kind && (ct.first.kind() != *kind)) continue;
+            if (size && (ct.first.size() != *size)) continue;
+            if (succ)
+                containers += ct.second.second;
+            else
+                containers += ct.second.first;
+        }
+        return containers;
+    }
+
+    // Compilation time
+    void start_clock() { start_time = std::chrono::steady_clock::now(); }
+
+    void stop_clock() { stop_time = std::chrono::steady_clock::now(); }
+
+    std::string get_duration() const {
+        std::stringstream ss;
+        const auto duration = stop_time - start_time;
+        const auto hrs = std::chrono::duration_cast<std::chrono::hours>(duration);
+        const auto mins = std::chrono::duration_cast<std::chrono::minutes>(duration - hrs);
+        const auto secs = std::chrono::duration_cast<std::chrono::seconds>(duration - hrs - mins);
+        const auto msecs =
+            std::chrono::duration_cast<std::chrono::milliseconds>(duration - hrs - mins - secs);
+
+        ss << hrs.count() << "h " << mins.count() << "m " << secs.count() << "s " << msecs.count()
+           << "ms " << std::endl;
+        return ss.str();
+    }
+
     void clear() {
-        overall_containers_tried = 0;
+        test_containers.clear();
+        alloc_containers.clear();
     }
 };
 

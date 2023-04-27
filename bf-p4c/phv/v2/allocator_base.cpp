@@ -1,5 +1,6 @@
 #include "bf-p4c/phv/v2/allocator_base.h"
 
+#include <iomanip>
 #include <sstream>
 #include <tuple>
 #include <unordered_map>
@@ -7,6 +8,7 @@
 #include <optional>
 #include <boost/range/join.hpp>
 
+#include "bf-p4c/common/table_printer.h"
 #include "bf-p4c/device.h"
 #include "bf-p4c/phv/action_phv_constraints.h"
 #include "bf-p4c/phv/action_source_tracker.h"
@@ -638,8 +640,7 @@ const AllocError* AllocatorBase::check_container_scope_constraints(
 ContScopeAllocResult AllocatorBase::try_slices_to_container(
     const ScoreContext &ctx, const Allocation &alloc, const FieldSliceAllocStartMap &fs_starts,
     const Container &c, AllocatorMetrics &alloc_metrics, const bool skip_mau_checks) const {
-    // Update metrics
-    alloc_metrics.update_containers_tried();
+    ContScopeAllocResult *ret = nullptr;
     auto candidates = make_alloc_slices(kit_i.uses, fs_starts, c);
     if (kit_i.settings.physical_liverange_overlay) {
         candidates = update_alloc_slices_with_physical_liverange(
@@ -678,34 +679,45 @@ ContScopeAllocResult AllocatorBase::try_slices_to_container(
                     LOG6(ctx.t_tabs() << "  " << sl);
                 *err << ": " << short_name << " is overlapped with: " << overlapped.front();
             }
-            return ContScopeAllocResult(err);
+           ret = new ContScopeAllocResult(err);
         }
     }
 
-    // check misc container-scope constraints.
-    if (const auto* err = check_container_scope_constraints(alloc, candidates, c)) {
-        return ContScopeAllocResult(err);
+    if (!ret) {
+        // check misc container-scope constraints.
+        if (const auto* err = check_container_scope_constraints(alloc, candidates, c)) {
+            ret = new ContScopeAllocResult(err);
+        }
     }
 
-    LOG5(ctx.t_tabs() << "Checking action phv constraints: ");
-    // check all kinds of action phv constraints.
     ActionSourceCoPackMap action_copack_hints;
-    if (!skip_mau_checks) {
-        if (const auto* err =
-                verify_can_pack(ctx, alloc, ctx.sc(), candidates, c, action_copack_hints)) {
-            return ContScopeAllocResult(err);
+    if (!ret) {
+        LOG5(ctx.t_tabs() << "Checking action phv constraints: ");
+        // check all kinds of action phv constraints.
+        if (!skip_mau_checks) {
+            if (const auto* err =
+                    verify_can_pack(ctx, alloc, ctx.sc(), candidates, c, action_copack_hints)) {
+                ret = new ContScopeAllocResult(err);
+            }
         }
     }
 
-    LOG5(ctx.t_tabs() << "Saving allocation: ");
-    // save allocation to result transaction.
-    auto tx = alloc.makeTransaction();
-    for (auto& slice : candidates) {
-        tx.allocate(slice, nullptr, kit_i.settings.single_gress_parser_group);
+    if (!ret) {
+        LOG5(ctx.t_tabs() << "Saving allocation: ");
+        // save allocation to result transaction.
+        auto tx = alloc.makeTransaction();
+        for (auto& slice : candidates) {
+            tx.allocate(slice, nullptr, kit_i.settings.single_gress_parser_group);
+        }
+
+        const bool packed_with_existing = !alloc.liverange_overlapped_slices(c, candidates).empty();
+        ret = new ContScopeAllocResult(tx, action_copack_hints, c, packed_with_existing);
     }
 
-    const bool packed_with_existing = !alloc.liverange_overlapped_slices(c, candidates).empty();
-    return ContScopeAllocResult(tx, action_copack_hints, c, packed_with_existing);
+
+    // Update metrics
+    alloc_metrics.update_containers_metrics(c, ret);
+    return *ret;
 }
 
 SomeContScopeAllocResult AllocatorBase::try_slices_to_container_group(
@@ -1767,9 +1779,152 @@ AllocResult AllocatorBase::alloc_strided_super_clusters(const ScoreContext& ctx,
 }
 
 std::ostream& operator<<(std::ostream& out, const AllocatorMetrics &am) {
-    Log::TempIndent indent;
-    out << "Allocation Metrics: " << indent;
-    out << "Overall Containers Tried: " << am.get_overall_containers_tried();
+    const PHV::Kind *ALL_KINDS = nullptr;
+    const PHV::Size *ALL_SIZES = nullptr;
+    // Test Containers Stats
+    auto test_ct = am.get_containers(AllocatorMetrics::TEST, ALL_KINDS, ALL_SIZES);
+    auto test_cs = am.get_containers(AllocatorMetrics::TEST, ALL_KINDS, ALL_SIZES, true);
+
+    auto NORMAL = PHV::Kind::normal;
+    auto MOCHA  = PHV::Kind::mocha;
+    auto DARK   = PHV::Kind::dark;
+
+    auto B8  = PHV::Size::b8;
+    auto B16 = PHV::Size::b16;
+    auto B32 = PHV::Size::b32;
+
+    auto  test_nct = am.get_containers(AllocatorMetrics::TEST, &NORMAL);
+    auto  test_ncs = am.get_containers(AllocatorMetrics::TEST, &NORMAL, ALL_SIZES, true);
+    auto  test_mct = am.get_containers(AllocatorMetrics::TEST, &MOCHA);
+    auto  test_mcs = am.get_containers(AllocatorMetrics::TEST, &MOCHA,  ALL_SIZES, true);
+    auto  test_dct = am.get_containers(AllocatorMetrics::TEST, &DARK);
+    auto  test_dcs = am.get_containers(AllocatorMetrics::TEST, &DARK,   ALL_SIZES, true);
+    // 8 bit containers
+    auto test_bnct = am.get_containers(AllocatorMetrics::TEST, &NORMAL, &B8);
+    auto test_bncs = am.get_containers(AllocatorMetrics::TEST, &NORMAL, &B8, true);
+    auto test_bmct = am.get_containers(AllocatorMetrics::TEST, &MOCHA,  &B8);
+    auto test_bmcs = am.get_containers(AllocatorMetrics::TEST, &MOCHA,  &B8, true);
+    auto test_bdct = am.get_containers(AllocatorMetrics::TEST, &DARK,   &B8);
+    auto test_bdcs = am.get_containers(AllocatorMetrics::TEST, &DARK,   &B8, true);
+    // 16 bit containers
+    auto test_hnct = am.get_containers(AllocatorMetrics::TEST, &NORMAL, &B16);
+    auto test_hncs = am.get_containers(AllocatorMetrics::TEST, &NORMAL, &B16, true);
+    auto test_hmct = am.get_containers(AllocatorMetrics::TEST, &MOCHA,  &B16);
+    auto test_hmcs = am.get_containers(AllocatorMetrics::TEST, &MOCHA,  &B16, true);
+    auto test_hdct = am.get_containers(AllocatorMetrics::TEST, &DARK,   &B16);
+    auto test_hdcs = am.get_containers(AllocatorMetrics::TEST, &DARK,   &B16, true);
+    // 32 bit containers
+    auto test_wnct = am.get_containers(AllocatorMetrics::TEST, &NORMAL, &B32);
+    auto test_wncs = am.get_containers(AllocatorMetrics::TEST, &NORMAL, &B32, true);
+    auto test_wmct = am.get_containers(AllocatorMetrics::TEST, &MOCHA,  &B32);
+    auto test_wmcs = am.get_containers(AllocatorMetrics::TEST, &MOCHA,  &B32, true);
+    auto test_wdct = am.get_containers(AllocatorMetrics::TEST, &DARK,   &B32);
+    auto test_wdcs = am.get_containers(AllocatorMetrics::TEST, &DARK,   &B32, true);
+
+    // Allocatable Containers Stats
+    auto alloc_ct = am.get_containers(AllocatorMetrics::ALLOC, ALL_KINDS, ALL_SIZES);
+    auto alloc_cs = am.get_containers(AllocatorMetrics::ALLOC, ALL_KINDS, ALL_SIZES, true);
+
+    auto  alloc_nct = am.get_containers(AllocatorMetrics::ALLOC, &NORMAL);
+    auto  alloc_ncs = am.get_containers(AllocatorMetrics::ALLOC, &NORMAL, ALL_SIZES, true);
+    auto  alloc_mct = am.get_containers(AllocatorMetrics::ALLOC, &MOCHA);
+    auto  alloc_mcs = am.get_containers(AllocatorMetrics::ALLOC, &MOCHA,  ALL_SIZES, true);
+    auto  alloc_dct = am.get_containers(AllocatorMetrics::ALLOC, &DARK);
+    auto  alloc_dcs = am.get_containers(AllocatorMetrics::ALLOC, &DARK,   ALL_SIZES, true);
+    // 8 bit containers
+    auto alloc_bnct = am.get_containers(AllocatorMetrics::ALLOC, &NORMAL, &B8);
+    auto alloc_bncs = am.get_containers(AllocatorMetrics::ALLOC, &NORMAL, &B8, true);
+    auto alloc_bmct = am.get_containers(AllocatorMetrics::ALLOC, &MOCHA,  &B8);
+    auto alloc_bmcs = am.get_containers(AllocatorMetrics::ALLOC, &MOCHA,  &B8, true);
+    auto alloc_bdct = am.get_containers(AllocatorMetrics::ALLOC, &DARK,   &B8);
+    auto alloc_bdcs = am.get_containers(AllocatorMetrics::ALLOC, &DARK,   &B8, true);
+    // 16 bit containers
+    auto alloc_hnct = am.get_containers(AllocatorMetrics::ALLOC, &NORMAL, &B16);
+    auto alloc_hncs = am.get_containers(AllocatorMetrics::ALLOC, &NORMAL, &B16, true);
+    auto alloc_hmct = am.get_containers(AllocatorMetrics::ALLOC, &MOCHA,  &B16);
+    auto alloc_hmcs = am.get_containers(AllocatorMetrics::ALLOC, &MOCHA,  &B16, true);
+    auto alloc_hdct = am.get_containers(AllocatorMetrics::ALLOC, &DARK,   &B16);
+    auto alloc_hdcs = am.get_containers(AllocatorMetrics::ALLOC, &DARK,   &B16, true);
+    // 32 bit containers
+    auto alloc_wnct = am.get_containers(AllocatorMetrics::ALLOC, &NORMAL, &B32);
+    auto alloc_wncs = am.get_containers(AllocatorMetrics::ALLOC, &NORMAL, &B32, true);
+    auto alloc_wmct = am.get_containers(AllocatorMetrics::ALLOC, &MOCHA,  &B32);
+    auto alloc_wmcs = am.get_containers(AllocatorMetrics::ALLOC, &MOCHA,  &B32, true);
+    auto alloc_wdct = am.get_containers(AllocatorMetrics::ALLOC, &DARK,   &B32);
+    auto alloc_wdcs = am.get_containers(AllocatorMetrics::ALLOC, &DARK,   &B32, true);
+
+    // Total Containers Stats
+    auto oct = test_ct + alloc_ct;
+    auto ocs = test_cs + alloc_cs;
+
+    auto setp = [](const float &f) {
+        std::stringstream ss;
+        ss << std::setprecision(2) << std::fixed << f;
+        return ss.str();
+    };
+
+    out << std::endl << "ALLOCATION METRICS" << std::endl;
+
+    // Add Headers
+    std::stringstream ss;
+    std::vector<std::string> headers;
+    headers.push_back("          Metric          ");
+    headers.push_back("Tried  ");
+    headers.push_back("Successful ");
+    headers.push_back("Successful (%)  ");
+    TablePrinter tp(ss, headers, TablePrinter::Align::RIGHT);
+
+    // Add Rows
+    auto addContainerMetric = [&](const std::string &metric, const unsigned long &tried,
+                                  const unsigned long &succ) {
+        std::vector<std::string> row;
+        row.push_back(metric);
+        row.push_back(std::to_string(tried));
+        row.push_back(std::to_string(succ));
+        std::string pct = "-NA-";
+        if (tried > 0) pct = setp((float(succ) / float(tried)) * 100.0);
+        row.push_back(pct);
+        tp.addRow(row);
+    };
+
+    addContainerMetric("        Total Containers  ", oct, ocs);
+    tp.addSep();
+    addContainerMetric("   Total Test Containers  ", test_ct,   test_cs);
+    addContainerMetric(" Total Normal Containers  ", test_nct,  test_ncs);
+    addContainerMetric(" 8 bit Normal Containers  ", test_bnct, test_bncs);
+    addContainerMetric("16 bit Normal Containers  ", test_hnct, test_hncs);
+    addContainerMetric("32 bit Normal Containers  ", test_wnct, test_wncs);
+    addContainerMetric(" Total Mocha  Containers  ", test_mct,  test_mcs);
+    addContainerMetric(" 8 bit Mocha  Containers  ", test_bmct, test_bmcs);
+    addContainerMetric("16 bit Mocha  Containers  ", test_hmct, test_hmcs);
+    addContainerMetric("32 bit Mocha  Containers  ", test_wmct, test_wmcs);
+    addContainerMetric(" Total Dark   Containers  ", test_dct,  test_dcs);
+    addContainerMetric(" 8 bit Dark   Containers  ", test_bdct, test_bdcs);
+    addContainerMetric("16 bit Dark   Containers  ", test_hdct, test_hdcs);
+    addContainerMetric("32 bit Dark   Containers  ", test_wdct, test_wdcs);
+
+
+    tp.addSep();
+    addContainerMetric(" Total Alloc  Containers  ", alloc_ct,   alloc_cs);
+    addContainerMetric(" Total Normal Containers  ", alloc_nct,  alloc_ncs);
+    addContainerMetric(" 8 bit Normal Containers  ", alloc_bnct, alloc_bncs);
+    addContainerMetric("16 bit Normal Containers  ", alloc_hnct, alloc_hncs);
+    addContainerMetric("32 bit Normal Containers  ", alloc_wnct, alloc_wncs);
+    addContainerMetric(" Total Mocha  Containers  ", alloc_mct,  alloc_mcs);
+    addContainerMetric(" 8 bit Mocha  Containers  ", alloc_bmct, alloc_bmcs);
+    addContainerMetric("16 bit Mocha  Containers  ", alloc_hmct, alloc_hmcs);
+    addContainerMetric("32 bit Mocha  Containers  ", alloc_wmct, alloc_wmcs);
+    addContainerMetric(" Total Dark   Containers  ", alloc_dct,  alloc_dcs);
+    addContainerMetric(" 8 bit Dark   Containers  ", alloc_bdct, alloc_bdcs);
+    addContainerMetric("16 bit Dark   Containers  ", alloc_hdct, alloc_hdcs);
+    addContainerMetric("32 bit Dark   Containers  ", alloc_wdct, alloc_wdcs);
+
+    tp.print();
+
+    out << ss.str();
+
+    out << std::endl;
+    out << "TIME TAKEN (Allocation Round): " << am.get_duration() << std::endl;
     return out;
 }
 

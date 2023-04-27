@@ -480,6 +480,8 @@ GreedyAllocator::AllocResultWithSlicingDetails GreedyAllocator::slice_and_alloca
 bool GreedyAllocator::allocate(std::list<SuperCluster *> clusters_input,
                                AllocatorMetrics &alloc_metrics) {
     LOG1("Run GreedyAllocator.");
+    alloc_metrics.start_clock();
+
     // print table ixbar usage
     LOG3(kit_i.mau.get_table_summary()->ixbarUsagesStr(&phv_i));
     bool nonfatal = false;
@@ -667,6 +669,7 @@ bool GreedyAllocator::allocate(std::list<SuperCluster *> clusters_input,
             }
         }
     }
+    alloc_metrics.stop_clock();
 
     // log allocation history.
     auto logfile = greedy_allocator_file_log(pipe_id_i, "phv_greedy_allocation_history_", 1);
