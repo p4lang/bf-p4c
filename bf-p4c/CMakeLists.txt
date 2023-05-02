@@ -237,7 +237,7 @@ set(QUAL_BF_P4C_IR_SRCS)
 foreach(src IN LISTS BF_P4C_IR_SRCS)
   set(QUAL_BF_P4C_IR_SRCS ${QUAL_BF_P4C_IR_SRCS} ${CMAKE_CURRENT_SOURCE_DIR}/${src})
 endforeach()
-set(EXTENSION_FRONTEND_SOURCES ${EXTENSION_FRONTEND_SOURCES} ${QUAL_BF_P4C_IR_SRCS} PARENT_SCOPE)
+set(EXTENSION_IR_SOURCES ${EXTENSION_IR_SOURCES} ${QUAL_BF_P4C_IR_SRCS} PARENT_SCOPE)
 
 set (BF_P4C_BACKEND_COMMON_SRCS
   common/alias.cpp
@@ -1045,7 +1045,7 @@ if(BUILD_STATIC_BFP4C_LIBS)
 else()
     add_library(tofinobackend OBJECT ${BF_P4C_SOURCES})
 endif()
-add_dependencies(tofinobackend genIR genLogging bfn_p4runtime)
+add_dependencies(tofinobackend ir-generated frontend genLogging bfn_p4runtime)
 target_include_directories(tofinobackend PRIVATE "${BFN_P4C_SOURCE_DIR}/third_party/spdlog/include")
 
 if(BUILD_STATIC_BFP4C_LIBS)
@@ -1523,7 +1523,7 @@ if (ENABLE_TESTING)
                                 # test_bf_gtest_helpers should be in its own testlib - & requies 'whole_archive' hack!
                                 # Leave it in GTEST_BF_P4C_SOURCES for now.
   target_include_directories (bf_gtest_support PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/test/gtest}" PRIVATE "${P4C_BINARY_DIR}")
-  add_dependencies (bf_gtest_support p4headers_h p4headers_cpp genIR)  # Indirectly we #include "ir/gen-tree-macro.h"
+  add_dependencies (bf_gtest_support p4headers_h p4headers_cpp ir-generated)  # Indirectly we #include "ir/gen-tree-macro.h"
 
 
 
