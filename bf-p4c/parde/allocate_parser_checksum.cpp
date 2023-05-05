@@ -709,7 +709,9 @@ struct InsertParserClotChecksums : public PassManager {
 struct DuplicateStates : public ParserTransform {
     ordered_map<cstring,
         ordered_map<cstring, ordered_set<const IR::BFN::ParserState*>>> duplicate_path;
-    AllocateParserChecksums& allocator;
+    std::map<std::pair<const IR::BFN::ParserState*, cstring>, IR::BFN::ParserState*>
+        duplicate_states;
+    AllocateParserChecksums &allocator;
     const CollectParserInfo&      parser_info;
     const CollectParserChecksums& checksum_info;
     DuplicateStates(AllocateParserChecksums& allocator,
@@ -783,6 +785,7 @@ struct DuplicateStates : public ParserTransform {
     }
 
     profile_t init_apply(const IR::Node *root) override {
+        duplicate_states.clear();
         for (auto& kv : checksum_info.parser_to_decl_names) {
             for (auto decl : kv.second) {
                 find_state_to_duplicate(kv.first, decl);
@@ -793,6 +796,8 @@ struct DuplicateStates : public ParserTransform {
 
     IR::BFN::ParserState* get_new_state(const IR::BFN::ParserState* state,
                                          cstring decl) {
+        auto state_decl = std::make_pair(state, decl);
+        if (duplicate_states.count(state_decl)) return duplicate_states.at(state_decl);
         auto new_state = new IR::BFN::ParserState(state->p4State,
                                                   state->name + ".$duplicate_" + decl,
                                                   state->gress);
@@ -807,6 +812,7 @@ struct DuplicateStates : public ParserTransform {
         new_state->statements = *new_statements;
         new_state->transitions = state->transitions;
         new_state->selects = state->selects;
+        duplicate_states.emplace(state_decl, new_state);
         return new_state;
     }
 
