@@ -123,13 +123,11 @@ control MyIngress(
         ig_tm_md.ucast_egress_port = ig_intr_md.ingress_port;
 
         if (hdr.ethernet.ether_type == TEST64_RW) {
-            rw64.write(0, hdr.test64.a);
-            hdr.test64.b = hdr.test64.a;
+            hdr.test64.b = rw64.write(0, hdr.test64.a);
         } else if (hdr.ethernet.ether_type == TEST64_RAC) {
             hdr.test64.b = rmw64.execute(0);
         } else if (hdr.ethernet.ether_type == TEST128_RW) {
-            rw128.write(0, hdr.test128.a);
-            hdr.test128.b = hdr.test128.a;
+            hdr.test128.b = rw128.write(0, hdr.test128.a);
         } else if (hdr.ethernet.ether_type == TEST128_RAC) {
             hdr.test128.b = rmw128.execute(0);
         }

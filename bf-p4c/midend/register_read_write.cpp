@@ -78,7 +78,8 @@ RegisterReadWrite::extractRegisterReadWrite(const IR::Statement *reg_stmt) {
         // This is a call to .write or .read without assignment, so not assigning to read_expr
         call = reg_mcall_stmt->methodCall;
     } else if (auto reg_assign_stmt = reg_stmt->to<IR::AssignmentStatement>()) {
-        // This is a call to .read and we need to store the left-hand side of the assignment
+        // This is a call to .read or .write that stores the result somewhere, so we need
+        // to store the left-hand side of the assignment
         if (auto *slice = reg_assign_stmt->right->to<IR::Slice>()) {
             call = slice->e0->to<IR::MethodCallExpression>();
         } else {
@@ -184,18 +185,17 @@ IR::Node *RegisterReadWrite::UpdateRegisterActionsAndExecuteCalls::preorder(
     if (!inst || inst->type->name != "RegisterAction") return act;
 
     auto regAct = getOriginal<IR::Declaration_Instance>();
-    LOG2("regAct: " << regAct);
-    LOG2("initializer: " << regAct->initializer);
+    Log::TempIndent indent;
+    LOG2("regAct: " << regAct << indent);
     auto applyDecl = regAct->initializer->components[0]->to<IR::Declaration>();
-    LOG2("apply: " << applyDecl);
-    LOG2("apply: " << applyDecl->node_type_name());
 
     const IR::BlockStatement *src_body = applyDecl->to<IR::Function>()->body;
     if (!processDeclaration(regAct, src_body)) return act;
 
-    LOG2(" -> replacing decl inst.");
-    return new IR::Declaration_Instance(act->name, regAct->annotations,
+    auto *rv = new IR::Declaration_Instance(act->name, regAct->annotations,
         regAct->type, regAct->arguments, regAct->initializer);
+    LOG2(" -> replacing decl inst with:" << rv);
+    return rv;
 }
 
 IR::Node *RegisterReadWrite::UpdateRegisterActionsAndExecuteCalls::postorder(IR::P4Control* ctrl) {
@@ -263,9 +263,9 @@ IR::Node *RegisterReadWrite::UpdateRegisterActionsAndExecuteCalls::postorder(IR:
 //   }
 // FIXME -- really should factor out common code between createRegisterAction and
 //          createRegisterExecute
-IR::MethodCallExpression*
+void
 RegisterReadWrite::AnalyzeActionWithRegisterCalls::createRegisterExecute(
-                                        IR::MethodCallExpression *reg_execute,
+                                        RegActionInfo &info,
                                         const IR::Statement *reg_stmt,
                                         cstring action_name) {
     BUG_CHECK(
@@ -273,14 +273,13 @@ RegisterReadWrite::AnalyzeActionWithRegisterCalls::createRegisterExecute(
 
     auto rv = extractRegisterReadWrite(reg_stmt);
     auto *call = rv.first;
-    if (!call) return nullptr;
+    if (!call) return;
 
-    LOG1(" creating register execute call for MethodCallExpression: " << call);
+    LOG2("creating register execute call for MethodCallExpression: " << call);
 
     // Create Register Action - Add to declaration
     auto member = call->method->to<IR::Member>();
     auto reg_path = member->expr->to<IR::PathExpression>()->path;
-    auto reg_decl = self.refMap->getDeclaration(reg_path)->to<IR::Declaration_Instance>();
 
     // Register read/write calls don not have an index argument for direct
     // registers. This is currently unsupported.
@@ -308,52 +307,28 @@ RegisterReadWrite::AnalyzeActionWithRegisterCalls::createRegisterExecute(
                 " and write expression only %1% specified", num_call_args);
     }
 
-    auto reg_args = reg_decl->type->to<IR::Type_Specialized>()->arguments;
-    auto rtype = reg_args->at(0);
-    auto utype = call->type;
-    if (utype->is<IR::Type_Void>()) {
-        auto tmp = self.typeMap->getType(rtype);
-        if (auto tt = tmp->to<IR::Type_Type>())
-            tmp = tt->type;
-        if (auto stype = tmp->to<IR::Type_StructLike>()) {
-            // currently only support structs with 1 or 2 identical fields in registers;
-            // backend will flag an error if it is not.
-            utype = stype->fields.front()->type;
-        } else {
-            utype = rtype; } }
-
-    auto apply_name = reg_path->name + "_" + action_name;
-
-    if (!reg_execute) {
+    if (!info.execute_call) {
         // Create Execute Method Call Expression
-        auto reg_execute_method = new IR::Member(member->type,
-                                        new IR::PathExpression(IR::ID(apply_name)), "execute");
+        auto regaction = new IR::PathExpression(IR::ID(reg_path->name + "_" + action_name));
+        auto method = new IR::Member(regaction, "execute");
 
         // Use first argument which is the indirect index
-        auto reg_execute_args = new IR::Vector<IR::Argument>({ call->arguments->at(0) });
-        reg_execute = new IR::MethodCallExpression(utype, reg_execute_method, reg_execute_args);
+        auto args = new IR::Vector<IR::Argument>({ call->arguments->at(0) });
+        info.execute_call = new IR::MethodCallExpression(method, args);
     }
-
-    return reg_execute;
+    LOG5("  " << info.execute_call);
 }
 
-RegisterReadWrite::AnalyzeActionWithRegisterCalls::RegInfo
-RegisterReadWrite::AnalyzeActionWithRegisterCalls::createRegisterAction(
-                                            RegInfo reg_info,
+void RegisterReadWrite::AnalyzeActionWithRegisterCalls::createRegisterAction(
+                                            RegActionInfo &info,
                                             const IR::Statement *reg_stmt,
                                             const IR::Declaration *act) {
     BUG_CHECK(reg_stmt, "No register call statment present to analyze in action - ", act);
 
-    auto rv = extractRegisterReadWrite(reg_stmt);
-    auto *call = rv.first;
-    if (!call) return RegInfo();
+    auto [call, assign_lhs] = extractRegisterReadWrite(reg_stmt);
+    if (!call) return;
 
-    if (!reg_info.read_expr) {
-        // Do not overwrite with returned nullptr if the read expression is already stored
-        reg_info.read_expr = rv.second;
-    }
-
-    LOG1(" creating register action for MethodCallExpression: " << call);
+    LOG1("creating register action for MethodCallExpression: " << call);
 
     // Register read/write calls don not have an index argument for direct
     // registers. This is currently unsupported.
@@ -379,6 +354,10 @@ RegisterReadWrite::AnalyzeActionWithRegisterCalls::createRegisterAction(
         BUG_CHECK(num_call_args == 1,
                 " Invalid indirect register read call. Needs 1 argument for register index "
                 " but %1% specified", num_call_args);
+        if (!info.read_expr) {
+            // Do not overwrite with returned nullptr if the read expression is already stored
+            info.read_expr = assign_lhs;
+        }
     }
     if (is_write) {
         BUG_CHECK(num_call_args == 2,
@@ -389,17 +368,15 @@ RegisterReadWrite::AnalyzeActionWithRegisterCalls::createRegisterAction(
     auto reg_args = reg_decl->type->to<IR::Type_Specialized>()->arguments;
     auto rtype = reg_args->at(0);
     auto itype = reg_args->at(1);
-    auto utype = call->type;
-    if (utype->is<IR::Type_Void>()) {
-        auto tmp = self.typeMap->getType(rtype);
-        if (auto tt = tmp->to<IR::Type_Type>())
-            tmp = tt->type;
-        if (auto stype = tmp->to<IR::Type_StructLike>()) {
-            // currently only support structs with 1 or 2 identical fields in registers;
-            // backend will flag an error if it is not.
-            utype = stype->fields.front()->type;
-        } else {
-            utype = rtype; } }
+    auto utype = rtype;
+    auto tmp = self.typeMap->getType(rtype);
+    if (auto tt = tmp->to<IR::Type_Type>())
+        tmp = tt->type;
+    if (auto stype = tmp->to<IR::Type_StructLike>()) {
+        // currently only support structs with 1 or 2 identical fields in registers;
+        // backend will flag an error if it is not.
+        utype = stype->fields.front()->type; }
+
     auto ratype = new IR::Type_Specialized(
         new IR::Type_Name("RegisterAction"),
         new IR::Vector<IR::Type>({rtype, itype, utype}));
@@ -408,35 +385,35 @@ RegisterReadWrite::AnalyzeActionWithRegisterCalls::createRegisterAction(
     auto *ctor_args = new IR::Vector<IR::Argument>({
             new IR::Argument(new IR::PathExpression(new IR::Path(reg_path->name)))});
 
-    auto apply_params = new IR::ParameterList({
+    if (!info.apply_params)
+        info.apply_params = new IR::ParameterList({
                      new IR::Parameter("value", IR::Direction::InOut, rtype) });
 
-    auto body = new IR::BlockStatement();
+    if (!info.apply_body) info.apply_body = new IR::BlockStatement();
     // For register reads, add a return value
     auto in_value = new IR::PathExpression("in_value");
     auto value = new IR::PathExpression("value");
     if (is_read) {
-        auto rv = new IR::PathExpression("rv");
-        apply_params->push_back(new IR::Parameter("rv", IR::Direction::Out, utype));
-        body->components.insert(body->components.end(),
-            new IR::Declaration_Variable("in_value", rtype));
-        body->components.insert(body->components.end(),
-            new IR::AssignmentStatement(in_value, value));
-        body->components.insert(body->components.end(),
-            new IR::AssignmentStatement(rv, in_value));
+        info.apply_body->push_back(new IR::Declaration_Variable("in_value", rtype));
+        info.apply_body->push_back(new IR::AssignmentStatement(in_value, value));
     } else {
         // For register writes, use second method call argument to update the
         // register value
         auto write_expr = call->arguments->at(1)->expression;
-        auto new_assign = new IR::AssignmentStatement(value, write_expr);
         // If write_expr contains a previous register read expression, replace with
         // in_value which is where the read value is stored inside the register
         // action
-        if (reg_info.read_expr) {
-            auto *sar = new SearchAndReplaceExpr(in_value, reg_info.read_expr);
-            new_assign = new IR::AssignmentStatement(value, write_expr->apply(*sar));
+        if (info.read_expr) {
+            auto *sar = new SearchAndReplaceExpr(in_value, info.read_expr);
+            write_expr = write_expr->apply(*sar);
         }
-        body->components.insert(body->components.end(), new_assign);
+        info.apply_body->push_back(new IR::AssignmentStatement(value, write_expr));
+    }
+    if (assign_lhs) {
+        auto rv = new IR::PathExpression("rv");
+        if (!info.apply_params->getParameter("rv"))
+            info.apply_params->push_back(new IR::Parameter("rv", IR::Direction::Out, utype));
+        info.apply_body->push_back(new IR::AssignmentStatement(rv, value));
     }
 
     auto apply_name = reg_path->name + "_" + act->name;
@@ -444,31 +421,14 @@ RegisterReadWrite::AnalyzeActionWithRegisterCalls::createRegisterAction(
     auto *annots = new IR::Annotations();
     annots->addAnnotation(IR::ID("name"), externalName);
 
-    if (!reg_info.reg_action) {
-        auto apply = new IR::Function("apply",
-                new IR::Type_Method(IR::Type_Void::get(), apply_params, "apply"), body);
+    if (!info.reg_action) {
+        auto apply_type = new IR::Type_Method(IR::Type_Void::get(), info.apply_params, "apply");
+        auto apply = new IR::Function("apply", apply_type, info.apply_body);
         auto *apply_block = new IR::BlockStatement({ apply });
-        reg_info.reg_action = new IR::Declaration_Instance(IR::ID(apply_name),
+        info.reg_action = new IR::Declaration_Instance(IR::ID(apply_name),
                             annots, ratype, ctor_args, apply_block);
-    } else {
-        // Find the apply function
-        auto reg_action_components = reg_info.reg_action->initializer->components;
-        for (auto comp : reg_action_components) {
-            auto apply_function = comp->to<IR::Function>();
-            if (!apply_function) continue;
-            if (apply_function->name != "apply") continue;
-            auto apply_body = apply_function->body;
-            body->components.insert(body->components.begin(), apply_body->components.begin(),
-                                                              apply_body->components.end());
-            auto apply = new IR::Function("apply", apply_function->type, body);
-            auto *apply_block = new IR::BlockStatement({ apply });
-            reg_info.reg_action = new IR::Declaration_Instance(reg_info.reg_action->name,
-                                reg_info.reg_action->annotations, reg_info.reg_action->type,
-                                reg_info.reg_action->arguments, apply_block);
-            break;
-        }
     }
-    return reg_info;
+    LOG5("  " << info.reg_action);
 }
 
 bool RegisterReadWrite::AnalyzeActionWithRegisterCalls::preorder(const IR::Declaration *act) {
@@ -476,34 +436,33 @@ bool RegisterReadWrite::AnalyzeActionWithRegisterCalls::preorder(const IR::Decla
         return true;
     }
 
-    LOG1(" analysing action: " << act);
-
     if (self.action_register_calls.count(act) == 0) return false;
+    Log::TempIndent indent;
+    LOG1("RegisterReadWrite: analysing action: " << act << indent);
 
     auto control = findContext<IR::P4Control>();
     BUG_CHECK(control, "No control found for P4 Action ", act);
 
-    LOG1("self.action_register_call " << self.action_register_calls.size());
     for (auto reg : self.action_register_calls[act]) {
-        RegInfo reg_info;
+        RegActionInfo info;
         for (auto call : reg.second) {
-            reg_info = createRegisterAction(reg_info, call, act);
-            reg_info.reg_execute = createRegisterExecute(reg_info.reg_execute, call, act->name);
+            createRegisterAction(info, call, act);
+            createRegisterExecute(info, call, act->name);
         }
 
-        auto reg_action = reg_info.reg_action;
-        auto reg_execute = reg_info.reg_execute;
+        auto reg_action = info.reg_action;
+        auto execute_call = info.execute_call;
         BUG_CHECK(reg_action, "Cannot create register action for register reads or "
                             "writes within P4 Action %1%", act);
-        BUG_CHECK(reg_execute, "Cannot create register execute call for register reads or "
+        BUG_CHECK(execute_call, "Cannot create register execute call for register reads or "
                             "writes within P4 Action %1%", act);
 
         self.control_register_actions[control].push_back(reg_action);
 
-        LOG3(" Adding execute in " << act->name << " for " << reg.first->toString() << ": "
-            << reg_execute);
+        LOG3("Adding execute in " << act->name << " for " << reg.first->toString() << ": "
+            << execute_call);
 
-        self.action_register_exec_calls[act][reg.first] = reg_execute;
+        self.action_register_exec_calls[act][reg.first] = execute_call;
         self.generated_register_actions[reg.first].insert(act);
     }
 
@@ -518,7 +477,6 @@ void RegisterReadWrite::CollectRegisterReadsWrites::collectRegReadWrite(
 
     auto em = mi->to<P4::ExternMethod>();
     cstring externName = em->actualExternType->name;
-    LOG1(" BB: " << externName);
     if (externName != "Register") return;
 
     auto stmt = findContext<IR::Statement>();
@@ -527,7 +485,7 @@ void RegisterReadWrite::CollectRegisterReadsWrites::collectRegReadWrite(
     auto reg = em->object->to<IR::Declaration_Instance>();
     if (!reg) return;
 
-    LOG1(" Register extern found: " << em->method->name << " in action: " << act->name);
+    LOG1("Register extern found: " << em->method->name << " in action: " << act->name);
     if (em->method->name == "read" || em->method->name == "write") {
         self.action_register_calls[act][reg].insert(stmt);
     }
@@ -543,8 +501,6 @@ void RegisterReadWrite::CollectRegisterReadsWrites::collectRegReadWrite(
 
 bool RegisterReadWrite::CollectRegisterReadsWrites::preorder(
                                         const IR::MethodCallExpression* call) {
-    LOG1(" MethodCallExpression: " << call);
-
     // Check for register read/write extern calls
     auto act = findContext<IR::P4Action>();
     if (act) {

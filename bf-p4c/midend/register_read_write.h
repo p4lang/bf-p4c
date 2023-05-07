@@ -116,19 +116,21 @@ class RegisterReadWrite : public PassManager {
      */
     class AnalyzeActionWithRegisterCalls: public Inspector {
         RegisterReadWrite &self;
-        struct RegInfo {
+        struct RegActionInfo {
+            // infomation and IR about RegisterAction being created to implement a
+            // Register read+write
             IR::Declaration_Instance *reg_action = nullptr;
-            IR::MethodCallExpression *reg_execute = nullptr;
+            IR::ParameterList *apply_params = nullptr;
+            IR::BlockStatement *apply_body = nullptr;
+            IR::MethodCallExpression *execute_call = nullptr;
             const IR::Expression *read_expr = nullptr;
         };
         bool preorder(const IR::Declaration*) override;
 
-        IR::MethodCallExpression*
-        createRegisterExecute(IR::MethodCallExpression *reg_execute,
-                              const IR::Statement *reg_stmt, cstring action_name);
-        RegInfo
-        createRegisterAction(RegInfo reg_info,
-                              const IR::Statement *reg_stmt, const IR::Declaration *act);
+        void createRegisterExecute(RegActionInfo &reg_info, const IR::Statement *reg_stmt,
+                                   cstring action_name);
+        void createRegisterAction(RegActionInfo &reg_info, const IR::Statement *reg_stmt,
+                                  const IR::Declaration *act);
      public:
         explicit AnalyzeActionWithRegisterCalls(RegisterReadWrite &self) :
              self(self) {}

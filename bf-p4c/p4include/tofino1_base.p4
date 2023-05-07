@@ -612,7 +612,7 @@ extern Register<T, I> {
     T read(in I index);
 
     /// Write value to register at specified index.
-    void write(in I index, in T value);
+    T write(in I index, in T value);
 }
 
 /// DirectRegister
@@ -629,7 +629,7 @@ extern DirectRegister<T> {
     T read();
 
     /// Write value to a direct register.
-    void write(in T value);
+    T write(in T value);
 }
 
 extern RegisterParam<T> {

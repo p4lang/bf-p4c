@@ -668,7 +668,7 @@ extern Register<T, I> {
     T read(in I index);
 
     /// Write value to register at specified index.
-    void write(in I index, in T value);
+    T write(in I index, in T value);
 
     /// Write a value to every index in the register
     void clear(in T value, @optional in T busy);
@@ -688,7 +688,7 @@ extern DirectRegister<T> {
     T read();
 
     /// Write value to a direct register.
-    void write(in T value);
+    T write(in T value);
 
     /// Write a value to every element of the register
     void clear(in T value, @optional in T busy);
