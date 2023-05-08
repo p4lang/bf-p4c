@@ -618,7 +618,7 @@ void TernaryMatchTable::gen_entry_cfg(json::vector &out, std::string name, \
                  * maybe.  Henry and I both agree that is really doesn't make any sense and can be
                  * deleted, but remains in there now
                  */
-                for (int bit = (lsb_offset / 8) * 8; bit <= (lsb_hi / 8) * 8; bit += 8) {
+                for (int bit = (lsb_lo / 8) * 8; bit <= (lsb_hi / 8) * 8; bit += 8) {
                     int lsb_lo_bit_in_byte = std::max(lsb_lo, bit) % 8;
                     int lsb_hi_bit_in_byte = std::min(lsb_hi, bit + 7) % 8;
                     auto dirtcam_mode = get_dirtcam_mode(index, (bit / 8));
