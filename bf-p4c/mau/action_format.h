@@ -810,7 +810,7 @@ class RamSection {
             }
         }
         rv << "Action Data : " << size() << "'b{";
-        for (auto a : adb_params)
+        for (auto &a : adb_params)
             rv << " " << a.first << " : " << a.second;
         rv << " }";
         return rv.str();

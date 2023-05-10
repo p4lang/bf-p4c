@@ -90,11 +90,11 @@ void Manifest::InputFiles::serialize(Writer& writer) {
     }
     writer.Key("includes");
     writer.StartArray();
-    for (auto includePath : m_includePaths) writer.String(includePath.c_str());
+    for (auto &includePath : m_includePaths) writer.String(includePath.c_str());
     writer.EndArray();
     writer.Key("defines");
     writer.StartArray();
-    for (auto define : m_defines) writer.String(define.c_str());
+    for (auto &define : m_defines) writer.String(define.c_str());
     writer.EndArray();
     writer.EndObject();
 }
@@ -187,7 +187,7 @@ void Manifest::serialize_target_data(Writer& writer) {
     writer.String(numPorts.c_str());
     writer.Key("pipes");
     writer.StartArray();
-    for (auto pipe : m_pipes) {
+    for (auto &pipe : m_pipes) {
         writer.StartObject();
         writer.Key("pipe");
         writer.Int(pipe.first);
@@ -203,7 +203,7 @@ void Manifest::serialize_target_data(Writer& writer) {
                 switch (gress) {
                   case INGRESS:
                     // ingress can go to any other pipe's egress
-                    for (auto other_pipe : m_pipes)
+                    for (auto &other_pipe : m_pipes)
                         sendTo(writer, other_pipe.first, EGRESS);
                     break;
                   case EGRESS:
@@ -231,7 +231,7 @@ void Manifest::serialize_target_data(Writer& writer) {
 void Manifest::serializePipes(Writer& writer) {
     writer.Key("pipes");
     writer.StartArray();  // for each pipe
-    for (auto pipeOutput : m_pipeOutputs) {
+    for (auto &pipeOutput : m_pipeOutputs) {
         // XXX(yumin): have to add this check for a ghost thread profile P4C-3327.
         if (m_pipes.count(pipeOutput.first)) {
             writer.StartObject();
@@ -299,7 +299,7 @@ void Manifest::OutputFiles::serialize(Writer& writer) {
 
     writer.Key("resources");
     writer.StartArray();
-    for (auto resource : m_resources) {
+    for (auto &resource : m_resources) {
         writer.StartObject();
         writer.Key("path");
         writer.String(resource.first.c_str());
@@ -316,7 +316,7 @@ void Manifest::OutputFiles::serialize(Writer& writer) {
 
     writer.Key("logs");
     writer.StartArray();
-    for (auto log : m_logs) {
+    for (auto &log : m_logs) {
         writer.StartObject();
         writer.Key("path");
         writer.String(log.first.c_str());
@@ -343,7 +343,7 @@ Manifest::Manifest() : m_options(BackendOptions()), m_programInputs(BackendOptio
 }
 
 Manifest::~Manifest() {  //  dtor
-    for (auto pipe_output : m_pipeOutputs) delete pipe_output.second;
+    for (auto &pipe_output : m_pipeOutputs) delete pipe_output.second;
     m_manifestStream.flush();
     m_manifestStream.close();
 }

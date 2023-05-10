@@ -361,7 +361,7 @@ bool ComputeLoweredDeparserIR::preorder(const IR::BFN::Deparser* deparser) {
         if (!tmMeta) {
             ::warning("ig_intr_md_for_tm not defined in ingress control block");
         } else {
-            for (auto fname : Device::get().pardeSpec().mdpValidVecFields()) {
+            for (auto &fname : Device::get().pardeSpec().mdpValidVecFields()) {
                 const IR::Expression* exp = nullptr;
                 const PHV::Field* f = nullptr;
                 if (fname.rfind(".$valid") != std::string::npos)

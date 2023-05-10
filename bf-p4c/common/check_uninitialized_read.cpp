@@ -77,7 +77,7 @@ void FindUninitializedAndOverlayedReads::end_apply() {
         auto lr_start = sl.getEarliestLiveness();
         auto lr_end   = sl.getLatestLiveness();
 
-        for (auto def : defuse.getAllDefs(sl.field()->id)) {
+        for (const auto &def : defuse.getAllDefs(sl.field()->id)) {
             le_bitrange bits;
             phv.field(def.second, &bits);
             int def_stage = get_min_stage(def.first);
@@ -95,7 +95,7 @@ void FindUninitializedAndOverlayedReads::end_apply() {
         auto lr_start = sl.getEarliestLiveness();
         auto lr_end   = sl.getLatestLiveness();
 
-        for (auto use : defuse.getAllUses(sl.field()->id)) {
+        for (auto &use : defuse.getAllUses(sl.field()->id)) {
             le_bitrange bits;
             phv.field(use.second, &bits);
             int use_stage = get_min_stage(use.first);

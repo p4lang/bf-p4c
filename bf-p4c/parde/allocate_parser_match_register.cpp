@@ -892,7 +892,7 @@ class MatcherAllocator : public Visitor {
                         continue;
                     }
 
-                    for (auto reg : allocation.group_to_alloc_regs.at(other_group)) {
+                    for (auto &reg : allocation.group_to_alloc_regs.at(other_group)) {
                         if (reg == get_match_register(scratch)) {
                             return false;
                         }

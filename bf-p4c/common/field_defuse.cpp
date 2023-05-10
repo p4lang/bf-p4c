@@ -105,7 +105,7 @@ void FieldDefUse::read(const PHV::Field *f, std::optional<le_bitrange> range,
     info.use.emplace(use);
     located_uses[f->id].emplace(use);
     check_conflicts(info, unit->stage());
-    for (auto def : info.def) {
+    for (auto &def : info.def) {
         if (!range) {
             LOG4("  " << use << " uses " << def);
             uses[def].emplace(use);
@@ -197,7 +197,7 @@ void FieldDefUse::write(const PHV::Field *f, std::optional<le_bitrange> range,
 
     // Update output_deps with the new def.
     locpair def(unit, e);
-    for (auto old_def : info.def) {
+    for (auto &old_def : info.def) {
         le_bitrange old_range;
         const PHV::Field *old_f = phv.field(old_def.second, &old_range);
         if (old_f && range && !range->overlaps(old_range)) continue;
@@ -233,7 +233,7 @@ void FieldDefUse::write(const PHV::Field *f, std::optional<le_bitrange> range,
 
         info.use.emplace(unit, e);
         check_conflicts(info, unit->stage());
-        for (auto def : info.def)
+        for (auto &def : info.def)
             LOG4("  " << e << " in " << *unit << " combines with " <<
                  def.second << " from " << *def.first);
     } else {

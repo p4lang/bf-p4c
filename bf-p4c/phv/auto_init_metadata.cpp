@@ -227,7 +227,7 @@ Visitor::profile_t RemoveMetadataInits::init_apply(const IR::Node* root) {
 void RemoveMetadataInits::end_apply() {
     Log::TempIndent indent;
     LOG3("RemoveMetadataInits end_apply" << indent);
-    for (auto z : zeroInitFields) {
+    for (auto &z : zeroInitFields) {
         LOG4("ZeroInitField : " << z);
     }
 }

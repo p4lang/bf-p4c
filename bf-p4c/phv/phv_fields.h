@@ -1807,7 +1807,7 @@ struct MapFieldToParserStates : public Inspector {
 
             if (phv_i.alloc_done()) {
                 PHV::FieldUse use(PHV::FieldUse::WRITE);
-                for (auto alloc : phv_i.get_alloc(field, PHV::AllocContext::PARSER, &use)) {
+                for (auto &alloc : phv_i.get_alloc(field, PHV::AllocContext::PARSER, &use)) {
                     auto cont = alloc.container();
                     container_to_parser_states[cont].insert(state);
                     container_to_writes[cont].insert(prim);
