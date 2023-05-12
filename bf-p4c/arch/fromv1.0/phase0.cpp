@@ -312,7 +312,7 @@ struct FindPhase0Table : public Inspector {
         // The match type must be 'exact'.
         auto* matchType = refMap->getDeclaration(keyElem->matchType->path, true)
                                ->to<IR::Declaration_ID>();
-        if (matchType->name.name != P4::P4CoreLibrary::instance.exactMatch.name)
+        if (matchType->name.name != P4::P4CoreLibrary::instance().exactMatch.name)
             return false;
 
         errStr = "";

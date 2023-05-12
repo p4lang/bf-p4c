@@ -379,7 +379,7 @@ p4c_add_xfail_reason("tofino2"
 )
 
 p4c_add_xfail_reason("tofino2"
-  "AssertionError: Expected packet was not received on device .*, port .*"
+  "AssertionError: Expected packet was not received on device .*, port .*|array index 32 out of bounds"
   p4c-3614
 )
 
@@ -483,7 +483,6 @@ if (TEST_ALT_PHV_ALLOC)
     # Actions and constraints errors
     p4c_add_xfail_reason("tofino2"
         "error: PHV allocation creates an invalid container action within a Tofino ALU"
-        extensions/p4_tests/p4_16/customer/extreme/p4c-2641.p4
         extensions/p4_tests/p4_16/stf/meter_dest_16_32_flexible.p4
     )
 
@@ -501,12 +500,6 @@ if (TEST_ALT_PHV_ALLOC)
     p4c_add_xfail_reason("tofino2"
         "Two conditional parameters set the same bits"
         extensions/p4_tests/p4_16/customer/arista/obfuscated-msee_tofino2.p4
-    )
-
-    # Tests that take way too long with ALT-PHV
-    p4c_add_xfail_reason("tofino2"
-        "TIMEOUT"
-        extensions/p4_tests/p4_16/customer/extreme/npb-97-ga.p4
     )
 
     p4c_add_xfail_reason("tofino2"

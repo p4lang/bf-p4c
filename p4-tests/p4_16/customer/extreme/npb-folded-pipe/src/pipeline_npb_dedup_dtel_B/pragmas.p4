@@ -64,4 +64,7 @@
 //@pa_no_overlay("ingress", "ig_intr_md_for_tm.qid", "ig_md.qos.qid")
 //@pa_no_overlay("ingress", "ig_md.lkp_1.ip_type", "hdr.transport.ethernet.ether_type") // added per case 00776085 patch
 
+@pa_container_size("ingress", "hdr.outer.ethernet.ether_type", 16)
+@pa_container_size("ingress", "hdr.transport.ethernet.ether_type", 16)
+
 #endif // _P4_PRAGMAS_

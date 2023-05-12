@@ -275,7 +275,7 @@ struct IngressParserModel : public ::Model::Elem {
                        Model::Type_Model istdType, Model::Type_Model resubmitMetaType,
                        Model::Type_Model recircMetaType) :
         Model::Elem("IngressParser"),
-        packetParam("buffer", P4::P4CoreLibrary::instance.packetIn, 0),
+        packetParam("buffer", P4::P4CoreLibrary::instance().packetIn, 0),
         headersParam("parsed_hdr", headersType, 1),
         metadataParam("user_meta", userMetaType, 2),
         istdParam("istd", istdType, 3),
@@ -309,7 +309,7 @@ struct IngressDeparserModel : public ::Model::Elem {
                  Model::Type_Model bridgeMetaType, Model::Type_Model headersType,
                  Model::Type_Model userMetaType, Model::Type_Model istdType) :
         Model::Elem("IngressDeparser"),
-        packetParam("buffer", P4::P4CoreLibrary::instance.packetIn, 0),
+        packetParam("buffer", P4::P4CoreLibrary::instance().packetIn, 0),
         cloneParam("clone_i2e_meta", cloneType, 1),
         resubmitParam("resubmit_meta", resubmitMetaType, 2),
         normalMetaParam("normal_meta", bridgeMetaType, 3),
@@ -331,7 +331,7 @@ struct EgressParserModel : public ::Model::Elem {
                       Model::Type_Model istdMetaType, Model::Type_Model bridgeMetaType,
                       Model::Type_Model cloneI2EMetaType, Model::Type_Model cloneE2EMetaType) :
         Model::Elem("EgressParser"),
-        packetParam("buffer", P4::P4CoreLibrary::instance.packetIn, 0),
+        packetParam("buffer", P4::P4CoreLibrary::instance().packetIn, 0),
         headersParam("parsed_hdr", headersType, 1),
         metadataParam("user_meta", userMetaType, 2),
         istdMetaParam("istd", istdMetaType, 3),
@@ -370,7 +370,7 @@ struct EgressDeparserModel : public ::Model::Elem {
                         Model::Type_Model istdType,
                         Model::Type_Model edstdType) :
         Model::Elem("EgressDeparser"),
-        packetParam("buffer", P4::P4CoreLibrary::instance.packetIn, 0),
+        packetParam("buffer", P4::P4CoreLibrary::instance().packetIn, 0),
         cloneE2EMetaParam("clone_e2e_meta", cloneE2EMetaType, 1),
         recircMetaParam("recirculate_meta", recircMetaType, 2),
         headersParam("hdr", headersType, 3),
