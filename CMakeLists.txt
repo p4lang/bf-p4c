@@ -170,14 +170,14 @@ endmacro(get_schema_version)
 # change: context and manifest for now
 # We generate a pair of dummy dependency files will be ignored
 set(SCHEMA_FILES
-  ${BFN_P4C_SOURCE_DIR}/compiler_interfaces/schemas/context_schema.py
-  ${BFN_P4C_SOURCE_DIR}/compiler_interfaces/schemas/manifest_schema.py
-  ${BFN_P4C_SOURCE_DIR}/compiler_interfaces/schemas/phv_schema.py
-  ${BFN_P4C_SOURCE_DIR}/compiler_interfaces/schemas/power_schema.py
-  ${BFN_P4C_SOURCE_DIR}/compiler_interfaces/schemas/resources_schema.py
+  compiler_interfaces/schemas/context_schema.py
+  compiler_interfaces/schemas/manifest_schema.py
+  compiler_interfaces/schemas/phv_schema.py
+  compiler_interfaces/schemas/power_schema.py
+  compiler_interfaces/schemas/resources_schema.py
   )
 foreach (f ${SCHEMA_FILES})
-  configure_file(${f} ${CMAKE_BINARY_DIR}/${f}.dep)
+  configure_file(${BFN_P4C_SOURCE_DIR}/${f} ${CMAKE_BINARY_DIR}/${f}.dep)
 endforeach()
 
 if (ENABLE_WERROR)
