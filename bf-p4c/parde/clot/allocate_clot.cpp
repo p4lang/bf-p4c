@@ -1177,10 +1177,10 @@ class GreedyClotAllocator : public Visitor {
                 bool can_start_new_sequence = clotInfo.can_start_clot(extract_info) &&
                                               parserInfo.graph(*extract_info->states().begin())
                                                   .is_mutex(extract_info->states());
+                state_to_size_in_bits.clear();
                 if (can_start_new_sequence) {
                     LOG4("  Started a sequence with field: " << field->name);
                     sequence.push_back(extract_info);
-                    state_to_size_in_bits.clear();
                     for (const auto& state : extract_info->states())
                         state_to_size_in_bits[state] = extract_info->slice()->size();
                 } else {
