@@ -4,12 +4,13 @@
 #include <functional>
 
 #include "bf-p4c/phv/utils/utils.h"
+#include "bf-p4c/phv/v2/allocator_metrics.h"
 
 namespace PHV {
 namespace v2 {
 
 /// a function type that true if phv allocation is possible for the cluster.
-using AllocVerifier = std::function<bool(const SuperCluster *)>;
+using AllocVerifier = std::function<bool(const SuperCluster *, AllocatorMetrics &)>;
 
 /// @returns true if two field slices cannot be packed into one container.
 using HasPackConflict = std::function<

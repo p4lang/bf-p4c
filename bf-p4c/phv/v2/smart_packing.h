@@ -7,10 +7,11 @@
 #include "bf-p4c/ir/bitrange.h"
 #include "bf-p4c/mau/table_dependency_graph.h"
 #include "bf-p4c/mau/table_mutex.h"
-#include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/collect_table_keys.h"
 #include "bf-p4c/phv/mau_backtracker.h"
+#include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/utils/utils.h"
+#include "bf-p4c/phv/v2/allocator_metrics.h"
 #include "bf-p4c/phv/v2/parser_packing_validator.h"
 #include "bf-p4c/phv/v2/types.h"
 
@@ -27,6 +28,7 @@ class IxbarFriendlyPacking {
     const ParserPackingValidator* parser_packing_validator_i;
     const AllocVerifier& can_alloc_i;
     const MauBacktracker* mau_i;
+    AllocatorMetrics& alloc_metrics;
 
     bool can_pack(const std::vector<FieldSlice>& slices,
                   const FieldSlice& fs) const;
@@ -53,7 +55,8 @@ class IxbarFriendlyPacking {
                          HasPackConflict has_pc,
                          const ParserPackingValidator* parser_packing_validator,
                          const AllocVerifier& can_alloc,
-                         const MauBacktracker* mau)
+                         const MauBacktracker* mau,
+                         AllocatorMetrics &alloc_metrics)
         : phv_i(phv),
           tables_i(tables),
           table_mutex_i(table_mutex),
@@ -62,9 +65,10 @@ class IxbarFriendlyPacking {
           has_pack_conflict_i(has_pc),
           parser_packing_validator_i(parser_packing_validator),
           can_alloc_i(can_alloc),
-          mau_i(mau) {}
+          mau_i(mau),
+          alloc_metrics(alloc_metrics){}
 
-    std::list<SuperCluster*> pack(const std::list<SuperCluster *> &clusters);
+    std::list<SuperCluster *> pack(const std::list<SuperCluster *> &clusters);
     static bool may_create_container_conflict(const FieldSlice& a, const FieldSlice& b,
                                               const FieldDefUse& defuse,
                                               const DependencyGraph& deps,

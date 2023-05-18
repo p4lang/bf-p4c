@@ -775,6 +775,7 @@ set (BF_P4C_BACKEND_PHV_HDRS
   phv/alloc_setting.h
   phv/v2/phv_kit.h
   phv/v2/allocator_base.h
+  phv/v2/allocator_metrics.h
   phv/v2/copacker.h
   phv/v2/phv_allocation_v2.h
   phv/v2/parser_packing_validator.h

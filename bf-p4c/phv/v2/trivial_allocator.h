@@ -89,6 +89,7 @@ class TrivialAllocator : public AllocatorBase {
     /// containers. Use this verify whether there is any unsat constraint in @p sc.
     bool can_be_allocated(const Allocation& empty_alloc,
                           const PHV::SuperCluster* sc,
+                          AllocatorMetrics &alloc_metrics,
                           const int max_slicings = 128) const;
 
     /// result of pre-slicing will always have a set of sliced super cluster. If any sliced

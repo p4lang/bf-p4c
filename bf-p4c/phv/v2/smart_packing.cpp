@@ -5,6 +5,7 @@
 #include "bf-p4c/lib/autoclone.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/utils/utils.h"
+#include "bf-p4c/phv/v2/allocator_base.h"
 #include "bf-p4c/phv/v2/utils_v2.h"
 
 namespace PHV {
@@ -344,7 +345,7 @@ IxbarFriendlyPacking::make_table_key_candidates(const std::list<SuperCluster*>& 
     return rst;
 }
 
-std::list<SuperCluster*> IxbarFriendlyPacking::pack(const std::list<SuperCluster*>& clusters) {
+std::list<SuperCluster *> IxbarFriendlyPacking::pack(const std::list<SuperCluster *> &clusters) {
     const auto to_be_packed = make_table_key_candidates(clusters);
     Log::TempIndent indent;
     LOG3("Sorted smarting packing table order and slices:" << indent);
@@ -352,6 +353,8 @@ std::list<SuperCluster*> IxbarFriendlyPacking::pack(const std::list<SuperCluster
         LOG3("For Table :" << tb_slices.first->name);
         LOG3("Slices: " << tb_slices.second);
     }
+
+    alloc_metrics.start_clock();
 
     // list of clusters that will be returned in the end.
     ordered_set<SuperCluster*> updated_clusters;
@@ -395,7 +398,7 @@ std::list<SuperCluster*> IxbarFriendlyPacking::pack(const std::list<SuperCluster
                 std::vector<FieldSlice> packing = workers[i].curr;
                 packing.push_back(fs);
                 auto merge_rst = merge_by_packing(packing, fs_sc);
-                const bool can_be_allocated = can_alloc_i(merge_rst.merged);
+                const bool can_be_allocated = can_alloc_i(merge_rst.merged, alloc_metrics);
                 if (can_be_allocated) {
                     LOG3("\t\tAllocation is OK. We will merge:");
                     for (auto* to_remove : merge_rst.from) {
@@ -453,6 +456,10 @@ std::list<SuperCluster*> IxbarFriendlyPacking::pack(const std::list<SuperCluster
             }
         }
     }
+
+    alloc_metrics.stop_clock();
+    LOG1(alloc_metrics);
+
     std::list<SuperCluster*> after_merge(updated_clusters.begin(), updated_clusters.end());
     return after_merge;
 }

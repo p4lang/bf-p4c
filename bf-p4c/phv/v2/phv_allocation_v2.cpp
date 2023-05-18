@@ -33,16 +33,18 @@ const IR::Node* PhvAllocation::apply_visitor(const IR::Node* root_, const char *
 
     const MauBacktracker* mau = kit_i.settings.physical_stage_trivial ? &kit_i.mau : nullptr;
 
-    AllocatorMetrics trivial_alloc_metrics, greedy_alloc_metrics;
+    AllocatorMetrics trivial_alloc_metrics("TrivialAllocator");
+    AllocatorMetrics greedy_alloc_metrics("GreedyAllocator");
+    AllocatorMetrics ixbar_pack_metrics("IXbarPackingTrivialAllocator");
 
     // apply table-layout-friendly packing on super clusters.
     auto trivial_allocator = new PHV::v2::TrivialAllocator(kit_i, phv_i, pipe_id_i);
-    const auto alloc_verifier = [&](const PHV::SuperCluster* sc) {
-        return trivial_allocator->can_be_allocated(alloc.makeTransaction(), sc);
+    const auto alloc_verifier = [&](const PHV::SuperCluster* sc, AllocatorMetrics &alloc_metrics) {
+        return trivial_allocator->can_be_allocated(alloc.makeTransaction(), sc, alloc_metrics);
     };
     IxbarFriendlyPacking packing(phv_i, kit_i.tb_keys, kit_i.table_mutex, kit_i.defuse, kit_i.deps,
                                  kit_i.get_has_pack_conflict(), kit_i.parser_packing_validator,
-                                 alloc_verifier, mau);
+                                 alloc_verifier, mau, ixbar_pack_metrics);
     LOG2("Packing " << clusters.size() << " clusters");
     clusters = packing.pack(clusters);
     // clusters = get_packed_cluster_group(clusters, kit_i.table_pack_opt, alloc_verifier, phv_i);

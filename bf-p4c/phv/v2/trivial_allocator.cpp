@@ -418,11 +418,11 @@ bool TrivialAllocator::allocate(const std::list<PHV::SuperCluster *> &clusters,
 
 bool TrivialAllocator::can_be_allocated(const Allocation& empty_alloc,
                                         const PHV::SuperCluster* sc,
+                                        AllocatorMetrics &alloc_metrics,
                                         const int max_slicings) const {
     Log::TempIndent indent;
     LOG1("TrivialAllocator::can_be_allocated for super cluster " << sc
             << " with max slicings " << max_slicings << indent);
-    AllocatorMetrics alloc_metrics;
     const auto rst =
         slice_and_allocate_sc(empty_alloc, sc, PhvStatus(), make_container_groups_merged_by_size(),
                               alloc_metrics, true, max_slicings);

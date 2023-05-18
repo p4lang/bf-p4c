@@ -716,7 +716,7 @@ ContScopeAllocResult AllocatorBase::try_slices_to_container(
 
 
     // Update metrics
-    alloc_metrics.update_containers_metrics(c, ret);
+    alloc_metrics.update_containers_metrics(c, ret->ok());
     return *ret;
 }
 
@@ -770,75 +770,56 @@ SomeContScopeAllocResult AllocatorBase::try_slices_to_container_group(
         PHV::Type t(k, group.width());
         if (!group.hasType(t)) continue;
 
-        // Check if an empty container of the type can be allocated
-        // Using index 9999 as it is unlikely to be used in actual allocation attempt and also
-        // easeir to identify in logs as a test container.
-        PHV::Container testCont(t, PHV::TEST_CONTAINER_INDEX);
-        LOG3(ctx.t_tabs() << "Try container " << testCont);
-        auto test_rst = try_slices_to_container(new_ctx, alloc, fs_starts, testCont, alloc_metrics);
-        if (test_rst.ok()
-            || (test_rst.err && test_rst.err->code == ErrorCode::ACTION_CANNOT_BE_SYNTHESIZED)) {
-            PHV::ContainerEquivalenceTracker cet(alloc);
-            // Try all containers of the type
-            for (const Container &c : group.getAllContainersOfKind(t.kind())) {
-                // If an equivalent container has been tried then skip it
-                if (auto equivalent_c = cet.find_equivalent_tried_container(c)) {
-                    LOG6(new_ctx.t_tabs() << "Container " << c << " is indistinguishible "
-                            "from an already tried container " << *equivalent_c << ", skipping");
-                    continue;
-                }
-                auto c_rst = try_slices_to_container(new_ctx, alloc, fs_starts, c, alloc_metrics);
-                pretty_print_errs(c, c_rst);
-                if (c_rst.ok()) {
-                    // pick this container if higher score.
-                    const auto* c_rst_score = ctx.score()->make(*c_rst.tx);
-                    LOG3(ctx.t_tabs() << "Try container " << c);
-                    LOG3(new_ctx.t_tabs() << "Succeeded, score: " << c_rst_score->str());
-                    some.collect(c_rst, c_rst_score);
-
-                    // If score indicates a mismatch_gress there is a possiblity of a better score
-                    // for an equivalent container. Hence we remove the container from equivalence
-                    // tracker. This is necessary as the equivalence tracker does not check
-                    // container gress
-                    if (auto *c_rst_greedy_score = dynamic_cast<const GreedyTxScore*>(c_rst_score)){
-                        if (c_rst_greedy_score->has_mismatch_gress()) {
-                            LOG6(new_ctx.t_tabs() << "Invalidating Container " << c
-                                    << " from equivalence tracker as it has a mismatch gress");
-                            cet.invalidate(c);
-                        }
-                    }
-
-                    // XXX(yumin): we do not use is_packing in c_rst because only strict empty is
-                    // allowed, for this container-level search optimization parameter.
-                    if (ctx.search_config()->stop_first_succ_empty_normal_container) {
-                        const auto container_status = alloc.getStatus(c);
-                        if (c.type().kind() == PHV::Kind::normal &&
-                            (!container_status || container_status->slices.empty())) {
-                            LOG3(new_ctx.t_tabs()
-                                 << "Stop early because first_succ_empty_normal_container.");
-                            break;
-                        }
-                    }
-                } else {
-                    // prefer to return the most informative error message.
-                    if (c_rst.err->code == ErrorCode::ACTION_CANNOT_BE_SYNTHESIZED) {
-                        some.err = c_rst.err;
-                    } else if (some.err->code != ErrorCode::ACTION_CANNOT_BE_SYNTHESIZED &&
-                               c_rst.err->code == ErrorCode::CONTAINER_PARSER_PACKING_INVALID) {
-                        some.err = c_rst.err;
-                    }
-                }
+        PHV::ContainerEquivalenceTracker cet(alloc);
+        // Try all containers of the type
+        for (const Container &c : group.getAllContainersOfKind(t.kind())) {
+            // If an equivalent container has been tried then skip it
+            if (auto equivalent_c = cet.find_equivalent_tried_container(c)) {
+                LOG6(new_ctx.t_tabs() << "Container " << c << " is indistinguishible "
+                        "from an already tried container " << *equivalent_c << ", skipping");
+                alloc_metrics.update_container_equivalence_metrics(*equivalent_c);
+                continue;
             }
-        } else {
-            LOG6(new_ctx.t_tabs() << "Skipping all containers of type " << t
-                    << " as an empty container cannot be allocated."
-                    << " Error: " << test_rst.err_str());
-            // prefer to return the most informative error message.
-            if (test_rst.err->code == ErrorCode::ACTION_CANNOT_BE_SYNTHESIZED) {
-                some.err = test_rst.err;
-            } else if (some.err->code != ErrorCode::ACTION_CANNOT_BE_SYNTHESIZED &&
-                       test_rst.err->code == ErrorCode::CONTAINER_PARSER_PACKING_INVALID) {
-                some.err = test_rst.err;
+            auto c_rst = try_slices_to_container(new_ctx, alloc, fs_starts, c, alloc_metrics);
+            pretty_print_errs(c, c_rst);
+            if (c_rst.ok()) {
+                // pick this container if higher score.
+                const auto* c_rst_score = ctx.score()->make(*c_rst.tx);
+                LOG3(ctx.t_tabs() << "Try container " << c);
+                LOG3(new_ctx.t_tabs() << "Succeeded, score: " << c_rst_score->str());
+                some.collect(c_rst, c_rst_score);
+
+                // If score indicates a mismatch_gress there is a possiblity of a better score
+                // for an equivalent container. Hence we remove the container from equivalence
+                // tracker. This is necessary as the equivalence tracker does not check
+                // container gress
+                if (auto *c_rst_greedy_score = dynamic_cast<const GreedyTxScore*>(c_rst_score)){
+                    if (c_rst_greedy_score->has_mismatch_gress()) {
+                        LOG6(new_ctx.t_tabs() << "Invalidating Container " << c
+                                << " from equivalence tracker as it has a mismatch gress");
+                        cet.invalidate(c);
+                    }
+                }
+
+                // XXX(yumin): we do not use is_packing in c_rst because only strict empty is
+                // allowed, for this container-level search optimization parameter.
+                if (ctx.search_config()->stop_first_succ_empty_normal_container) {
+                    const auto container_status = alloc.getStatus(c);
+                    if (c.type().kind() == PHV::Kind::normal &&
+                        (!container_status || container_status->slices.empty())) {
+                        LOG3(new_ctx.t_tabs()
+                             << "Stop early because first_succ_empty_normal_container.");
+                        break;
+                    }
+                }
+            } else {
+                // prefer to return the most informative error message.
+                if (c_rst.err->code == ErrorCode::ACTION_CANNOT_BE_SYNTHESIZED) {
+                    some.err = c_rst.err;
+                } else if (some.err->code != ErrorCode::ACTION_CANNOT_BE_SYNTHESIZED &&
+                           c_rst.err->code == ErrorCode::CONTAINER_PARSER_PACKING_INVALID) {
+                    some.err = c_rst.err;
+                }
             }
         }
     }
@@ -1781,9 +1762,6 @@ AllocResult AllocatorBase::alloc_strided_super_clusters(const ScoreContext& ctx,
 std::ostream& operator<<(std::ostream& out, const AllocatorMetrics &am) {
     const PHV::Kind *ALL_KINDS = nullptr;
     const PHV::Size *ALL_SIZES = nullptr;
-    // Test Containers Stats
-    auto test_ct = am.get_containers(AllocatorMetrics::TEST, ALL_KINDS, ALL_SIZES);
-    auto test_cs = am.get_containers(AllocatorMetrics::TEST, ALL_KINDS, ALL_SIZES, true);
 
     auto NORMAL = PHV::Kind::normal;
     auto MOCHA  = PHV::Kind::mocha;
@@ -1792,34 +1770,6 @@ std::ostream& operator<<(std::ostream& out, const AllocatorMetrics &am) {
     auto B8  = PHV::Size::b8;
     auto B16 = PHV::Size::b16;
     auto B32 = PHV::Size::b32;
-
-    auto  test_nct = am.get_containers(AllocatorMetrics::TEST, &NORMAL);
-    auto  test_ncs = am.get_containers(AllocatorMetrics::TEST, &NORMAL, ALL_SIZES, true);
-    auto  test_mct = am.get_containers(AllocatorMetrics::TEST, &MOCHA);
-    auto  test_mcs = am.get_containers(AllocatorMetrics::TEST, &MOCHA,  ALL_SIZES, true);
-    auto  test_dct = am.get_containers(AllocatorMetrics::TEST, &DARK);
-    auto  test_dcs = am.get_containers(AllocatorMetrics::TEST, &DARK,   ALL_SIZES, true);
-    // 8 bit containers
-    auto test_bnct = am.get_containers(AllocatorMetrics::TEST, &NORMAL, &B8);
-    auto test_bncs = am.get_containers(AllocatorMetrics::TEST, &NORMAL, &B8, true);
-    auto test_bmct = am.get_containers(AllocatorMetrics::TEST, &MOCHA,  &B8);
-    auto test_bmcs = am.get_containers(AllocatorMetrics::TEST, &MOCHA,  &B8, true);
-    auto test_bdct = am.get_containers(AllocatorMetrics::TEST, &DARK,   &B8);
-    auto test_bdcs = am.get_containers(AllocatorMetrics::TEST, &DARK,   &B8, true);
-    // 16 bit containers
-    auto test_hnct = am.get_containers(AllocatorMetrics::TEST, &NORMAL, &B16);
-    auto test_hncs = am.get_containers(AllocatorMetrics::TEST, &NORMAL, &B16, true);
-    auto test_hmct = am.get_containers(AllocatorMetrics::TEST, &MOCHA,  &B16);
-    auto test_hmcs = am.get_containers(AllocatorMetrics::TEST, &MOCHA,  &B16, true);
-    auto test_hdct = am.get_containers(AllocatorMetrics::TEST, &DARK,   &B16);
-    auto test_hdcs = am.get_containers(AllocatorMetrics::TEST, &DARK,   &B16, true);
-    // 32 bit containers
-    auto test_wnct = am.get_containers(AllocatorMetrics::TEST, &NORMAL, &B32);
-    auto test_wncs = am.get_containers(AllocatorMetrics::TEST, &NORMAL, &B32, true);
-    auto test_wmct = am.get_containers(AllocatorMetrics::TEST, &MOCHA,  &B32);
-    auto test_wmcs = am.get_containers(AllocatorMetrics::TEST, &MOCHA,  &B32, true);
-    auto test_wdct = am.get_containers(AllocatorMetrics::TEST, &DARK,   &B32);
-    auto test_wdcs = am.get_containers(AllocatorMetrics::TEST, &DARK,   &B32, true);
 
     // Allocatable Containers Stats
     auto alloc_ct = am.get_containers(AllocatorMetrics::ALLOC, ALL_KINDS, ALL_SIZES);
@@ -1853,17 +1803,13 @@ std::ostream& operator<<(std::ostream& out, const AllocatorMetrics &am) {
     auto alloc_wdct = am.get_containers(AllocatorMetrics::ALLOC, &DARK,   &B32);
     auto alloc_wdcs = am.get_containers(AllocatorMetrics::ALLOC, &DARK,   &B32, true);
 
-    // Total Containers Stats
-    auto oct = test_ct + alloc_ct;
-    auto ocs = test_cs + alloc_cs;
-
     auto setp = [](const float &f) {
         std::stringstream ss;
         ss << std::setprecision(2) << std::fixed << f;
         return ss.str();
     };
 
-    out << std::endl << "ALLOCATION METRICS" << std::endl;
+    out << std::endl << "ALLOCATION METRICS: " << am.get_name() << std::endl;
 
     // Add Headers
     std::stringstream ss;
@@ -1875,8 +1821,8 @@ std::ostream& operator<<(std::ostream& out, const AllocatorMetrics &am) {
     TablePrinter tp(ss, headers, TablePrinter::Align::RIGHT);
 
     // Add Rows
-    auto addContainerMetric = [&](const std::string &metric, const unsigned long &tried,
-                                  const unsigned long &succ) {
+    auto addContainerMetric = [&](const std::string &metric,
+                                  const unsigned long &tried, const unsigned long &succ) {
         std::vector<std::string> row;
         row.push_back(metric);
         row.push_back(std::to_string(tried));
@@ -1887,44 +1833,100 @@ std::ostream& operator<<(std::ostream& out, const AllocatorMetrics &am) {
         tp.addRow(row);
     };
 
-    addContainerMetric("        Total Containers  ", oct, ocs);
-    tp.addSep();
-    addContainerMetric("   Total Test Containers  ", test_ct,   test_cs);
-    addContainerMetric(" Total Normal Containers  ", test_nct,  test_ncs);
-    addContainerMetric(" 8 bit Normal Containers  ", test_bnct, test_bncs);
-    addContainerMetric("16 bit Normal Containers  ", test_hnct, test_hncs);
-    addContainerMetric("32 bit Normal Containers  ", test_wnct, test_wncs);
-    addContainerMetric(" Total Mocha  Containers  ", test_mct,  test_mcs);
-    addContainerMetric(" 8 bit Mocha  Containers  ", test_bmct, test_bmcs);
-    addContainerMetric("16 bit Mocha  Containers  ", test_hmct, test_hmcs);
-    addContainerMetric("32 bit Mocha  Containers  ", test_wmct, test_wmcs);
-    addContainerMetric(" Total Dark   Containers  ", test_dct,  test_dcs);
-    addContainerMetric(" 8 bit Dark   Containers  ", test_bdct, test_bdcs);
-    addContainerMetric("16 bit Dark   Containers  ", test_hdct, test_hdcs);
-    addContainerMetric("32 bit Dark   Containers  ", test_wdct, test_wdcs);
-
-
-    tp.addSep();
     addContainerMetric(" Total Alloc  Containers  ", alloc_ct,   alloc_cs);
-    addContainerMetric(" Total Normal Containers  ", alloc_nct,  alloc_ncs);
-    addContainerMetric(" 8 bit Normal Containers  ", alloc_bnct, alloc_bncs);
-    addContainerMetric("16 bit Normal Containers  ", alloc_hnct, alloc_hncs);
-    addContainerMetric("32 bit Normal Containers  ", alloc_wnct, alloc_wncs);
-    addContainerMetric(" Total Mocha  Containers  ", alloc_mct,  alloc_mcs);
-    addContainerMetric(" 8 bit Mocha  Containers  ", alloc_bmct, alloc_bmcs);
-    addContainerMetric("16 bit Mocha  Containers  ", alloc_hmct, alloc_hmcs);
-    addContainerMetric("32 bit Mocha  Containers  ", alloc_wmct, alloc_wmcs);
-    addContainerMetric(" Total Dark   Containers  ", alloc_dct,  alloc_dcs);
-    addContainerMetric(" 8 bit Dark   Containers  ", alloc_bdct, alloc_bdcs);
-    addContainerMetric("16 bit Dark   Containers  ", alloc_hdct, alloc_hdcs);
-    addContainerMetric("32 bit Dark   Containers  ", alloc_wdct, alloc_wdcs);
+    tp.addSep();
+    addContainerMetric(" Total Normal Alloc Containers  ", alloc_nct,  alloc_ncs);
+    addContainerMetric(" 8 bit Normal Alloc Containers  ", alloc_bnct, alloc_bncs);
+    addContainerMetric("16 bit Normal Alloc Containers  ", alloc_hnct, alloc_hncs);
+    addContainerMetric("32 bit Normal Alloc Containers  ", alloc_wnct, alloc_wncs);
+    tp.addSep();
+    addContainerMetric(" Total Mocha  Alloc Containers  ", alloc_mct,  alloc_mcs);
+    addContainerMetric(" 8 bit Mocha  Alloc Containers  ", alloc_bmct, alloc_bmcs);
+    addContainerMetric("16 bit Mocha  Alloc Containers  ", alloc_hmct, alloc_hmcs);
+    addContainerMetric("32 bit Mocha  Alloc Containers  ", alloc_wmct, alloc_wmcs);
+    tp.addSep();
+    addContainerMetric(" Total Dark   Alloc Containers  ", alloc_dct,  alloc_dcs);
+    addContainerMetric(" 8 bit Dark   Alloc Containers  ", alloc_bdct, alloc_bdcs);
+    addContainerMetric("16 bit Dark   Alloc Containers  ", alloc_hdct, alloc_hdcs);
+    addContainerMetric("32 bit Dark   Alloc Containers  ", alloc_wdct, alloc_wdcs);
 
     tp.print();
 
+    out << std::endl;
+    out << "The below metric captures the no. of allocation attempts done on a container";
+    out << std::endl;
+    out << "This is further divided by the container type (kind - Normal / Dark / Mocha and size "
+           "- 8 / 16/ 32) for a more fine grained detail";
+    out << std::endl;
+    out << "The attempts show the total no. of tries and the no. of successful tries to give a "
+           "success %";
+    out << std::endl;
     out << ss.str();
+
+    // Equivalent Containers Stats
+    auto equiv_ct = am.get_containers(AllocatorMetrics::EQUIV, ALL_KINDS, ALL_SIZES);
+
+    auto  equiv_nct = am.get_containers(AllocatorMetrics::EQUIV, &NORMAL);
+    auto  equiv_mct = am.get_containers(AllocatorMetrics::EQUIV, &MOCHA);
+    auto  equiv_dct = am.get_containers(AllocatorMetrics::EQUIV, &DARK);
+    // 8 bit containers
+    auto equiv_bnct = am.get_containers(AllocatorMetrics::EQUIV, &NORMAL, &B8);
+    auto equiv_bmct = am.get_containers(AllocatorMetrics::EQUIV, &MOCHA,  &B8);
+    auto equiv_bdct = am.get_containers(AllocatorMetrics::EQUIV, &DARK,   &B8);
+    // 16 bit containers
+    auto equiv_hnct = am.get_containers(AllocatorMetrics::EQUIV, &NORMAL, &B16);
+    auto equiv_hmct = am.get_containers(AllocatorMetrics::EQUIV, &MOCHA,  &B16);
+    auto equiv_hdct = am.get_containers(AllocatorMetrics::EQUIV, &DARK,   &B16);
+    // 32 bit containers
+    auto equiv_wnct = am.get_containers(AllocatorMetrics::EQUIV, &NORMAL, &B32);
+    auto equiv_wmct = am.get_containers(AllocatorMetrics::EQUIV, &MOCHA,  &B32);
+    auto equiv_wdct = am.get_containers(AllocatorMetrics::EQUIV, &DARK,   &B32);
+
+    // Add Headers
+    std::stringstream ss_equiv;
+    std::vector<std::string> headers_equiv;
+    headers_equiv.push_back("          Metric          ");
+    headers_equiv.push_back("Skipped ");
+    TablePrinter tp_equiv(ss_equiv, headers_equiv, TablePrinter::Align::RIGHT);
+
+    // Add Rows
+    auto addEquivContainerMetric = [&](const std::string &metric,
+                                  const unsigned long &skipped) {
+        std::vector<std::string> row;
+        row.push_back(metric);
+        row.push_back(std::to_string(skipped));
+        tp_equiv.addRow(row);
+    };
+
+    addEquivContainerMetric(" Total Equiv  Containers        ", equiv_ct);
+    tp.addSep();
+    addEquivContainerMetric(" Total Normal Equiv Containers  ", equiv_nct);
+    addEquivContainerMetric(" 8 bit Normal Equiv Containers  ", equiv_bnct);
+    addEquivContainerMetric("16 bit Normal Equiv Containers  ", equiv_hnct);
+    addEquivContainerMetric("32 bit Normal Equiv Containers  ", equiv_wnct);
+    tp.addSep();
+    addEquivContainerMetric(" Total Mocha  Equiv Containers  ", equiv_mct);
+    addEquivContainerMetric(" 8 bit Mocha  Equiv Containers  ", equiv_bmct);
+    addEquivContainerMetric("16 bit Mocha  Equiv Containers  ", equiv_hmct);
+    addEquivContainerMetric("32 bit Mocha  Equiv Containers  ", equiv_wmct);
+    tp.addSep();
+    addEquivContainerMetric(" Total Dark   Equiv Containers  ", equiv_dct);
+    addEquivContainerMetric(" 8 bit Dark   Equiv Containers  ", equiv_bdct);
+    addEquivContainerMetric("16 bit Dark   Equiv Containers  ", equiv_hdct);
+    addEquivContainerMetric("32 bit Dark   Equiv Containers  ", equiv_wdct);
+
+    tp_equiv.print();
+
+    out << std::endl;
+    out << "The below metric captures the no. of times a container equivalence check has been "
+           "successful in skipping a container allocation because of an equivalent container being "
+           "tried and failed before";
+    out << std::endl;
+    out << ss_equiv.str();
 
     out << std::endl;
     out << "TIME TAKEN (Allocation Round): " << am.get_duration() << std::endl;
+
     return out;
 }
 
