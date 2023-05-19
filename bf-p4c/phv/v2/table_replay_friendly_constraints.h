@@ -31,7 +31,7 @@ class TableReplayFriendlyPhvConstraints : public Transform {
     // extra pa_no_pack pragmas to fix table replay
     ordered_map<cstring, ordered_set<cstring>> add_pa_no_pack;
     // problematic_table during table replay found by table_summary
-    const IR::MAU::Table* problematic_table;
+    const IR::MAU::Table* problematic_table = nullptr;
     // field candidates to fix in the problematic table
     ordered_set<const PHV::Field *> field_candidates;
     // a map from action to a set of fields in this action
