@@ -749,6 +749,8 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/logging-bmv2.p4
   # new tests added to p4c
   testdata/p4_16_samples/test-parserinvalidargument-error-bmv2.p4
+  # error: eg_intr_md_from_parser: declaration not found (2023-05-19 p4c update)
+  testdata/p4_16_samples/psa-parser-error-test-bmv2.p4
   )
 
 p4c_add_xfail_reason("tofino"
