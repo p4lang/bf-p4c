@@ -585,7 +585,7 @@ class CoreAllocation {
                           const PHV::Transaction& alloc) const;
 
     /// Do the @p slice and @p prim have overlapping field ranges
-    bool rangesOverlap(const PHV::AllocSlice slice, const IR::BFN::ParserPrimitive* prim) const;
+    bool rangesOverlap(const PHV::AllocSlice& slice, const IR::BFN::ParserPrimitive* prim) const;
 
     /** Verify whether the @p candidate_slices will produce parser extractions
       * that will lead to data corruption

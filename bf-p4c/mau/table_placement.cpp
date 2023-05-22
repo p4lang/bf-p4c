@@ -801,6 +801,7 @@ class DecidePlacement::BacktrackPlacement {
         tablePlacementErrors = self.self.summary.getPlacementError();
         resource_mode = self.resource_mode; }
     BacktrackPlacement &operator=(const BacktrackPlacement &a) {
+        if (this == &a) return *this;
         BUG_CHECK(&self == &a.self, " inconsistent backtracking assignment");
         pl = a.pl;
         work = a.work;

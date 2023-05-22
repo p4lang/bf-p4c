@@ -90,7 +90,7 @@ std::ostream &operator<<(std::ostream &out, const PHV::ActionSet &actions) {
 }
 
 void PHV::Allocation::addMetaInitPoints(
-        PHV::AllocSlice slice,
+        const PHV::AllocSlice& slice,
         const ActionSet& actions) {
     meta_init_points_i[slice] = actions;
     LOG_FEATURE(fieldName(slice), 5, "Setting init points for " << slice << ": " << actions);

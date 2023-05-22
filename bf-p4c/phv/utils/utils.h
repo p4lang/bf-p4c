@@ -204,7 +204,7 @@ class Allocation {
     virtual bool addStatus(PHV::Container c, const ContainerStatus& status);
 
     /// Add the actions in @p actions to the metadata initialization points for @p slice.
-    virtual void addMetaInitPoints(AllocSlice slice, const ActionSet& actions);
+    virtual void addMetaInitPoints(const AllocSlice& slice, const ActionSet& actions);
 
     /// Uniform convenience abstraction for adding one slice.  For internal use
     /// only.  @c must exist in this Allocation.

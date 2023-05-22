@@ -1687,15 +1687,16 @@ bool CoreAllocation::satisfies_constraints(
 
     // true if @a is the same field allocated right before @b. e.g.
     // B1[0:1] <- f1[0:1], B1[2:7] <- f1[2:7]
-    auto is_aligned_same_field_alloc = [](PHV::AllocSlice a, PHV::AllocSlice b) {
+    auto is_aligned_same_field_alloc = [](const PHV::AllocSlice& a, const PHV::AllocSlice& b) {
         if (a.field() != b.field() || a.container() != b.container()) {
             return false;
         }
-        if (a.container_slice().hi > b.container_slice().hi) {
-            std::swap(a, b);
-        }
-        return  b.field_slice().lo - a.field_slice().hi ==
-            b.container_slice().lo - a.container_slice().hi;
+        if (a.container_slice().hi > b.container_slice().hi)
+            return  a.field_slice().lo - b.field_slice().hi ==
+                a.container_slice().lo - b.container_slice().hi;
+        else
+            return  b.field_slice().lo - a.field_slice().hi ==
+                b.container_slice().lo - a.container_slice().hi;
     };
     // Check no pack for this field.
     const auto& byte_slices = alloc.byteSlicesByLiveness(c, slice, utils_i.pragmas.pa_no_init());
@@ -1960,8 +1961,8 @@ bool CoreAllocation::checkDarkOverlay(const std::vector<PHV::AllocSlice>& candid
     return canUseARA;
 }
 
-bool CoreAllocation::rangesOverlap(const PHV::AllocSlice slice,
-                                const IR::BFN::ParserPrimitive *prim) const {
+bool CoreAllocation::rangesOverlap(const PHV::AllocSlice& slice,
+                                   const IR::BFN::ParserPrimitive *prim) const {
     const IR::Expression *expr = nullptr;
     if (auto* extract = prim->to<IR::BFN::Extract>()) {
         expr = extract->dest->field;
@@ -3481,8 +3482,8 @@ std::vector<AllocAlignment> CoreAllocation::build_alignments(
     // find max_n alignments which is a 'intersection' of one allocAlignemnt for
     // each slice list that is not conflict with others.
     std::vector<AllocAlignment> rst;
-    std::function<void(int depth, AllocAlignment curr)> dfs =
-        [&] (int depth, AllocAlignment curr) -> void {
+    std::function<void(int depth, AllocAlignment& curr)> dfs =
+        [&] (int depth, AllocAlignment& curr) -> void {
             if (depth == int(all_alignments.size())) {
                 rst.push_back(curr);
                 return;
@@ -3497,7 +3498,8 @@ std::vector<AllocAlignment> CoreAllocation::build_alignments(
                 }
             }
         };
-    dfs(0, AllocAlignment());
+    AllocAlignment emptyAlignment;
+    dfs(0, emptyAlignment);
     return rst;
 }
 
@@ -3671,7 +3673,7 @@ CoreAllocation::find_first_unallocated_slicelist(
     const PHV::Allocation& alloc, const std::list<PHV::ContainerGroup*>& container_groups,
     const PHV::SuperCluster& sc) const {
     ScoreContext score_ctx(
-            "dummy", true, [](const AllocScore, const AllocScore) { return false; });
+            "dummy", true, [](const AllocScore&, const AllocScore&) { return false; });
     ordered_set<const PHV::SuperCluster::SliceList*> never_allocated;
     for (const PHV::SuperCluster::SliceList* slice_list : sc.slice_lists()) {
         never_allocated.insert(slice_list);
@@ -5254,7 +5256,7 @@ std::optional<const PHV::SuperCluster::SliceList*> BruteForceAllocationStrategy:
     const std::list<PHV::SuperCluster*>& slicing,
     const std::list<PHV::ContainerGroup*>& container_groups) const {
     ScoreContext score_ctx(
-            "dummy", true, [](const AllocScore, const AllocScore) { return false; });
+            "dummy", true, [](const AllocScore&, const AllocScore&) { return false; });
     LOG_DEBUG3("diagnose_slicing starts");
     auto tx = empty_alloc_i.makeTransaction();
     for (auto* sc : slicing) {

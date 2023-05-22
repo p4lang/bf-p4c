@@ -345,7 +345,7 @@ class TableSummary: public MauInspector {
     State::state_t getActualState() const { return state; }
     void setPrevState() { state = prev_state; }
     cstring getActualStateStr() const;
-    void setAllStagesResources(const StageUseEstimate use) { allStages = use; }
+    void setAllStagesResources(const StageUseEstimate& use) { allStages = use; }
     StageUseEstimate getAllStagesResources() const { return allStages; }
 
     std::map<int, PlacedTable*>& getPlacedTables() { return placedTables; }

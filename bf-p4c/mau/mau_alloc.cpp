@@ -51,7 +51,7 @@ TableAllocPass::TableAllocPass(const BFN_Options& options, PhvInfo& phv, Depende
         new AdjustIXBarExpression,
         // RemoveNoopGateway can be removed after MultipleApply2 is in
         new PassIf(
-            [options] {
+            [&options] {
                 return !Device::hasLongBranches() || options.disable_long_branch;
             },
             { new RemoveNoopGateway })
