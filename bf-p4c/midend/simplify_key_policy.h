@@ -44,6 +44,25 @@ class IsSlice : public P4::KeyIsSimple {
     }
 };
 
+// Extend P4::IsMask to handle Slices
+// E.g. hdr.ethernet.smac[15:0] & 0x1f1f
+// This is a valid key which contains a field slice and a mask
+// Frontend IsMask only handles non sliced fields on masks.
+class IsSliceMask : public P4::IsMask {
+    void postorder(const IR::Slice *) override {}
+    void postorder(const IR::Constant *) override {
+        // Only skip constants under a Slice
+        if (!getParent<IR::Slice>()) simple = false;
+    }
+
+ public:
+    IsSliceMask() { setName("IsSlicMask"); }
+
+    bool isSimple(const IR::Expression *expr, const Visitor::Context *ctxt) override {
+        return P4::IsMask::isSimple(expr, ctxt);
+    }
+};
+
 class KeyIsSimple {
  public:
     static P4::KeyIsSimple *getPolicy(P4::ReferenceMap &refMap, P4::TypeMap &typeMap) {
@@ -52,7 +71,7 @@ class KeyIsSimple {
                 new P4::OrPolicy(
                     new P4::OrPolicy(new P4::IsValid(&refMap, &typeMap), new P4::IsMask()),
                     new BFN::IsPhase0()),
-                new BFN::IsSlice());
+                new P4::OrPolicy(new BFN::IsSlice(), new BFN::IsSliceMask()));
     }
 };
 

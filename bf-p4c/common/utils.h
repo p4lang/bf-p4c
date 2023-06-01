@@ -60,6 +60,10 @@ bool ghost_only_on_other_pipes(int pipe_id);
 /// Input: "vrf & 0xff0f", Output: std::pair<"vrf", "0xff0f">
 std::pair<cstring, cstring> get_key_and_mask(const cstring &input);
 
+/// Separate out key slice info from an input key slice string
+/// Input: "vrf[15:0]", Output: std::pair<true, "vrf", 15, 0>
+std::tuple<bool, cstring, int, int> get_key_slice_info(const cstring &input);
+
 const IR::Vector<IR::Expression>* getListExprComponents(const IR::Node& node);
 
 #endif /* EXTENSIONS_BF_P4C_COMMON_UTILS_H_ */

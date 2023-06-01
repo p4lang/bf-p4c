@@ -48,6 +48,7 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
     testdata/p4_16_samples/issue1000-bmv2.p4
     testdata/p4_16_samples/issue1755-bmv2.p4
     testdata/p4_16_samples/issue774-4-bmv2.p4
+    testdata/p4_16_samples/match-on-exprs-bmv2.p4
     testdata/p4_16_samples/subparser-with-header-stack-bmv2.p4
     )
 
@@ -794,7 +795,6 @@ p4c_add_xfail_reason("tofino"
 # P4C-1753
 p4c_add_xfail_reason("tofino"
   ".* expected packet on port .* not seen"
-  testdata/p4_16_samples/match-on-exprs-bmv2.p4
   testdata/p4_16_samples/table-entries-range-bmv2.p4
   testdata/p4_16_samples/table-entries-ternary-bmv2.p4
 )

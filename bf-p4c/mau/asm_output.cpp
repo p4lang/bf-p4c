@@ -60,21 +60,27 @@ cstring keyAnnotationName(const IR::MAU::TableKey* table_key, cstring table_name
         // IR structure of a slice. The original name of the table key must be
         // kept in case an optimization renames the table key name (not sure if
         // there is optimization that does this).
-        std::string s(annName.c_str());
-        std::smatch sm;
-        std::regex sliceRegex(R"(\[([0-9]+):([0-9]+)\])");
-        std::regex_search(s, sm, sliceRegex);
-        if (sm.size() == 3) {
-            auto newAnnName = s.substr(0, sm.position(0));
-            if (!table_name.isNullOrEmpty())
-                // XXX(cole): It would be nice to report srcInfo here.
-                ::warning(BFN::ErrorType::WARN_SUBSTITUTION,
-                          "%1%: Table key name not supported. "
-                          "Replacing \"%2%\" with \"%3%\".", table_name, annName, newAnnName);
-            annName = newAnnName;
+        // XXX(amreshk): For a slice with mask, skip the hack as the entire expression is output in
+        // bf-rt so it must be in sync with the context.json. This is however based on driver
+        // requirements and subject to change.
+        auto [key, mask] = get_key_and_mask(annName);
+        if (mask == "") {
+            std::string s(annName.c_str());
+            std::smatch sm;
+            std::regex sliceRegex(R"(\[([0-9]+):([0-9]+)\])");
+            std::regex_search(s, sm, sliceRegex);
+            if (sm.size() == 3) {
+                auto newAnnName = s.substr(0, sm.position(0));
+                if (!table_name.isNullOrEmpty())
+                    // XXX(cole): It would be nice to report srcInfo here.
+                    ::warning(BFN::ErrorType::WARN_SUBSTITUTION,
+                              "%1%: Table key name not supported. "
+                              "Replacing \"%2%\" with \"%3%\".", table_name, annName, newAnnName);
+                annName = newAnnName;
+            }
+            LOG3(ann << ": setting external annName of key " << table_key
+                     << " to " << annName);
         }
-        LOG3(ann << ": setting external annName of key " << table_key
-                 << " to " << annName);
     }
     return annName;
 }
@@ -251,8 +257,29 @@ class ExtractKeyDetails {
             return slice_range.start_bit;
         }
         int width() const {
-            if (recombine_mask)
+            if (recombine_mask) {
+                // A masked value has width of the field or field slice which is masked
+                // and full_width of the entire field. The width needs to match the width which is
+                // output in the bf-rt.json for the driver to correlate between bf-rt and context
+                // jsons
+                // e.g. hdr.ethernet.src & 0xf -> width : 32, full_width : 32
+                //      hdr.ethernet.src[15:0] & 0xf -> width : 16, full_width : 32
+                //
+                // The mask can truncate the key expression to a smaller slice,
+                // e.g. hdr.ethernet.src[15:0] & 0xf -> hdr.ethernet.src[4:0]
+                //
+                // However the generated width should reflect what is in the p4 since that is what
+                // goes in bf-rt.json. This original slice info can be obtained from the
+                // nameAnnotation.
+                if (auto ann = (*key)->getAnnotation(IR::Annotation::nameAnnotation)) {
+                    auto annName = ann->getName();
+                    auto km = get_key_and_mask(annName);
+                    auto [ isSlice, keyStr, slhi, sllo ] = get_key_slice_info(km.first);
+                    if (isSlice)
+                        return (slhi - sllo + 1);
+                }
                 return full_size();  // A masked value is full width.
+            }
             SliceRange slice_range{(*key)->expr, full_size()};
             return slice_range.width;
         }
@@ -2171,8 +2198,13 @@ void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
         out << format.separator << "size: " << key_info.width();
         out << format.separator << "full_size: " << key_info.full_size();
         auto key_name = key_info.key_name(false);
-        if (!key_name.isNullOrEmpty())
-            out << format.separator << "key_name: " << '"' << canon_name(key_name) << '"';
+        if (!key_name.isNullOrEmpty()) {
+            out << format.separator << "key_name: ";
+            if (key_info.mask())
+                out << '"' << key_name << '"';
+            else
+                out << '"' << canon_name(key_name) << '"';
+        }
         auto start_bit = key_info.start_bit();
         if ( start_bit > 0)
             out << format.separator << "start_bit: " << start_bit;

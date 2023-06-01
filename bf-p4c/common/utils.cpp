@@ -17,6 +17,19 @@ bool ghost_only_on_other_pipes(int pipe_id) {
     return false;
 }
 
+std::tuple<bool, cstring, int, int> get_key_slice_info(const cstring &input) {
+    std::string s(input);
+    std::smatch match;
+    std::regex sliceRegex(R"(\[([0-9]+):([0-9]+)\])");
+    std::regex_search(s, match, sliceRegex);
+    if (match.size() == 3) {
+        int hi = std::atoi(match[1].str().c_str());
+        int lo = std::atoi(match[2].str().c_str());
+        return std::make_tuple(true, match.prefix().str(), hi, lo);
+    }
+    return std::make_tuple(false, "", -1, -1);
+}
+
 std::pair<cstring, cstring>
 get_key_and_mask(const cstring &input) {
     std::string k(input);
