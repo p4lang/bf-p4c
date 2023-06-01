@@ -618,6 +618,7 @@ class TableFlowGraphBuilder : public Inspector {
  public:
     TableFlowGraph graph;
     MauBacktracker &backtracker;
+    int placement_stages;
 
     explicit TableFlowGraphBuilder(MauBacktracker &backtracker) : backtracker(backtracker) {}
 
@@ -632,6 +633,7 @@ class TableFlowGraphBuilder : public Inspector {
         ordered_map<const IR::MAU::Table*, int> table_to_latest_stage;
         ordered_set<const IR::MAU::Table*> tables_not_connected;
         int placed_tables_in_table_seq = 0;
+
         for (auto table : table_seq->tables) {
             auto stages = backtracker.stage(table, true);
             if (stages.size() == 0) {
@@ -639,6 +641,7 @@ class TableFlowGraphBuilder : public Inspector {
             }
             int earliest_stage = *(std::min_element(stages.begin(), stages.end()));
             int latest_stage = *(std::max_element(stages.begin(), stages.end()));
+            if (latest_stage >= placement_stages) placement_stages = (latest_stage + 1);
             tables_not_connected.insert(table);
             earliest_stage_to_tables[earliest_stage].insert(table);
             latest_stage_to_tables[latest_stage].insert(table);
@@ -653,7 +656,7 @@ class TableFlowGraphBuilder : public Inspector {
         std::optional<const IR::MAU::Table*> leading_table = std::nullopt;
         std::optional<const IR::MAU::Table*> trailing_table = std::nullopt;
 
-        for (int i = 0; i < Device::numStages(); i++) {
+        for (int i = 0; i < placement_stages; i++) {
             for (auto table : earliest_stage_to_tables[i]) {
                 if (!leading_table) {
                     leading_table = table;
@@ -661,7 +664,7 @@ class TableFlowGraphBuilder : public Inspector {
                     continue;
                 }
                 graph.addEdge(*trailing_table, table);
-                LOG5("tableseq add edge from: " << (*trailing_table)->name << " to " <<
+                LOG5(" in tableseq add edge from: " << (*trailing_table)->name << " to " <<
                     table->name);
                 trailing_table = table;
             }
@@ -672,10 +675,13 @@ class TableFlowGraphBuilder : public Inspector {
             parent_table = findContext<IR::MAU::Table>(ctxt);
             if (parent_table == nullptr) break;
             auto parent_stages = backtracker.stage(parent_table, true);
+            LOG5("    ... found " << parent_table->name << " at stage " <<
+                 *(parent_stages.begin()));
             if (parent_stages.size() > 0) break;
         } while (parent_table);
 
         if (parent_table) {
+            LOG5("parent table " << parent_table->name);
             auto parent_stages = backtracker.stage(parent_table, true);
             BUG_CHECK(parent_stages.size() > 0, "table %1% should be placed1", parent_table->name);
             int parent_earliest_stage =
@@ -691,6 +697,8 @@ class TableFlowGraphBuilder : public Inspector {
                 (*leading_table)->name,
                 parent_table->name);
             graph.addEdge(parent_table, *leading_table);
+            LOG5(" cross tableseq add edge from: " << parent_table->name << " to " <<
+                 (*leading_table)->name);
         }
         return true;
     }
@@ -702,6 +710,7 @@ class TableFlowGraphBuilder : public Inspector {
     Visitor::profile_t init_apply(const IR::Node *root) {
         profile_t rv = Inspector::init_apply(root);
         graph.clear();
+        placement_stages = Device::numStages();
         return rv;
     }
 };

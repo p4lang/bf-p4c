@@ -163,6 +163,7 @@ IxbarFriendlyPacking::MergedCluster IxbarFriendlyPacking::merge_by_packing(
                                   ordered_set<SuperCluster::SliceList*>());
     ordered_set<SuperCluster*> to_be_packed_sc;
     for (auto& fs : packed) {
+        LOG5("\tmerge_by_packing fs: " << fs);
         rst.from.insert(fs_sc.at(fs));
         to_be_packed_sc.insert(fs_sc.at(fs));
     }
@@ -176,6 +177,8 @@ IxbarFriendlyPacking::MergedCluster IxbarFriendlyPacking::merge_by_packing(
     for (auto& fs : packed) {
         auto* field = phv_i.field(fs.field()->id);
         const int field_alignment = (offset - fs.range().lo) % 8;
+        LOG5("\t fs: " << fs << " " << field->name << fs.range() <<" alignment orig: " <<
+             field->alignment->align <<" calc:" << field_alignment << " offset: " << offset);
         rst.original_alignments[field] = field->alignment;
         BUG_CHECK(!field->alignment || int(field->alignment->align) == field_alignment,
                   "incompatible alignment");

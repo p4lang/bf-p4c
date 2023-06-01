@@ -248,11 +248,11 @@ TEST_F(TableDependencyGraphTest, GraphInjectedControl) {
     "#pipeline pipe\n",
     "#stage 0\n",
     "#stage -1\n",
-    " ^---- t1_0(0,11)\n",
-    " A^--- cond-`(\\d+)`(0,11)\n",
-    " -B^-- t2_0(0,11)\n",
-    " -BC^- t3_0(0,11)\n",
-    " D--D^ t4_0.0(0,11)\n",
+    " ^---- t1_0(0,11) : ingress\n",
+    " A^--- cond-`(\\d+)`(0,11) : ingress\n",
+    " -B^-- t2_0(0,11) : ingress\n",
+    " -BC^- t3_0(0,11) : ingress\n",
+    " D--D^ t4_0.0(0,11) : ingress\n",
     "#dependencies\n",
     "A :  CONTROL_DEFAULT_NEXT_TABLE\n",
     "B :  CONTROL_COND_TRUE\n",
@@ -464,10 +464,10 @@ TEST_F(TableDependencyGraphTest, GraphEdgeAnnotations) {
     "#pipeline pipe\n",
     "#stage 0\n",
     "#stage -1\n",
-    " ^--- t11_0(0,10)\n",
-    " A^-- t12_0(1,11)\n",
-    " B-^- t1_0(0,11)\n",
-    " --B^ t2_0(0,11)\n",
+    " ^--- t11_0(0,10) : ingress\n",
+    " A^-- t12_0(1,11) : ingress\n",
+    " B-^- t1_0(0,11) : ingress\n",
+    " --B^ t2_0(0,11) : ingress\n",
     };
     check_dependency_graph_summary(test, dg, expected);
 }
@@ -705,18 +705,18 @@ TEST_F(TableDependencyGraphTest, GraphLayeredControl) {
     "#pipeline pipe\n",
     "#stage 0\n",
     "#stage -1\n",
-    " ^----------- t11_0(0,7)\n",
-    " A^---------- t12_0(1,11)\n",
-    " B-^--------- t1_0(0,7)\n",
-    " --B^-------- t2_0(0,7)\n",
-    " ----^------- t3_0(0,11)\n",
-    " -----^------ t4_0(0,11)\n",
-    " ------^----- t5_0(0,11)\n",
-    " -------^---- t6_0(0,11)\n",
-    " ---C----^--- t7_0(1,8)\n",
-    " ---D----D^-- t8_0(2,9)\n",
-    " ---D----DE^- t9_0(3,10)\n",
-    " ---D----DEE^ t10_0(4,11)\n",
+    " ^----------- t11_0(0,7) : ingress\n",
+    " A^---------- t12_0(1,11) : ingress\n",
+    " B-^--------- t1_0(0,7) : ingress\n",
+    " --B^-------- t2_0(0,7) : ingress\n",
+    " ----^------- t3_0(0,11) : ingress\n",
+    " -----^------ t4_0(0,11) : ingress\n",
+    " ------^----- t5_0(0,11) : ingress\n",
+    " -------^---- t6_0(0,11) : ingress\n",
+    " ---C----^--- t7_0(1,8) : ingress\n",
+    " ---D----D^-- t8_0(2,9) : ingress\n",
+    " ---D----DE^- t9_0(3,10) : ingress\n",
+    " ---D----DEE^ t10_0(4,11) : ingress\n",
     };
     check_dependency_graph_summary(test, dg, expected);
 }
@@ -902,20 +902,20 @@ TEST_F(TableDependencyGraphTest, GraphMinStage) {
     "#pipeline pipe\n",
     "#stage 0\n",
     "#stage -1\n",
-    " ^------------- A_0(0,8)\n",
-    " A^------------ B_0(0,8)\n",
-    " -A^----------- X_0(0,9)\n",
-    " -B-^---------- Y_0(0,9)\n",
-    " B---^--------- C_0(0,11)\n",
-    " ----A^-------- X2_0(0,11)\n",
-    " ----B-^------- Y2_0(0,11)\n",
-    " -------^----C- beta_0(1,10)\n",
-    " -------A^----- t2_0(1,11)\n",
-    " -DEE-----^---- Z1_0(1,9)\n",
-    " -DEE-----C^--- Z2_0(2,10)\n",
-    " -DEE-----CC^-- Z3_0(3,11)\n",
-    " ------------^- alpha_0(0,9)\n",
-    " -------FE---C^ gamma_0(2,11)\n",
+    " ^------------- A_0(0,8) : ingress\n",
+    " A^------------ B_0(0,8) : ingress\n",
+    " -A^----------- X_0(0,9) : ingress\n",
+    " -B-^---------- Y_0(0,9) : ingress\n",
+    " B---^--------- C_0(0,11) : ingress\n",
+    " ----A^-------- X2_0(0,11) : ingress\n",
+    " ----B-^------- Y2_0(0,11) : ingress\n",
+    " -------^----C- beta_0(1,10) : ingress\n",
+    " -------A^----- t2_0(1,11) : ingress\n",
+    " -DEE-----^---- Z1_0(1,9) : ingress\n",
+    " -DEE-----C^--- Z2_0(2,10) : ingress\n",
+    " -DEE-----CC^-- Z3_0(3,11) : ingress\n",
+    " ------------^- alpha_0(0,9) : ingress\n",
+    " -------FE---C^ gamma_0(2,11) : ingress\n",
     };
     check_dependency_graph_summary(test, dg, expected);
 }
@@ -1014,10 +1014,10 @@ TEST_F(TableDependencyGraphTest, AntiGraph1) {
         "#pipeline pipe\n",
         "#stage 0\n",
         "#stage -1\n",
-        " ^--A node_c_0(1,11)\n",
-        " B^-C node_d_0(1,11)\n",
-        " --^- node_a_0(0,10)\n",
-        " --D^ node_b_0(1,11)\n",
+        " ^--A node_c_0(1,11) : ingress\n",
+        " B^-C node_d_0(1,11) : ingress\n",
+        " --^- node_a_0(0,10) : ingress\n",
+        " --D^ node_b_0(1,11) : ingress\n",
     };
     check_dependency_graph_summary(test, dg, expected);
 }
@@ -1117,10 +1117,10 @@ TEST_F(TableDependencyGraphTest, DomFrontier1) {
         "#pipeline pipe\n",
         "#stage 0\n",
         "#stage -1\n",
-        " ^--A node_c_0(1,10)\n",
-        " B^-C node_d_0(2,11)\n",
-        " --^- node_a_0(0,9)\n",
-        " --D^ node_b_0(1,10)\n",
+        " ^--A node_c_0(1,10) : ingress\n",
+        " B^-C node_d_0(2,11) : ingress\n",
+        " --^- node_a_0(0,9) : ingress\n",
+        " --D^ node_b_0(1,10) : ingress\n",
     };
     check_dependency_graph_summary(test, dg, expected);
 }
@@ -1220,10 +1220,10 @@ TEST_F(TableDependencyGraphTest, DomFrontier2) {
     "#pipeline pipe\n",
     "#stage 0\n",
     "#stage -1\n",
-    " ^--- node_a_0(0,9)\n",
-    " A^-- node_b_0(1,10)\n",
-    " BC^- node_c_0(1,10)\n",
-    " B-D^ node_d_0(2,11)\n",
+    " ^--- node_a_0(0,9) : ingress\n",
+    " A^-- node_b_0(1,10) : ingress\n",
+    " BC^- node_c_0(1,10) : ingress\n",
+    " B-D^ node_d_0(2,11) : ingress\n",
     };
     check_dependency_graph_summary(test, dg, expected);
 }
@@ -1320,10 +1320,10 @@ TEST_F(TableDependencyGraphTest, AntiGraph2) {
     "#pipeline pipe\n",
     "#stage 0\n",
     "#stage -1\n",
-    " ^--- node_a_0(0,10)\n",
-    " A^-- node_b_0(0,10)\n",
-    " --^- node_c_0(0,11)\n",
-    " -BA^ node_d_0(1,11)\n",
+    " ^--- node_a_0(0,10) : ingress\n",
+    " A^-- node_b_0(0,10) : ingress\n",
+    " --^- node_c_0(0,11) : ingress\n",
+    " -BA^ node_d_0(1,11) : ingress\n",
     };
     check_dependency_graph_summary(test, dg, expected);
 }
@@ -1429,10 +1429,10 @@ TEST_F(TableDependencyGraphTest, LogicalThruControl) {
     "#pipeline pipe\n",
     "#stage 0\n",
     "#stage -1\n",
-    " ^--- node_a_0(0,9)\n",
-    " A^-- node_b_0(1,10)\n",
-    " BC^- node_c_0(1,10)\n",
-    " --D^ node_d_0(2,11)\n",
+    " ^--- node_a_0(0,9) : ingress\n",
+    " A^-- node_b_0(1,10) : ingress\n",
+    " BC^- node_c_0(1,10) : ingress\n",
+    " --D^ node_d_0(2,11) : ingress\n",
     };
     check_dependency_graph_summary(test, dg, expected);
 }
@@ -1536,10 +1536,10 @@ TEST_F(TableDependencyGraphTest, LogicalThruControl2) {
     "#pipeline pipe\n",
     "#stage 0\n",
     "#stage -1\n",
-    " ^--- node_a_0(0,9)\n",
-    " A^-- node_b_0(1,10)\n",
-    " -B^- node_c_0(1,11)\n",
-    " -CD^ node_d_0(2,11)\n",
+    " ^--- node_a_0(0,9) : ingress\n",
+    " A^-- node_b_0(1,10) : ingress\n",
+    " -B^- node_c_0(1,11) : ingress\n",
+    " -CD^ node_d_0(2,11) : ingress\n",
     };
     check_dependency_graph_summary(test, dg, expected);
 }
@@ -1675,11 +1675,11 @@ TEST_F(TableDependencyGraphTest, GraphA) {
         "#pipeline pipe\n",
         "#stage 0\n",
         "#stage -1\n",
-        " ^---- node_a_0(0,8)\n",
-        " A^--- node_b_0(1,9)\n",
-        " BC^-- node_c_0(2,10)\n",
-        " BCD^- node_d_0(3,11)\n",
-        " BC--^ node_e_0(2,11)\n",
+        " ^---- node_a_0(0,8) : ingress\n",
+        " A^--- node_b_0(1,9) : ingress\n",
+        " BC^-- node_c_0(2,10) : ingress\n",
+        " BCD^- node_d_0(3,11) : ingress\n",
+        " BC--^ node_e_0(2,11) : ingress\n",
     };
     check_dependency_graph_summary(test, dg, expected);
 }
@@ -1754,9 +1754,9 @@ TEST_F(TableDependencyGraphTest, HitMissValidation) {
     "#pipeline pipe\n",
     "#stage 0\n",
     "#stage -1\n",
-    " ^-- node_a_0(0,10)\n",
-    " A^- node_b_0(1,11)\n",
-    " B-^ node_c_0(0,11)\n",
+    " ^-- node_a_0(0,10) : ingress\n",
+    " A^- node_b_0(1,11) : ingress\n",
+    " B-^ node_c_0(0,11) : ingress\n",
     };
     check_dependency_graph_summary(test, dg, expected);
 }
@@ -1839,10 +1839,10 @@ TEST_F(TableDependencyGraphTest, ExitTest) {
     "#pipeline pipe\n",
     "#stage 0\n",
     "#stage -1\n",
-    " ^--- node_a_0(0,10)\n",
-    " A^-- node_b_0(0,11)\n",
-    " BA^- node_c_0(1,11)\n",
-    " AA-^ node_d_0(0,11)\n",
+    " ^--- node_a_0(0,10) : ingress\n",
+    " A^-- node_b_0(0,11) : ingress\n",
+    " BA^- node_c_0(1,11) : ingress\n",
+    " AA-^ node_d_0(0,11) : ingress\n",
     };
     check_dependency_graph_summary(test, dg, expected);
 }
@@ -1990,14 +1990,14 @@ TEST_F(TableDependencyGraphTest, LogicalVsPhysicalTest) {
     "#pipeline pipe\n",
     "#stage 0\n",
     "#stage -1\n",
-    " ^------- node_a_0(0,7)\n",
-    " A^------ node_b_0(1,8)\n",
-    " BC^----- node_c_0(1,8)\n",
-    " D--^---- node_d_0(0,8)\n",
-    " EFGF^--- node_e_0(2,9)\n",
-    " ----B^-- node_f_0(3,10)\n",
-    " HIH-ID^- node_g_0(3,10)\n",
-    " JCFKI-F^ node_h_0(4,11)\n",
+    " ^------- node_a_0(0,7) : ingress\n",
+    " A^------ node_b_0(1,8) : ingress\n",
+    " BC^----- node_c_0(1,8) : ingress\n",
+    " D--^---- node_d_0(0,8) : ingress\n",
+    " EFGF^--- node_e_0(2,9) : ingress\n",
+    " ----B^-- node_f_0(3,10) : ingress\n",
+    " HIH-ID^- node_g_0(3,10) : ingress\n",
+    " JCFKI-F^ node_h_0(4,11) : ingress\n",
     };
     check_dependency_graph_summary(test, dg, expected);
 }
@@ -2279,10 +2279,10 @@ TEST_F(TableDependencyGraphTest, ExitGraph1) {
         "#pipeline pipe\n",
         "#stage 0\n",
         "#stage -1\n",
-        " ^--- node_a_0(0,10)\n",
-        " A^-- node_b_0(0,10)\n",
-        " -A^- node_c_0(0,10)\n",
-        " -AB^ node_d_0(1,11)\n",
+        " ^--- node_a_0(0,10) : ingress\n",
+        " A^-- node_b_0(0,10) : ingress\n",
+        " -A^- node_c_0(0,10) : ingress\n",
+        " -AB^ node_d_0(1,11) : ingress\n",
     };
     check_dependency_graph_summary(test, dg, expected);
 }
@@ -2373,10 +2373,10 @@ TEST_F(TableDependencyGraphTest, ExitGraph2) {
         "#pipeline pipe\n",
         "#stage 0\n",
         "#stage -1\n",
-        " ^--- node_a_0(0,10)\n",
-        " A^-- node_b_0(0,10)\n",
-        " -B^- node_c_0(0,10)\n",
-        " --C^ node_d_0(1,11)\n",
+        " ^--- node_a_0(0,10) : ingress\n",
+        " A^-- node_b_0(0,10) : ingress\n",
+        " -B^- node_c_0(0,10) : ingress\n",
+        " --C^ node_d_0(1,11) : ingress\n",
     };
     check_dependency_graph_summary(test, dg, expected);
 }
@@ -2479,11 +2479,11 @@ TEST_F(TableDependencyGraphTest, ExitGraph3) {
         "#pipeline pipe\n",
         "#stage 0\n",
         "#stage -1\n",
-        " ^---- node_a_0(0,10)\n",
-        " A^--- node_b_0(0,10)\n",
-        " -B^-- node_c_0(0,10)\n",
-        " --A^- node_d_0(0,11)\n",
-        " --CB^ node_e_0(1,11)\n",
+        " ^---- node_a_0(0,10) : ingress\n",
+        " A^--- node_b_0(0,10) : ingress\n",
+        " -B^-- node_c_0(0,10) : ingress\n",
+        " --A^- node_d_0(0,11) : ingress\n",
+        " --CB^ node_e_0(1,11) : ingress\n",
     };
     check_dependency_graph_summary(test, dg, expected);
 }
@@ -2575,10 +2575,10 @@ TEST_F(TableDependencyGraphTest, ExitGraph4) {
     "#pipeline pipe\n",
     "#stage 0\n",
     "#stage -1\n",
-    " ^--- node_a_0(0,10)\n",
-    " A^-- node_b_0(0,10)\n",
-    " -B^- node_c_0(0,10)\n",
-    " -BC^ node_d_0(1,11)\n",
+    " ^--- node_a_0(0,10) : ingress\n",
+    " A^-- node_b_0(0,10) : ingress\n",
+    " -B^- node_c_0(0,10) : ingress\n",
+    " -BC^ node_d_0(1,11) : ingress\n",
     };
     check_dependency_graph_summary(test, dg, expected);
 }
@@ -2706,13 +2706,13 @@ TEST_F(TableDependencyGraphTest, ExitGraph5) {
     "#pipeline pipe\n",
     "#stage 0\n",
     "#stage -1\n",
-    " ^---A-- node_b_0(0,10)\n",
-    " B^----- node_c_0(0,10)\n",
-    " B-^---- node_d_0(0,10)\n",
-    " B--^--- node_e_0(0,10)\n",
-    " ----^-- node_a_0(0,10)\n",
-    " -AAA-^- node_f_0(0,10)\n",
-    " -AAA-C^ node_g_0(1,11)\n",
+    " ^---A-- node_b_0(0,10) : ingress\n",
+    " B^----- node_c_0(0,10) : ingress\n",
+    " B-^---- node_d_0(0,10) : ingress\n",
+    " B--^--- node_e_0(0,10) : ingress\n",
+    " ----^-- node_a_0(0,10) : ingress\n",
+    " -AAA-^- node_f_0(0,10) : ingress\n",
+    " -AAA-C^ node_g_0(1,11) : ingress\n",
     };
     check_dependency_graph_summary(test, dg, expected);
 }
@@ -2843,14 +2843,14 @@ TEST_F(TableDependencyGraphTestForTofino2, Tofino2GraphTest) {
     "#pipeline pipe\n",
     "#stage 0\n",
     "#stage -1\n",
-    " ^------- node_a_0(0,17)\n",
-    " A^------ node_b_0(0,17)\n",
-    " AB^-C--- multi_0(1,18)\n",
-    " A-B^---- node_c_0(2,19)\n",
-    " A---^--- node_d_0(0,18)\n",
-    " A-C--^-- node_e_0(1,19)\n",
-    " A-----^- node_f_0(0,19)\n",
-    " A------^ node_g_0(0,19)\n",
+    " ^------- node_a_0(0,17) : ingress\n",
+    " A^------ node_b_0(0,17) : ingress\n",
+    " AB^-C--- multi_0(1,18) : ingress\n",
+    " A-B^---- node_c_0(2,19) : ingress\n",
+    " A---^--- node_d_0(0,18) : ingress\n",
+    " A-C--^-- node_e_0(1,19) : ingress\n",
+    " A-----^- node_f_0(0,19) : ingress\n",
+    " A------^ node_g_0(0,19) : ingress\n",
     };
     check_dependency_graph_summary(test, dg, expected);
 }
@@ -3375,12 +3375,12 @@ TEST_F(TableDependencyGraphTest, P4C_2716_Test1) {
         "#pipeline pipe\n",
         "#stage 0\n",
         "#stage -1\n",
-        " ^----- node_a_0(0,11)\n",
-        " A^---- node_b_0(0,11)\n",
-        " AB^CCD node_f_0(0,11)\n",
-        " -E-^-- node_c_0(0,11)\n",
-        " -E--^- node_d_0(0,11)\n",
-        " A----^ node_e_0(0,11)\n",
+        " ^----- node_a_0(0,11) : ingress\n",
+        " A^---- node_b_0(0,11) : ingress\n",
+        " AB^CCD node_f_0(0,11) : ingress\n",
+        " -E-^-- node_c_0(0,11) : ingress\n",
+        " -E--^- node_d_0(0,11) : ingress\n",
+        " A----^ node_e_0(0,11) : ingress\n",
     };
     check_dependency_graph_summary(test, dg, expected);
 }

@@ -2435,6 +2435,11 @@ std::ostream &operator<<(std::ostream &out, DependencyGraph::dependencies_t deps
 
 
 bool PrintDependencyGraph::preorder(const IR::BFN::Pipe *p) {
+    vertex_names.clear();
+    edge_names.clear();
+    bitvec_to_char.clear();
+    char_to_bitvec.clear();
+    min_path_len = (int) Device::numStages() * 0.7;
     pipe_name = p->canon_name();
     DependencyGraph::Graph::vertex_iterator vertices, vertices_end;
     for (boost::tie(vertices, vertices_end) = boost::vertices(dg.g);
@@ -2536,10 +2541,10 @@ std::stringstream PrintDependencyGraph::print_graph(const DependencyGraph& dg) {
                 ss << deps;
             }
         }
-        auto t= dg.get_vertex(src_v);
+        auto t = dg.get_vertex(src_v);
         ss << " " << vertex_names.at(src_v) << "("
             << dg.min_stage(t) << ","
-            << dg.max_stage(t) << ")";
+           << dg.max_stage(t) << ") : " << t->gress;
         ss << std::endl;
     }
 
@@ -2551,6 +2556,122 @@ std::stringstream PrintDependencyGraph::print_graph(const DependencyGraph& dg) {
     return ss;
 }
 
+void PrintDependencyGraph::reverse_dfs(const IR::MAU::Table *tbl,
+                                       std::stack<const IR::MAU::Table*>& chain,
+                                       std::vector<std::vector<const IR::MAU::Table*>>& crit_chains,
+                                       std::map<const IR::MAU::Table*, bool>& visited_tbls,
+                                       int last_stg) {
+    chain.push(tbl);
+    LOG7(Log::indent << "reverse_dfs table: " << tbl->name);
+    BUG_CHECK(dg.stage_info.count(tbl), "Table %1% not in stage_info  ...? ", tbl->name);
+
+    if (dg.min_stage_edges.count(tbl)) {
+        std::set<const IR::MAU::Table*> prev_tbls;
+        for (auto [p_tbl, dep] : dg.min_stage_edges.at(tbl)) {
+            if (!visited_tbls[tbl] && !(prev_tbls.count(p_tbl)))
+                reverse_dfs(p_tbl, chain, crit_chains, visited_tbls, last_stg);
+            prev_tbls.insert(p_tbl);
+        }
+    }
+
+    BUG_CHECK(dg.stage_info.count(tbl), "No stage info for %1% ?", tbl->name);
+
+    int pipe_size = last_stg - dg.stage_info.at(tbl).min_stage;
+    LOG7(Log::indent << "pipe_size: " << pipe_size << Log::unindent << Log::unindent);
+
+    if (pipe_size > min_path_len) {
+        std::vector<const IR::MAU::Table*> crit_chain;
+        std::stack<const IR::MAU::Table*> chain_stack(chain);
+        while (!chain_stack.empty()) {
+            crit_chain.push_back(chain_stack.top());
+            chain_stack.pop();
+        }
+        crit_chains.push_back(crit_chain);
+    }
+
+    visited_tbls[tbl] = true;
+    chain.pop();
+}
+
+
+
+void PrintDependencyGraph::print_critical_chains(const DependencyGraph& dg) {
+    std::list<std::vector<const IR::MAU::Table*>> chains;
+    std::vector<std::vector<const IR::MAU::Table*>> crit_chains;
+    std::map<int, std::vector<const IR::MAU::Table*>> tablesPerMinStage;
+    std::map<const IR::MAU::Table*, bool> visited_tbls;
+    LOG6("Looking for Table dependency chains wih minimum length of " << min_path_len <<
+         Log::indent);
+
+    // First map tables to their min stages
+    for (const auto& kv : dg.stage_info) {
+        auto *tbl = kv.first;
+        auto info = kv.second;
+        tablesPerMinStage[info.min_stage].push_back(tbl);
+        LOG7("Map table " << tbl->name << " to stage " << info.min_stage);
+        visited_tbls[tbl] = false;
+    }
+
+    // Start traversal from tables with MAX min_stage. Use reverse_dfs()
+    // and min_stage_edges to build vectors of table chains that are
+    // at least as long as 70% of the device pipeline length
+
+    std::stack<const IR::MAU::Table*> cur_chain;
+    bool stop_search = false;
+
+    for (auto rItr = tablesPerMinStage.rbegin(); rItr!=tablesPerMinStage.rend(); ++rItr) {
+        if (stop_search) break;
+        // Iterate over the tables in stage stg
+        for (auto *tbl : rItr->second) {
+            BUG_CHECK(dg.stage_info.count(tbl), "B. No stage_info for %1%", tbl->name);
+
+            auto info = dg.stage_info.at(tbl);
+            LOG7("table: " << tbl->name << " min_stage: " << info.min_stage <<
+                 " dep_stages: " << info.dep_stages);
+
+            // No need to do something if table has been already visited
+            if (visited_tbls[tbl]) continue;
+
+            if (info.min_stage < min_path_len) {
+                stop_search = true;
+                LOG7("\t STOPPING SEARCH ...");
+                break;
+            } else {
+                if (visited_tbls[tbl]) continue;
+                if (!dg.min_stage_edges.count(tbl)) continue;
+                int last_stg = dg.stage_info.at(tbl).min_stage;
+                // Start new table chain
+                reverse_dfs(tbl, cur_chain, crit_chains, visited_tbls, last_stg);
+            }
+        }
+    }
+
+    LOG_FEATURE("table_dependency_summary", 3, Log::unindent <<
+                "*** Table dependency chains (of minimum length " << min_path_len << ") ***");
+    int c_num = 1;
+    for (auto vec : crit_chains) {
+        std::stringstream ss;
+        int t_num = 0;
+        gress_t gress = GHOST;
+        for (auto* t : vec) {
+            if (t_num) {
+                ss << " -> ";
+                BUG_CHECK(gress == t->gress, "Formed critical chain with different-gress tables?");
+            } else {
+                gress = t->gress;
+                ss << "\n" << c_num << ". ";
+            }
+            BUG_CHECK(dg.stage_info.count(t), "C. No stage_info for %1%", t->name);
+            ss << t->name << "(" << dg.stage_info.at(t).min_stage << ")" ;
+            t_num++;
+        }
+        ss << " (" << gress << ")";
+        LOG_FEATURE("table_dependency_summary", 3, ss);
+        c_num++;
+    }
+}
+
 void PrintDependencyGraph::end_apply(const IR::Node *) {
     LOG_FEATURE("table_dependency_summary", 3, print_graph(dg));
+    print_critical_chains(dg);
 }

@@ -611,7 +611,6 @@ static inline auto
 getParserRangeDefMatcher(const PhvInfo& phv, const PHV::Field* f,
                          const std::optional<le_bitrange> &bits) {
     le_bitrange range = bits ? *bits : StartLen(0, f->size);
-    LOG1("\tDefInParser range: " << range);
     // note that we need to capture f (pointer) and range by value to avoid dangling reference,
     // but phv by reference (it is large and we got it by reference)
     return [&phv, range, f](const FieldDefUse::locpair& lp) {
@@ -621,7 +620,6 @@ getParserRangeDefMatcher(const PhvInfo& phv, const PHV::Field* f,
 
             // Cannot extract field - e.g. ImplicitParserInit
             if (!phv.field(lp.second, &rng)) return false;
-            LOG1("\t  DefInParser rng: " << rng);
             return range.overlaps(rng);
         };
 }

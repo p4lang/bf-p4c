@@ -1054,6 +1054,7 @@ class FindDependencyGraph : public Logging::PassManager {
 };
 
 class PrintDependencyGraph : public Inspector {
+    int min_path_len;
     cstring pipe_name;
     const DependencyGraph &dg;
     std::map<DependencyGraph::Graph::vertex_descriptor, cstring> vertex_names;
@@ -1069,6 +1070,16 @@ class PrintDependencyGraph : public Inspector {
  public:
     explicit PrintDependencyGraph(const DependencyGraph &out) : dg(out) {}
     std::stringstream print_graph(const DependencyGraph& g);
+
+    // DFS traversal of table dependency graph but starting from the
+    // last min_stage tables toward min_stage 0.
+    void reverse_dfs(const IR::MAU::Table *tbl, std::stack<const IR::MAU::Table*>& chain,
+                     std::vector<std::vector<const IR::MAU::Table*>>& crit_chains,
+                     std::map<const IR::MAU::Table*, bool>& visited_tbls, int last_stage);
+
+    // Print critical table dependency chains that cross at least
+    // 70% of the device stages (e.g. for Tofino: chains >= floor(12 * 0.7) = 8 stages
+    void print_critical_chains(const DependencyGraph& g);
 };
 
 // Print a summary of the dependency graph in ascii

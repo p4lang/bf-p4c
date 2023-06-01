@@ -1907,37 +1907,44 @@ bool DfsItrContext::dfs_prune(const ordered_set<SuperCluster*>& unchecked) {
     for (const auto* sc : unchecked) {
         // unwell_formed
         if (dfs_prune_unwell_formed(sc)) {
+            LOG5("dfs prune unwell formed");
             return true;
         }
 
         // decided slice list will create invalid parser packing.
         if (!config_i.disable_packing_check && dfs_prune_invalid_parser_packing(sc)) {
+            LOG5("dfs prune invalid parser packing ");
             return true;
         }
 
         // conflicting constraints
         auto after_split_constraints = collect_aftersplit_constraints(sc);
         if (!after_split_constraints) {
+            LOG5("conflicting aftersplit constraints");
             return true;
         }
 
         // unsat constraints due to slice list sz limit.
         if (dfs_prune_unsat_slicelist_max_size(*after_split_constraints, sc)) {
+            LOG5("dfs prune unsat slicelist max size");
             return true;
         }
 
         // constraints for a slice list cannot be *all* satisfied.
         if (dfs_prune_unsat_slicelist_constraints(*after_split_constraints, sc)) {
+            LOG5("dfs prune unsat slicelist constraints");
             return true;
         }
 
         // prune when metadata list joins two size-mismatched exact lists.
         if (dfs_prune_unsat_exact_list_size_mismatch(*after_split_constraints, sc)) {
+            LOG5("dfs prune unsat exact list size mismatch");
             return true;
         }
 
         // prune invalid packing
         if (!config_i.disable_packing_check && dfs_prune_invalid_packing(sc)) {
+            LOG5("dfs prune invalid packing");
             return true;
         }
     }

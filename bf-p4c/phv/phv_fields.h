@@ -1142,7 +1142,6 @@ class PhvInfo {
     const SymBitMatrix& metadata_mutex() const { return metadata_mutex_i; }
     const SymBitMatrix& dark_mutex() const { return dark_mutex_i; }
     const SymBitMatrix& deparser_no_pack_mutex() const { return deparser_no_pack_i; }
-    const SymBitMatrix& field_no_pack_mutex() const { return field_no_pack_i; }
     const SymBitMatrix& digest_no_pack_mutex() const { return digest_no_pack_i; }
     const SameContainerAllocConstraint& same_container_alloc_constraint() const {
         return same_container_alloc_i;
@@ -1151,7 +1150,6 @@ class PhvInfo {
     SymBitMatrix& metadata_mutex() { return metadata_mutex_i; }
     SymBitMatrix& dark_mutex() { return dark_mutex_i; }
     SymBitMatrix& deparser_no_pack_mutex() { return deparser_no_pack_i; }
-    SymBitMatrix& field_no_pack_mutex() { return field_no_pack_i; }
     SymBitMatrix& digest_no_pack_mutex() { return digest_no_pack_i; }
 
     SymBitMatrix& getBridgedExtractedTogether() { return bridged_extracted_together_i; }

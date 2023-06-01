@@ -264,13 +264,30 @@ bool PackConflicts::hasPackConflict(const PHV::FieldSlice& fs1, const PHV::Field
 }
 
 void PackConflicts::printNoPackConflicts() const {
-    LOG5("List of no pack constraints ");
+    LOG5("List of no pack constraints for fields ");
     for (auto& f1 : phv) {
         for (auto& f2 : phv) {
             if (f1.id >= f2.id) continue;
-            if (phv.isFieldNoPack(&f1, &f2))
-                LOG5("\t" << f1.name << " (" << f1.id << "), " << f2.name << " (" << f2.id << ")");
-        } }
+            if (phv.isFieldNoPack(&f1, &f2)) {
+                LOG5("\tno pack fields: " << f1.name << " (" << f1.id << "), " << f2.name <<
+                     " (" << f2.id << ")");
+            }
+        }
+    }
+    LOG5("List of no pack constraints for fieldslices ");
+    for (auto& entry1 : fieldslice_to_id) {
+        auto fs1 = entry1.first;
+        auto id1 = entry1.second;
+        for (auto& entry2 : fieldslice_to_id) {
+            auto fs2 = entry2.first;
+            auto id2 = entry2.second;
+            if (id1 >= id2) continue;
+            if (hasPackConflict(fs1, fs2)) {
+                LOG5("\tno pack fieldslices: " << fs1 << " (" << id1 << "), " <<
+                                                  fs2 << " (" << id2 << ")");
+            }
+        }
+    }
     LOG5("End List of no pack constraints ");
 }
 
