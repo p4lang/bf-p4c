@@ -435,13 +435,30 @@ const IR::MAU::Action *SplitAttachedInfo::create_split_action(const IR::MAU::Act
                 // first SALU stage using stateful counter, so use the counter in this
                 // stage (don't rewrite to use $index set in earlier stage)
             } else if (!format_type.matchThisStage()) {
+                bool att_mem_found_in_this_stage = false;
+                // An action can have multiple attached tables each tied to a different instruction.
+                // E.g.
+                //  action map_port_indexB()
+                //  {
+                //      banked_port_statsB.count(pkt_count_index);  // Counter
+                //      latch_timestampB.execute(pkt_count_index);  // Stateful
+                //  }
+                // Each instruction will be linked to one of the attached tables (memories)
+                // Loop through to find the one used for this instruction.
+                // Report a BUG if none found
                 for (auto *at : this_stage) {
-                    BUG_CHECK(this_stage.found(at), "Inconsistent stateful calls in %s", act);
+                    att_mem_found_in_this_stage = this_stage.found(at);
+                    if (!att_mem_found_in_this_stage) continue;
                     if (auto *tv = split_index(at, tbl)) {
                         // FIXME -- should only create this modified cloned call once?
                         auto *call = (*it)->clone();
                         call->index = new IR::MAU::HashDist(new IR::MAU::HashGenExpression(tv));
-                        *it = call; } } }
+                        *it = call;
+                    }
+                    break;
+                }
+                BUG_CHECK(att_mem_found_in_this_stage, "Inconsistent stateful calls in %s", act);
+            }
             it++;
         } else if (format_type.track(instr->attached_callee)) {
             // split to a different stage
