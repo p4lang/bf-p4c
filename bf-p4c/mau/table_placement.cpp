@@ -4821,6 +4821,15 @@ IR::MAU::Table *TransformTables::break_up_atcam(IR::MAU::Table *tbl,
     int logical_tables = placed->use.preferred()->logical_tables();
 
     BUG_CHECK(stage_table == placed->stage_split, "mismatched stage table id");
+    LOG3("atcam table: " << tbl->name << " has " << logical_tables << "logical tables");
+    int atcam_entries_in_stage = 0;
+    for (int lt = 0; lt < logical_tables; lt++) {
+        int entries = placed->use.preferred()->partition_sizes[lt] * Memories::SRAM_DEPTH;
+        atcam_entries_in_stage += entries;
+        LOG3("atcam table: " << tbl->name << " partition has " << entries << " entries");
+    }
+    LOG3("atcam table: " << tbl->name << " has " << atcam_entries_in_stage << " entries");
+
     for (int lt = 0; lt < logical_tables; lt++) {
         auto *table_part = tbl->clone();
         if (lt != 0)
@@ -4829,10 +4838,10 @@ IR::MAU::Table *TransformTables::break_up_atcam(IR::MAU::Table *tbl,
         table_part->set_global_id(placed->logical_id + lt);
         table_part->logical_split = lt;
         table_part->logical_tables_in_stage = logical_tables;
+        table_part->atcam_entries_in_stage = atcam_entries_in_stage;
         auto rsrcs = placed->resources.clone()->rename(tbl, stage_table, lt);
         int entries = placed->use.preferred()->partition_sizes[lt] * Memories::SRAM_DEPTH;
         table_set_resources(table_part, rsrcs, entries);
-
         if (!rv) {
             rv = table_part;
             BUG_CHECK(!prev, "First logical table for %s is not first?", tbl->name);

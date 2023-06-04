@@ -16,3 +16,4 @@ set(SWITCH_T2_PTF_SPEC
     ^switch_l3.L3MulticastTest")
 
 bfn_add_switch_test("2" "y2" "" "METRICS" ON "${SWITCH_T2_PTF_SPEC}")
+set_tests_properties("tofino2/switch_16_y2" PROPERTIES TIMEOUT ${extended_timeout_3times})

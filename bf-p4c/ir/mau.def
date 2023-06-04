@@ -40,6 +40,7 @@ class Table : BFN::Unit, IAnnotated  {
     int                                         stage_split = -1;
     int                                         logical_split = -1;
     int                                         logical_tables_in_stage = -1;
+    int                                         atcam_entries_in_stage = -1;
     /**
      * each gateway_row is an expression for a single row of the gateway,
      * with the string being a tag to run in 'next' for next table, or null

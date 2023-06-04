@@ -14,7 +14,8 @@ const IR::Node *TableReplayFriendlyPhvConstraints::preorder(IR::BFN::Pipe * pipe
     } else {
         problematic_table =
             mau_backtracker.get_table_summary()->get_table_replay_problematic_table();
-        LOG5("problematic table is " << problematic_table->name);
+        LOG1("problematic table is " << problematic_table->name << " due to " <<
+            mau_backtracker.get_table_summary()->get_table_replay_result());
     }
     return pipe;
 }
@@ -40,6 +41,7 @@ const IR::Node *TableReplayFriendlyPhvConstraints::preorder(IR::Expression *expr
     }
     // collect fields that are used in the same action.
     if (action) action_to_fields[action].insert(f->name);
+
     if (add_pa_container_size.find(f->name) != add_pa_container_size.end()) {
         return expr;
     }
@@ -70,6 +72,12 @@ const IR::Node *TableReplayFriendlyPhvConstraints::preorder(IR::Expression *expr
         container_size_is_same = false;
     }
     if (container_size_is_same) container_size_ok.insert(f);
+
+    if (f->exact_containers()) {
+        LOG3(f << " has exact container constraints");
+        container_size_ok.insert(f);
+    }
+
     // For now, we only care about field size <= 16
     if (f->size > 16) {
         return expr;

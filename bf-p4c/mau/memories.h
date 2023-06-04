@@ -214,6 +214,7 @@ struct Memories {
     virtual void printOn(std::ostream &) const = 0;
     cstring last_failure() const { return failure_reason ? failure_reason : ""; }
     virtual void init_shared(int stage) { local_stage = stage; }
+    virtual const ordered_map<cstring, int> collect_sram_block_alloc_info() = 0;
 
  protected:
     enum update_type_t { UPDATE_RAM, UPDATE_MAPRAM, UPDATE_GATEWAY,

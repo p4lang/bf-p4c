@@ -252,7 +252,7 @@ bool TableSummary::preorder(const IR::MAU::Table *t) {
         }
     }
     if (!pTMerge)
-        placedTables[*t->global_id()] = new PlacedTable(t);
+        placedTables[*t->global_id()] = new PlacedTable(t, state);
 
     return true;
 }
@@ -337,6 +337,7 @@ bool TableSummary::find_problematic_table() {
                 max_diff = diff;
             }
         }
+        LOG3("max score is " << max_diff);
         return problem_table;
     };
 
@@ -388,20 +389,20 @@ bool TableSummary::find_problematic_table() {
         }
         return true;
     } else if (table_replay_result == PlacementResult::FAIL_ON_MEM) {
-        // For FAIL_ON_MEM, the score is the different of adb size * #entry between real table
+        auto real_table_sram_alloc = collect_table_sram_alloc_info();
+        // For FAIL_ON_MEM, the score is the different of number of sram blocks between real table
         // allocation and table allocation after trivial allocation.
         for (auto trivial_table_alloc : table_replay_fix_candidates) {
-            BUG_CHECK(trivial_table_alloc->global_id().has_value(),
-                "table %1% is not allocated", trivial_table_alloc->name);
-            int gid = *(trivial_table_alloc->global_id());
-            auto real_table_alloc = order[gid];
-            if (trivial_table_alloc->layout.action_data_bytes <
-                real_table_alloc->layout.action_data_bytes) {
-                problematic_candidates[trivial_table_alloc] =
-                    (real_table_alloc->layout.action_data_bytes
-                    - trivial_table_alloc->layout.action_data_bytes)
-                    * real_table_alloc->layout.entries;
-            }
+            auto trivial_block_size =
+                trivial_table_sram_alloc[failure_stage].count(trivial_table_alloc->name) ?
+                trivial_table_sram_alloc[failure_stage][trivial_table_alloc->name] : 0;
+            auto real_block_size =
+                real_table_sram_alloc[failure_stage].count(trivial_table_alloc->name) ?
+                real_table_sram_alloc[failure_stage][trivial_table_alloc->name] : 0;
+                if (real_block_size - trivial_block_size > 0) {
+                    problematic_candidates[trivial_table_alloc] =
+                    real_block_size - trivial_block_size;
+                }
         }
         if (problematic_candidates.size() == 0) {
             table_replay_problematic_table = failed_table;
@@ -493,6 +494,7 @@ void TableSummary::postorder(const IR::BFN::Pipe *pipe) {
                 trivial_mergedGateways.insert(mergedGateways.begin(), mergedGateways.end());
                 trivial_placedTables.clear();
                 trivial_placedTables.insert(placedTables.begin(), placedTables.end());
+                trivial_table_sram_alloc = collect_table_sram_alloc_info();
                 // record table allocation info after trivial phv allocation.
                 for (auto [gid, table] : order) {
                     trivial_table_info[gid] = table;
@@ -531,6 +533,7 @@ void TableSummary::postorder(const IR::BFN::Pipe *pipe) {
                 trivial_mergedGateways.insert(mergedGateways.begin(), mergedGateways.end());
                 trivial_placedTables.clear();
                 trivial_placedTables.insert(placedTables.begin(), placedTables.end());
+                trivial_table_sram_alloc = collect_table_sram_alloc_info();
                 // clear the table allocation info allocated in ALT_INITIAL and record it again.
                 trivial_table_info.clear();
                 for (auto [gid, table] : order) {
@@ -870,15 +873,6 @@ void TableSummary::PlacedTable::add(const IR::MAU::Table *t) {
     if (!t) return;
     if (!t->resources) return;
     if (t->resources->memuse.count(t->unique_id()) == 0) return;  // BUG_CHECK?
-    auto mem = t->resources->memuse.at(t->unique_id());
-    if (t->ways.size() > 0) {
-        auto match_groups = t->ways[0].match_groups;
-        for (auto mem_way : mem.ways) {
-            entries += match_groups * mem_way.size * Memories::SRAM_DEPTH;
-            LOG3("Adding entries to table : " << t->name << ", match_groups: " << match_groups
-                    << ", mem.ways: " << mem.ways);
-        }
-    }
     for (auto &ba : t->attached) {
         auto memName = ba->attached->name;
         auto attEntries = ba->entries;
@@ -887,7 +881,7 @@ void TableSummary::PlacedTable::add(const IR::MAU::Table *t) {
     }
 }
 
-TableSummary::PlacedTable::PlacedTable(const IR::MAU::Table *t) {
+TableSummary::PlacedTable::PlacedTable(const IR::MAU::Table *t, state_t &state) {
     BUG_CHECK(t, "PlacedTable called with no valid table");
     Log::TempIndent indent;
     LOG5("Populating PlacedTable for Table : " << t->name << indent);
@@ -904,19 +898,13 @@ TableSummary::PlacedTable::PlacedTable(const IR::MAU::Table *t) {
     logicalId = *t->logical_id;
     entries = t->layout.entries;
     LOG3("Adding " << entries << " entries to table");
-    // TBD: Fix layout to have the correct entries and ways for all table types
-    // This should ideally happen in TP possibly during TransformTables pass
-    // Do we need to do anything different for DLEFT for entries calculation
-    // here?
-    if (t->layout.atcam) {
-        entries = 0;
-        auto mem = t->resources->memuse.at(t->unique_id());
-        auto match_groups = t->ways[0].match_groups;
-        for (auto mem_way : mem.ways) {
-            entries += match_groups * mem_way.size * Memories::SRAM_DEPTH;
-            LOG3("Adding " << entries << " entries to atcam table with match_groups: "
-                    << match_groups << ", mem.ways: " << mem.ways);
-        }
+
+    if (t->layout.atcam &&
+        (state == ALT_INITIAL || state == ALT_RETRY_ENHANCED_TP)) {
+        // In Table replay, atcam table entries size is the total atcam size on the same stage.
+        // During table replay, table placement will only look at the first atcam partition.
+        entries = t->atcam_entries_in_stage;
+        LOG3("Adding " << entries << " atcam entries to table");
     }
 
     for (auto &ba : t->attached) {
@@ -943,4 +931,38 @@ std::ostream &operator<<(std::ostream &out, const TableSummary::PlacedTable &pl)
         out << "Attached Table : " << att.first << ", entries : " << att.second << Log::endl;
     out << pl.layout << Log::endl;
     return out;
+}
+
+// This function collect sram blocks allocated per table per stage.
+ordered_map<int, ordered_map<cstring, int>> TableSummary::collect_table_sram_alloc_info() {
+    ordered_map<int, ordered_map<cstring, int>> sram_block_alloced;
+    for (auto gress : { INGRESS, EGRESS }) {
+        for (auto &i : ixbar[gress]) {
+            auto sram_info = memory[gress].at(i.first)->collect_sram_block_alloc_info();
+            ordered_map<cstring, int> table_sram_blocks_info;
+            for (auto [tbl, blocks] : sram_info) {
+                size_t pos = 0;
+                // There are allocation for xxx$action xxx$tind. Here extracts the prefix, which is
+                // the table name.
+                for (; pos < tbl.size(); pos++) {
+                    if (tbl[pos] == '$') {
+                        break;
+                    }
+                }
+                cstring tbl_name = tbl;
+                if (pos < tbl.size()) {
+                    tbl_name = tbl.substr(0, pos);
+                }
+                if (table_sram_blocks_info.count(tbl_name)) {
+                    table_sram_blocks_info[tbl_name] += blocks;
+                } else {
+                    table_sram_blocks_info[tbl_name] = blocks;
+                }
+            }
+            sram_block_alloced[i.first].insert(
+                table_sram_blocks_info.begin(), table_sram_blocks_info.end());
+        }
+        if (Device::threadsSharePipe(INGRESS, EGRESS)) break;
+    }
+    return sram_block_alloced;
 }

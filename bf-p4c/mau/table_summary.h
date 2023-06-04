@@ -154,7 +154,7 @@ class TableSummary: public MauInspector {
 
         ordered_map<cstring, int> attached_entries;
 
-        explicit PlacedTable(const IR::MAU::Table *t);
+        explicit PlacedTable(const IR::MAU::Table *t, State::state_t &state);
         void add(const IR::MAU::Table *t);
     };
     friend std::ostream &operator<<(std::ostream &out, const PlacedTable &pl);
@@ -234,6 +234,8 @@ class TableSummary: public MauInspector {
     ordered_map<cstring, ordered_set<int>> trivial_internalTableAlloc;
     ordered_map<cstring, std::pair<cstring, cstring>> trivial_mergedGateways;
     std::map<int, PlacedTable*> trivial_placedTables;
+    // number of sram blocks allocated per table per stage in first round of table placement
+    ordered_map<int, ordered_map<cstring, int>> trivial_table_sram_alloc;
 
     PlacementResult table_replay_result = FAIL;
 
@@ -298,6 +300,8 @@ class TableSummary: public MauInspector {
     // returns three different failure reason FAIL_ON_ADB, FAIL_ON_IXBAR and FAIL_ON_MEM. For
     // different reasons, this function has different heuristics to select the problematic table.
     bool find_problematic_table();
+
+    ordered_map<int, ordered_map<cstring, int>> collect_table_sram_alloc_info();
 
  public:
     explicit TableSummary(

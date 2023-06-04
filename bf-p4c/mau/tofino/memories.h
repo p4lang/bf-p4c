@@ -667,6 +667,29 @@ struct Memories : public ::Memories {
     }
     void printOn(std::ostream &) const;
     void visitUse(const Use &, std::function<void(cstring &, update_type_t)> fn);
+    const ordered_map<cstring, int> collect_sram_block_alloc_info() override {
+        const BFN::Alloc2Dbase<cstring> *arrays[] = { &tcam_use, &sram_print_search_bus,
+                &sram_print_result_bus, &tind_bus, &action_data_bus,
+                &stash_use, &sram_use, &mapram_use, &overflow_bus,
+                &gateway_use, &payload_use };
+        ordered_map<cstring, int> sram_info;
+        for (auto arr : arrays)
+            for (int r = 0; r < arr->rows(); r++)
+                for (int c = 0; c < arr->cols(); c++)
+                    if (arr->at(r, c))
+                        // initialize all table sram block numbers to zero.
+                        sram_info[arr->at(r, c)] = 0;
+
+        for (int r = 0; r < SRAM_ROWS; r++) {
+            for (int c = 0; c < SRAM_COLUMNS; c++) {
+                if (auto tbl = sram_use.at(r,c)) {
+                    // count sram blocks
+                    sram_info[tbl]++;
+                }
+            }
+        }
+        return sram_info;
+    }
 };
 
 }  // namespace Tofino
