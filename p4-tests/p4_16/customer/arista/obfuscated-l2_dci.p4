@@ -10,7 +10,7 @@
 @pa_parser_group_monogress
 @pa_mutually_exclusive("egress" , "Westoak.Wyndmoor.Steger" , "Olcott.Casnovia.Steger")
 @pa_mutually_exclusive("egress" , "Olcott.Casnovia.Steger" , "Westoak.Wyndmoor.Steger")
-@pa_container_size("ingress" , "Westoak.Covert.Brainard" , 32)
+@pa_container_size("ingress" , "Westoak.Covert.Brainard" , 16)
 @pa_container_size("ingress" , "Westoak.Wyndmoor.SomesBar" , 32)
 @pa_container_size("ingress" , "Westoak.Wyndmoor.Hueytown" , 32)
 @pa_container_size("egress" , "Olcott.Harding.Mackville" , 32)

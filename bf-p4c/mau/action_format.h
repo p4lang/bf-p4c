@@ -428,7 +428,7 @@ struct ALUParameter {
         : param(p), phv_bits(pb), right_shift(0) {}
 
     friend std::ostream &operator<<(std::ostream &out, const ALUParameter& p) {
-        return out << "ALU Param : { " << p.param << ", phv bits : 0x"
+        return out << "ALU Param { " << p.param << ", phv bits : 0x"
                    << p.phv_bits << ", rotate_right_shift : " << p.right_shift << " } ";
     }
 };
@@ -574,21 +574,27 @@ class ALUOperation {
 
     friend std::ostream &operator<<(std::ostream &out, const ALUOperation& op) {
         Log::TempIndent indent;
-        out << "ALU Operation { "  << Log::endl << indent;
-        out << "params: "          << op._params << Log::endl;
+        out << "ALU Operation { "  << indent << Log::endl;
+        out << "params:" << indent;
+        for (auto &p : op._params)
+            out << Log::endl << p;
+        out << indent.pop_back() << Log::endl;
         out << "phv bits: "        << op._phv_bits
-            << " right_shift : "    << op._right_shift
-            << " right_shift_set: " << op._right_shift_set
-            << " container: "       << op._container
-            << " op constraint: "   << op._constraint;
+            << ", right_shift : "    << op._right_shift
+            << ", right_shift_set: " << op._right_shift_set
+            << ", container: "       << op._container
+            << ", op constraint: "   << op._constraint << Log::endl;
         if (op._alias)
-            out << " alias: "       << op._alias;
+            out << "alias: "       << op._alias << Log::endl;
         if (op._mask_alias)
-            out << " mask alias: "  << op._mask_alias;
-        if (op._mask_params.size() > 0)
-            out << " mask params: " << op._mask_params;
-        out << " mask bits: "       << op._mask_bits
-            << " action name: "     << op._action_name;
+            out << "mask alias: "  << op._mask_alias << Log::endl;
+        if (op._mask_params.size() > 0) {
+            out << "mask params: " << Log::indent;
+            for (auto &p : op._mask_params)
+                out << Log::endl << p;
+            out << Log::unindent << Log::endl; }
+        out << "mask bits: "       << op._mask_bits
+            << ", action name: "     << op._action_name;
         out << " }";
         return out;
     }
@@ -917,10 +923,10 @@ struct ALUPosition {
         : alu_op(ao), loc(l), start_byte(sb) { }
 
     friend std::ostream &operator<<(std::ostream &out, const ALUPosition& pos) {
-        out << "ALU Position { op: " << *pos.alu_op
-                        << ", loc: " << pos.loc
-                        << ", start_byte: " << pos.start_byte
-                        << " } ";
+        out << "ALU Position" << Log::indent << Log::endl <<
+               "op: " << *pos.alu_op << Log::endl <<
+               "loc: " << pos.loc << Log::endl <<
+               "start_byte: " << pos.start_byte << Log::unindent;
         return out;
     }
 };

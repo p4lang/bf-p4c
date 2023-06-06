@@ -2095,6 +2095,7 @@ void Format::Use::determine_mod_cond_maps() {
         auto &mod_map = mod_cond_values[act_alu_positions.first];
         for (auto alu_position : act_alu_positions.second) {
             safe_vector<bitvec> verify_unique_per_mask(AD_LOCATIONS, bitvec());
+            std::set<cstring> verified_conditional_params;
             auto param_positions = alu_position.alu_op->parameter_positions();
             for (auto param_position : param_positions) {
                 auto param = param_position.second;
@@ -2114,12 +2115,14 @@ void Format::Use::determine_mod_cond_maps() {
                     conditional_params.insert(param->cond_name());
                 }
                 for (auto cond_param : conditional_params) {
+                    if (verified_conditional_params.count(cond_param)) continue;
                     for (int i = 0; i < AD_LOCATIONS; i++) {
                         bitvec param_use = mod_map.at(cond_param).at(i);
                         BUG_CHECK((verify_unique_per_mask[i] & param_use).empty(), "Two "
                                   "conditional parameters set the same bits");
                         verify_unique_per_mask[i] |= param_use;
                     }
+                    verified_conditional_params.insert(cond_param);
                 }
             }
         }

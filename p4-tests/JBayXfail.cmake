@@ -493,12 +493,7 @@ if (TEST_ALT_PHV_ALLOC)
 
     # Table fitting errors
     p4c_add_xfail_reason("tofino2"
-        "error: table allocation .* Allocation state: ALT_FINALIZE_TABLE"
-        extensions/p4_tests/p4_16/customer/arista/obfuscated-l2_dci.p4
-    )
-
-    p4c_add_xfail_reason("tofino2"
-        "Two conditional parameters set the same bits"
+        "Overlapping field bit information on an input xbar byte"
         extensions/p4_tests/p4_16/customer/arista/obfuscated-msee_tofino2.p4
     )
 
