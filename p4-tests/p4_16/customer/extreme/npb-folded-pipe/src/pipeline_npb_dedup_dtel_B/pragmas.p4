@@ -4,8 +4,8 @@
 // These pragmas are needed to function properly
 // -----------------------------------------------------------------------------
 @pa_auto_init_metadata
-@pa_no_overlay("ingress", "hdr.transport.ipv4.src_addr")
-@pa_no_overlay("ingress", "hdr.transport.ipv4.dst_addr")
+//@pa_no_overlay("ingress", "hdr.transport.ipv4.src_addr")
+//@pa_no_overlay("ingress", "hdr.transport.ipv4.dst_addr")
 
 #ifdef PA_MONOGRESS
 @pa_parser_group_monogress  //grep for monogress in phv_allocation log to confirm
@@ -24,26 +24,26 @@
 // These pragmas are needed to fit design
 // -----------------------------------------------------------------------------
 #ifdef INGRESS_PARSER_POPULATES_LKP_1
-@pa_atomic("ingress" , "ig_md.lkp_1.ip_type")
+//@pa_atomic("ingress" , "ig_md.lkp_1.ip_type")
 #endif
 #ifdef INGRESS_PARSER_POPULATES_LKP_2
-@pa_atomic("ingress" , "ig_md.lkp_2.ip_type")
+//@pa_atomic("ingress" , "ig_md.lkp_2.ip_type")
 #endif
 //@pa_atomic("egress" , "eg_md.bypass")
-@pa_container_size("egress", "eg_md.flags.bypass_egress", 8)
-@pa_solitary("egress" , "eg_md.lkp_1.ip_flags")
+//@pa_container_size("egress", "eg_md.flags.bypass_egress", 8)
+//@pa_solitary("egress" , "eg_md.lkp_1.ip_flags")
 
 
-@pa_container_size("egress" , "protocol_outer_0" , 8)
-@pa_container_size("egress" , "protocol_inner_0" , 8)
-@pa_container_size("egress" , "eg_md.lkp_1.tcp_flags", 8)
+//@pa_container_size("egress" , "protocol_outer_0" , 8)
+//@pa_container_size("egress" , "protocol_inner_0" , 8)
+//@pa_container_size("egress" , "eg_md.lkp_1.tcp_flags", 8)
 
 //Needed to fit design w/ SDE v9.8.0-pr10582 (see case 00675487)
-@pa_container_size("ingress", "ig_intr_md_for_tm.level2_mcast_hash", 16)
-@pa_container_size("ingress", "ig_intr_md_for_tm.level2_exclusion_id", 16)
-@pa_container_size("ingress", "ig_intr_md_for_tm.rid", 16)
-@pa_container_size("ingress", "ig_intr_md_for_dprsr.mtu_trunc_len", 16)
-@pa_container_size("egress", "eg_intr_md_for_dprsr.mtu_trunc_len", 16)
+//@pa_container_size("ingress", "ig_intr_md_for_tm.level2_mcast_hash", 16)
+//@pa_container_size("ingress", "ig_intr_md_for_tm.level2_exclusion_id", 16)
+//@pa_container_size("ingress", "ig_intr_md_for_tm.rid", 16)
+//@pa_container_size("ingress", "ig_intr_md_for_dprsr.mtu_trunc_len", 16)
+//@pa_container_size("egress", "eg_intr_md_for_dprsr.mtu_trunc_len", 16)
 
 
 // These pragmas are need to fit design (v6 encap)
@@ -51,11 +51,11 @@
 
 // remove following pragmas:
 // -----------------------
-@pa_container_size("ingress", "ig_md.mirror.src", 8)
-@pa_container_size("ingress", "ig_md.mirror.type", 8)
+//@pa_container_size("ingress", "ig_md.mirror.src", 8)
+//@pa_container_size("ingress", "ig_md.mirror.type", 8)
 @pa_alias("ingress", "ig_md.qos.qid", "ig_intr_md_for_tm.qid")
-@pa_container_size("egress", "eg_md.mirror.src", 8)
-@pa_container_size("egress", "eg_md.mirror.type", 8)
+//@pa_container_size("egress", "eg_md.mirror.src", 8)
+//@pa_container_size("egress", "eg_md.mirror.type", 8)
 
 // Add the following pragmas:
 // -----------------------

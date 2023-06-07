@@ -463,7 +463,7 @@ p4c_add_xfail_reason("tofino2"
 p4c_add_xfail_reason("tofino2"                      
    "bytes value is .*, expected .*" 
    extensions/p4_tests/p4_16/stf/p4c-2911-2.p4     
-)                                                  
+)
 
 # ALT-PHV: tests that do not work yet with the alternative allocator.
 # If you make an ALT-PHV test pass (or get close to it but if fails on later
@@ -508,3 +508,12 @@ if (TEST_ALT_PHV_ALLOC)
     )
 
 endif (TEST_ALT_PHV_ALLOC)
+
+if (NOT TEST_ALT_PHV_ALLOC)
+    # Failure only with traditional compilation.
+    p4c_add_xfail_reason("tofino2"
+        "PHV allocation was not successful"
+        extensions/p4_tests/p4_16/customer/kaloom/p4c-5223-leaf-tof2.p4
+    )                        
+
+endif()

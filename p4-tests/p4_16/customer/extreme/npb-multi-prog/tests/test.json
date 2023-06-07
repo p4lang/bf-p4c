@@ -31,20 +31,20 @@
                             "deploy_name": "egOnly",
                             "p4_enum_file": "types.p4",
                             "bfrt_prefixes": {
-                                "iprsr": "pipeline_npb_egOnly.IngressParser_0",
-                                "ictl": "IngressControl_0",
-                                "idprsr": "pipeline_npb_egOnly.IngressDeparser_0",
-                                "eprsr": "pipeline_npb_egOnly.EgressParser_0",
-                                "ectl": "EgressControl_0",
-                                "edprsr": "pipeline_npb_egOnly.EgressDeparser_0"
+                                "iprsr": "pipeline_npb_egOnly.IngressParser_1",
+                                "ictl": "IngressControl_1",
+                                "idprsr": "pipeline_npb_egOnly.IngressDeparser_1",
+                                "eprsr": "pipeline_npb_egOnly.EgressParser_1",
+                                "ectl": "EgressControl_1",
+                                "edprsr": "pipeline_npb_egOnly.EgressDeparser_1"
                             },
                             "p4rt_prefixes": {
-                                "iprsr": "IngressParser_0",
-                                "ictl": "IngressControl_0",
-                                "idprsr": "IngressDeparser_0",
-                                "eprsr": "EgressParser_0",
-                                "ectl": "EgressControl_0",
-                                "edprsr": "EgressDeparser_0"
+                                "iprsr": "IngressParser_1",
+                                "ictl": "IngressControl_1",
+                                "idprsr": "IngressDeparser_1",
+                                "eprsr": "EgressParser_1",
+                                "ectl": "EgressControl_1",
+                                "edprsr": "EgressDeparser_1"
                             },
                             "params_bool": {
                                 "TRANSPORT_INGRESS_ENABLE": true,
@@ -173,20 +173,20 @@
                             "deploy_name": "igOnly",
                             "p4_enum_file": "types.p4",
                             "bfrt_prefixes": {
-                                "iprsr": "pipeline_npb_igOnly_C.IngressParser_1",
-                                "ictl": "IngressControl_1",
-                                "idprsr": "pipeline_npb_igOnly_C.IngressDeparser_1",
-                                "eprsr": "pipeline_npb_igOnly_C.EgressParser_1",
-                                "ectl": "EgressControl_1",
-                                "edprsr": "pipeline_npb_igOnly_C.EgressDeparser_1"
+                                "iprsr": "pipeline_npb_igOnly_C.IngressParserIGOnly.ip",
+                                "ictl": "IngressControlIGOnly.ic",
+                                "idprsr": "pipeline_npb_igOnly_C.IngressDeparserIGOnly",
+                                "eprsr": "pipeline_npb_igOnly_C.EgressParserIGOnly",
+                                "ectl": "EgressControlIGOnly.ec",
+                                "edprsr": "pipeline_npb_igOnly_C.EgressDeparserIGOnly"
                             },
                             "p4rt_prefixes": {
-                                "iprsr": "IngressParser_1",
-                                "ictl": "IngressControl_1",
-                                "idprsr": "IngressDeparser_1",
-                                "eprsr": "EgressParser_1",
-                                "ectl": "EgressControl_1",
-                                "edprsr": "EgressDeparser_1"
+                                "iprsr": "IngressParserIGOnly.ip",
+                                "ictl": "IngressControlIGOnly.ic",
+                                "idprsr": "IngressDeparserIGOnly",
+                                "eprsr": "EgressParserIGOnly",
+                                "ectl": "EgressControlIGOnly.ec",
+                                "edprsr": "EgressDeparserIGOnly"
                             },
                             "params_bool": {
                                 "TRANSPORT_INGRESS_ENABLE": true,
@@ -315,20 +315,20 @@
                             "deploy_name": "igOnly",
                             "p4_enum_file": "types.p4",
                             "bfrt_prefixes": {
-                                "iprsr": "pipeline_npb_igOnly_B.IngressParser_2",
-                                "ictl": "IngressControl_2",
-                                "idprsr": "pipeline_npb_igOnly_B.IngressDeparser_2",
-                                "eprsr": "pipeline_npb_igOnly_B.EgressParser_2",
-                                "ectl": "EgressControl_2",
-                                "edprsr": "pipeline_npb_igOnly_B.EgressDeparser_2"
+                                "iprsr": "pipeline_npb_igOnly_B.IngressParserIGOnly.ip",
+                                "ictl": "IngressControlIGOnly.ic",
+                                "idprsr": "pipeline_npb_igOnly_B.IngressDeparserIGOnly",
+                                "eprsr": "pipeline_npb_igOnly_B.EgressParserIGOnly",
+                                "ectl": "EgressControlIGOnly.ec",
+                                "edprsr": "pipeline_npb_igOnly_B.EgressDeparserIGOnly"
                             },
                             "p4rt_prefixes": {
-                                "iprsr": "IngressParser_2",
-                                "ictl": "IngressControl_2",
-                                "idprsr": "IngressDeparser_2",
-                                "eprsr": "EgressParser_2",
-                                "ectl": "EgressControl_2",
-                                "edprsr": "EgressDeparser_2"
+                                "iprsr": "IngressParserIGOnly.ip",
+                                "ictl": "IngressControlIGOnly.ic",
+                                "idprsr": "IngressDeparserIGOnly",
+                                "eprsr": "EgressParserIGOnly",
+                                "ectl": "EgressControlIGOnly.ec",
+                                "edprsr": "EgressDeparserIGOnly"
                             },
                             "params_bool": {
                                 "TRANSPORT_INGRESS_ENABLE": true,
@@ -457,20 +457,20 @@
                             "deploy_name": "igOnly",
                             "p4_enum_file": "types.p4",
                             "bfrt_prefixes": {
-                                "iprsr": "pipeline_npb_igOnly_A.IngressParser_3",
-                                "ictl": "IngressControl_3",
-                                "idprsr": "pipeline_npb_igOnly_A.IngressDeparser_3",
-                                "eprsr": "pipeline_npb_igOnly_A.EgressParser_3",
-                                "ectl": "EgressControl_3",
-                                "edprsr": "pipeline_npb_igOnly_A.EgressDeparser_3"
+                                "iprsr": "pipeline_npb_igOnly_A.IngressParserIGOnly.ip",
+                                "ictl": "IngressControlIGOnly.ic",
+                                "idprsr": "pipeline_npb_igOnly_A.IngressDeparserIGOnly",
+                                "eprsr": "pipeline_npb_igOnly_A.EgressParserIGOnly",
+                                "ectl": "EgressControlIGOnly.ec",
+                                "edprsr": "pipeline_npb_igOnly_A.EgressDeparserIGOnly"
                             },
                             "p4rt_prefixes": {
-                                "iprsr": "IngressParser_3",
-                                "ictl": "IngressControl_3",
-                                "idprsr": "IngressDeparser_3",
-                                "eprsr": "EgressParser_3",
-                                "ectl": "EgressControl_3",
-                                "edprsr": "EgressDeparser_3"
+                                "iprsr": "IngressParserIGOnly.ip",
+                                "ictl": "IngressControlIGOnly.ic",
+                                "idprsr": "IngressDeparserIGOnly",
+                                "eprsr": "EgressParserIGOnly",
+                                "ectl": "EgressControlIGOnly.ec",
+                                "edprsr": "EgressDeparserIGOnly"
                             },
                             "params_bool": {
                                 "TRANSPORT_INGRESS_ENABLE": true,

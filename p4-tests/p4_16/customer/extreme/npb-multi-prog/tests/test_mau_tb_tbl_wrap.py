@@ -235,7 +235,7 @@ def npb_tunnel_rmac_add(self, target, ig_pipe, dst_addr):
 	try:
 		for ig_pipe2 in ig_pipes2:
 			if(PipelineParams.BRIDGING_ENABLE == True):
-#				table = self.bfrt_info.table_get('%s.rmac.rmac' % ictl_s[ig_pipe2])
+#				table = self.bfrt_info.table_get('%s.rmac.rmac' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 #				table.entry_add(
 #					target,
 #					[table.make_key(
@@ -277,7 +277,7 @@ def npb_tunnel_rmac_del(self, target, ig_pipe, dst_addr):
 	try:
 		for ig_pipe2 in ig_pipes2:
 			if(PipelineParams.BRIDGING_ENABLE == True):
-#				table = self.bfrt_info.table_get('%s.rmac.rmac' % ictl_s[ig_pipe2])
+#				table = self.bfrt_info.table_get('%s.rmac.rmac' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 #				table.entry_del(
 #					target,
 #					[table.make_key(
@@ -367,7 +367,7 @@ def npb_ing_port_add(self, target, ig_pipe, port, port_lag_ptr, bridging_enable,
 
 					# insert both versions (cpu and non-cpu):
 
-					table = self.bfrt_info.table_get('%s.ingress_port_mapping.port_mapping' % ictl_s[ig_pipe2])
+					table = self.bfrt_info.table_get('%s.ingress_port_mapping.port_mapping' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 					table.entry_add(
 						target,
 						[table.make_key(
@@ -380,7 +380,7 @@ def npb_ing_port_add(self, target, ig_pipe, port, port_lag_ptr, bridging_enable,
 						)]
 					)
 
-					table = self.bfrt_info.table_get('%s.ingress_port_mapping.port_mapping' % ictl_s[ig_pipe2])
+					table = self.bfrt_info.table_get('%s.ingress_port_mapping.port_mapping' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 					table.entry_add(
 						target,
 						[table.make_key(
@@ -396,7 +396,7 @@ def npb_ing_port_add(self, target, ig_pipe, port, port_lag_ptr, bridging_enable,
 
 				else:
 					# insert both versions (cpu and non-cpu):
-					table = self.bfrt_info.table_get('%s.ingress_port_mapping.port_mapping' % ictl_s[ig_pipe2])
+					table = self.bfrt_info.table_get('%s.ingress_port_mapping.port_mapping' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 					table.entry_add(
 						target,
 						[table.make_key(
@@ -410,7 +410,7 @@ def npb_ing_port_add(self, target, ig_pipe, port, port_lag_ptr, bridging_enable,
 						)]
 					)
 
-					table = self.bfrt_info.table_get('%s.ingress_port_mapping.port_mapping' % ictl_s[ig_pipe2])
+					table = self.bfrt_info.table_get('%s.ingress_port_mapping.port_mapping' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 					table.entry_add(
 						target,
 						[table.make_key(
@@ -453,7 +453,7 @@ def npb_ing_port_add(self, target, ig_pipe, port, port_lag_ptr, bridging_enable,
 
 		try:
 
-			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sfc_top.port_mapping' % ictl_s[ig_pipe])
+			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sfc_top.port_mapping' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe]]))
 			table.entry_add(
 				target,
 				[table.make_key(
@@ -500,7 +500,7 @@ def npb_ing_port_del(self, target, ig_pipe, port, port_lag_ptr):
 
 					# delete both versions (cpu and non-cpu):
 
-					table = self.bfrt_info.table_get('%s.ingress_port_mapping.port_mapping' % ictl_s[ig_pipe2])
+					table = self.bfrt_info.table_get('%s.ingress_port_mapping.port_mapping' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 					table.entry_del(
 						target,
 						[table.make_key(
@@ -509,7 +509,7 @@ def npb_ing_port_del(self, target, ig_pipe, port, port_lag_ptr):
 						)]
 					)
 
-					table = self.bfrt_info.table_get('%s.ingress_port_mapping.port_mapping' % ictl_s[ig_pipe2])
+					table = self.bfrt_info.table_get('%s.ingress_port_mapping.port_mapping' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 					table.entry_del(
 						target,
 						[table.make_key(
@@ -522,7 +522,7 @@ def npb_ing_port_del(self, target, ig_pipe, port, port_lag_ptr):
 
 					# delete both versions (cpu and non-cpu):
 
-					table = self.bfrt_info.table_get('%s.ingress_port_mapping.port_mapping' % ictl_s[ig_pipe2])
+					table = self.bfrt_info.table_get('%s.ingress_port_mapping.port_mapping' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 					table.entry_del(
 						target,
 						[table.make_key(
@@ -531,7 +531,7 @@ def npb_ing_port_del(self, target, ig_pipe, port, port_lag_ptr):
 						)]
 					)
 
-					table = self.bfrt_info.table_get('%s.ingress_port_mapping.port_mapping' % ictl_s[ig_pipe2])
+					table = self.bfrt_info.table_get('%s.ingress_port_mapping.port_mapping' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 					table.entry_del(
 						target,
 						[table.make_key(
@@ -588,7 +588,7 @@ def npb_ing_port_mirror_add(self, target, ig_pipe, port, session_id):
 		ig_pipes2 = ig_pipes.copy()
 
 	for ig_pipe2 in ig_pipes2:
-		table = self.bfrt_info.table_get('%s.ingress_port_mapping.port_mirror.port_mirror' % ictl_s[ig_pipe2])
+		table = self.bfrt_info.table_get('%s.ingress_port_mapping.port_mirror.port_mirror' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 		table.entry_add(
 			target,
 			[table.make_key(
@@ -609,7 +609,7 @@ def npb_ing_port_mirror_del(self, target, ig_pipe, port):
 		ig_pipes2 = ig_pipes.copy()
 
 	for ig_pipe2 in ig_pipes2:
-		table = self.bfrt_info.table_get('%s.ingress_port_mapping.port_mirror.port_mirror' % ictl_s[ig_pipe2])
+		table = self.bfrt_info.table_get('%s.ingress_port_mapping.port_mirror.port_mirror' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 		table.entry_del(
 			target,
 			[table.make_key(
@@ -630,7 +630,7 @@ def npb_port_vlan_to_bd_add(self, target, ig_pipe, port_lag_index, vid_valid, vi
 		try:
 			for ig_pipe2 in ig_pipes2:
 				# bottom
-				table = self.bfrt_info.table_get('%s.ingress_port_mapping.bd_action_profile' % ictl_s[ig_pipe2])
+				table = self.bfrt_info.table_get('%s.ingress_port_mapping.bd_action_profile' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 				table.entry_add(
 					target,
 					[table.make_key(
@@ -649,7 +649,7 @@ def npb_port_vlan_to_bd_add(self, target, ig_pipe, port_lag_index, vid_valid, vi
 		try:
 			for ig_pipe2 in ig_pipes2:
 				# top
-				table = self.bfrt_info.table_get('%s.ingress_port_mapping.port_vlan_to_bd_mapping' % ictl_s[ig_pipe2])
+				table = self.bfrt_info.table_get('%s.ingress_port_mapping.port_vlan_to_bd_mapping' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 				table.entry_add(
 					target,
 					[table.make_key(
@@ -679,7 +679,7 @@ def npb_port_vlan_to_bd_del(self, target, ig_pipe, port_lag_index, vid_valid, vi
 		try:
 			for ig_pipe2 in ig_pipes2:
 				# top
-				table = self.bfrt_info.table_get('%s.ingress_port_mapping.port_vlan_to_bd_mapping' % ictl_s[ig_pipe2])
+				table = self.bfrt_info.table_get('%s.ingress_port_mapping.port_vlan_to_bd_mapping' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 				table.entry_del(
 					target,
 					[table.make_key(
@@ -697,7 +697,7 @@ def npb_port_vlan_to_bd_del(self, target, ig_pipe, port_lag_index, vid_valid, vi
 		try:
 			for ig_pipe2 in ig_pipes2:
 				# bottom
-				table = self.bfrt_info.table_get('%s.ingress_port_mapping.bd_action_profile' % ictl_s[ig_pipe2])
+				table = self.bfrt_info.table_get('%s.ingress_port_mapping.bd_action_profile' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 				table.entry_del(
 					target,
 					[table.make_key(
@@ -721,7 +721,7 @@ def npb_vlan_to_bd_add(self, target, ig_pipe, vid, member_ptr, bd):
 		try:
 			for ig_pipe2 in ig_pipes2:
 				# bottom
-				table = self.bfrt_info.table_get('%s.ingress_port_mapping.bd_action_profile' % ictl_s[ig_pipe2])
+				table = self.bfrt_info.table_get('%s.ingress_port_mapping.bd_action_profile' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 				table.entry_add(
 					target,
 					[table.make_key(
@@ -740,7 +740,7 @@ def npb_vlan_to_bd_add(self, target, ig_pipe, vid, member_ptr, bd):
 		try:
 			for ig_pipe2 in ig_pipes2:
 				# top
-				table = self.bfrt_info.table_get('%s.ingress_port_mapping.vlan_to_bd_mapping' % ictl_s[ig_pipe2])
+				table = self.bfrt_info.table_get('%s.ingress_port_mapping.vlan_to_bd_mapping' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 				table.entry_add(
 					target,
 					[table.make_key(
@@ -767,7 +767,7 @@ def npb_vlan_to_bd_del(self, target, ig_pipe, vid, member_ptr):
 		try:
 			for ig_pipe2 in ig_pipes2:
 				# top
-				table = self.bfrt_info.table_get('%s.ingress_port_mapping.vlan_to_bd_mapping' % ictl_s[ig_pipe2])
+				table = self.bfrt_info.table_get('%s.ingress_port_mapping.vlan_to_bd_mapping' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 				table.entry_del(
 					target,
 					[table.make_key(
@@ -782,7 +782,7 @@ def npb_vlan_to_bd_del(self, target, ig_pipe, vid, member_ptr):
 		try:
 			for ig_pipe2 in ig_pipes2:
 				# bottom
-				table = self.bfrt_info.table_get('%s.ingress_port_mapping.bd_action_profile' % ictl_s[ig_pipe2])
+				table = self.bfrt_info.table_get('%s.ingress_port_mapping.bd_action_profile' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 				table.entry_del(
 					target,
 					[table.make_key(
@@ -807,7 +807,7 @@ def npb_tunnel_dmac_add(self, target, ig_pipe, ig_port_lag_ptr, ethertype, ether
 
 		if(PipelineParams.BRIDGING_ENABLE == True):
 			for ig_pipe2 in ig_pipes2:
-				table = self.bfrt_info.table_get('%s.dmac.dmac' % ictl_s[ig_pipe2])
+				table = self.bfrt_info.table_get('%s.dmac.dmac' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 				table.entry_add(
 					target,
 					[table.make_key(
@@ -833,7 +833,7 @@ def npb_tunnel_dmac_del(self, target, ig_pipe, ig_port_lag_ptr, ethertype, ether
 
 		if(PipelineParams.BRIDGING_ENABLE == True):
 			for ig_pipe2 in ig_pipes2:
-				table = self.bfrt_info.table_get('%s.dmac.dmac' % ictl_s[ig_pipe2])
+				table = self.bfrt_info.table_get('%s.dmac.dmac' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 				table.entry_del(
 					target,
 					[table.make_key(
@@ -865,7 +865,7 @@ def npb_tunnel_network_dst_vtep_add(self, target, ig_pipe,
 		):
 
 		for ig_pipe2 in ig_pipes:
-			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sfc_top.tunnel_transport.dst_vtep' % ictl_s[ig_pipe2])
+			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sfc_top.tunnel_transport.dst_vtep' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 			table.entry_add(
 				target,
 				[table.make_key(
@@ -894,7 +894,7 @@ def npb_tunnel_network_dst_vtep_del(self, target, ig_pipe,
 		tun_type = 0,         tun_type_mask = 0
 		):
 		for ig_pipe2 in ig_pipes:
-			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sfc_top.tunnel_transport.dst_vtep' % ictl_s[ig_pipe2])
+			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sfc_top.tunnel_transport.dst_vtep' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 
 			# read counter
 			resp = table.entry_get(
@@ -945,7 +945,7 @@ def npb_tunnel_network_src_vtep_add(self, target, ig_pipe,
 		):
 
 		for ig_pipe2 in ig_pipes:
-			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sfc_top.tunnel_transport.src_vtep' % ictl_s[ig_pipe2])
+			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sfc_top.tunnel_transport.src_vtep' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 			table.entry_add(
 				target,
 				[table.make_key(
@@ -966,7 +966,7 @@ def npb_tunnel_network_src_vtep_del(self, target, ig_pipe,
 		):
 
 		for ig_pipe2 in ig_pipes:
-			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sfc_top.tunnel_transport.src_vtep' % ictl_s[ig_pipe2])
+			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sfc_top.tunnel_transport.src_vtep' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 			table.entry_del(
 				target,
 				[table.make_key(
@@ -988,7 +988,7 @@ def npb_tunnel_network_sap_add(self, target, ig_pipe,
 		):
 
 		for ig_pipe2 in ig_pipes:
-			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sfc_top.tunnel_network.sap' % ictl_s[ig_pipe2])
+			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sfc_top.tunnel_network.sap' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 			table.entry_add(
 				target,
 				[table.make_key(
@@ -1008,7 +1008,7 @@ def npb_tunnel_network_sap_del(self, target, ig_pipe,
 		):
 
 		for ig_pipe2 in ig_pipes:
-			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sfc_top.tunnel_network.sap' % ictl_s[ig_pipe2])
+			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sfc_top.tunnel_network.sap' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 			table.entry_del(
 				target,
 				[table.make_key(
@@ -1036,7 +1036,7 @@ def npb_tunnel_outer_sap_add(self, target, ig_pipe,
 			scope = 1;
 
 		for ig_pipe2 in ig_pipes:
-			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sfc_top.tunnel_outer.sap_tcam' % ictl_s[ig_pipe2])
+			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sfc_top.tunnel_outer.sap_tcam' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 			table.entry_add(
 				target,
 				[table.make_key(
@@ -1058,7 +1058,7 @@ def npb_tunnel_outer_sap_del(self, target, ig_pipe,
 		):
 
 		for ig_pipe2 in ig_pipes:
-			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sfc_top.tunnel_outer.sap_tcam' % ictl_s[ig_pipe2])
+			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sfc_top.tunnel_outer.sap_tcam' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 			table.entry_del(
 				target,
 				[table.make_key(
@@ -1094,7 +1094,7 @@ def npb_tunnel_inner_sap_add(self, target, ig_pipe,
 			scope = 1;
 
 		for ig_pipe2 in ig_pipes:
-			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sfc_top.tunnel_inner.sap_tcam' % ictl_s[ig_pipe2])
+			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sfc_top.tunnel_inner.sap_tcam' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 			table.entry_add(
 				target,
 				[table.make_key(
@@ -1131,7 +1131,7 @@ def npb_tunnel_inner_sap_del(self, target, ig_pipe,
 		):
 
 		for ig_pipe2 in ig_pipes:
-			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sfc_top.tunnel_inner.sap_tcam' % ictl_s[ig_pipe2])
+			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sfc_top.tunnel_inner.sap_tcam' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 
 			# read counter
 			resp = table.entry_get(
@@ -1185,7 +1185,7 @@ def npb_tunnel_inner_sap_del(self, target, ig_pipe,
 def npb_npb_sfc_sf_sel_add(self, target, ig_pipe, spi, si, si_predec):
 
 		for ig_pipe2 in ig_pipes:
-			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sfc_top.ing_sfc_sf_sel' % ictl_s[ig_pipe2])
+			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sfc_top.ing_sfc_sf_sel' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 			table.entry_add(
 				target,
 				[table.make_key(
@@ -1201,7 +1201,7 @@ def npb_npb_sfc_sf_sel_add(self, target, ig_pipe, spi, si, si_predec):
 def npb_npb_sfc_sf_sel_del(self, target, ig_pipe, spi, si):
 
 		for ig_pipe2 in ig_pipes:
-			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sfc_top.ing_sfc_sf_sel' % ictl_s[ig_pipe2])
+			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sfc_top.ing_sfc_sf_sel' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 			table.entry_del(
 				target,
 				[table.make_key(
@@ -1215,7 +1215,7 @@ def npb_npb_sfc_sf_sel_del(self, target, ig_pipe, spi, si):
 def npb_sfc_sf_sel_nsh_xlate_add(self, target, ig_pipe, ta, spi, si, sf_bitmask):
 
 		for ig_pipe2 in ig_pipes:
-			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sfc_top.ing_sfc_sf_sel_nsh_xlate' % ictl_s[ig_pipe2])
+			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sfc_top.ing_sfc_sf_sel_nsh_xlate' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 			table.entry_add(
 				target,
 				[table.make_key(
@@ -1233,7 +1233,7 @@ def npb_sfc_sf_sel_nsh_xlate_add(self, target, ig_pipe, ta, spi, si, sf_bitmask)
 def npb_sfc_sf_sel_nsh_xlate_del(self, target, ig_pipe, ta):
 
 		for ig_pipe2 in ig_pipes:
-			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sfc_top.ing_sfc_sf_sel_nsh_xlate' % ictl_s[ig_pipe2])
+			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sfc_top.ing_sfc_sf_sel_nsh_xlate' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 			table.entry_del(
 				target,
 				[table.make_key(
@@ -1251,7 +1251,7 @@ def npb_npb_sf0_action_sel_add(self, target, ig_pipe, spi, si, bitmask):
 	try:
 
 		for ig_pipe2 in ig_pipes:
-			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_top.ing_sf_action_sel' % ictl_s[ig_pipe2])
+			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_top.ing_sf_action_sel' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 			table.entry_add(
 				target,
 				[table.make_key(
@@ -1270,7 +1270,7 @@ def npb_npb_sf0_action_sel_del(self, target, ig_pipe, spi, si):
 	try:
 
 		for ig_pipe2 in ig_pipes:
-			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_top.ing_sf_action_sel' % ictl_s[ig_pipe2])
+			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_top.ing_sf_action_sel' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 			table.entry_del(
 				target,
 				[table.make_key(
@@ -1288,7 +1288,7 @@ def npb_npb_sf0_action_sel_del(self, target, ig_pipe, spi, si):
 def npb_npb_sf0_len_rng_add(self, target, ig_pipe, l3_len_lo, l3_len_hi, l3_len_rng):
 
 		for ig_pipe2 in ig_pipes:
-			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_top.ing_sf_ip_len_rng' % ictl_s[ig_pipe2])
+			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_top.ing_sf_ip_len_rng' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 			table.entry_add(
 				target,
 				[table.make_key(
@@ -1303,7 +1303,7 @@ def npb_npb_sf0_len_rng_add(self, target, ig_pipe, l3_len_lo, l3_len_hi, l3_len_
 def npb_npb_sf0_len_rng_del(self, target, ig_pipe, l3_len_lo, l3_len_hi):
 
 		for ig_pipe2 in ig_pipes:
-			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_top.ing_sf_ip_len_rng' % ictl_s[ig_pipe2])
+			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_top.ing_sf_ip_len_rng' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 			table.entry_del(
 				target,
 				[table.make_key(
@@ -1318,7 +1318,7 @@ def npb_npb_sf0_len_rng_del(self, target, ig_pipe, l3_len_lo, l3_len_hi):
 def npb_npb_sf0_l4_src_port_rng_add(self, target, ig_pipe, l3_len_lo, l3_len_hi, l3_len_rng):
 
 		for ig_pipe2 in ig_pipes:
-			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_top.ing_sf_l4_src_port_rng' % ictl_s[ig_pipe2])
+			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_top.ing_sf_l4_src_port_rng' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 			table.entry_add(
 				target,
 				[table.make_key(
@@ -1333,7 +1333,7 @@ def npb_npb_sf0_l4_src_port_rng_add(self, target, ig_pipe, l3_len_lo, l3_len_hi,
 def npb_npb_sf0_l4_src_port_rng_del(self, target, ig_pipe, l3_len_lo, l3_len_hi):
 
 		for ig_pipe2 in ig_pipes:
-			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_top.ing_sf_l4_src_port_rng' % ictl_s[ig_pipe2])
+			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_top.ing_sf_l4_src_port_rng' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 			table.entry_del(
 				target,
 				[table.make_key(
@@ -1348,7 +1348,7 @@ def npb_npb_sf0_l4_src_port_rng_del(self, target, ig_pipe, l3_len_lo, l3_len_hi)
 def npb_npb_sf0_l4_dst_port_rng_add(self, target, ig_pipe, l3_len_lo, l3_len_hi, l3_len_rng):
 
 		for ig_pipe2 in ig_pipes:
-			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_top.ing_sf_l4_dst_port_rng' % ictl_s[ig_pipe2])
+			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_top.ing_sf_l4_dst_port_rng' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 			table.entry_add(
 				target,
 				[table.make_key(
@@ -1363,7 +1363,7 @@ def npb_npb_sf0_l4_dst_port_rng_add(self, target, ig_pipe, l3_len_lo, l3_len_hi,
 def npb_npb_sf0_l4_dst_port_rng_del(self, target, ig_pipe, l3_len_lo, l3_len_hi):
 
 		for ig_pipe2 in ig_pipes:
-			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_top.ing_sf_l4_dst_port_rng' % ictl_s[ig_pipe2])
+			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_top.ing_sf_l4_dst_port_rng' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 			table.entry_del(
 				target,
 				[table.make_key(
@@ -1401,7 +1401,7 @@ def npb_npb_sf0_policy_l2_add(self, target, ig_pipe,
 			scope = 1;
 
 		for ig_pipe2 in ig_pipes:
-			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_top.acl.mac_acl.acl' % ictl_s[ig_pipe2])
+			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_top.acl.mac_acl.acl' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 			table.entry_add(
 				target,
 				[table.make_key(
@@ -1440,7 +1440,7 @@ def npb_npb_sf0_policy_l2_del(self, target, ig_pipe,
 		):
 
 		for ig_pipe2 in ig_pipes:
-			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_top.acl.mac_acl.acl' % ictl_s[ig_pipe2])
+			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_top.acl.mac_acl.acl' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 
 			# read counter
 			resp = table.entry_get(
@@ -1522,7 +1522,7 @@ def npb_npb_sf0_policy_l34_v4_add(self, target, ig_pipe,
 			scope = 1;
 
 		for ig_pipe2 in ig_pipes:
-			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_top.acl.ipv4_acl.acl' % ictl_s[ig_pipe2])
+			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_top.acl.ipv4_acl.acl' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 			table.entry_add(
 				target,
 				[table.make_key(
@@ -1574,7 +1574,7 @@ def npb_npb_sf0_policy_l34_v4_del(self, target, ig_pipe,
 		):
 
 		for ig_pipe2 in ig_pipes:
-			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_top.acl.ipv4_acl.acl' % ictl_s[ig_pipe2])	
+			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_top.acl.ipv4_acl.acl' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))	
 
 			# read counter
 			resp = table.entry_get(
@@ -1678,7 +1678,7 @@ def npb_npb_sf0_policy_l34_v6_add(self, target, ig_pipe,
 
 
 		for ig_pipe2 in ig_pipes:
-			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_top.acl.ipv6_acl.acl' % ictl_s[ig_pipe2])
+			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_top.acl.ipv6_acl.acl' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 			table.entry_add(
 				target,
 				[table.make_key(
@@ -1737,7 +1737,7 @@ def npb_npb_sf0_policy_l34_v6_del(self, target, ig_pipe,
 		):
 
 		for ig_pipe2 in ig_pipes:
-			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_top.acl.ipv6_acl.acl' % ictl_s[ig_pipe2])
+			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_top.acl.ipv6_acl.acl' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 
 			# read counter
 			resp = table.entry_get(
@@ -1822,7 +1822,7 @@ def npb_npb_sf0_policy_l7_add(self, target, ig_pipe,
 			scope = 1;
 
 		for ig_pipe2 in ig_pipes:
-			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_top.acl.l7_acl.acl' % ictl_s[ig_pipe2])
+			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_top.acl.l7_acl.acl' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 			table.entry_add(
 				target,
 				[table.make_key(
@@ -1851,7 +1851,7 @@ def npb_npb_sf0_policy_l7_del(self, target, ig_pipe,
 		):
 
 		for ig_pipe2 in ig_pipes:
-			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_top.acl.l7_acl.acl' % ictl_s[ig_pipe2])
+			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_top.acl.l7_acl.acl' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 
 			# read counter
 			resp = table.entry_get(
@@ -1892,7 +1892,7 @@ def npb_npb_sf0_policy_sfp_sel_hash_add(self, target, ig_pipe, vpn, flowclass):
 	try:
 		for ig_pipe2 in ig_pipes:
 			# insert both copies of the table:
-			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_sfp_hash_lkp_1.ing_flow_class' % ictl_s[ig_pipe2])
+			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_sfp_hash_lkp_1.ing_flow_class' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 			table.entry_add(
 				target,
 				[table.make_key(
@@ -1904,7 +1904,7 @@ def npb_npb_sf0_policy_sfp_sel_hash_add(self, target, ig_pipe, vpn, flowclass):
 				)]
 			)
 
-#			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_sfp_hash_lkp_2.ing_flow_class' % ictl_s[ig_pipe2])
+#			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_sfp_hash_lkp_2.ing_flow_class' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 #			table.entry_add(
 #				target,
 #				[table.make_key(
@@ -1924,7 +1924,7 @@ def npb_npb_sf0_policy_sfp_sel_hash_del(self, target, ig_pipe, vpn):
 		for ig_pipe2 in ig_pipes:
 			# delete both copies of the table:
 
-			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_sfp_hash_lkp_1.ing_flow_class' % ictl_s[ig_pipe2])
+			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_sfp_hash_lkp_1.ing_flow_class' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 			table.entry_del(
 				target,
 				[table.make_key(
@@ -1932,7 +1932,7 @@ def npb_npb_sf0_policy_sfp_sel_hash_del(self, target, ig_pipe, vpn):
 				)],
 			)
 
-#			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_sfp_hash_lkp_2.ing_flow_class' % ictl_s[ig_pipe2])
+#			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_sfp_hash_lkp_2.ing_flow_class' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 #			table.entry_del(
 #				target,
 #				[table.make_key(
@@ -1950,7 +1950,7 @@ def npb_npb_sf0_policy_sfp_sel_hash_del(self, target, ig_pipe, vpn):
 def npb_npb_sf0_policy_sfp_sel_single_add(self, target, ig_pipe, sfc, sfc_member_ptr, spi, si, si_predec):
 		if(PipelineParams.SFF_SCHD_SIMPLE == True):
 			for ig_pipe2 in ig_pipes:
-				table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_sfp_sel.ing_schd' % ictl_s[ig_pipe2])
+				table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_sfp_sel.ing_schd' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 				table.entry_add(
 					target,
 					[table.make_key(
@@ -1967,8 +1967,8 @@ def npb_npb_sf0_policy_sfp_sel_single_add(self, target, ig_pipe, sfc, sfc_member
 
 			for ig_pipe2 in ig_pipes:
 				# bottom
-#				table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_sfp_sel.schd_selector' % ictl_s[ig_pipe2])
-				table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_sfp_sel.schd_action_profile' % ictl_s[ig_pipe2])
+#				table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_sfp_sel.schd_selector' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
+				table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_sfp_sel.schd_action_profile' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 				table.entry_add(
 					target,
 					[table.make_key(
@@ -1986,7 +1986,7 @@ def npb_npb_sf0_policy_sfp_sel_single_add(self, target, ig_pipe, sfc, sfc_member
 
 				for ig_pipe2 in ig_pipes:
 					# top
-					table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_sfp_sel.ing_schd' % ictl_s[ig_pipe2])
+					table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_sfp_sel.ing_schd' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 					table.entry_add(
 						target,
 						[table.make_key(
@@ -2004,7 +2004,7 @@ def npb_npb_sf0_policy_sfp_sel_single_add(self, target, ig_pipe, sfc, sfc_member
 def npb_npb_sf0_policy_sfp_sel_single_del(self, target, ig_pipe, sfc, sfc_member_ptr):
 		if(PipelineParams.SFF_SCHD_SIMPLE == True):
 			for ig_pipe2 in ig_pipes:
-				table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_sfp_sel.ing_schd' % ictl_s[ig_pipe2])
+				table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_sfp_sel.ing_schd' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 				table.entry_del(
 					target,
 					[table.make_key(
@@ -2016,7 +2016,7 @@ def npb_npb_sf0_policy_sfp_sel_single_del(self, target, ig_pipe, sfc, sfc_member
 
 				for ig_pipe2 in ig_pipes:
 					# top
-					table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_sfp_sel.ing_schd' % ictl_s[ig_pipe2])
+					table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_sfp_sel.ing_schd' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 					table.entry_del(
 						target,
 						[table.make_key(
@@ -2029,8 +2029,8 @@ def npb_npb_sf0_policy_sfp_sel_single_del(self, target, ig_pipe, sfc, sfc_member
 
 			for ig_pipe2 in ig_pipes:
 				# bottom
-#				table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_sfp_sel.schd_selector' % ictl_s[ig_pipe2])
-				table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_sfp_sel.schd_action_profile' % ictl_s[ig_pipe2])
+#				table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_sfp_sel.schd_selector' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
+				table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_sfp_sel.schd_action_profile' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 				table.entry_del(
 					target,
 					[table.make_key(
@@ -2065,8 +2065,8 @@ def npb_npb_sf0_policy_sfp_sel_multi_add(self, target, ig_pipe, sfc, sfc_group_p
 
 				for ig_pipe2 in ig_pipes:
 					# bottom
-#					table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_sfp_sel.schd_selector' % ictl_s[ig_pipe2])
-					table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_sfp_sel.schd_action_profile' % ictl_s[ig_pipe2])
+#					table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_sfp_sel.schd_selector' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
+					table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_sfp_sel.schd_action_profile' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 					table.entry_add(
 						target,
 						[table.make_key(
@@ -2082,8 +2082,8 @@ def npb_npb_sf0_policy_sfp_sel_multi_add(self, target, ig_pipe, sfc, sfc_group_p
 
 			for ig_pipe2 in ig_pipes:
 				# middle
-#				table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_sfp_sel.schd_selector_sel' % ictl_s[ig_pipe2])
-				table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_sfp_sel.schd_selector' % ictl_s[ig_pipe2])
+#				table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_sfp_sel.schd_selector_sel' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
+				table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_sfp_sel.schd_selector' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 				table.entry_add(
 					target,
 					[table.make_key(
@@ -2098,7 +2098,7 @@ def npb_npb_sf0_policy_sfp_sel_multi_add(self, target, ig_pipe, sfc, sfc_group_p
 				)
 
 				# top
-				table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_sfp_sel.ing_schd' % ictl_s[ig_pipe2])
+				table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_sfp_sel.ing_schd' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 				table.entry_add(
 					target,
 					[table.make_key(
@@ -2125,7 +2125,7 @@ def npb_npb_sf0_policy_sfp_sel_multi_del(self, target, ig_pipe, sfc, sfc_group_p
 
 			for ig_pipe2 in ig_pipes:
 				# top
-				table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_sfp_sel.ing_schd' % ictl_s[ig_pipe2])
+				table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_sfp_sel.ing_schd' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 				table.entry_del(
 					target,
 					[table.make_key(
@@ -2134,8 +2134,8 @@ def npb_npb_sf0_policy_sfp_sel_multi_del(self, target, ig_pipe, sfc, sfc_group_p
 				)
 
 				# middle
-#				table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_sfp_sel.schd_selector_sel' % ictl_s[ig_pipe2])
-				table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_sfp_sel.schd_selector' % ictl_s[ig_pipe2])
+#				table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_sfp_sel.schd_selector_sel' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
+				table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_sfp_sel.schd_selector' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 				table.entry_del(
 					target,
 					[table.make_key(
@@ -2147,8 +2147,8 @@ def npb_npb_sf0_policy_sfp_sel_multi_del(self, target, ig_pipe, sfc, sfc_group_p
 
 				for ig_pipe2 in ig_pipes:
 					# bottom
-#					table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_sfp_sel.schd_selector' % ictl_s[ig_pipe2])
-					table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_sfp_sel.schd_action_profile' % ictl_s[ig_pipe2])
+#					table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_sfp_sel.schd_selector' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
+					table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_npb_basic_adv_sfp_sel.schd_action_profile' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 					table.entry_del(
 						target,
 						[table.make_key(
@@ -2165,7 +2165,7 @@ def npb_npb_sff_fib_add(self, target, ig_pipe,  spi, si, nexthop_ptr, end_of_cha
 		try:
 
 			for ig_pipe2 in ig_pipes:
-				table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sff_top.ing_sff_fib' % ictl_s[ig_pipe2])
+				table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sff_top.ing_sff_fib' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 				table.entry_add(
 					target,
 					[table.make_key(
@@ -2187,7 +2187,7 @@ def npb_npb_sff_fib_del(self, target, ig_pipe, spi, si):
 		try:
 
 			for ig_pipe2 in ig_pipes:
-				table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sff_top.ing_sff_fib' % ictl_s[ig_pipe2])
+				table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sff_top.ing_sff_fib' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 				table.entry_del(
 					target,
 					[table.make_key(
@@ -2206,7 +2206,7 @@ def npb_npb_sff_fib_del(self, target, ig_pipe, spi, si):
 def npb_npb_sf1_action_sel_add(self, target, ig_pipe, spi, si, bitmask, mgid):
 
 		for ig_pipe2 in ig_pipes:
-			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_multicast_top_part1.ing_sf_action_sel' % ictl_s[ig_pipe2])
+			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_multicast_top_part1.ing_sf_action_sel' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 			table.entry_add(
 				target,
 				[table.make_key(
@@ -2222,7 +2222,7 @@ def npb_npb_sf1_action_sel_add(self, target, ig_pipe, spi, si, bitmask, mgid):
 def npb_npb_sf1_action_sel_del(self, target, ig_pipe, spi, si):
 
 		for ig_pipe2 in ig_pipes:
-			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_multicast_top_part1.ing_sf_action_sel' % ictl_s[ig_pipe2])
+			table = self.bfrt_info.table_get('%s.npb_ing_top.npb_ing_sf_multicast_top_part1.ing_sf_action_sel' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 
 			# read counter
 			resp = table.entry_get(
@@ -2267,7 +2267,7 @@ def npb_nexthop_add(self, target, ig_pipe, nexthop_ptr, bd, port_lag_ptr):
 
 		try:
 			for ig_pipe2 in ig_pipes2:
-				table = self.bfrt_info.table_get('%s.nexthop.nexthop' % ictl_s[ig_pipe2])
+				table = self.bfrt_info.table_get('%s.nexthop.nexthop' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 				table.entry_add(
 					target,
 					[table.make_key(
@@ -2331,7 +2331,7 @@ def npb_nexthop_tunnel_encap_add(self, target, ig_pipe, nexthop_ptr, bd, tunnel_
 		try:
 
 			for ig_pipe2 in ig_pipes2:
-				table = self.bfrt_info.table_get('%s.nexthop.nexthop' % ictl_s[ig_pipe2])
+				table = self.bfrt_info.table_get('%s.nexthop.nexthop' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 				table.entry_add(
 					target,
 					[table.make_key(
@@ -2382,7 +2382,7 @@ def npb_nexthop_del(self, target, ig_pipe, nexthop_ptr):
 		try:
 
 			for ig_pipe2 in ig_pipes2:
-				table = self.bfrt_info.table_get('%s.nexthop.nexthop' % ictl_s[ig_pipe2])
+				table = self.bfrt_info.table_get('%s.nexthop.nexthop' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 				table.entry_del(
 					target,
 					[table.make_key(
@@ -2410,7 +2410,7 @@ def npb_tunnel_encap_nexthop_add(self, target, ig_pipe, tunnel_ptr, port_lag_ptr
 			ig_pipes2 = ig_pipes.copy()
 
 		for ig_pipe2 in ig_pipes2:
-			table = self.bfrt_info.table_get('%s.outer_fib.fib' % ictl_s[ig_pipe2])
+			table = self.bfrt_info.table_get('%s.outer_fib.fib' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 			table.entry_add(
 				target,
 				[table.make_key(
@@ -2436,7 +2436,7 @@ def npb_tunnel_encap_nexthop_del(self, target, ig_pipe, tunnel_ptr):
 			ig_pipes2 = ig_pipes.copy()
 
 		for ig_pipe2 in ig_pipes2:
-			table = self.bfrt_info.table_get('%s.outer_fib.fib' % ictl_s[ig_pipe2])
+			table = self.bfrt_info.table_get('%s.outer_fib.fib' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 			table.entry_del(
 				target,
 				[table.make_key(
@@ -2462,8 +2462,8 @@ def npb_lag_single_add(self, target, ig_pipe, port_lag_ptr, port_lag_member_ptr,
 			for ig_pipe2 in ig_pipes2:
 
 				# bottom
-#				table = self.bfrt_info.table_get('%s.lag.lag_selector' % ictl_s[ig_pipe2])
-				table = self.bfrt_info.table_get('%s.lag.lag_action_profile' % ictl_s[ig_pipe2])
+#				table = self.bfrt_info.table_get('%s.lag.lag_selector' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
+				table = self.bfrt_info.table_get('%s.lag.lag_action_profile' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 				table.entry_add(
 					target,
 					[table.make_key(
@@ -2476,7 +2476,7 @@ def npb_lag_single_add(self, target, ig_pipe, port_lag_ptr, port_lag_member_ptr,
 				)		
 
 				# top
-				table = self.bfrt_info.table_get('%s.lag.lag' % ictl_s[ig_pipe2])
+				table = self.bfrt_info.table_get('%s.lag.lag' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 				table.entry_add(
 					target,
 					[table.make_key(
@@ -2503,7 +2503,7 @@ def npb_lag_single_del(self, target, ig_pipe, port_lag_ptr, port_lag_member_ptr)
 			for ig_pipe2 in ig_pipes2:
 
 				# top
-				table = self.bfrt_info.table_get('%s.lag.lag' % ictl_s[ig_pipe2])
+				table = self.bfrt_info.table_get('%s.lag.lag' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 				table.entry_del(
 					target,
 					[table.make_key(
@@ -2512,8 +2512,8 @@ def npb_lag_single_del(self, target, ig_pipe, port_lag_ptr, port_lag_member_ptr)
 				)
 
 				# bottom
-#				table = self.bfrt_info.table_get('%s.lag.lag_selector' % ictl_s[ig_pipe2])
-				table = self.bfrt_info.table_get('%s.lag.lag_action_profile' % ictl_s[ig_pipe2])
+#				table = self.bfrt_info.table_get('%s.lag.lag_selector' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
+				table = self.bfrt_info.table_get('%s.lag.lag_action_profile' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 				table.entry_del(
 					target,
 					[table.make_key(
@@ -2547,8 +2547,8 @@ def npb_lag_multi_add(self, target, ig_pipe, port_lag_ptr, port_lag_group_ptr, p
 				for i in range(len(port)):
 
 					# bottom
-#					table = self.bfrt_info.table_get('%s.lag.lag_selector' % ictl_s[ig_pipe2])
-					table = self.bfrt_info.table_get('%s.lag.lag_action_profile' % ictl_s[ig_pipe2])
+#					table = self.bfrt_info.table_get('%s.lag.lag_selector' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
+					table = self.bfrt_info.table_get('%s.lag.lag_action_profile' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 					table.entry_add(
 						target,
 						[table.make_key(
@@ -2561,8 +2561,8 @@ def npb_lag_multi_add(self, target, ig_pipe, port_lag_ptr, port_lag_group_ptr, p
 					)
 
 				# middle
-#				table = self.bfrt_info.table_get('%s.lag.lag_selector_sel' % ictl_s[ig_pipe2])
-				table = self.bfrt_info.table_get('%s.lag.lag_selector' % ictl_s[ig_pipe2])
+#				table = self.bfrt_info.table_get('%s.lag.lag_selector_sel' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
+				table = self.bfrt_info.table_get('%s.lag.lag_selector' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 				table.entry_add(
 					target,
 					[table.make_key(
@@ -2577,7 +2577,7 @@ def npb_lag_multi_add(self, target, ig_pipe, port_lag_ptr, port_lag_group_ptr, p
 				)
 
 				# top
-				table = self.bfrt_info.table_get('%s.lag.lag' % ictl_s[ig_pipe2])
+				table = self.bfrt_info.table_get('%s.lag.lag' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 				table.entry_add(
 					target,
 					[table.make_key(
@@ -2609,7 +2609,7 @@ def npb_lag_multi_del(self, target, ig_pipe, port_lag_ptr, port_lag_group_ptr, p
 					port_lag_member_ptr_list.append(port_lag_member_ptr+i)
 
 				# top
-				table = self.bfrt_info.table_get('%s.lag.lag' % ictl_s[ig_pipe2])
+				table = self.bfrt_info.table_get('%s.lag.lag' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 				table.entry_del(
 					target,
 					[table.make_key(
@@ -2618,8 +2618,8 @@ def npb_lag_multi_del(self, target, ig_pipe, port_lag_ptr, port_lag_group_ptr, p
 				)
 
 				# middle
-#				table = self.bfrt_info.table_get('%s.lag.lag_selector_sel' % ictl_s[ig_pipe2])
-				table = self.bfrt_info.table_get('%s.lag.lag_selector' % ictl_s[ig_pipe2])
+#				table = self.bfrt_info.table_get('%s.lag.lag_selector_sel' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
+				table = self.bfrt_info.table_get('%s.lag.lag_selector' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 				table.entry_del(
 					target,
 					[table.make_key(
@@ -2630,8 +2630,8 @@ def npb_lag_multi_del(self, target, ig_pipe, port_lag_ptr, port_lag_group_ptr, p
 				for i in range(0, len(port)):
 
 					# bottom
-#					table = self.bfrt_info.table_get('%s.lag.lag_selector' % ictl_s[ig_pipe2])
-					table = self.bfrt_info.table_get('%s.lag.lag_action_profile' % ictl_s[ig_pipe2])
+#					table = self.bfrt_info.table_get('%s.lag.lag_selector' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
+					table = self.bfrt_info.table_get('%s.lag.lag_action_profile' % '.'.join([p4_pipeline_name_s[ig_pipe2], ictl_s[ig_pipe2]]))
 					table.entry_del(
 						target,
 						[table.make_key(

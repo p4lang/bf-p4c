@@ -122,6 +122,7 @@ set (P16_JNA_EXCLUDE_PATTERNS
   "p4c-4072\\.p4"
   "p4c-4943\\.p4"
   "p4c-3582\\.p4"
+  "p4c-5223-leaf-tof2\\.p4"
 )
 
 include(JBayErrors.cmake)
@@ -243,6 +244,9 @@ p4c_add_bf_backend_tests("tofino2" "jbay" "t2na" "base" "${CMAKE_CURRENT_SOURCE_
 set_tests_properties("tofino2/extensions/p4_tests/p4_16/customer/extreme/p4c-3473-a2.p4" PROPERTIES TIMEOUT ${extended_timeout_2times})
 
 set_tests_properties("tofino2/extensions/p4_tests/p4_16/customer/extreme/p4c-2918-2.p4" PROPERTIES TIMEOUT ${extended_timeout_2times})
+
+# Kaloom leaf profile needs extra flags.
+p4c_add_bf_backend_tests("tofino2" "jbay" "t2na" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/kaloom/p4c-5223-leaf-tof2.p4" "-Xp4c=\"--traffic-limit 95 --disable-power-check --disable-parse-depth-limit\"")
 
 # Exclude some p4s with conditional checksum updates that are added separately
 set (P4_14_EXCLUDE_FILES "parser_dc_full\\.p4" "sai_p4\\.p4"
