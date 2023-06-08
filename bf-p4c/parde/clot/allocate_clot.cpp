@@ -1,8 +1,12 @@
 #include "allocate_clot.h"
+#include <optional>
 #include "clot_candidate.h"
 #include "field_slice_extract_info.h"
 #include "field_pov_analysis.h"
 #include "header_removal_analysis.h"
+#include "bf-p4c/parde/count_strided_header_refs.h"
+#include "bf-p4c/parde/parser_info.h"
+
 /**
  * \ingroup parde
  * This implements a greedy CLOT-allocation algorithm, as described in
@@ -41,48 +45,84 @@ class GreedyClotAllocator : public Visitor {
             const IR::BFN::ParserGraph* graph,
             const IR::BFN::ParserState* state = nullptr,
             FieldExtractInfo* result = nullptr,
-            ordered_set<const IR::BFN::ParserState*>* visited = nullptr) {
+            ordered_set<std::pair<const IR::BFN::ParserState*, unsigned>>* visited = nullptr,
+            unsigned stack_offset = 0) {
         // Initialize parameters if needed.
         if (!state) state = graph->root;
         if (!result) result = new FieldExtractInfo();
-        if (!visited) visited = new ordered_set<const IR::BFN::ParserState*>();
+        if (!visited)
+            visited = new ordered_set<
+                std::pair<const IR::BFN::ParserState*, unsigned>>();
 
-        LOG6("Finding extracts in state " << state->name);
-        visited->insert(state);
+        LOG6("Finding extracts in state " << state->name << " (offset=" << stack_offset << ")");
+        visited->insert(std::make_pair(state, stack_offset));
 
         // Find all packet-sourced extracts in the current state.
+        cstring header_stack_name;
+        std::set<unsigned> header_stack_indices;
         if (clotInfo.field_range_.count(state)) {
             for (const auto& [field, bitrange] : clotInfo.field_range_.at(state)) {
+                const auto* adj_field = field;
+                if (auto stack_index = get_element_index(field)) {
+                    cstring name = field->name;
+                    cstring field_name = name.findlast('.') + 1;
+                    cstring header_name = field->header();
+                    header_name = header_name.before(strrchr(header_name, '['));
+                    cstring new_field_name = header_name + "[" +
+                                             cstring::to_cstring(*stack_index + stack_offset) +
+                                             "]." + field_name;
+                    header_stack_name = header_name;
+                    header_stack_indices.emplace(*stack_index + stack_offset);
+                    adj_field = phvInfo.field(new_field_name);
+                }
+
                 int min_packet_offset = parserInfo.get_min_shift_amount(state) + bitrange.lo;
                 int max_packet_offset = parserInfo.get_max_shift_amount(state) + bitrange.lo;
 
                 // Add to result->fieldMap.
-                result->updateFieldMap(field, state, static_cast<unsigned>(bitrange.lo),
+                result->updateFieldMap(adj_field, state, stack_offset,
+                                       static_cast<unsigned>(bitrange.lo),
                                        min_packet_offset, max_packet_offset);
 
-                if (!clotInfo.can_be_in_clot(field)) continue;
+                if (!clotInfo.can_be_in_clot(adj_field)) continue;
 
-                BUG_CHECK(clotInfo.field_to_pseudoheaders_.count(field),
+                BUG_CHECK(clotInfo.field_to_pseudoheaders_.count(adj_field),
                           "Field %s determined to be CLOT-eligible, but is not extracted (no "
                           "pseudoheader information)",
-                          field->name);
+                          adj_field->name);
 
                 // Add to result->pseudoheaderMap.
-                for (auto pseudoheader : clotInfo.field_to_pseudoheaders_.at(field)) {
-                    result->updatePseudoheaderMap(pseudoheader, field, state,
+                for (auto pseudoheader : clotInfo.field_to_pseudoheaders_.at(adj_field)) {
+                    result->updatePseudoheaderMap(pseudoheader, adj_field, state,
+                                                  stack_offset,
                                                   static_cast<unsigned>(bitrange.lo),
                                                   min_packet_offset, max_packet_offset);
                 }
             }
         }
+        if (header_stack_indices.size()) {
+            LOG6("Indices for " << header_stack_name << ": " << header_stack_indices);
+            result->updateHeaderStackMap(header_stack_name, state, header_stack_indices);
+        }
+
+        // Check the number of stack elements in the current state
+        CountStridedHeaderRefs count;
+        state->statements.apply(count);
+
+        unsigned succ_offset = 0;
+        if (state->stride && count.header_stack_to_indices.size() == 1) {
+            // Case of > 1 is handled in compute_lowered_parser_ir
+            auto& indices = count.header_stack_to_indices.begin()->second;
+            succ_offset = stack_offset + indices.size();
+        }
 
         // Recurse with the unvisited successors of the current state, if any.
         if (graph->successors().count(state)) {
             for (auto succ : graph->successors().at(state)) {
-                if (visited->count(succ)) continue;
+                if (visited->count(std::make_pair(succ, succ_offset))) continue;
 
                 LOG6("Recursing with transition " << state->name << " -> " << succ->name);
-                group_extracts(graph, succ, result, visited);
+                group_extracts(graph, succ, result, visited, succ_offset);
             }
         }
 
@@ -796,11 +836,137 @@ class GreedyClotAllocator : public Visitor {
         return result;
     }
 
+    /// Get the element index for a field
+    std::optional<unsigned> get_element_index(const PHV::Field* field) {
+        cstring header_name = field->header();
+        const char* index_pos = strrchr(header_name, '[');
+        if (index_pos) {
+            size_t idx_start = index_pos - header_name.c_str() + 1;
+            size_t idx_len = header_name.size() - idx_start - 1;
+            cstring header_inst = header_name.substr(idx_start, idx_len);
+            return static_cast<unsigned>(std::atoi(header_inst.c_str()));
+        }
+        return std::nullopt;
+    }
+
+    /// Get the element index for an extract to a header stack element
+    std::optional<unsigned> get_element_index(const FieldSliceExtractInfo* extract) {
+        const auto* slice = extract->slice();
+        return get_element_index(slice->field());
+    }
+
+    /// Identify which candidates correspond to header stacks extracted in loop states
+    /// and record information about the stacks. Trim the list of candidates based on
+    /// which states are missing elements.
+    ClotCandidateSet *identify_stacks_and_trim_candidates(
+            ClotCandidateSet *candidates,
+            std::map<const ClotCandidate *, const IR::HeaderStack *> &stack_candidates,
+            std::map<const IR::HeaderStack *, int> &stack_delta) {
+        std::map<const IR::HeaderStack*, std::set<const IR::BFN::ParserState*>> stack_states;
+        std::map<std::pair<const IR::BFN::ParserState*, const IR::HeaderStack*>,
+                 std::set<unsigned>> stack_elements;
+
+        auto& parser_state_header_stacks = clotInfo.parser_state_to_header_stacks();
+        for (auto* candidate : *candidates) {
+            bool is_stack = false;
+            bool is_non_stack = false;
+            const IR::HeaderStack* hs = nullptr;
+            for (auto extract : candidate->extracts()) {
+                for (const auto* state : extract->states()) {
+                    if (parser_state_header_stacks.count(state)) {
+                        is_stack = true;
+                        hs = parser_state_header_stacks.at(state).front();
+                        stack_states[hs].emplace(state);
+                        auto state_stack = std::make_pair(state, hs);
+
+                        // Identify the "delta": the number of elements processed
+                        // by each state. If we have different numbers processed
+                        // in different states, treat the delta as 1 (i.e., all elements
+                        // of the stack will be processed).
+                        if (clotInfo.header_stack_elements().count(state_stack)) {
+                            int elems = clotInfo.header_stack_elements().at(state_stack).size();
+                            if (!stack_delta.count(hs))
+                                stack_delta.emplace(hs, elems);
+                            else if (elems == stack_delta.at(hs))
+                                stack_delta.emplace(hs, 1);
+                        }
+
+                        // Record the element being written
+                        auto index = get_element_index(extract);
+                        if (index)
+                            stack_elements[state_stack].emplace(*index);
+                    } else {
+                        is_non_stack = true;
+                    }
+                }
+            }
+            BUG_CHECK(!(is_stack && is_non_stack),
+                      "Candidate %1% corresponds to a stack and non-stack extract?", candidate->id);
+            if (is_stack) stack_candidates.emplace(candidate, hs);
+        }
+
+        // For the header stacks identified above, verify that candidates:
+        //  - cover all the states that extract the stack elements
+        //  - extract all elements of the stack
+        // If either of these are not satisfied then none of the elements can be
+        // extrcted into clots because we can't conditionally extract to CLOTs vs PHVs based
+        // on the value of the parser offset counter.
+        //
+        // FIXME: We can extract to a mix of CLOTs and PHVs if all paths through the loop extract
+        // identical numbers of CLOTs at identical stack indices.
+        std::set<const IR::HeaderStack *> stacks_missing_elements;
+        for (auto& [hs, states] : stack_states) {
+            bool seen_all = true;
+            for (auto& [other_state, stacks] : clotInfo.parser_state_to_header_stacks()) {
+                for (auto* other_hs : stacks) {
+                    if (other_hs == hs) {
+                        auto state_stack = std::make_pair(other_state, hs);
+                        seen_all &= states.count(other_state) &&
+                                    clotInfo.header_stack_elements().at(state_stack) ==
+                                        stack_elements.at(state_stack);
+                        break;
+                    }
+                }
+                if (!seen_all) break;
+            }
+            if (!seen_all) {
+                LOG6("Missing stack elements for " << hs->name);
+                stacks_missing_elements.emplace(hs);
+            }
+        }
+
+        // Eliminate candidates corresponding to missing states
+        auto* new_candidates = new ClotCandidateSet();
+        for (auto* candidate : *candidates) {
+            if (stack_candidates.count(candidate)) {
+                if (!stacks_missing_elements.count(stack_candidates.at(candidate)))
+                    new_candidates->insert(candidate);
+                else
+                    LOG4("Discarding candidate " << candidate->id
+                                                 << " due to missing stack element");
+            } else {
+                new_candidates->insert(candidate);
+            }
+        }
+
+        return new_candidates;
+    }
+
     /// Uses a greedy algorithm to allocate the given candidates.
     void allocate(ClotCandidateSet* candidates,
                   const FieldExtractInfo* fei,
                   const HeaderRemovalAnalysis::ResultMap header_removals) {
         const auto MAX_CLOTS_PER_GRESS = Device::pardeSpec().numClotsPerGress();
+
+        std::map<const ClotCandidate*, const IR::HeaderStack*> stack_candidates;
+        std::map<const IR::HeaderStack *, int> stack_delta;
+
+        candidates = identify_stacks_and_trim_candidates(candidates, stack_candidates, stack_delta);
+
+        // Pool of available tags
+        std::set<unsigned> free_tags;;
+        for (unsigned i = 0; i < MAX_CLOTS_PER_GRESS; ++i)
+            free_tags.insert(free_tags.end(), i);
 
         // Invariant: all members of the candidate set can be allocated. That is, if we were to
         // allocate any single member, it would not violate any CLOT-allocation constraints.
@@ -827,52 +993,108 @@ class GreedyClotAllocator : public Visitor {
             auto states = candidate->states();
             auto gress = candidate->thread();
 
-            auto clot = new Clot(gress);
-            if (LOGGING(3)) {
-                LOG3("Allocating CLOT " << clot->tag << " to candidate " << candidate->id);
+            const auto *hs =
+                stack_candidates.count(candidate) ? stack_candidates.at(candidate) : nullptr;
+            int depth = hs ? hs->size : 1;
+            int delta = hs && stack_delta.count(hs) ? stack_delta.at(hs) : 1;
 
-                bool first_state = true;
-                for (auto* state : states) {
-                    LOG3("  " << (first_state ? "states: " : "        ") << state->name);
-                    first_state = false;
+            unsigned first_idx = 0;
+            if (hs) {
+                auto* extract = candidate->extracts().front();
+                first_idx = *get_element_index(extract);
+            }
+
+            // Check whether sufficient tags exist at the required spacing if multiple elements need
+            // allocating and identify the first tag in the sequence
+            bool found = false;
+            unsigned tag = 0;
+            for (unsigned candidate : free_tags) {
+                int next_tag = candidate + delta;
+                bool miss = false;
+                while (next_tag - candidate < static_cast<unsigned>(depth) - first_idx && !miss) {
+                    miss = !free_tags.count(next_tag);
+                    if (!miss) next_tag += delta;
+                }
+                if (!miss) {
+                    found = true;
+                    tag = candidate;
+                    break;
                 }
             }
-            clotInfo.add_clot(clot, states);
 
-            // Add field slices.
-            for (auto extract : candidate->extracts()) {
-                auto slice = extract->slice();
+            unsigned first_tag = tag;
+            while (found && tag - first_tag < static_cast<unsigned>(depth) - first_idx) {
+                auto clot = new Clot(gress);
+                clot->tag = tag;
+                if (LOGGING(3)) {
+                    std::string extra = depth > 1
+                                            ? " (" + std::to_string(first_idx + tag - first_tag) +
+                                                  " of " + std::to_string(depth) +
+                                                  ", step=" + std::to_string(delta) + ")"
+                                            : "";
+                    LOG3("Allocating CLOT " << clot->tag << " to candidate " << candidate->id
+                                            << extra);
 
-                Clot::FieldKind kind;
-                if (clotInfo.is_checksum(slice))
-                    kind = Clot::FieldKind::CHECKSUM;
-                else if (clotInfo.is_modified(slice))
-                    kind = Clot::FieldKind::MODIFIED;
-                else if (clotInfo.is_readonly(slice))
-                    kind = Clot::FieldKind::READONLY;
-                else
-                    kind = Clot::FieldKind::UNUSED;
-
-                for (const auto& state : extract->states()) {
-                    cstring state_name = clotInfo.sanitize_state_name(state->name, gress);
-                    clot->add_slice(state_name, kind, slice);
-                    if (LOGGING(4)) {
-                        std::string kind_str;
-                        switch (kind) {
-                        case Clot::FieldKind::CHECKSUM:
-                            kind_str = "checksum field"; break;
-                        case Clot::FieldKind::MODIFIED:
-                            kind_str = "modified phv field"; break;
-                        case Clot::FieldKind::READONLY:
-                            kind_str = "read-only phv field"; break;
-                        case Clot::FieldKind::UNUSED:
-                            kind_str = "field"; break;
-                        }
-                        LOG4("  Added " << kind_str << " " << slice->shortString() << " at bit "
-                             << clot->bit_offset(state_name, slice) << " in parser state "
-                             << state_name);
+                    bool first_state = true;
+                    for (auto* state : states) {
+                        LOG3("  " << (first_state ? "states: " : "        ") << state->name);
+                        first_state = false;
                     }
                 }
+                clotInfo.add_clot(clot, states);
+
+                // Add field slices.
+                for (auto extract : candidate->extracts()) {
+                    auto extract_slice = extract->slice();
+                    const PHV::FieldSlice* slice = extract_slice;
+                    if (tag != first_tag) {
+                        cstring name = slice->field()->name;
+                        cstring field_name = name.findlast('.') + 1;
+                        cstring new_field_name = hs->name + "[" +
+                                                 cstring::to_cstring(first_idx + tag - first_tag) +
+                                                 "]." + field_name;
+                        auto *field = phvInfo.field(new_field_name);
+                        slice = new PHV::FieldSlice(field, extract_slice->range());
+                    }
+
+                    Clot::FieldKind kind;
+                    if (clotInfo.is_checksum(slice))
+                        kind = Clot::FieldKind::CHECKSUM;
+                    else if (clotInfo.is_modified(slice))
+                        kind = Clot::FieldKind::MODIFIED;
+                    else if (clotInfo.is_readonly(slice))
+                        kind = Clot::FieldKind::READONLY;
+                    else
+                        kind = Clot::FieldKind::UNUSED;
+
+                    for (const auto& state : extract->states()) {
+                        cstring state_name = clotInfo.sanitize_state_name(state->name, gress);
+                        clot->add_slice(state_name, kind, slice);
+                        if (LOGGING(4)) {
+                            std::string kind_str;
+                            switch (kind) {
+                            case Clot::FieldKind::CHECKSUM:
+                                kind_str = "checksum field"; break;
+                            case Clot::FieldKind::MODIFIED:
+                                kind_str = "modified phv field"; break;
+                            case Clot::FieldKind::READONLY:
+                                kind_str = "read-only phv field"; break;
+                            case Clot::FieldKind::UNUSED:
+                                kind_str = "field"; break;
+                            }
+                            LOG4("  Added " << kind_str << " " << slice->shortString() << " at bit "
+                                 << clot->bit_offset(state_name, slice) << " in parser state "
+                                 << state_name);
+                        }
+                    }
+                }
+
+                if (depth > 1) {
+                    clot->stack_depth = depth - static_cast<int>(first_idx);
+                    clot->stack_inc = delta;
+                }
+                free_tags.erase(tag);
+                tag += delta;
             }
 
             // Done allocating the candidate. Remove any candidates that would violate
@@ -933,8 +1155,9 @@ class GreedyClotAllocator : public Visitor {
 
                         bool first_state = true;
                         for (auto* state : candidate->states()) {
-                             LOG3("  " << (first_state ? "states: " : "        ") << state->name);
-                             first_state = false;
+                            LOG3("  " << (first_state ? "states: " : "        ")
+                                      << state->name);
+                            first_state = false;
                         }
                     }
                     LOG3("");
@@ -983,6 +1206,74 @@ class GreedyClotAllocator : public Visitor {
         return hra.resultMap;
     }
 
+    void filter_stack_extracts(FieldExtractInfo* field_extract_info) {
+        // Identify pseudoheaders with header stacks
+        std::map<cstring, std::map<unsigned, const Pseudoheader*>> pseudoheader_stacks;
+        for (const auto& [pseudoheader, extracts] : field_extract_info->pseudoheaderMap) {
+            for (const auto* field : Keys(extracts)) {
+                if (auto stack_index = get_element_index(field)) {
+                    cstring header_name = field->header();
+                    header_name = header_name.before(strrchr(header_name, '['));
+                    pseudoheader_stacks[header_name].emplace(*stack_index, pseudoheader);
+                    LOG5("Pseudoheader " << pseudoheader->id << " extracts " << header_name << "["
+                                         << *stack_index << "]");
+                }
+            }
+        }
+
+        if (LOGGING(6)) {
+            for (auto& [stack, index_map] : pseudoheader_stacks) {
+                Log::TempIndent indent;
+                LOG6("Indeces/pseudoheaders for Header stack " << stack << ":" << indent);
+                for (auto& [index, pseudoheader] : index_map) {
+                    LOG6("    " << index << " in " << pseudoheader->id);
+                }
+            }
+        }
+
+        // Identify pseudoheaders to be eliminated because a subset of
+        // indices are missing for a state
+        bool done = false;
+        auto header_stack_map = field_extract_info->headerStackMap;
+        ordered_set<const Pseudoheader*> pseudoheaders_to_remove;
+        while (!done) {
+            done = true;
+            for (auto& [stack, index_map] : pseudoheader_stacks) {
+                ordered_set<unsigned> indices_to_remove;
+                BUG_CHECK(header_stack_map.count(stack),
+                          "Header stack %1% missing from CLOT header stack map");
+                for (auto& [index, pseudoheader] : index_map) {
+                    bool failed = false;
+                    for (auto& [_, state_indices] : header_stack_map.at(stack)) {
+                        if (state_indices.count(index)) {
+                            for (auto state_index : state_indices) {
+                                if (!index_map.count(state_index)) {
+                                    pseudoheaders_to_remove.emplace(pseudoheader);
+                                    failed = true;
+                                    break;
+                                }
+                            }
+                        }
+                        if (failed) {
+                            indices_to_remove.emplace(index);
+                            break;
+                        }
+                    }
+                }
+                if (indices_to_remove.size()) {
+                    done = false;
+                    for (auto index : indices_to_remove) index_map.erase(index);
+                }
+            }
+        }
+
+        // Remove the identified pseudoheaders
+        for (auto pseudoheader : pseudoheaders_to_remove) {
+            field_extract_info->pseudoheaderMap.erase(pseudoheader);
+            LOG4("Removing pseudoheader " << pseudoheader->id);
+        }
+    }
+
     Visitor::profile_t init_apply(const IR::Node* root) override {
         // Configure logging for this visitor.
         if (BackendOptions().verbose > 0) {
@@ -1020,6 +1311,7 @@ class GreedyClotAllocator : public Visitor {
                 }
                 LOG4("");
             }
+            filter_stack_extracts(field_extract_info);
 
             // Identify CLOT candidates (using older pseudoheader technique)
             auto candidates = find_clot_candidates(field_extract_info->pseudoheaderMap);
@@ -1275,8 +1567,8 @@ class GreedyClotAllocator : public Visitor {
 };
 
 AllocateClot::AllocateClot(ClotInfo &clotInfo, const PhvInfo &phv, PhvUse &uses,
-                           PragmaDoNotUseClot& pragmaDoNotUseClot, bool log) :
-clotInfo(clotInfo) {
+                           PragmaDoNotUseClot &pragmaDoNotUseClot, bool log)
+    : clotInfo(clotInfo) {
     addPasses({
         &uses,
         &clotInfo.parserInfo,

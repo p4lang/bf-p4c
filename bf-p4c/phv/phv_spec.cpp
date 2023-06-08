@@ -1,5 +1,6 @@
 #include "bf-p4c/phv/phv_spec.h"
 
+#include <optional>
 #include <sstream>
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/common/pragma/all_pragmas.h"
@@ -354,14 +355,32 @@ unsigned PhvSpec::physicalAddress(const PHV::Container &c, ArchBlockType_t inter
     return physicalAddress(containerToId(c), interface);
 }
 
+std::optional<PHV::Container> PhvSpec::physicalAddressToContainer(unsigned address,
+                                                   ArchBlockType_t interface) const {
+    for (auto &[type, physicalRange] : physicalAddressSpec(interface)) {
+        for (unsigned i = 0; i < physicalRange.blocks; i++) {
+            unsigned lo = physicalRange.start + i * physicalRange.incr;
+            unsigned hi =
+                lo + ((physicalRange.blockSize << physicalRange.shl) >> physicalRange.shr);
+            if (address >= lo && address < hi) {
+                unsigned base = i * physicalRange.blockSize;
+                unsigned offset = ((address - lo) << physicalRange.shr) >> physicalRange.shl;
+                unsigned index = base + offset;
+                return PHV::Container(type, index);
+            }
+        }
+    }
+    return std::nullopt;
+}
+
 PhvSpec::AddressSpec TofinoPhvSpec::_physicalAddresses = {
-    /*                  start, blocks, blockSize, incr */
-    { PHV::Type::W,   {     0,      1,        64,    0 } },
-    { PHV::Type::B,   {    64,      1,        64,    0 } },
-    { PHV::Type::H,   {   128,      1,       128,    0 } },
-    { PHV::Type::TW,  {   256,      1,        32,    0 } },
-    { PHV::Type::TB,  {   288,      1,        32,    0 } },
-    { PHV::Type::TH,  {   320,      1,        48,    0 } }
+    /*                  start, blocks, blockSize, incr, shl, shr */
+    { PHV::Type::W,   {     0,      1,        64,    0,   0,   0 } },
+    { PHV::Type::B,   {    64,      1,        64,    0,   0,   0 } },
+    { PHV::Type::H,   {   128,      1,       128,    0,   0,   0 } },
+    { PHV::Type::TW,  {   256,      1,        32,    0,   0,   0 } },
+    { PHV::Type::TB,  {   288,      1,        32,    0,   0,   0 } },
+    { PHV::Type::TH,  {   320,      1,        48,    0,   0,   0 } }
 };
 
 TofinoPhvSpec::TofinoPhvSpec() {
@@ -523,25 +542,34 @@ unsigned TofinoPhvSpec::physicalAddress(unsigned id, ArchBlockType_t /* interfac
 
 // Static data member intializers for phv grouping on JBay
 PhvSpec::AddressSpec JBayPhvSpec::_physicalMauAddresses = {
-    /*                  start, blocks, blockSize, incr */
-    {PHV::Type::W,  {       0,      4,        12,   20 }},
-    {PHV::Type::MW, {      12,      4,         4,   20 }},
-    {PHV::Type::DW, {      16,      4,         4,   20 }},
-    {PHV::Type::B,  {      80,      4,        12,   20 }},
-    {PHV::Type::MB, {      92,      4,         4,   20 }},
-    {PHV::Type::DB, {      96,      4,         4,   20 }},
-    {PHV::Type::H,  {     160,      6,        12,   20 }},
-    {PHV::Type::MH, {     172,      6,         4,   20 }},
-    {PHV::Type::DH, {     176,      6,         4,   20 }}
+    /*                  start, blocks, blockSize, incr, shl, shr */
+    {PHV::Type::W,  {       0,      4,        12,   20,   0,   0 }},
+    {PHV::Type::MW, {      12,      4,         4,   20,   0,   0 }},
+    {PHV::Type::DW, {      16,      4,         4,   20,   0,   0 }},
+    {PHV::Type::B,  {      80,      4,        12,   20,   0,   0 }},
+    {PHV::Type::MB, {      92,      4,         4,   20,   0,   0 }},
+    {PHV::Type::DB, {      96,      4,         4,   20,   0,   0 }},
+    {PHV::Type::H,  {     160,      6,        12,   20,   0,   0 }},
+    {PHV::Type::MH, {     172,      6,         4,   20,   0,   0 }},
+    {PHV::Type::DH, {     176,      6,         4,   20,   0,   0 }}
 };
 PhvSpec::AddressSpec JBayPhvSpec::_physicalParserAddresses = {
-    /*                  start, blocks, blockSize, incr */
-    {PHV::Type::W,  {       0,      4,        12,   20 }},
-    {PHV::Type::MW, {      12,      4,         4,   16 }},
-    {PHV::Type::B,  {      64,      4,        12,   16 }},
-    {PHV::Type::MB, {      76,      4,         4,   16 }},
-    {PHV::Type::H,  {     128,      6,        12,   16 }},
-    {PHV::Type::MH, {     140,      6,         4,   16 }},
+    /*                  start, blocks, blockSize, incr, shl, shr */
+    {PHV::Type::W,  {       0,      4,        12,   32,   1,   0 }},
+    {PHV::Type::MW, {      24,      4,         4,   32,   1,   0 }},
+    {PHV::Type::B,  {     128,      4,        12,    8,   0,   1 }},
+    {PHV::Type::MB, {     134,      4,         4,    8,   0,   1 }},
+    {PHV::Type::H,  {     160,      6,        12,   16,   0,   0 }},
+    {PHV::Type::MH, {     172,      6,         4,   16,   0,   0 }},
+};
+PhvSpec::AddressSpec JBayPhvSpec::_physicalDeparserAddresses = {
+    /*                  start, blocks, blockSize, incr, shl, shr */
+    {PHV::Type::W,  {       0,      4,        12,   16,   0,   0 }},
+    {PHV::Type::MW, {      12,      4,         4,   16,   0,   0 }},
+    {PHV::Type::B,  {      64,      4,        12,   16,   0,   0 }},
+    {PHV::Type::MB, {      76,      4,         4,   16,   0,   0 }},
+    {PHV::Type::H,  {     128,      6,        12,   16,   0,   0 }},
+    {PHV::Type::MH, {     140,      6,         4,   16,   0,   0 }},
 };
 
 JBayPhvSpec::JBayPhvSpec() {
@@ -725,11 +753,16 @@ unsigned JBayPhvSpec::physicalAddress(unsigned id, ArchBlockType_t interface) co
                   "PHV container %1% has unrecognized type %2%",
                   idToContainer(id), containerType);
         physicalRange = _physicalMauAddresses.at(containerType);
-    } else {
+    } else if (interface == PARSER) {
         BUG_CHECK(_physicalParserAddresses.find(containerType) != _physicalParserAddresses.end(),
                   "PHV container %1% has unrecognized type %2%",
                   idToContainer(id), containerType);
         physicalRange = _physicalParserAddresses.at(containerType);
+    } else {
+        BUG_CHECK(
+            _physicalDeparserAddresses.find(containerType) != _physicalDeparserAddresses.end(),
+            "PHV container %1% has unrecognized type %2%", idToContainer(id), containerType);
+        physicalRange = _physicalDeparserAddresses.at(containerType);
     }
 
 
@@ -741,16 +774,17 @@ unsigned JBayPhvSpec::physicalAddress(unsigned id, ArchBlockType_t interface) co
     BUG_CHECK(blockOffset < physicalRange.blockSize,
               "No physical address for PHV container %1%", idToContainer(id));
 
-    return physicalRange.start + block * physicalRange.incr + blockOffset;
+    return physicalRange.start + block * physicalRange.incr +
+           ((blockOffset << physicalRange.shl) >> physicalRange.shr);
 }
 
 #if HAVE_FLATROCK
 // Static data member intializers for phv grouping on Flatrock
 PhvSpec::AddressSpec FlatrockPhvSpec::_physicalAddresses = {
-    /*                  start, blocks, blockSize, incr */
-    {PHV::Type::B,  {       0,      1,       128,    0 }},
-    {PHV::Type::H,  {     128,      1,        32,    0 }},
-    {PHV::Type::W,  {     160,      1,        16,    0 }},
+    /*                  start, blocks, blockSize, incr, shl, shr */
+    {PHV::Type::B,  {       0,      1,       128,    0,   0,   0 }},
+    {PHV::Type::H,  {     128,      1,        32,    0,   0,   0 }},
+    {PHV::Type::W,  {     160,      1,        16,    0,   0,   0 }},
 };
 
 FlatrockPhvSpec::FlatrockPhvSpec() {
@@ -826,6 +860,7 @@ const bitvec& FlatrockPhvSpec::individuallyAssignedContainers() const {
 unsigned FlatrockPhvSpec::physicalAddress(unsigned id, ArchBlockType_t) const {
     return id;
 }
+
 #endif /* HAVE_FLATROCK */
 
 void PhvSpec::applyGlobalPragmas(const std::vector<const IR::Annotation*>& global_pragmas) const {

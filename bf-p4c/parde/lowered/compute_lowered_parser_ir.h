@@ -2,6 +2,7 @@
 #define EXTENSIONS_BF_P4C_PARDE_LOWERED_COMPUTE_LOWERED_PARSER_IR_H_
 
 #include "bf-p4c/parde/allocate_parser_checksum.h"
+#include "bf-p4c/parde/count_strided_header_refs.h"
 #include "bf-p4c/parde/parde_visitor.h"
 #include "bf-p4c/parde/clot/clot_info.h"
 
@@ -59,12 +60,6 @@ struct ComputeLoweredParserIR : public ParserInspector {
                         const IR::BFN::ParserState* state,
                         cstring name,
                         std::vector<const IR::BFN::ParserChecksumPrimitive*>& checksums);
-
-    struct CountStridedHeaderRefs : public Inspector {
-        std::map<cstring, std::set<unsigned>> header_stack_to_indices;
-
-        bool preorder(const IR::HeaderStackItemRef* hs);
-    };
 
     unsigned getOffsetIncAmt(const IR::BFN::ParserState* state);
 

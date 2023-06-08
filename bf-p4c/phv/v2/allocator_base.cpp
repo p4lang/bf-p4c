@@ -1641,6 +1641,7 @@ AllocResult AllocatorBase::alloc_stride(const ScoreContext& ctx,
         // pick a leader container, and try to allocate the stride starting from leader.
         auto leader_cond_ctx = ctx.with_t(ctx.t() + 1);
         for (const auto& leader_cond : group) {
+            if (leader_cond.type().kind() == PHV::Kind::dark) continue;
             // build allocation schedule based on this leader container.
             bool ok = true;
             PHV::Container curr_cond = leader_cond;
@@ -1651,7 +1652,28 @@ AllocResult AllocatorBase::alloc_stride(const ScoreContext& ctx,
                     break;
                 }
                 container_schedule[fs] = curr_cond;
-                curr_cond = PHV::Container(curr_cond.type(), curr_cond.index() + 1);
+
+                auto prev = curr_cond;
+                unsigned prev_index = Device::phvSpec().physicalAddress(prev, PhvSpec::PARSER);
+                auto curr =
+                    Device::phvSpec().physicalAddressToContainer(prev_index + 1, PhvSpec::PARSER);
+
+                if (!curr || curr->size() != prev.size()) {
+                    ok = false;
+                    break;
+                }
+
+                // 8b containers are paired in 16b parser containers. If we have an 8b container,
+                // we need to maintain the high/low half across the strided allocation.
+                if ((Device::currentDevice() == Device::JBAY
+#if HAVE_CLOUDBREAK
+                     || Device::currentDevice() == Device::CLOUDBREAK
+#endif
+                    ) &&  // NOLINT(whitespace/parens)
+                    prev.type().size() == PHV::Size::b8 && prev.index() % 2)
+                    curr = PHV::Container(curr->type(), curr->index() + 1);
+
+                curr_cond = *curr;
             }
             if (!ok) break;
             // allocate them by schedule.

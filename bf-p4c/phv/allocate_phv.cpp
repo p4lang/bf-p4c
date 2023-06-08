@@ -5452,27 +5452,43 @@ BruteForceAllocationStrategy::tryAllocStrideWithLeaderAllocated(
         if (sc == leader)
             continue;
 
-        PHV::Container curr(prev.type(), prev.index() + 1);
+        unsigned prev_index = Device::phvSpec().physicalAddress(prev, PhvSpec::PARSER);
+        auto curr = Device::phvSpec().physicalAddressToContainer(prev_index + 1, PhvSpec::PARSER);
 
-        if (!leader_alloc.getStatus(curr)) {
-            LOG_FEATURE("alloc_progress", 5, TAB1 "Failed: No allocation status for " << curr);
+        if (!curr) {
+            LOG_FEATURE("alloc_progress", 5, TAB1 "Failed: No next container for " << prev);
             return false;
         }
 
-        PHV::ContainerGroup cg(curr.type().size(), {curr});
+        // 8b containers are paired in 16b parser containers. If we have an 8b container, we need to
+        // maintain the high/low half across the strided allocation.
+        if ((Device::currentDevice() == Device::JBAY
+#if HAVE_CLOUDBREAK
+             || Device::currentDevice() == Device::CLOUDBREAK
+#endif
+            ) &&  // NOLINT(whitespace/parens)
+            prev.type().size() == PHV::Size::b8 && prev.index() % 2)
+            curr = PHV::Container(curr->type(), curr->index() + 1);
+
+        if (!leader_alloc.getStatus(*curr)) {
+            LOG_FEATURE("alloc_progress", 5, TAB1 "Failed: No allocation status for " << *curr);
+            return false;
+        }
+
+        PHV::ContainerGroup cg(curr->type().size(), {*curr});
 
         auto sc_alloc = core_alloc_i.try_alloc(leader_alloc, cg, *sc,
                                               config_i.max_sl_alignment, score_ctx);
 
         if (!sc_alloc) {
             LOG_FEATURE("alloc_progress", 5, TAB1 "Failed to allocate next stride slice in " <<
-                        curr);
+                        *curr);
             return false;
         }
 
-        LOG_FEATURE("alloc_progress", 5, TAB1 "Allocated next stride slice in " << curr);
+        LOG_FEATURE("alloc_progress", 5, TAB1 "Allocated next stride slice in " << *curr);
         leader_alloc.commit(*sc_alloc);
-        prev = curr;
+        prev = *curr;
     }
 
     return true;

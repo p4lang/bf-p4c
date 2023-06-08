@@ -1,6 +1,7 @@
 #include "clot_info.h"
 
 #include <array>
+#include <string>
 #include <vector>
 #include <initializer_list>
 
@@ -10,6 +11,7 @@
 #include "bf-p4c/device.h"
 #include "bf-p4c/logging/logging.h"
 #include "bf-p4c/parde/parde_visitor.h"
+#include "bf-p4c/parde/parser_info.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "lib/bitvec.h"
@@ -174,11 +176,18 @@ void ClotInfo::add_field(const PHV::Field* f, const IR::BFN::ParserRVal* source,
         field_range_[state][f] = rval->range;
 }
 
-void ClotInfo::compute_byte_maps() {
-    for (auto kv : parser_state_to_fields_) {
-        auto state = kv.first;
-        auto& fields_in_state = kv.second;
+void ClotInfo::add_stack(const IR::HeaderStack* hs,
+                         const IR::BFN::ParserState* state,
+                         int index) {
+    std::string extra = index >= 0 ? " (element " + std::to_string(index) + ")" : "";
+    LOG4("adding stack " << hs << " to " << state->name << extra);
+    parser_state_to_header_stacks_[state].push_back(hs);
+    if (index >= 0)
+        header_stack_elements_[std::make_pair(state, hs)].emplace(static_cast<unsigned>(index));
+}
 
+void ClotInfo::compute_byte_maps() {
+    for (auto& [state, fields_in_state] : parser_state_to_fields_) {
         for (auto f : fields_in_state) {
             if (auto f_offset_opt = offset(state, f)) {
                 unsigned f_offset = *f_offset_opt;
@@ -197,11 +206,11 @@ void ClotInfo::compute_byte_maps() {
     if (LOGGING(4)) {
         std::clog << "=====================================================" << std::endl;
 
-        for (auto kv : field_to_byte_idx) {
-            std::clog << "state: " << kv.first->name << std::endl;
-            for (auto fb : kv.second) {
-                std::clog << "  " << fb.first->name << " in byte";
-                for (auto id : fb.second)
+        for (auto& [state, field_byte_idx_map] : field_to_byte_idx) {
+            std::clog << "state: " << state->name << std::endl;
+            for (auto& [field, indices] : field_byte_idx_map) {
+                std::clog << "  " << field->name << " in byte";
+                for (auto id : indices)
                     std::clog << " " << id;
                 std::clog << std::endl;
             }
@@ -209,11 +218,11 @@ void ClotInfo::compute_byte_maps() {
 
         std::clog << "-----------------------------------------------------" << std::endl;
 
-        for (auto kv : byte_idx_to_field) {
-            std::clog << "state: " << kv.first->name << std::endl;
-            for (auto bf : kv.second) {
-                std::clog << "  Byte " << bf.first << " has:";
-                for (auto f : bf.second)
+        for (auto& [state, byte_idx_field_map] : byte_idx_to_field) {
+            std::clog << "state: " << state->name << std::endl;
+            for (auto& [byte, fields] : byte_idx_field_map) {
+                std::clog << "  Byte " << byte << " has:";
+                for (auto* f : fields)
                     std::clog << " " << f->name;
                 std::clog << std::endl;
             }
@@ -1121,6 +1130,8 @@ void ClotInfo::clear() {
     is_modified_.clear();
     do_not_use_clot_fields.clear();
     parser_state_to_fields_.clear();
+    parser_state_to_header_stacks_.clear();
+    header_stack_elements_.clear();
     field_to_parser_states_.clear();
     fields_to_pov_bits_.clear();
     field_to_byte_idx.clear();
@@ -1214,6 +1225,33 @@ bool CollectClotInfo::preorder(const IR::BFN::ParserZeroInit* zero_init) {
     if (auto field_lval = zero_init->field->to<IR::BFN::FieldLVal>()) {
         if (auto f = phv.field(field_lval->field)) {
             clotInfo.add_field(f, new IR::BFN::ConstantRVal(0), state);
+        }
+    }
+
+    return true;
+}
+
+bool CollectClotInfo::preorder(const IR::HeaderStackItemRef* hsir) {
+    auto state = findContext<IR::BFN::ParserState>();
+    if (state) {
+        const auto* base = hsir->baseRef();
+        if (!base) return true;
+        bool in_loopback = clotInfo.parserInfo.graph(state).is_loopback_state(state->name);
+        if (!in_loopback) {
+            for (auto& [states, _] : clotInfo.parserInfo.graph(state).loopbacks()) {
+                if (states.first == state) {
+                    in_loopback = true;
+                    break;
+                }
+            }
+        }
+        if (in_loopback) {
+            if (const auto* hs = base->to<IR::HeaderStack>()) {
+                int index = -1;
+                if (const auto* c = hsir->index()->to<IR::Constant>())
+                    index = c->asInt();
+                clotInfo.add_stack(hs, state, index);
+            }
         }
     }
 

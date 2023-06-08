@@ -170,11 +170,15 @@ class Parser : public BaseParser, public Contextable {
                 int             start = -1, length = -1, length_shift = -1, length_mask = -1;
                 int             max_length = -1;
                 int             csum_unit = -1;
+                int             stack_depth = 1;
+                int             stack_inc = 1;
                 Clot(gress_t gress, const value_t &tag, const value_t &data);
                 Clot(const Clot &) = delete;
                 Clot(Clot &&) = delete;
                 bool parse_length(const value_t &exp, int what = 0);
-                template<class PO_ROW> void write_config(PO_ROW &, int) const;
+                template<class PO_ROW> void write_config(PO_ROW &, int, bool) const;
+             private:
+                Clot(gress_t, const Clot &, int);
             };
             std::vector<Clot *>         clots;
             std::vector<Checksum>       csum;
@@ -529,8 +533,8 @@ void Parser::State::Match::write_common_row_config(REGS &regs, Parser *pa, State
     }
 
     int clot_unit = 0;
-    for (auto *c : clots) c->write_config(action_row, clot_unit++);
-    if (def) for (auto *c : def->clots) c->write_config(action_row, clot_unit++);
+    for (auto *c : clots) c->write_config(action_row, clot_unit++, offset_inc > 0);
+    if (def) for (auto *c : def->clots) c->write_config(action_row, clot_unit++, offset_inc > 0);
     pa->mark_unused_output_map(regs, output_map, used);
 
     if (buf_req < 0) {

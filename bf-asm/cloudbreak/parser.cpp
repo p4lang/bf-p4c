@@ -401,7 +401,7 @@ template<> void Parser::State::Match::HdrLenIncStop::write_config(
 }
 
 template<> void Parser::State::Match::Clot::write_config(
-        Cloudbreak::memories_parser_::_po_action_row &po_row, int idx) const {
+        Cloudbreak::memories_parser_::_po_action_row &po_row, int idx, bool offset_add) const {
     po_row.clot_tag[idx] = tag;
     po_row.clot_offset[idx] = start;
     if (load_length) {
@@ -414,6 +414,7 @@ template<> void Parser::State::Match::Clot::write_config(
         po_row.clot_type[idx] = 0;
         po_row.clot_en_len_shr[idx] = 1; }
     po_row.clot_has_csum[idx] = csum_unit > 0;
+    po_row.clot_tag_offset_add[idx] = offset_add;
 }
 
 template<> void Parser::State::Match::write_counter_config(

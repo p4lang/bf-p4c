@@ -39,6 +39,10 @@ class Clot final : public LiftCompare<Clot> {
         BUG_CHECK(gress != GHOST, "Cannot assign CLOTs to ghost gress.");
     }
 
+    explicit Clot(gress_t gress, unsigned tag) : tag(tag), gress(gress) {
+        BUG_CHECK(gress != GHOST, "Cannot assign CLOTs to ghost gress.");
+    }
+
     explicit Clot(cstring);
 
     cstring toString() const;
@@ -65,6 +69,10 @@ class Clot final : public LiftCompare<Clot> {
     gress_t gress;
 
     const IR::BFN::FieldLVal* pov_bit = nullptr;
+
+    std::optional<unsigned> stack_depth = std::nullopt;
+
+    std::optional<unsigned> stack_inc = std::nullopt;
 
     unsigned length_in_bytes(cstring parser_state) const;
 

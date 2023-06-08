@@ -1,6 +1,7 @@
 #ifndef EXTENSIONS_BF_P4C_PHV_PHV_SPEC_H_
 #define EXTENSIONS_BF_P4C_PHV_PHV_SPEC_H_
 
+#include <optional>
 #include <vector>
 #include "bf-p4c/phv/phv.h"
 #include "lib/ordered_map.h"
@@ -21,9 +22,17 @@ class PhvSpec {
 
     /// Represents a range of container addresses
     /// Containers are organized by blocks of blockSize. The addresses start at 'start'.
-    /// The next block address is current bloc start + incr
-    struct RangeSpec { unsigned start; unsigned blocks; unsigned blockSize; unsigned incr; };
-    using  AddressSpec = std::map<PHV::Type, RangeSpec>;
+    /// The next block address is current block start + incr
+    /// The address of a regiser within a block is start + ((index << shl) >> shr)
+    struct RangeSpec {
+        unsigned start;
+        unsigned blocks;
+        unsigned blockSize;
+        unsigned incr;
+        unsigned shl;
+        unsigned shr;
+    };
+    using AddressSpec = std::map<PHV::Type, RangeSpec>;
 
  protected:
     // All cache fields
@@ -272,6 +281,11 @@ class PhvSpec {
     /// @return the target-specific address specification for the specified interface
     virtual AddressSpec &physicalAddressSpec(ArchBlockType_t interface) const = 0;
 
+    /// @return the target-specific container of @p address, for the specified interface
+    /// in the pipeline: PARSER, MAU, DEPARSER.
+    std::optional<PHV::Container> physicalAddressToContainer(unsigned address,
+                                                             ArchBlockType_t interface) const;
+
     /// apply global pragmas to cached info about available PHV containers
     void applyGlobalPragmas(const std::vector<const IR::Annotation*>& global_pragmas) const;
 };
@@ -347,9 +361,8 @@ class JBayPhvSpec : public PhvSpec {
     AddressSpec &physicalAddressSpec(ArchBlockType_t interface) const override {
         switch (interface) {
         case PhvSpec::MAU: return _physicalMauAddresses;
-        case PhvSpec::PARSER:
-        case PhvSpec::DEPARSER:
-            return _physicalParserAddresses;
+        case PhvSpec::PARSER: return _physicalParserAddresses;
+        case PhvSpec::DEPARSER: return _physicalDeparserAddresses;
         default:
             BUG("Invalid interface");
         }
@@ -358,6 +371,7 @@ class JBayPhvSpec : public PhvSpec {
  private:
     static AddressSpec _physicalMauAddresses;
     static AddressSpec _physicalParserAddresses;
+    static AddressSpec _physicalDeparserAddresses;
 };
 
 #ifdef HAVE_CLOUDBREAK

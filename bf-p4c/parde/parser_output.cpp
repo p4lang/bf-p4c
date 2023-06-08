@@ -682,6 +682,14 @@ struct ParserAsmSerializer : public ParserInspector {
             if (extract->dest->csum_unit) {
                 out << indent << "checksum: " << *extract->dest->csum_unit << std::endl;
             }
+
+            if (extract->dest->stack_depth) {
+                out << indent << "stack_depth: " << *extract->dest->stack_depth << std::endl;
+            }
+
+            if (extract->dest->stack_inc) {
+                out << indent << "stack_inc: " << *extract->dest->stack_inc << std::endl;
+            }
         } else {
             out << indent << "# clot " << extract->dest->tag << " (spilled)" << std::endl;
         }

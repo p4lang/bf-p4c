@@ -2,20 +2,45 @@
 
 namespace Parde::Lowered {
 
+PHV::Container ComputeMultiWriteContainers::offset_container(const PHV::Container& container) {
+    if (stack_offset == 0) return container;
+
+    unsigned index = Device::phvSpec().physicalAddress(container, PhvSpec::PARSER);
+    auto curr = Device::phvSpec().physicalAddressToContainer(index + stack_offset,
+                                                             PhvSpec::PARSER);
+    // If we have an 8b container on JBay/Cloudbreak, point to the correct
+    // half in the 16b parser container
+    if ((Device::currentDevice() == Device::JBAY
+#if HAVE_CLOUDBREAK
+         || Device::currentDevice() == Device::CLOUDBREAK
+#endif
+        ) &&  // NOLINT(whitespace/parens)
+        container.type().size() == PHV::Size::b8 && container.index() % 2)
+        curr = PHV::Container(curr->type(), curr->index() + 1);
+
+    return *curr;
+}
+
 bool ComputeMultiWriteContainers::preorder(IR::BFN::LoweredParserMatch* match) {
     auto orig = getOriginal<IR::BFN::LoweredParserMatch>();
 
+    auto match_offset = std::make_pair(orig, stack_offset);
+    if (visited_matches.count(match_offset)) return false;
+
     for (auto e : match->extracts) {
         if (auto extract = e->to<IR::BFN::LoweredExtractPhv>()) {
+            PHV::Container container = extract->dest->container;
+            if (extract->source->is<IR::BFN::LoweredInputBufferRVal>())
+                container = offset_container(extract->dest->container);
             if (extract->write_mode == IR::BFN::ParserWriteMode::CLEAR_ON_WRITE) {
-                clear_on_write[extract->dest->container].insert(orig);
+                clear_on_write[container].insert(orig);
             } else {
                 // Two extraction in the same transition, container should be bitwise or
-                if (bitwise_or.count(extract->dest->container) &&
-                    bitwise_or[extract->dest->container].count(orig)) {
-                    bitwise_or_containers.insert(extract->dest->container);
+                if (bitwise_or.count(container) &&
+                    bitwise_or[container].count(orig)) {
+                    bitwise_or_containers.insert(container);
                 }
-                bitwise_or[extract->dest->container].insert(orig);
+                bitwise_or[container].insert(orig);
             }
         }
     }
@@ -25,7 +50,7 @@ bool ComputeMultiWriteContainers::preorder(IR::BFN::LoweredParserMatch* match) {
         if (csum->csum_err) {
             container = csum->csum_err->container->container;
         } else if (csum->phv_dest) {
-            container = csum->phv_dest->container;
+            container = offset_container(csum->phv_dest->container);
         }
         if (container) {
             if (csum->write_mode == IR::BFN::ParserWriteMode::CLEAR_ON_WRITE) {
@@ -36,7 +61,14 @@ bool ComputeMultiWriteContainers::preorder(IR::BFN::LoweredParserMatch* match) {
         }
     }
 
+    visited_matches.emplace(match_offset);
+    if (match->offsetInc) stack_offset += *match->offsetInc;
+
     return true;
+}
+
+void ComputeMultiWriteContainers::postorder(IR::BFN::LoweredParserMatch* match) {
+    if (match->offsetInc) stack_offset -= *match->offsetInc;
 }
 
 bool ComputeMultiWriteContainers::preorder(IR::BFN::LoweredParser*) {

@@ -18,6 +18,12 @@ class FieldSliceExtractInfo {
     // Invariant: all offsets here are congruent, modulo 8.
     ordered_map<const IR::BFN::ParserState*, unsigned> state_bit_offsets_;
 
+    /// By stack offset: the parser states in which the field slice is extracted, mapped
+    /// to the field slice's offset (in bits) from the start of the state.
+    // Invariant: all offsets here are congruent, modulo 8.
+    std::map<unsigned, ordered_map<const IR::BFN::ParserState*, unsigned>>
+        stack_offset_state_bit_offsets_;
+
     /// The field slice's minimum offset, in bits, from the start of the packet.
     int min_packet_bit_offset_;
 
@@ -30,14 +36,20 @@ class FieldSliceExtractInfo {
  public:
     FieldSliceExtractInfo(
         const ordered_map<const IR::BFN::ParserState*, unsigned>& state_bit_offsets,
+        const std::map<unsigned, ordered_map<const IR::BFN::ParserState*, unsigned>>&
+            stack_offset_state_bit_offsets,
         int min_packet_bit_offset, int max_packet_bit_offset, const PHV::Field* field)
-        : FieldSliceExtractInfo(state_bit_offsets, min_packet_bit_offset, max_packet_bit_offset,
+        : FieldSliceExtractInfo(state_bit_offsets, stack_offset_state_bit_offsets,
+                                min_packet_bit_offset, max_packet_bit_offset,
                                 new PHV::FieldSlice(field)) {}
 
     FieldSliceExtractInfo(
         const ordered_map<const IR::BFN::ParserState*, unsigned>& state_bit_offsets,
+        const std::map<unsigned, ordered_map<const IR::BFN::ParserState*, unsigned>>&
+            stack_offset_state_bit_offsets,
         int min_packet_bit_offset, int max_packet_bit_offset, const PHV::FieldSlice* slice)
         : state_bit_offsets_(state_bit_offsets),
+          stack_offset_state_bit_offsets_(stack_offset_state_bit_offsets),
           min_packet_bit_offset_(min_packet_bit_offset),
           max_packet_bit_offset_(max_packet_bit_offset),
           slice_(slice) {}
@@ -46,6 +58,8 @@ class FieldSliceExtractInfo {
     ///
     /// @param state
     ///             the new parser state
+    /// @param stack_offset
+    ///             stack index offset
     /// @param state_bit_offset
     ///             the field's bit offset from the beginning of @p state
     /// @param min_packet_bit_offset
@@ -54,7 +68,8 @@ class FieldSliceExtractInfo {
     /// @param max_packet_bit_offset
     ///             the maximum bit offset from the beginning of the packet of the field in the
     ///             given state
-    void update(const IR::BFN::ParserState* state, unsigned state_bit_offset,
+    void update(const IR::BFN::ParserState* state,
+                unsigned stack_offset, unsigned state_bit_offset,
                 int min_packet_bit_offset, int max_packet_bit_offset);
 
     /// @return the parser states in which the field slice is extracted.
@@ -166,6 +181,8 @@ class FieldExtractInfo {
                      ordered_map<const PHV::Field*, FieldSliceExtractInfo*>,
                      Pseudoheader::Less> PseudoheaderMap;
     typedef ordered_map<const PHV::Field*, FieldSliceExtractInfo*> FieldMap;
+    typedef std::map<cstring,
+                     std::map<const IR::BFN::ParserState*, std::set<unsigned>>> HeaderStackMap;
 
     /// Maps pseudoheaders to fields to their FieldSliceExtractInfo instances.
     PseudoheaderMap pseudoheaderMap;
@@ -173,34 +190,58 @@ class FieldExtractInfo {
     /// Maps all extracted fields to their FieldSliceExtractInfo instances.
     FieldMap fieldMap;
 
+    /// Maps all header stacks to the sets of indicies that could be extracted in each state
+    // FIXME: Don't need to make sure that all or none of the indices extracted in a state
+    // are covered by CLOTs. If multiple are extracted in a single iteration, then potentionally
+    // only those at the same offset across all iterationsd need to be CLOTed/not CLOTed.
+    // e.g., if a state extracts 0 & 1, or 2 & 3, then it's probably okay if only 0 and 2 are
+    // CLOTed because they are both the first offset in the state being processed.
+    HeaderStackMap headerStackMap;
+
     void updateFieldMap(const PHV::Field* field, const IR::BFN::ParserState* state,
-                        unsigned state_bit_offset, int min_packet_bit_offset,
-                        int max_packet_bit_offset) {
+                        unsigned stack_offset, unsigned state_bit_offset,
+                        int min_packet_bit_offset, int max_packet_bit_offset) {
         if (fieldMap.count(field)) {
-            fieldMap.at(field)->update(state, state_bit_offset, min_packet_bit_offset,
-                                       max_packet_bit_offset);
+            fieldMap.at(field)->update(state, stack_offset, state_bit_offset,
+                                       min_packet_bit_offset, max_packet_bit_offset);
         } else {
             ordered_map<const IR::BFN::ParserState*, unsigned> state_bit_offsets;
             state_bit_offsets[state] = state_bit_offset;
-            fieldMap[field] = new FieldSliceExtractInfo(state_bit_offsets, min_packet_bit_offset,
+            std::map<unsigned, ordered_map<const IR::BFN::ParserState*, unsigned>>
+                stack_offset_state_bit_offsets;
+            stack_offset_state_bit_offsets[stack_offset][state] = state_bit_offset;
+            fieldMap[field] = new FieldSliceExtractInfo(state_bit_offsets,
+                                                        stack_offset_state_bit_offsets,
+                                                        min_packet_bit_offset,
                                                         max_packet_bit_offset, field);
         }
     }
 
     void updatePseudoheaderMap(const Pseudoheader* pseudoheader, const PHV::Field* field,
-                               const IR::BFN::ParserState* state, unsigned state_bit_offset,
+                               const IR::BFN::ParserState* state,
+                               unsigned stack_offset, unsigned state_bit_offset,
                                int min_packet_bit_offset, int max_packet_bit_offset) {
         if (pseudoheaderMap.count(pseudoheader) && pseudoheaderMap.at(pseudoheader).count(field)) {
             auto* fei = pseudoheaderMap.at(pseudoheader).at(field);
-            fei->update(state, state_bit_offset, min_packet_bit_offset, max_packet_bit_offset);
+            fei->update(state, stack_offset, state_bit_offset,
+                        min_packet_bit_offset, max_packet_bit_offset);
         } else {
             ordered_map<const IR::BFN::ParserState*, unsigned> state_bit_offsets;
             state_bit_offsets[state] = state_bit_offset;
-            auto fei = new FieldSliceExtractInfo(state_bit_offsets, min_packet_bit_offset,
-                                                 max_packet_bit_offset, field);
+            std::map<unsigned, ordered_map<const IR::BFN::ParserState*, unsigned>>
+                stack_offset_state_bit_offsets;
+            stack_offset_state_bit_offsets[stack_offset][state] = state_bit_offset;
+            auto fei = new FieldSliceExtractInfo(state_bit_offsets, stack_offset_state_bit_offsets,
+                                                 min_packet_bit_offset, max_packet_bit_offset,
+                                                 field);
 
             pseudoheaderMap[pseudoheader][field] = fei;
         }
+    }
+
+    void updateHeaderStackMap(cstring header_stack, const IR::BFN::ParserState* state,
+                              const std::set<unsigned> indices) {
+        headerStackMap[header_stack][state].insert(indices.begin(), indices.end());
     }
 };
 

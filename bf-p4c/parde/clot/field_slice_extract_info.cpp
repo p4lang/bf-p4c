@@ -1,22 +1,27 @@
 #include "field_slice_extract_info.h"
 
-void FieldSliceExtractInfo::update(const IR::BFN::ParserState* state, unsigned state_bit_offset,
+void FieldSliceExtractInfo::update(const IR::BFN::ParserState* state,
+                                   unsigned stack_offset, unsigned state_bit_offset,
                                    int min_packet_offset, int max_packet_offset) {
-    BUG_CHECK(!state_bit_offsets_.count(state),
-              "Field %s is unexpectedly extracted multiple times in %2%", slice_->field()->name,
+    BUG_CHECK(!stack_offset_state_bit_offsets_[stack_offset].count(state),
+              "Field %s is unexpectedly extracted multiple times in %s", slice_->field()->name,
               state->name);
 
-    auto& entry = *state_bit_offsets_.begin();
-    BUG_CHECK(entry.second % 8 == state_bit_offset % 8,
-              "Field %s determined to be CLOT-eligible, but has inconsistent bit-in-byte "
-              "offsets in states %s and %s",
-              slice_->field()->name, entry.first->name, state->name);
+    if (stack_offset_state_bit_offsets_[stack_offset].size() == 0) {
+        stack_offset_state_bit_offsets_[stack_offset].emplace(state, state_bit_offset);
+    } else {
+        auto& entry = *state_bit_offsets_.begin();
+        BUG_CHECK(entry.second % 8 == state_bit_offset % 8,
+                  "Field %s determined to be CLOT-eligible, but has inconsistent bit-in-byte "
+                  "offsets in states %s and %s",
+                  slice_->field()->name, entry.first->name, state->name);
 
-    BUG_CHECK(entry.first->thread() == state->thread(),
-              "A FieldSliceExtractInfo for an %s extract of field %s is being updated with an "
-              "extract in parser state %s, which comes from %s",
-              toString(entry.first->thread()), slice_->field()->name, state->name,
-              toString(state->thread()));
+        BUG_CHECK(entry.first->thread() == state->thread(),
+                  "A FieldSliceExtractInfo for an %s extract of field %s is being updated with an "
+                  "extract in parser state %s, which comes from %s",
+                  toString(entry.first->thread()), slice_->field()->name, state->name,
+                  toString(state->thread()));
+    }
 
     state_bit_offsets_[state] = state_bit_offset;
     min_packet_bit_offset_ = std::min(min_packet_bit_offset_, min_packet_offset);
@@ -89,10 +94,16 @@ const FieldSliceExtractInfo* FieldSliceExtractInfo::trim(int lo_idx, int bits) c
     for (auto& [state, bit_offset] : state_bit_offsets_)
         state_bit_offsets[state] = bit_offset + adjustment;
 
+    std::map<unsigned, ordered_map<const IR::BFN::ParserState*, unsigned>>
+        stack_offset_state_bit_offsets;
+    for (auto& [stack_offset, state_bit_offsets] : stack_offset_state_bit_offsets_)
+        for (auto& [state, bit_offset] : state_bit_offsets)
+            stack_offset_state_bit_offsets[stack_offset][state] = bit_offset + adjustment;
+
     auto range = slice_->range().shiftedByBits(lo_idx).resizedToBits(bits);
     auto slice = new PHV::FieldSlice(slice_->field(), range);
-    return new FieldSliceExtractInfo(state_bit_offsets, min_packet_bit_offset,
-                                     max_packet_bit_offset, slice);
+    return new FieldSliceExtractInfo(state_bit_offsets, stack_offset_state_bit_offsets,
+                                     min_packet_bit_offset, max_packet_bit_offset, slice);
 }
 
 std::vector<const FieldSliceExtractInfo*>*

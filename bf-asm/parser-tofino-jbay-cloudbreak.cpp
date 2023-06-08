@@ -1461,6 +1461,12 @@ Parser::State::Match::Clot::Clot(gress_t gress, const value_t &tag,
             } else if (kv.key == "checksum") {
                 if (CHECKTYPE(kv.value, tINT))
                     csum_unit = kv.value.i;
+            } else if (kv.key == "stack_depth") {
+                if (CHECKTYPE(kv.value, tINT))
+                    stack_depth = kv.value.i;
+            } else if (kv.key == "stack_inc") {
+                if (CHECKTYPE(kv.value, tINT))
+                    stack_inc = kv.value.i;
             } else {
                 error(kv.key.lineno, "Unknown CLOT key %s", value_desc(kv.key));
             }
@@ -1477,6 +1483,33 @@ Parser::State::Match::Clot::Clot(gress_t gress, const value_t &tag,
             max_length = length;
     } else if (!load_length && max_length != length) {
         error(data.lineno, "Inconsistent constant length and max_length in clot"); }
+    // Create objects for each element in the stack. Only the first element
+    // creates the additional stack elements, and this should only be done
+    // for clot instances in parser loops.
+    for (int i = stack_inc ; i < stack_depth; i += stack_inc)
+        new Clot(gress, *this, i);
+}
+
+/// Clone a clot to create a new stack instance. Should only be used
+/// for clot extrcts in non-unrolled parser loops.
+Parser::State::Match::Clot::Clot(gress_t gress, const Clot &src, int instance) {
+    if (src.tag >= 0) {
+        this->tag = src.tag + instance;
+        name = std::to_string(this->tag);
+    } else {
+        this->tag = -1;
+        name = src.name + "." + std::to_string(instance);
+    }
+    Parser::clots[gress][name].push_back(this);
+    lineno       = src.lineno;
+    load_length  = src.load_length;
+    start        = src.start;
+    length       = src.length;
+    length_shift = src.length_shift;
+    length_mask  = src.length_mask;
+    max_length   = src.max_length;
+    csum_unit    = src.csum_unit;
+    stack_depth  = src.stack_depth;
 }
 
 Parser::State::Match::FieldMapping::FieldMapping(Phv::Ref &ref, const value_t &a) {

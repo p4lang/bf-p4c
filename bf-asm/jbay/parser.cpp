@@ -227,7 +227,8 @@ template <> void Parser::State::Match::Set::write_output_config(Target::JBay::pa
     int dest = where->reg.parser_id();
     int mask = (1 << (1 + where->hi/8U)) - (1 << (where->lo/8U));
     unsigned what = this->what << where->lo;
-    if (what) {
+    // Trim the bytes to be written, unless the value is being rotated
+    if (what && !(flags & ROTATE)) {
         for (unsigned i = 0; i < 4; ++i)
             if (((what >> (8*i)) & 0xff) == 0)
                 mask &= ~(1 << i); }
@@ -269,7 +270,7 @@ template<> void Parser::State::Match::HdrLenIncStop::write_config(
 }
 
 template<> void Parser::State::Match::Clot::write_config(
-        JBay::memories_parser_::_po_action_row &po_row, int idx) const {
+        JBay::memories_parser_::_po_action_row &po_row, int idx, bool offset_add) const {
     po_row.clot_tag[idx] = tag;
     po_row.clot_offset[idx] = start;
     if (load_length) {
@@ -282,6 +283,7 @@ template<> void Parser::State::Match::Clot::write_config(
         po_row.clot_type[idx] = 0;
         po_row.clot_en_len_shr[idx] = 1; }
     po_row.clot_has_csum[idx] = csum_unit > 0;
+    po_row.clot_tag_offset_add[idx] = offset_add;
 }
 
 template<> void Parser::State::Match::write_counter_config(

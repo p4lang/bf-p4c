@@ -631,7 +631,7 @@ template<> void Parser::State::Match::HdrLenIncStop::write_config(
 }
 
 template<> void Parser::State::Match::Clot::write_config(
-        Tofino::memories_all_parser_::_po_action_row &, int) const {
+        Tofino::memories_all_parser_::_po_action_row &, int, bool) const {
     BUG();  // no CLOTs on tofino; should not get here
 }
 

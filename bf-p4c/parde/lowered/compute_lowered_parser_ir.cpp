@@ -166,13 +166,6 @@ IR::BFN::LoweredParserChecksum* ComputeLoweredParserIR::lowerParserChecksum(
     return csum;
 }
 
-bool ComputeLoweredParserIR::CountStridedHeaderRefs::preorder(const IR::HeaderStackItemRef* hs) {
-    auto stack = hs->base()->toString();
-    auto index = hs->index()->to<IR::Constant>()->asUnsigned();
-    header_stack_to_indices[stack].insert(index);
-    return false;
-}
-
 unsigned ComputeLoweredParserIR::getOffsetIncAmt(const IR::BFN::ParserState* state) {
     CountStridedHeaderRefs count;
     state->statements.apply(count);

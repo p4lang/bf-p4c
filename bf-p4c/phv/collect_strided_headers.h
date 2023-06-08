@@ -38,8 +38,8 @@ struct CollectStridedHeaders : public Inspector {
 
     const ordered_set<const PHV::Field*>*
     get_strided_group(const PHV::Field* f) const {
-        for (auto& kv : stride_groups) {
-            for (auto& group : kv.second) {
+        for (auto& [_, groups] : stride_groups) {
+            for (auto& group : groups) {
                 if (group.count(f))
                     return &group;
             }

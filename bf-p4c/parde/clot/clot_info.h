@@ -35,6 +35,15 @@ class ClotInfo {
     ordered_map<const IR::BFN::ParserState*,
                 std::vector<const PHV::Field*>> parser_state_to_fields_;
 
+    /// Maps parser states to all header stacks extracted in that state if the
+    /// state is a loop target
+    ordered_map<const IR::BFN::ParserState*,
+                std::vector<const IR::HeaderStack*>> parser_state_to_header_stacks_;
+
+    /// Maps parser states + header header state to elements seen
+    ordered_map<std::pair<const IR::BFN::ParserState*, const IR::HeaderStack*>,
+                std::set<unsigned>> header_stack_elements_;
+
     /// Maps fields to all states that extract the field, regardless of source. Each state is
     /// further mapped to the source from which the field is extracted.
     ordered_map<const PHV::Field*,
@@ -112,6 +121,16 @@ class ClotInfo {
         return parser_state_to_fields_;
     };
 
+    const ordered_map<const IR::BFN::ParserState*, std::vector<const IR::HeaderStack*>>&
+            parser_state_to_header_stacks() const {
+        return parser_state_to_header_stacks_;
+    };
+
+    const ordered_map<std::pair<const IR::BFN::ParserState*, const IR::HeaderStack*>,
+                      std::set<unsigned>>& header_stack_elements() {
+        return header_stack_elements_;
+    }
+
     /// A POV is in this set if there is a path through the parser in which the field is not
     /// extracted, but its POV bit is set.
     std::set<const PHV::Field*> pov_extracted_without_fields;
@@ -168,6 +187,8 @@ class ClotInfo {
  private:
     void add_field(const PHV::Field* f, const IR::BFN::ParserRVal* source,
                    const IR::BFN::ParserState* state);
+
+    void add_stack(const IR::HeaderStack *hs, const IR::BFN::ParserState *state, int index = -1);
 
     /// Populates @ref field_to_byte_idx and @ref byte_idx_to_field.
     void compute_byte_maps();
@@ -419,6 +440,9 @@ class CollectClotInfo : public Inspector {
     /// Collects the set of fields extracted.
     bool preorder(const IR::BFN::Extract* extract) override;
     bool preorder(const IR::BFN::ParserZeroInit* zero_init) override;
+
+    /// Collects the set of header stacks extracted in loop states
+    bool preorder(const IR::HeaderStackItemRef* hs) override;
 
     /// Collects the set of POV bits on which each field's emit is predicated.
     bool preorder(const IR::BFN::EmitField* emit) override;
