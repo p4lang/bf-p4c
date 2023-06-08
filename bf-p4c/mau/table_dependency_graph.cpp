@@ -2649,11 +2649,11 @@ void PrintDependencyGraph::print_critical_chains(const DependencyGraph& dg) {
     LOG_FEATURE("table_dependency_summary", 3, Log::unindent <<
                 "*** Table dependency chains (of minimum length " << min_path_len << ") ***");
     int c_num = 1;
-    for (auto vec : crit_chains) {
+    for (const auto &vec : crit_chains) {
         std::stringstream ss;
         int t_num = 0;
         gress_t gress = GHOST;
-        for (auto* t : vec) {
+        for (const auto* t : vec) {
             if (t_num) {
                 ss << " -> ";
                 BUG_CHECK(gress == t->gress, "Formed critical chain with different-gress tables?");

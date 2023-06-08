@@ -42,7 +42,7 @@ class Manifest : public Inspector {
         std::set<cstring> m_defines;
 
         explicit InputFiles(const BFN_Options&);
-        void serialize(Writer&);
+        void serialize(Writer&) const;
     };
 
     /// represents a graph file
@@ -55,7 +55,7 @@ class Manifest : public Inspector {
             const cstring format_in = ".dot") :
             m_path(path_in), m_gress(gress_in), m_type(type_in), m_format(format_in) { }
 
-        void serialize(Writer&);
+        void serialize(Writer&) const;
 
         cstring getHash() const {
             return m_path + toString(m_gress) + m_type + m_format;
@@ -78,7 +78,7 @@ class Manifest : public Inspector {
         std::set<PathAndType, PathCmp>        m_logs;
         std::set<GraphOutput, GraphOutputCmp> m_graphs;
 
-        void serialize(Writer&);
+        void serialize(Writer&) const;
     };
 
     const BFN_Options& m_options;

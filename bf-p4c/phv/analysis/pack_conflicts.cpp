@@ -245,11 +245,11 @@ bool PackConflicts::hasPackConflict(const PHV::FieldSlice& fs1, const PHV::Field
     if (!field_fine_slices.count(fs1.field())) return false;
     if (!field_fine_slices.count(fs2.field())) return false;
 
-    for (auto range1 : field_fine_slices.at(fs1.field())) {
+    for (const auto &range1 : field_fine_slices.at(fs1.field())) {
         if (!range1.overlaps(fs1.range())) continue;
         auto fs1_overlapped_fs = PHV::FieldSlice(fs1.field(), range1);
         int fs1_overlapped_id = fieldslice_to_id.at(fs1_overlapped_fs);
-        for (auto range2 : field_fine_slices.at(fs2.field())) {
+        for (const auto &range2 : field_fine_slices.at(fs2.field())) {
             if (!range2.overlaps(fs2.range())) continue;
             auto fs2_overlapped_fs = PHV::FieldSlice(fs2.field(), range2);
             int fs2_overlapped_id = fieldslice_to_id.at(fs2_overlapped_fs);

@@ -57,10 +57,10 @@ class TableReplayFriendlyPhvConstraints : public Transform {
     const IR::Node *preorder(IR::BFN::Pipe * pipe) override;
     const IR::Node *preorder(IR::Expression *expr) override;
 
-    const IR::Node *postorder(IR::BFN::Pipe *pipe) {
+    const IR::Node *postorder(IR::BFN::Pipe *pipe) override {
         LOG5("print all pa container size");
         LOG5("pipe is " + pipe->canon_name());
-        for (auto it : add_pa_container_size) {
+        for (auto &it : add_pa_container_size) {
             LOG5(it.first);
             for (auto size : it.second) {
                 LOG5(size);

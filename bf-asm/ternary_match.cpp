@@ -406,7 +406,7 @@ template<class REGS> void TernaryMatchTable::write_regs_vt(REGS &regs) {
     auto &merge = regs.rams.match.merge;
     for (Layout &row : layout) {
         auto vpn = row.vpns.begin();
-        for (auto tcam : row.memunits) {
+        for (const auto &tcam : row.memunits) {
             BUG_CHECK(tcam.stage == INT_MIN && tcam.row == row.row,
                       "bogus tcam %s in row %d", tcam.desc(), row.row);
             auto &tcam_mode = regs.tcams.col[tcam.col].tcam_mode[row.row];
@@ -697,56 +697,56 @@ void TernaryMatchTable::gen_match_fields(json::vector &match_field_list,
                                          std::vector<bitvec> &tcam_bits) const {
     unsigned match_index = match.size() - 1;
     for (auto &ixb : input_xbar) {
-        for (auto field : *ixb) {
-            switch (field.first.type) {
+        for (const auto &[ field_group, field_phv ] : *ixb) {
+            switch (field_group.type) {
             case InputXbar::Group::EXACT:
                 continue;
             case InputXbar::Group::TERNARY: {
-                int word = match_index - match_word(field.first.index);
+                int word = match_index - match_word(field_group.index);
                 if (word < 0) continue;
                 std::string source = "spec";
-                std::string field_name = field.second.what.name();
+                std::string field_name = field_phv.what.name();
                 unsigned lsb_mem_word_offset = 0;
-                if (field.second.hi > 40) {
+                if (field_phv.hi > 40) {
                     // FIXME -- no longer needed if we always convert these to Group::BYTE?
                     // a field in the (mid) byte group, which is shared with the adjacent word
                     // group each word gets only 4 bits of the byte group and is placed at msb
                     // Check mid-byte field does not cross byte boundary (40-47)
-                    BUG_CHECK(field.second.hi < 48);
+                    BUG_CHECK(field_phv.hi < 48);
                     // Check mid-byte field is associated with even group
                     // | == 5 == | == 1 == | == 5 == | == 5 == | == 1 == | == 5 == |
                     // | Grp 0   | Midbyte0| Grp 1   | Grp 2   | Midbyte1| Grp 3   |
-                    BUG_CHECK((field.first.index & 1) == 0);
+                    BUG_CHECK((field_group.index & 1) == 0);
                     // Find groups to place this byte nibble. Check group which has this
                     // group as the byte_group
                     for (auto &m : match) {
-                        if (m.byte_group * 2 == field.first.index) {
+                        if (m.byte_group * 2 == field_group.index) {
                             // Check byte_config to determine where to place the nibble
-                            lsb_mem_word_offset = 1 + field.second.lo;
+                            lsb_mem_word_offset = 1 + field_phv.lo;
                             int nibble_offset = 0;
-                            int hwidth = 44 - field.second.lo;
+                            int hwidth = 44 - field_phv.lo;
                             int start_bit = 0;
                             if (m.byte_config == MIDBYTE_NIBBLE_HI) {
                                 nibble_offset += 4;
                                 start_bit = hwidth;
-                                hwidth = field.second.hi - 43;
+                                hwidth = field_phv.hi - 43;
                             }
                             int midbyte_word_group = match_index - match_word(m.word_group);
                             gen_entry_cfg(match_field_list, field_name,
                                     lsb_mem_word_offset, midbyte_word_group,
                                     midbyte_word_group, source,
-                                    field.second.what.lobit() + start_bit, hwidth,
-                                    field.first.index,
+                                    field_phv.what.lobit() + start_bit, hwidth,
+                                    field_group.index,
                                     tcam_bits[midbyte_word_group]);
                         }
                     }
                 } else {
-                    lsb_mem_word_offset = 1 + field.second.lo;
+                    lsb_mem_word_offset = 1 + field_phv.lo;
                     gen_entry_cfg(match_field_list, field_name,
                                   lsb_mem_word_offset, word, word, source,
-                                  field.second.what.lobit(), field.second.hi -
-                                  field.second.lo + 1, field.first.index,
-                                  tcam_bits[word], field.second.what->lo % 4); }
+                                  field_phv.what.lobit(), field_phv.hi -
+                                  field_phv.lo + 1, field_group.index,
+                                  tcam_bits[word], field_phv.what->lo % 4); }
                 break; }
             case InputXbar::Group::BYTE:
                 // The byte group represents what goes in top nibble in the tcam
@@ -773,12 +773,12 @@ void TernaryMatchTable::gen_match_fields(json::vector &match_field_list,
                 //  Adona     :  2   3   4   5
                 //  --------------------------
                 for (size_t word = 0; word < match.size(); word++) {
-                    if (match[word].byte_group != field.first.index) continue;
+                    if (match[word].byte_group != field_group.index) continue;
                     auto source     = "spec";
-                    auto field_name = field.second.what.name();
-                    int byte_lo     = field.second.lo;
-                    int field_lo    = field.second.what.lobit();
-                    int width       = field.second.what.size();
+                    auto field_name = field_phv.what.name();
+                    int byte_lo     = field_phv.lo;
+                    int field_lo    = field_phv.what.lobit();
+                    int width       = field_phv.what.size();
                     int nibble_lo   = byte_lo;
                     if (match[word].byte_config == MIDBYTE_NIBBLE_HI) {
                         if (byte_lo >= 4) {
@@ -827,7 +827,9 @@ void TernaryMatchTable::gen_match_fields(json::vector &match_field_list,
                         match_index - word, source, field_lo, width, match[word].byte_group,
                         tcam_bits[match_index - word]);
                 }
-                break; } } }
+                break; }
+        }
+    }
 }
 
 json::map &TernaryMatchTable::get_tbl_top(json::vector &out) const {

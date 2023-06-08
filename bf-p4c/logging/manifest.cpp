@@ -79,7 +79,7 @@ Manifest::InputFiles::InputFiles(const BFN_Options& options) {
     free(ppFlags);
 }
 
-void Manifest::InputFiles::serialize(Writer& writer) {
+void Manifest::InputFiles::serialize(Writer& writer) const {
     writer.Key("source_files");
     writer.StartObject();
     writer.Key("src_root");
@@ -264,7 +264,7 @@ void Manifest::sendTo(Writer& writer, const int pipe, const gress_t gress) {
     }
 }
 
-void Manifest::GraphOutput::serialize(Writer& writer) {
+void Manifest::GraphOutput::serialize(Writer& writer) const {
     writer.StartObject();
     writer.Key("path");
     writer.String(m_path.c_str());
@@ -277,7 +277,7 @@ void Manifest::GraphOutput::serialize(Writer& writer) {
     writer.EndObject();
 }
 
-void Manifest::OutputFiles::serialize(Writer& writer) {
+void Manifest::OutputFiles::serialize(Writer& writer) const {
     writer.Key("files");
     writer.StartObject();
     // Should be overwritten by assembler or driver on successful compile
@@ -311,12 +311,12 @@ void Manifest::OutputFiles::serialize(Writer& writer) {
 
     writer.Key("graphs");
     writer.StartArray();
-    for (auto graph : m_graphs) graph.serialize(writer);
+    for (const auto &graph : m_graphs) graph.serialize(writer);
     writer.EndArray();
 
     writer.Key("logs");
     writer.StartArray();
-    for (auto &log : m_logs) {
+    for (const auto &log : m_logs) {
         writer.StartObject();
         writer.Key("path");
         writer.String(log.first.c_str());

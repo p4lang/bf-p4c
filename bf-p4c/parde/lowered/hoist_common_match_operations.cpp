@@ -73,7 +73,7 @@ struct RightShiftCsumMask : public Modifier {
     bool preorder(IR::BFN::LoweredParserChecksum* csum) override {
         if (byteDelta == 0 || oob || swapMalform) return false;
         std::set<nw_byterange> new_masked_ranges;
-        for (auto m : csum->masked_ranges) {
+        for (const auto &m : csum->masked_ranges) {
             nw_byterange new_m(m.lo, m.hi);
             new_m = m.shiftedByBytes(byteDelta);
             BUG_CHECK(new_m.lo >= 0, "Shifting csum mask to negative position.");

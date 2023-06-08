@@ -134,7 +134,7 @@ bool RewriteEmitClot::preorder(IR::BFN::Deparser* deparser) {
             continue;
         }
 
-        for (auto entry : *sliceClots) {
+        for (const auto &entry : *sliceClots) {
             auto slice = entry.first;
             auto clot = entry.second;
 

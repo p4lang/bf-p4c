@@ -298,7 +298,7 @@ struct Operand {
 
         HashDistribution *find_hash_dist(int unit) const {
             if (auto rv = table->find_hash_dist(unit)) return rv;
-            for (auto mtab : table->get_match_tables())
+            for (auto *mtab : table->get_match_tables())
                 if (auto rv = mtab->find_hash_dist(unit)) return rv;
             return nullptr; }
         bool equiv(const Base *a_) const override {

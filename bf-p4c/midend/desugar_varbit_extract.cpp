@@ -605,21 +605,21 @@ class RewriteVarbitUses : public Modifier {
 };
 
 Modifier::profile_t RewriteVarbitUses::init_apply(const IR::Node* root) {
-    for (auto & hdr_len_states : cve.varbit_hdr_instance_to_constant_state) {
+    for (const auto &[ name, states ] : cve.varbit_hdr_instance_to_constant_state) {
         // If the length is declared as a constant, the creation of branches
         // for each state should happen in the ascending order of the lengths
         unsigned prev_length = 0;
-        auto varbit_field = cve.varbit_hdr_instance_to_varbit_field.at(hdr_len_states.first);
-        for (auto len_states : hdr_len_states.second) {
-            for (auto state : len_states.second) {
+        auto varbit_field = cve.varbit_hdr_instance_to_varbit_field.at(name);
+        for (const auto &len_states : states) {
+            for (const auto *state : len_states.second) {
                 create_branches(state, varbit_field, prev_length);
                 prev_length = len_states.first;
             }
         }
     }
-    for (auto hdr_states : cve.varbit_hdr_instance_to_variable_state) {
-        for (auto& state : hdr_states.second) {
-            auto varbit_field = cve.varbit_hdr_instance_to_varbit_field.at(hdr_states.first);
+    for (const auto &[ name, states ] : cve.varbit_hdr_instance_to_variable_state) {
+        for (const auto &state : states) {
+            auto varbit_field = cve.varbit_hdr_instance_to_varbit_field.at(name);
             create_branches(state, varbit_field, 0);
         }
     }
@@ -646,7 +646,7 @@ create_add_statement(const IR::Member* method,
                      const IR::Type_Header* header) {
     auto listVec = IR::Vector<IR::Expression>();
     auto headerName = create_instance_name(header->name);
-    for (auto f : header->fields) {
+    for (const auto *f : header->fields) {
         listVec.push_back(new IR::Member(f->type, new IR::Member(path, headerName), f->name));
     }
     auto args = new IR::Vector<IR::Argument>({ new IR::Argument(
@@ -659,10 +659,10 @@ const IR::ParserState*
 RewriteVarbitUses::create_branch_state(const IR::BFN::TnaParser* parser,
         const IR::ParserState* state, const IR::Expression* select,
         const IR::StructField* varbit_field, unsigned length, cstring name) {
-    for (auto& kv : state_to_branch_states) {
+    for (const auto &kv : state_to_branch_states) {
         auto p = cve.state_to_parser.at(kv.first);
         if (p == parser) {
-            for (auto s : kv.second) {
+            for (const auto &s : kv.second) {
                 if (name == s.second->name)
                     return s.second;
             }
@@ -704,18 +704,18 @@ RewriteVarbitUses::create_end_state(const IR::BFN::TnaParser* parser,
                                     const IR::StructField* varbit_field,
                                     const IR::Type_Header* orig_header,
                                     cstring orig_hdr_name) {
-    for (auto& kv : state_to_branch_states) {
-        auto p = cve.state_to_parser.at(kv.first);
+    for (const auto &kv : state_to_branch_states) {
+        const auto p = cve.state_to_parser.at(kv.first);
         if (p == parser) {
-            for (auto s : kv.second) {
+            for (const auto &s : kv.second) {
                 if (name == s.second->name)
                     return s.second;
             }
         }
     }
 
-    for (auto& kv : state_to_end_state) {
-        auto p = cve.state_to_parser.at(kv.first);
+    for (const auto& kv : state_to_end_state) {
+        const auto p = cve.state_to_parser.at(kv.first);
         if (p == parser) {
             if (name == kv.second->name)
                 return kv.second;
@@ -980,14 +980,14 @@ bool RewriteVarbitUses::preorder(IR::ParserState* state) {
             auto matches = length_to_match.at(length);
             auto next_state = ms.second;
 
-            for (auto match : merge_matches(matches, var_mask)) {
+            for (const auto &match : merge_matches(matches, var_mask)) {
                 auto select_case = create_select_case(var_bitwidth, match.value, match.mask,
                                                       next_state->name);
                 select_cases.push_back(select_case);
             }
         }
 
-        for (auto rej : merge_matches(cve.state_to_reject_matches.at(orig), var_mask)) {
+        for (const auto &rej : merge_matches(cve.state_to_reject_matches.at(orig), var_mask)) {
             auto select_case = create_select_case(var_bitwidth, rej.value, rej.mask, "reject");
             select_cases.push_back(select_case);
         }

@@ -618,7 +618,7 @@ class TableFlowGraphBuilder : public Inspector {
  public:
     TableFlowGraph graph;
     MauBacktracker &backtracker;
-    int placement_stages;
+    int placement_stages = -1;
 
     explicit TableFlowGraphBuilder(MauBacktracker &backtracker) : backtracker(backtracker) {}
 

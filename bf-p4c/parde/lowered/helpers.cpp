@@ -183,7 +183,7 @@ std::pair<IR::Vector<IR::BFN::ContainerRef>, std::vector<Clot*>> lowerFields(
             slice_clots = clotInfo.allocated_slices(field);
         }
         if (slice_clots) {
-            for (auto entry : *slice_clots) {
+            for (const auto &entry : *slice_clots) {
                 auto clot = entry.second;
                 if (clots.empty() || clots.back() != clot) clots.push_back(clot);
             }

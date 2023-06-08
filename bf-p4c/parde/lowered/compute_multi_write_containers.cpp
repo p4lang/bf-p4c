@@ -96,7 +96,7 @@ void ComputeMultiWriteContainers::detect_multi_writes(
     const IR::BFN::LoweredParser* parser,
     const std::map<PHV::Container, std::set<const IR::BFN::LoweredParserMatch*>>& writes,
     std::set<PHV::Container>& write_containers, const char* which) {
-    for (auto w : writes) {
+    for (const auto &w : writes) {
         if (has_non_mutex_writes(parser, w.second)) {
             write_containers.insert(w.first);
             LOG4("mark " << w.first << " as " << which);
@@ -108,8 +108,8 @@ void ComputeMultiWriteContainers::detect_multi_writes(
                 if (writes.count(other)) {
                     bool has_even_odd_pair = false;
 
-                    for (auto x : writes.at(other)) {
-                        for (auto y : w.second) {
+                    for (const auto &x : writes.at(other)) {
+                        for (const auto &y : w.second) {
                             if (x == y || !parser_info.graph(parser).is_mutex(x, y)) {
                                 has_even_odd_pair = true;
                                 break;
@@ -147,15 +147,15 @@ void ComputeMultiWriteContainers::postorder(IR::BFN::LoweredParser* parser) {
     }
 
     // validate
-    for (auto c : bitwise_or_containers) {
+    for (const auto &c : bitwise_or_containers) {
         if (clear_on_write_containers.count(c))
             BUG("Container cannot be both clear-on-write and bitwise-or: %1%", c);
     }
 
-    for (auto c : bitwise_or_containers)
+    for (const auto &c : bitwise_or_containers)
         parser->bitwiseOrContainers.push_back(new IR::BFN::ContainerRef(c));
 
-    for (auto c : clear_on_write_containers)
+    for (const auto &c : clear_on_write_containers)
         parser->clearOnWriteContainers.push_back(new IR::BFN::ContainerRef(c));
 }
 

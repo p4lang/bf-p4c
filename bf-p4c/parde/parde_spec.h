@@ -519,7 +519,7 @@ class TofinoPardeSpec : public PardeSpec {
     const nw_bitrange bitScratchRegisterRange(const MatchRegister &reg) const override {
         // Bug check while silencing unused variable warning.
         BUG("Scratch registers not available in Tofino. Register: %1%", reg.name);
-        return { };
+        return nw_bitrange();
     }
 
     bool byteScratchRegisterRangeValid(nw_byterange) const override {
@@ -617,7 +617,7 @@ class JBayPardeSpec : public PardeSpec {
             return nw_bitrange(480,487);
         else
             BUG("Invalid scratch register %1%", reg.name);
-        return { };
+        return nw_bitrange();
     }
 
     bool byteScratchRegisterRangeValid(nw_byterange range) const override {

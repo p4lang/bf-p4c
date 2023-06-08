@@ -458,7 +458,7 @@ Stage::Stage(int stage, bool egress_only) : Stage_data(stage, egress_only) {
 }
 
 Stage::~Stage() {
-    for (auto ref : all_refs)
+    for (auto *ref : all_refs)
         *ref = nullptr;
 }
 
@@ -483,7 +483,7 @@ Stage *Stage::stage(gress_t gress, int stageno) {
 }
 
 Stage::Stage(Stage &&a) : Stage_data(std::move(a)) {
-    for (auto ref : all_refs)
+    for (auto *ref : all_refs)
         *ref = this;
 }
 

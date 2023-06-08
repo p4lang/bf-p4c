@@ -2017,13 +2017,13 @@ void TnaProgramStructure::createDeparser() {
 void TnaProgramStructure::collectControlGressMapping() {
     std::set<cstring> reachableFromIngress;
     calledControls.reachable("ingress", reachableFromIngress);
-    for (auto s : reachableFromIngress) {
+    for (cstring s : reachableFromIngress) {
         mapControlToGress.emplace(s, INGRESS);
         LOG5("\tcontrol " << s << " reachable in ingress");
     }
     std::set<cstring> reachableFromEgress;
     calledControls.reachable("egress", reachableFromEgress);
-    for (auto s : reachableFromEgress) {
+    for (cstring s : reachableFromEgress) {
         mapControlToGress.emplace(s, EGRESS);
         LOG5("\tcontrol " << s << " reachable in egress");
     }

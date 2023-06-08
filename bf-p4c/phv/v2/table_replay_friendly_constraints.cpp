@@ -178,19 +178,18 @@ void CollectPHVAllocationResult::end_apply(const IR::Node *) {
 
     // perfectly_aligned means that except for the last AllocSlice, every AllocSlice of a fieldslice
     // can occupy a container entirely.
-    for (auto it : allocation_info) {
-        auto field_name = it.first;
+    for (const auto &[ field_name, alloc_align ] : allocation_info) {
         bool perfectly_aligned = true;
         auto field = phv.field(field_name);
         LOG5("Checking field: " << field);
         BUG_CHECK(field, "field not found");
-        for (int index = 0; index < field->size; index += it.second[index].length) {
+        for (int index = 0; index < field->size; index += alloc_align.at(index).length) {
             // if allocated in clot, then we cannot find this field
-            if (it.second.find(index) == it.second.end()) {
+            if (alloc_align.find(index) == alloc_align.end()) {
                 perfectly_aligned = false;
                 break;
             }
-            auto &alloc_info = it.second[index];
+            const auto &alloc_info = alloc_align.at(index);
             // if AllocSlice does not occupy a container entirely
             if (alloc_info.length != (int)alloc_info.container_size) {
                 // it is perfectly aligned if it is the last AllocSlice.
@@ -202,7 +201,7 @@ void CollectPHVAllocationResult::end_apply(const IR::Node *) {
                 break;
             }
         }
-        for (auto alloc : Values(allocation_info[field_name])) {
+        for (auto &alloc : Values(allocation_info[field_name])) {
             alloc.perfectly_aligned = perfectly_aligned;
         }
     }

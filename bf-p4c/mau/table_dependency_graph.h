@@ -1054,7 +1054,7 @@ class FindDependencyGraph : public Logging::PassManager {
 };
 
 class PrintDependencyGraph : public Inspector {
-    int min_path_len;
+    int min_path_len = 0;
     cstring pipe_name;
     const DependencyGraph &dg;
     std::map<DependencyGraph::Graph::vertex_descriptor, cstring> vertex_names;

@@ -2087,7 +2087,7 @@ bool ActionAnalysis::ContainerAction::verify_multiple_action_data() const {
 
         // Limit multiple AD exception to single source instructions
         if (fa.reads.size() > 1) return true;
-        for (auto r_param : fa.reads) {
+        for (const auto &r_param : fa.reads) {
             auto *r_expr = r_param.expr;
             if (auto *slice = r_expr->to<IR::Slice>()) {
                 r_expr = slice->e0;

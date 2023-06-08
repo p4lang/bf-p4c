@@ -311,7 +311,7 @@ IR::Vector<IR::BFN::LoweredParserPrimitive> ExtractSimplifier::lowerExtracts(
     std::map<gress_t, std::map<unsigned, unsigned>> clotTagToCsumUnit) {
     IR::Vector<IR::BFN::LoweredParserPrimitive> loweredExtracts;
 
-    for (auto& item : extractFromPacketByContainer) {
+    for (const auto &item : extractFromPacketByContainer) {
         auto container = item.first;
         auto& extracts = item.second;
         auto& merged = mergeExtractsFor<IR::BFN::LoweredPacketRVal>(container, extracts);
@@ -320,21 +320,21 @@ IR::Vector<IR::BFN::LoweredParserPrimitive> ExtractSimplifier::lowerExtracts(
 
     sortExtractPhvs(loweredExtracts);
 
-    for (auto& item : extractFromBufferByContainer) {
+    for (const auto &item : extractFromBufferByContainer) {
         auto container = item.first;
         auto& extracts = item.second;
         auto& merged = mergeExtractsFor<IR::BFN::LoweredMetadataRVal>(container, extracts);
         loweredExtracts.insert(loweredExtracts.end(), merged.begin(), merged.end());
     }
 
-    for (auto& item : extractConstantByContainer) {
+    for (const auto &item : extractConstantByContainer) {
         auto container = item.first;
         auto& extracts = item.second;
         auto* merged = mergeExtractsForConstants(container, extracts);
         loweredExtracts.push_back(merged);
     }
 
-    for (auto cx : clotExtracts) {
+    for (const auto &cx : clotExtracts) {
         auto* clot = cx.first;
         const auto* first_slice = clot->parser_state_to_slices().begin()->second.front();
         const auto* first_field = first_slice->field();
@@ -342,7 +342,7 @@ IR::Vector<IR::BFN::LoweredParserPrimitive> ExtractSimplifier::lowerExtracts(
         bool is_start = false;
         nw_bitinterval bitInterval;
 
-        for (auto extract : cx.second) {
+        for (const auto extract : cx.second) {
             auto rval = extract->source->to<IR::BFN::PacketRVal>();
             bitInterval = bitInterval.unionWith(rval->interval());
 

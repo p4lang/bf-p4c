@@ -151,7 +151,7 @@ update_flowgraph(const PHV::UnitSet& g_units,
     }
 
     // Update Transaction's ARA control-flow edges
-    for (auto u_pair : new_edges) {
+    for (const auto &u_pair : new_edges) {
         const IR::MAU::Table* g_t = u_pair.first->to<IR::MAU::Table>();
         const IR::MAU::Table* f_t = u_pair.second->to<IR::MAU::Table>();
 

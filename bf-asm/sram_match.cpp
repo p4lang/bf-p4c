@@ -750,7 +750,7 @@ void SRamMatchTable::setup_ways() {
                 if (!ram.isLamb() && !rams.count(ram))
                     error(w.lineno, "%s in way %d not part of table %s", ram.desc(), way, name());
                 rams.erase(ram); } }
-        for (auto unit : rams) {
+        for (const auto &unit : rams) {
             error(lineno, "%s not in any way of table %s", unit.desc(), name());
         }
     }

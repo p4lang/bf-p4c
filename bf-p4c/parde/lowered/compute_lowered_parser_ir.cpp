@@ -254,12 +254,12 @@ void ComputeLoweredParserIR::postorder(const IR::BFN::ParserState* state) {
     /// Convert multiple select into one.
     auto* loweredSelect = new IR::BFN::LoweredSelect();
 
-    for (auto select : state->selects) {
-        if (auto ctr = select->source->to<IR::BFN::ParserCounterRVal>())
+    for (const auto *select : state->selects) {
+        if (const auto *ctr = select->source->to<IR::BFN::ParserCounterRVal>())
             loweredSelect->counters.push_back(ctr);
 
-        if (auto saved = select->source->to<IR::BFN::SavedRVal>()) {
-            for (auto rs : saved->reg_slices) loweredSelect->regs.insert(rs.first);
+        if (const auto *saved = select->source->to<IR::BFN::SavedRVal>()) {
+            for (const auto &rs : saved->reg_slices) loweredSelect->regs.insert(rs.first);
         }
     }
 

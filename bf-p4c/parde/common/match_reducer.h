@@ -36,9 +36,9 @@ class HasFullMatchCoverage {
      */
     std::set<match_t, cmp> reduce(const std::set<match_t, cmp> matches) {
         std::set<match_t, cmp> transformed_matches;
-        for (const auto match1 : matches) {
+        for (const auto &match1 : matches) {
             bool combined_matches = false;
-            for (const auto match2 : matches) {
+            for (const auto &match2 : matches) {
                 big_int xor0 = match1.word0 ^ match2.word0,
                         xor1 = match1.word1 ^ match2.word1;
 

@@ -172,8 +172,8 @@ struct ParserLoopsInfo {
             }
         }
 
-        for (auto& loop : loops) {
-            for (auto s : loop) {
+        for (const auto& loop : loops) {
+            for (const auto &s : loop) {
                 auto state = pg.get_state(parser, s);
                 GetMaxLoopDepth mld;
                 state->apply(mld);

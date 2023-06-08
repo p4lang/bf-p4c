@@ -72,7 +72,7 @@ void FindUninitializedAndOverlayedReads::end_apply() {
         return min_stage;
     };
 
-    auto get_slice_defs = [&](const PHV::AllocSlice sl) {
+    auto get_slice_defs = [&](const PHV::AllocSlice &sl) {
         FieldDefUse::LocPairSet slice_defs;
         auto lr_start = sl.getEarliestLiveness();
         auto lr_end   = sl.getLatestLiveness();
@@ -90,7 +90,7 @@ void FindUninitializedAndOverlayedReads::end_apply() {
         return slice_defs;
     };
 
-    auto get_slice_uses = [&](const PHV::AllocSlice sl) {
+    auto get_slice_uses = [&](const PHV::AllocSlice &sl) {
         FieldDefUse::LocPairSet slice_uses;
         auto lr_start = sl.getEarliestLiveness();
         auto lr_end   = sl.getLatestLiveness();
