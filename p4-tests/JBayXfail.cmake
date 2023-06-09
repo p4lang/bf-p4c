@@ -458,11 +458,6 @@ p4c_add_xfail_reason("tofino2"
 if (TEST_ALT_PHV_ALLOC)
     # Bugs
     p4c_add_xfail_reason("tofino2"
-        "Unimplemented compiler support: In the ALU operation over container .* in action .*, the packing is too complicated due to a too complex container instruction with a speciality action data combined with other action data"
-        extensions/p4_tests/p4_16/jbay/p4c-3288.p4
-    )
-
-    p4c_add_xfail_reason("tofino2"
         "bfa:.*: error: forward_if_ethernet_parsed_0 gateway sharing search bus 4.0 with table1_0, but wants a different match group"
         extensions/p4_tests/p4_16/stf/parser_scratch_reg_3.p4
     )

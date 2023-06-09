@@ -459,6 +459,7 @@ abstract AttachedMemory : Attached {
     cstring toString() const override { return externType() + " " + name.toString(); }
     virtual bool usesMeterBus() const { return false; }
     virtual bool usesStatsBus() const { return false; }
+    virtual int get_min_size() const { return Memories::SRAM_DEPTH; }
 }
 
 /** Any attached table that has a keeps stateful information about flows.
@@ -479,6 +480,9 @@ abstract Synth2Port : AttachedMemory {
         if (type == DataAggregation::BYTES || type == DataAggregation::BOTH)
             return bytecount_adjust;
         return 0;
+    }
+    int get_min_size() const override {
+        return ((TableFormat::SINGLE_RAM_BITS / width) * Memories::SRAM_DEPTH); 
     }
 }
 

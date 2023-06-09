@@ -2553,10 +2553,13 @@ bool ActionAnalysis::ContainerAction::verify_speciality(cstring &error_message,
                              && ad_params > 1;
 
     if (impossible_to_merge) {
-        P4C_UNIMPLEMENTED("In the ALU operation over container %s in action %s, the packing is "
-                          "too complicated due to a too complex container instruction with a "
-                          "speciality action data combined with other action data: %s",
-                          container.toString(), action_name, *this);
+        error_message += "In the ALU operation over container " + container.toString() +
+                         " in action " + action_name +
+                         ", the packing is "
+                         "too complicated due to a too complex container instruction with a "
+                         "speciality action data combined with other action data.";
+        error_code |= MULTIPLE_SPECIALITIES;
+        return false;
     }
 
 

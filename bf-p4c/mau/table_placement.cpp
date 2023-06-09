@@ -2693,17 +2693,23 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
         // FIXME -- can't currently split tables with multiple stateful actions, as doing so
         // would require passing the meter_type via tempvar somehow.
     } else {
-        for (auto &att : min_placed->attached_entries) {
-            if (att.first->direct) continue;
-            if (att.second.entries == 0) continue;
-            if (can_split(min_placed->table, att.first)) {
+        for (auto &[ att_mem, att_entries ] : min_placed->attached_entries) {
+            if (att_mem->direct) continue;
+            if (att_entries.entries == 0) continue;
+            if (can_split(min_placed->table, att_mem)) {
                 if (needed_entries == 0) {
-                    if (att.second.entries > 1024) {
-                        att.second.entries = 1024;
-                        att.second.need_more = true; }
+                    auto min_split_size = att_mem->get_min_size();
+                    if (att_entries.entries > min_split_size) {
+                        att_entries.entries = min_split_size;
+                        att_entries.need_more = true;
+                    }
                 } else {
-                    att.second.entries = 0;
-                    att.second.need_more = true; } } } }
+                    att_entries.entries = 0;
+                    att_entries.need_more = true;
+                }
+            }
+        }
+    }
 
     if (!rv->table->created_during_tp) {
         BUG_CHECK(!rv->placed[uid(rv->table)],

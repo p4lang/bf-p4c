@@ -362,7 +362,8 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
             ATTACHED_OUTPUT_ILLEGAL_ALIGNMENT   = (1 << 20),
             CONSTANT_TO_HASH                    = (1 << 21),
             ILLEGAL_MOCHA_OR_DARK_WRITE         = (1 << 22),
-            BIT_COLLISION_SET                   = (1 << 23)
+            BIT_COLLISION_SET                   = (1 << 23),
+            MULTIPLE_SPECIALITIES               = (1 << 24)
         };
         unsigned error_code = NO_PROBLEM;
         static const std::vector<cstring> error_code_string_t;
