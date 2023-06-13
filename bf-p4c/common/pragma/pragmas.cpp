@@ -626,6 +626,14 @@ const char *PragmaIntrinsicMetadata::help = "@__intrinsic_metatada\n"
     "\n"
     "Intrinsic metadata that requires special processing in the backend";
 
+const char *PragmaIxbarGroupNum::name = "ixbar_group_num";
+const char *PragmaIxbarGroupNum::description = "Force field to use the specific ixbar group";
+const char *PragmaIxbarGroupNum::help = "@pragma ixbar_group_num \n"
+    "+ attached to P4 table match keys\n"
+    "\n"
+    "Force the table key to be allocated to the specified input xbar group."
+    "The valid input xbar group number is 0 to 7.";
+
 const char *PragmaLrtEnable::name = "lrt_enable";
 const char *PragmaLrtEnable::description = "Enable automatic cache evictions.";
 const char *PragmaLrtEnable::help = "@pragma lrt_enable 1\n"

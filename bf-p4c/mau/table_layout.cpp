@@ -876,6 +876,10 @@ void LayoutChoices::setup_indirect_ptrs(IR::MAU::Table::Layout &layout, const IR
     layout.action_addr = type_to_addr_map[ValidateAttachedOfSingleTable::ACTIONDATA];
     layout.stats_addr = type_to_addr_map[ValidateAttachedOfSingleTable::STATS];
     layout.meter_addr = type_to_addr_map[ValidateAttachedOfSingleTable::METER];
+    LOG5("add indirect ptr "
+         << " action addr " << layout.action_addr.total_bits()
+         << " stats_addr " << layout.stats_addr.total_bits()
+         << " meter_addr " << layout.meter_addr.total_bits());
     layout.overhead_bits += layout.action_addr.total_bits() + layout.stats_addr.total_bits()
                             + layout.meter_addr.total_bits();
 }

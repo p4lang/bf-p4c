@@ -455,10 +455,12 @@ static int need_align_flags[4][4] = {
 void IXBar::add_use(ContByteConversion &map_alloc, const PHV::Field *field,
                     const PhvInfo &phv, const IR::MAU::Table *ctxt,
                     std::optional<cstring> aliasSourceName, const le_bitrange *bits,
-                    int flags, byte_type_t byte_type, unsigned extra_align, int range_index) {
+                    int flags, byte_type_t byte_type, unsigned extra_align, int range_index,
+                    int ixbar_group_num) {
     LOG5("Adding IXBar Use for field - " << field << Log::endl << "  on table : " << ctxt->name
             << ", flags : " << flags << ", byte_type: " << byte_type
-            << ", extra_align: " << extra_align << ", range_index: " << range_index);
+            << ", extra_align: " << extra_align << ", range_index: " << range_index
+            << ", ixbar_group_num: " << ixbar_group_num);
 
     bool ok = false;
     int index = 0;
@@ -494,6 +496,11 @@ void IXBar::add_use(ContByteConversion &map_alloc, const PHV::Field *field,
             byte.set_spec(IXBar::ATCAM_INDEX);
         }
 
+        if (ixbar_group_num != -1) {
+            byte.ixbar_group_num = ixbar_group_num;
+            LOG3("initialize ixbar_group_num " << ixbar_group_num << " for field " << field->name);
+        }
+
         if (byte_type == IXBar::RANGE) {
             byte.range_index = range_index;
             if ((sl.container_slice().lo % 8) < 4) {
@@ -508,6 +515,7 @@ void IXBar::add_use(ContByteConversion &map_alloc, const PHV::Field *field,
         } else {
             map_alloc[byte].push_back(fi);
         }
+
         index++;
     });
     if (!ok) {
@@ -666,6 +674,7 @@ bool IXBar::FieldManagement::preorder(const IR::Expression *e) {
     }
 
     byte_type_t byte_type = NO_BYTE_TYPE;
+    int ixbar_group_num = -1;
     if (auto *read = findContext<IR::MAU::TableKey>()) {
         if (ki.is_atcam) {
             if (read->partition_index)
@@ -675,6 +684,9 @@ bool IXBar::FieldManagement::preorder(const IR::Expression *e) {
         }
         if (read->match_type.name == "range")
             byte_type = RANGE;
+
+        ixbar_group_num = read->ixbar_group_num;
+        LOG3("  " << read->match_type.name << " " << byte_type << " " << ixbar_group_num);
     }
     if (byte_type == PARTITION_INDEX) {
         int diff = bits.size() - ki.partition_bits;
@@ -693,7 +705,7 @@ bool IXBar::FieldManagement::preorder(const IR::Expression *e) {
 
     std::optional<cstring> aliasSourceName = phv.get_alias_name(e);
     add_use(*map_alloc, finfo, phv, tbl, aliasSourceName, &bits, 0, byte_type, 0,
-            ki.range_index);
+            ki.range_index, ixbar_group_num);
     if (byte_type == RANGE) {
         ki.range_index++;
     }

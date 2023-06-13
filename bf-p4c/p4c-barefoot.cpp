@@ -399,7 +399,6 @@ int main(int ac, char **av) {
         if (BackendOptions().enable_event_logger) EventLogger::get().enable();
     }
 
-
 #if BFP4C_CATCH_EXCEPTIONS
     try {
 #endif  // BFP4C_CATCH_EXCEPTIONS

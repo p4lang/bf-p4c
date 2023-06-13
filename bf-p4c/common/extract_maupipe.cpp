@@ -1,5 +1,9 @@
 #include "extract_maupipe.h"
 #include <assert.h>
+#include <optional>
+#include <boost/none.hpp>
+#include <boost/optional/optional.hpp>
+#include "ir/ir-generated.h"
 #include "slice.h"
 #include "ir/ir.h"
 #include "ir/dbprint.h"
@@ -1520,6 +1524,12 @@ class GetBackendTables : public MauInspector {
     sourceInfoLogging(sourceInfoLogging) {}
 
  private:
+    void handle_pragma_ixbar_group_num(const IR::Annotations *annotations, IR::MAU::TableKey *key) {
+        if (auto ixbar_num = annotations->getSingle("ixbar_group_num")) {
+            key->ixbar_group_num = getConstant(ixbar_num, 0, 7);
+        }
+    }
+
     void setup_match_mask(IR::MAU::Table *tt, const IR::Mask *mask, IR::ID match_id,
                           int p4_param_order, const IR::Annotations *annotations,
                           std::optional<cstring> partition_index) {
@@ -1536,6 +1546,7 @@ class GetBackendTables : public MauInspector {
             ixbar_read->annotations = annotations;
             if (partition_index && name_annotation && (*partition_index == *name_annotation))
                 ixbar_read->partition_index = true;
+            handle_pragma_ixbar_group_num(annotations, ixbar_read);
             tt->match_key.push_back(ixbar_read);
         }
     }
@@ -1619,6 +1630,8 @@ class GetBackendTables : public MauInspector {
 
                 if (partition_index && name_annotation && (*partition_index == *name_annotation))
                     ixbar_read->partition_index = true;
+
+                handle_pragma_ixbar_group_num(key_elem->annotations, ixbar_read);
                 tt->match_key.push_back(ixbar_read);
             }
             if (match_id.name != "selector" && match_id.name != "dleft_hash")

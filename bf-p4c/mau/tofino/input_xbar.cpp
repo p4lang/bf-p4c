@@ -16,6 +16,7 @@
 #include "lib/hex.h"
 #include "lib/range.h"
 #include "lib/log.h"
+#include "lib/safe_vector.h"
 
 constexpr le_bitrange Tofino::IXBar::SELECT_BIT_RANGE;
 // = le_bitrange(RAM_SELECT_BIT_START, METER_ALU_HASH_BITS-1);
@@ -1288,6 +1289,40 @@ bool IXBar::grp_use::is_better_group(const grp_use &b, bool prefer_found,
     return a.group < b.group;
 }
 
+bool IXBar::handle_pragma_ixbar_group_num(safe_vector<IXBar::Use::Byte *> &unalloced,
+        safe_vector<IXBar::Use::Byte *> &alloced, bool ternary,
+        safe_vector<grp_use> &order, safe_vector<mid_byte_use> &mid_byte_order,
+        int &bytes_to_allocate, bool hash_dist, unsigned byte_mask, int search_bus) {
+    safe_vector<IXBar::Use::Byte *> unalloced_with_pragma;
+    int ixbar_group_num = -1;
+    for (auto byte : unalloced) {
+        if (byte->ixbar_group_num != -1) {
+            ixbar_group_num = byte->ixbar_group_num;
+            unalloced_with_pragma.push_back(byte); }
+    }
+    if (ixbar_group_num == -1)
+        return false;
+
+    int match_bytes_placed = 0;
+    grp_use *selected_grp = &order[ixbar_group_num];
+    safe_vector<IXBar::Use::Byte *> alloced_by_pragma;
+    LOG5("       Group selected was " << selected_grp->group << " bytes left " << unalloced.size());
+    found_bytes(selected_grp, unalloced_with_pragma, ternary, match_bytes_placed, search_bus);
+    free_bytes(selected_grp, unalloced_with_pragma, alloced_by_pragma, ternary, hash_dist,
+               match_bytes_placed, search_bus);
+    selected_grp->attempted = true;
+    bytes_to_allocate -= match_bytes_placed;
+    calculate_found(unalloced_with_pragma, order, mid_byte_order, ternary, hash_dist, byte_mask);
+
+    for (auto byte : alloced_by_pragma) {
+        unalloced.erase(std::remove(unalloced.begin(), unalloced.end(), byte), unalloced.end());
+    }
+
+    for (auto byte : alloced_by_pragma) {
+        alloced.push_back(byte);
+    }
+    return true;
+}
 
 void IXBar::allocate_groups(safe_vector<IXBar::Use::Byte *> &unalloced,
         safe_vector<IXBar::Use::Byte *> &alloced, bool ternary, bool prefer_found,
@@ -1296,6 +1331,11 @@ void IXBar::allocate_groups(safe_vector<IXBar::Use::Byte *> &unalloced,
     for (int search_bus = 0; search_bus < groups_needed; search_bus++) {
         if (unalloced.size() == 0)
             return;
+
+        if (handle_pragma_ixbar_group_num(unalloced, alloced, ternary, order, mid_byte_order,
+                                          bytes_to_allocate, hash_dist, byte_mask, search_bus)) {
+            continue;
+        }
 
         int match_bytes_placed = 0;
         int max_possible_bytes = (groups_needed - search_bus) * bytes_per_group(ternary);

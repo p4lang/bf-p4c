@@ -662,9 +662,16 @@ struct IXBar : public ::IXBar {
         bool ternary, bool prefer_found, int required_allocation_bytes);
 
     void allocate_groups(safe_vector<Use::Byte *> &unalloced, safe_vector<Use::Byte *> &alloced,
-        bool ternary, bool prefer_found, safe_vector<grp_use> &order,
-        safe_vector<mid_byte_use> &mid_byte_order, int &bytes_to_allocate, int groups_needed,
-        bool hash_dist, unsigned byte_mask);
+                         bool ternary, bool prefer_found, safe_vector<grp_use> &order,
+                         safe_vector<mid_byte_use> &mid_byte_order, int &bytes_to_allocate,
+                         int groups_needed, bool hash_dist, unsigned byte_mask);
+    bool handle_pragma_ixbar_group_num(safe_vector<Use::Byte *> &unalloced,
+                                       safe_vector<Use::Byte *> &alloced, bool ternary,
+                                       safe_vector<grp_use> &order,
+                                       safe_vector<mid_byte_use> &mid_byte_order,
+                                       int &bytes_to_allocate, bool hash_dist,
+                                       unsigned byte_mask, int search_bus);
+
     hash_matrix_reqs match_hash_reqs(const LayoutOption *lo, size_t start, size_t end,
         bool ternary);
     void layout_option_calculation(const LayoutOption *layout_option,

@@ -109,6 +109,7 @@ struct IXBar {
         int lo;         ///> lo field bit in that byte
         int hi;         ///> hi field bit in that byte
         int cont_lo;    ///> mod 8 location in the container that the bitrange of field begins
+        int pragma_forced_ixbar_group = -1;
         std::optional<cstring> aliasSource;
                         ///> name of alias source field, if present
 
@@ -224,6 +225,8 @@ struct IXBar {
             // When converting a byte to proxy hash, this is the byte in the table format
             // in which the hash is provide
             bool        proxy_hash = false;
+            // Desired ixbar group as specified by the ixbar_group_num pragma
+            int         ixbar_group_num = -1;
 
             // Byte(cstring n, int l) : container(n), lo(l) {}
             // Byte(cstring n, int l, int g, int gb) : container(n), lo(l), loc(g, gb) {}
@@ -397,7 +400,8 @@ struct IXBar {
                         std::optional<cstring> aliasSourceName,
                         const le_bitrange *bits = nullptr, int flags = 0,
                         byte_type_t byte_type = NO_BYTE_TYPE,
-                        unsigned extra_align = 0, int range_index = 0);
+                        unsigned extra_align = 0, int range_index = 0,
+                        int pragma_forced_ixbar_group = -1);
     void create_alloc(ContByteConversion &map_alloc, IXBar::Use &alloc);
     void create_alloc(ContByteConversion &map_alloc, safe_vector<Use::Byte> &bytes);
 

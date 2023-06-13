@@ -162,7 +162,7 @@ class Table : BFN::Unit, IAnnotated  {
         std::map<cstring, int> excluded_field_msb_bits = {};
 
         bool is_lamb_direct() const { return is_lamb && is_direct; }
-        int get_subword_bits() const { 
+        int get_subword_bits() const {
             if (is_lamb) return ceil_log2(sets_per_word);
             return 0;
         }
@@ -174,8 +174,8 @@ class Table : BFN::Unit, IAnnotated  {
 
         /**
          * @brief Equivalent to get_sram_depth() for non-ATCAM tables.
-         * 
-         * @return min(partition_count, get_sram_depth()) for ATCAM tables 
+         *
+         * @return min(partition_count, get_sram_depth()) for ATCAM tables
          */
         int words_per_sram() const {
             return std::min(atcam ? partition_count : INT_MAX, get_sram_depth());
@@ -1117,6 +1117,9 @@ class TableKey : Expression, IAnnotated {
     bool partition_index = false;
     bool used_in_alpm = false;
 
+    // @ixbar_group_num is used to bind a table key to a specific ixbar group
+    int ixbar_group_num = -1;
+
     bool for_selection() const { return match_type.name == "selector"; }
     bool for_dleft() const { return match_type.name == "dleft_hash"; }
     bool for_atcam_partition_index() const { return match_type.name == "atcam_partition_index"; }
@@ -1124,6 +1127,7 @@ class TableKey : Expression, IAnnotated {
                                                    used_in_alpm == true; }
     bool for_range() const { return match_type.name == "range"; }
     bool for_match() const { return !for_selection() && !for_dleft(); }
+    int get_ixbar_group_num() const { return ixbar_group_num; }
 
     dbprint { out << expr << ": " << match_type.name; }
 
@@ -1150,5 +1154,5 @@ template<class T> inline const T *IR::MAU::Table::get_attached() const {
             return rv;
     return nullptr; }
 
-std::ostream &operator<<(std::ostream &out, const IR::MAU::Table::Layout &layout); 
+std::ostream &operator<<(std::ostream &out, const IR::MAU::Table::Layout &layout);
 #end

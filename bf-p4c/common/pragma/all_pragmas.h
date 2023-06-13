@@ -55,6 +55,7 @@ DEFINE_PRAGMA_CLASS(PragmaInHash);
 DEFINE_PRAGMA_CLASS(PragmaIntrinsicMetadata);
 DEFINE_PRAGMA_CLASS(PragmaIRContextBasedDebugLogging);
 DEFINE_PRAGMA_CLASS(PragmaIgnoreTableDependency);
+DEFINE_PRAGMA_CLASS(PragmaIxbarGroupNum);
 DEFINE_PRAGMA_CLASS(PragmaLrtEnable);
 DEFINE_PRAGMA_CLASS(PragmaLrtScale);
 DEFINE_PRAGMA_CLASS(PragmaMaxActions);

@@ -94,10 +94,11 @@ void ValidateAttachedOfSingleTable::free_address(const IR::MAU::AttachedMemory *
         }
         ia.meter_type_bits = 3;
     }
+
     ind_addrs[type] = ia;
-    LOG3("\tSetting indirect address info { addr_bits : " << ia.address_bits
-            << ", meter_type_bits : " << ia.meter_type_bits
-            << ", per_flow_enable : " << ia.per_flow_enable);
+    LOG3("\tSetting indirect address info { addr_bits : "
+         << ia.address_bits << ", meter_type_bits : " << ia.meter_type_bits
+         << ", per_flow_enable : " << ia.per_flow_enable);
 }
 
 bool ValidateAttachedOfSingleTable::preorder(const IR::MAU::Counter *cnt) {
