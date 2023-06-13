@@ -813,40 +813,6 @@ bool CollectGatewayFields::compute_offsets() {
     std::map<std::pair<PHV::Container, int>, std::set<int>>       alloc_bytes;
     PHV::FieldUse use_read(PHV::FieldUse::READ);
 
-    if (!gws.ByteSwizzle && ixbar) {
-        // can't byteswizzle on this target, so every field must be allocated to a fixed
-        // spot based on the ixbar
-        for (auto &byte : ixbar->use) {
-            // FIXME -- for Flatrock, can access either group 0 or 1, so need to give them
-            // different byte addresses in the match.  This should be more flexible to support
-            // other schemes too
-            int b = byte.loc.group*8 + byte.loc.byte;
-            alloc_bytes[byte].insert(b);
-            if (b >= bytes) bytes = b+1; }
-        // another odd problem -- xors can generally only go one way (can xor bytes 4-7 into
-        // bytes 0-3, but not the reverse on flatrock), so we need to make sure that the
-        // xor_with is going in the right direction for how ixbar allocated things.  So we
-        // look for cases that are wrong and try reversing them.  If that also doesn't
-        // work, fail.
-        for (auto &i : this->info) {
-            if (i.second.xor_with.empty()) continue;  // no xor so ok
-            bool can_xor = true;
-            i.first.foreach_byte(tbl, &use_read, [&](const PHV::AllocSlice &sl) {
-                for (int b : alloc_bytes.at(sl.container_byte())) {
-                    if (!((gws.XorByteSlots >> b) & 1))
-                        can_xor = false; } });
-            if (can_xor) continue;   // can xor, so ok
-            can_xor = true;
-            for (auto &xor_with : i.second.xor_with) {
-                xor_with.foreach_byte(tbl, &use_read, [&](const PHV::AllocSlice &sl) {
-                    for (int b : alloc_bytes.at(sl.container_byte())) {
-                        if (!((gws.XorByteSlots >> b) & 1))
-                            can_xor = false; } }); }
-            if (!can_xor) return false;  // reverse fails, so fail
-            for (auto &xor_with : i.second.xor_with)
-                this->info.at(xor_with).xor_with.insert(i.first);
-            i.second.xor_with.clear(); } }
-
     for (auto &i : this->info) {
         auto &field = i.first;
         auto &info = i.second;
@@ -855,17 +821,14 @@ bool CollectGatewayFields::compute_offsets() {
             int shift = field.range().lo - xor_with.range().lo;
             xor_with.foreach_byte(tbl, &use_read, [&](const PHV::AllocSlice &sl) {
                 auto alloc_byte = sl.container_byte();
-                bool duplicate = alloc_bytes.count(alloc_byte);
-                auto bit = (duplicate ? *alloc_bytes.at(alloc_byte).begin() : bytes) * 8U +
-                           sl.container_slice().lo % 8U;
+                auto bit = bytes * 8U + sl.container_slice().lo % 8U;
                 with.offsets.emplace_back(bit, sl.field_slice());
                 info.xor_offsets.emplace_back(bit, sl.field_slice().shiftedByBits(shift));
-                LOG5("  " << (duplicate ? "duplicate " : "") << "byte " << (bit/8) << " " <<
+                LOG5("  " << "byte " << (bit/8) << " " <<
                      field << "(" << info.xor_offsets.back().second << ") xor " << xor_with <<
                      ' ' << sl << " (" << with.offsets.back().second << ")");
-                if (!duplicate) {
-                    alloc_bytes[alloc_byte].insert(bytes);
-                    ++bytes; }
+                alloc_bytes[alloc_byte].insert(bytes);
+                ++bytes;
             }); } }
     // we collect slices that could be allocated to either bytes or bits here, then
     // allocate the largest ones to the bytes and then try to pack any remaining ones
