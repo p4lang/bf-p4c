@@ -441,17 +441,6 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_16/compile_only/p4c-4498.p4
 )
 
-# dev env update 2023-04-20 (counter STF failures) 
-p4c_add_xfail_reason("tofino2"                
-   "bytes value is .*, expected .*"           
-   extensions/p4_tests/p4_14/stf/p4c-2911-2.p4
-)                                             
-
-p4c_add_xfail_reason("tofino2"                      
-   "bytes value is .*, expected .*" 
-   extensions/p4_tests/p4_16/stf/p4c-2911-2.p4     
-)
-
 # ALT-PHV: tests that do not work yet with the alternative allocator.
 # If you make an ALT-PHV test pass (or get close to it but if fails on later
 # error), please update the xfails accordingly.

@@ -15,25 +15,24 @@ expect 2 10000001 00000002 f654 11 22 77
 wait
 
 # NOTES:
-# STF adds a 4-byte ethernet trailer by default. 
-# Total Size of 1 Packet (Bytes) = 13 (Header) + 4 (Eth trailer) 
+# STF adds a 4-byte ethernet trailer by default.
+# Total Size of 1 Packet (Bytes) = 13 (Header) + 4 (Eth trailer)
 #                                = 17
 # With new adjust_byte_count method call optional argument this value is
 # subtracted through p4
-# 
-# FIXME: STF issue where packets & bytes values are swapped.
- 
-# Ingress Counters Check
-check_counter ICounterDirect($A) bytes == 2 
-check_counter ICounterDirect($A) packets == 26 
+#
 
-check_counter ICounter(1) bytes == 2 
-check_counter ICounter(1) packets == 26 
+# Ingress Counters Check
+check_counter ICounterDirect($A) packets == 2
+check_counter ICounterDirect($A) bytes == 26
+
+check_counter ICounter(1) packets == 2
+check_counter ICounter(1) bytes == 26
 
 # Egress Counters Check
-check_counter ECounterDirect($B) bytes == 2 
-check_counter ECounterDirect($B) packets== 26 
+check_counter ECounterDirect($B) packets == 2
+check_counter ECounterDirect($B) bytes== 26
 
-check_counter ECounter(1) bytes == 2 
-check_counter ECounter(1) packets == 26 
+check_counter ECounter(1) packets == 2
+check_counter ECounter(1) bytes == 26
 
