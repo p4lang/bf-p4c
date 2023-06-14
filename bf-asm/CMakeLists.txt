@@ -64,6 +64,9 @@ set (JSONDIFF_SOURCES json_diff.cpp json.cpp fdstream.cpp)
 # bfdumpbin
 set (BFDUMPBIN_SOURCES bfdumpbin.cpp fdstream.cpp json.cpp bson.cpp)
 
+# bfdis
+set (BFDIS_SOURCES bfdis.cpp disasm.cpp fdstream.cpp)
+
 # reflow
 set (REFLOW_SOURCES reflow.cpp)
 
@@ -252,6 +255,15 @@ add_executable (json_diff ${JSONDIFF_SOURCES})
 
 # bfdumpbin
 add_executable (bfdumpbin ${BFDUMPBIN_SOURCES})
+
+# bfdis
+if (ENABLE_GTESTS)
+  # FIXME -- bfdis depends on bfas_lib which is only built if GTESTS are enabled.  So for
+  # now we only enable bfdis with ENABLE_GTESTS.  Should fix to use bfas_lib for bfas
+  # rather than building separately, so it will always be anbled.
+  add_executable (bfdis ${BFDIS_SOURCES})
+  target_link_libraries (bfdis bfas_lib ${BFASM_LIBS} ${BFASM_LIB_DEPS})
+endif()
 
 # reflow
 add_executable (reflow ${REFLOW_SOURCES})

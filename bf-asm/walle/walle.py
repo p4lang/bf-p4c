@@ -146,6 +146,7 @@ def parse_template_args(args, params):
         'global_types': (set(), add_set_arg),
         'global': (None, lambda args, attr, val: add_set_arg(args, 'global_types', val)),
         'include': ([], add_list_arg),
+        'input_binary': (False, bool_arg),
         'name': (None, str_arg),
         'namespace': (False, str_arg),
         'reverse_write': (False, bool_arg),

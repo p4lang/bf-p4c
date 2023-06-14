@@ -5,6 +5,7 @@ global:
   - emit_fieldname
   - emit_json
   - enable_disable
+  - input_binary
   - widereg
   - write_dma=mapram_config
   - write_dma=imem_dark_subword8

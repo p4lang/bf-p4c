@@ -14,6 +14,7 @@ import sys
 import glob
 
 from operator import mul
+from operator import ior
 
 import chip
 from functools import reduce
@@ -611,6 +612,144 @@ class csr_composite_object (csr_object):
         indent = indent[2:]
         outfile.write("%s}\n" % indent)
 
+    def gen_input_binary_method(self, outfile, args, classname, indent):
+        def child_name(child):
+            name = child.name
+            if name in args.cpp_reserved:
+                name += '_'
+            return name
+        def field_name(child):
+            name = child_name(child)
+            if child.count != (1,):
+                for i in range(0, len(child.count)):
+                    name += "[i%d]" % i
+            return name
+        outfile.write(indent)
+        if self.gen_method_declarator(outfile, args, "void", classname, "input_binary",
+                ["uint64_t a", "char t", "uint32_t *d", "size_t l"], ""):
+            return
+        indent += "  "
+        root_parent = self.parent
+        while type(root_parent) is not str:
+            root_parent = root_parent.parent
+        if root_parent == "memories":
+            width_unit = 128
+            address_unit = 16
+            outfile.write("%sBUG_CHECK(t == 'D', \"'%%c' tag in memories\", t);\n" % indent);
+        else:
+            width_unit = 32
+            address_unit = 1
+            outfile.write("%sBUG_CHECK(t != 'D', \"'%%c' tag in %s\", t);\n" %
+                          (indent, root_parent))
+        first = True
+        for a in sorted(self.children(), key=lambda a: -a.offset):
+            outfile.write('%s%sif (a >= 0x%x) {\n' %
+                          (indent, '' if first else '} else ', a.offset//address_unit))
+            indent += '  '
+            t = a
+            a = self.check_child_rewrite(a, args)
+            if a is None:
+                outfile.write('%sstd::cerr << "Address in ignored reg " << ' % indent +
+                              'string_regname(this, this+1) << ".%s" << std::endl;\n' % t.name)
+            elif isinstance(a, scanset_reg):
+                a.input_binary(outfile, args, indent, address_unit, width_unit)
+            elif a.disabled():
+                outfile.write('%sstd::cerr << "Address in disabled reg " << ' % indent +
+                              'string_regname(this, this+1) << ".%s" << std::endl;\n' % a.name)
+            else:
+                outfile.write('%sa -= 0x%x;\n' % (indent, a.offset//address_unit))
+                idx_suffix = ''
+                if a.count != (1,):
+                    outfile.write('%ssize_t idx = a / 0x%x;\n' %
+                                  (indent, a.address_stride()//address_unit))
+                    for idx_num, idx in reversed(list(enumerate(a.count))):
+                        outfile.write('%sint i%d = idx %% %d;\n' % (indent, idx_num, idx))
+                        if idx_num == 0:
+                            outfile.write('%sBUG_CHECK(idx < %d, "Index too' % (indent, idx) +
+                                          ' large for %%s.%s[%%zd]",\n' % a.name)
+                            outfile.write('%s          ' % indent +
+                                          'string_regname(this, this+1).c_str(), idx);\n')
+                        else:
+                            outfile.write('%sidx /= %d;\n' % (indent, idx))
+                        idx_suffix = ('[i%d]' % idx_num) + idx_suffix
+                    outfile.write('%sa -= 0x%x * %s' % (indent, a.address_stride()//address_unit,
+                                  '(' * (len(a.count)-1)))
+                    for idx_num, idx in enumerate(a.count):
+                        if idx_num != 0:
+                            outfile.write('*%d + ' % idx)
+                        outfile.write('i%d' % idx_num)
+                        if idx_num != 0:
+                            outfile.write(')')
+                    outfile.write(';\n'); 
+                #outfile.write('%sstd::cout << string_regname(this, this+1) << ".%s' %
+                #              (indent, a.name))
+                #if a.count != (1,):
+                #    for idx_num, idx in enumerate(a.count):
+                #        outfile.write('[" << i%d << "]' % idx_num)
+                #outfile.write('" << std::endl;\n');
+                access = '.'
+                if a.top_level():
+                    outfile.write('%sif (!%s) {\n' % (indent, field_name(a)))
+                    outfile.write('%s  auto *n = new %s;\n' % (indent,
+                                  a.canon_name(a.map.object_name)[0]))
+                    outfile.write('%s  auto fn = string_regname(this, this+1);\n' % indent);
+                    outfile.write('%s  declare_registers(n, sizeof(*n),\n' % indent);
+                    outfile.write('%s      [=](std::ostream &out, const char *addr, ' % indent +
+                                  'const void *end) {\n');
+                    outfile.write('%s          out << fn << ".%s' % (indent, child_name(a)))
+                    if a.count != (1,):
+                        for idx_num, idx in enumerate(a.count):
+                            outfile.write('[" << i%d << "]' % idx_num)
+                    outfile.write('";\n');
+                    outfile.write('%s          n->emit_fieldname(out, addr, end); });\n' % indent)
+                    outfile.write('%s  %s.set("%s", n); }\n' %
+                                  (indent, field_name(a), child_name(a)))
+                    access = '->'
+                single = a.singleton_obj()
+                if single != a:
+                    outfile.write("%sBUG_CHECK(t == 'R' && l == 1, \"tag '%%c' " % indent +
+                                  'input to singleton %s", t);\n' % field_name(a))
+                    if single.msb >= 64:
+                        outfile.write('%sBUG("widereg singleton %s not implemented");' %
+                                      (indent, field_name(a)))
+                    elif single.msb >= 32:
+                        outfile.write('%sBUG_CHECK((a|4) == 4, "invalid addr %%zd in ' % indent +
+                                      '%s", a);\n' % field_name(a))
+                        outfile.write('%s%s.set_subfield(*d, a*8, 32);\n' %
+                                      (indent, field_name(a)))
+                    else:
+                        outfile.write('%s%s = *d;\n' % (indent, field_name(a)))
+                elif isinstance(a, reg) and a.count != (1,):
+                    outfile.write('%sBUG_CHECK(a == 0 || l == 1, "%%" PRIu64 " off ' % indent +
+                                  'start of %s", a);\n' % a.name)
+                    if a.width%32 != 0:
+                        raise CsrException("Register %s width not a multiple of 32" % a.name)
+                    size = a.width//32
+                    outfile.write('%swhile (l > %d) {\n' % (indent, size))
+                    indent += '  ';
+                    outfile.write('%s%s%sinput_binary(a, t, d, %d);\n' %
+                                  (indent, field_name(a), access, size))
+                    outfile.write('%sd += %d; l -= %d;\n' % (indent, size, size))
+                    for idx_num, idx in reversed(list(enumerate(a.count))):
+                        outfile.write('%sif (++i%d >= %d) {\n' % (indent, idx_num, idx))
+                        indent += '  '
+                        if idx_num != 0:
+                            outfile.write('%si%d = 0;\n' % (indent, idx_num))
+                    outfile.write('%sBUG("Too much data for %s");%s\n' %
+                                  (indent, a.name, ' }' * (len(a.count) + 1)))
+                    indent = indent[2 * (len(a.count) + 1):]
+                    outfile.write('%s%s%sinput_binary(a, t, d, l);\n' %
+                                  (indent, field_name(a), access))
+                else:
+                    outfile.write('%s%s%sinput_binary(a, t, d, l);\n' %
+                                  (indent, field_name(a), access))
+            indent = indent[2:]
+            first = False
+        outfile.write('%s}\n' % indent)
+
+        indent = indent[2:]
+        outfile.write('%s}\n' % indent)
+
     def gen_binary_offset_method(self, outfile, args, classname, indent):
         outfile.write(indent)
         if self.gen_method_declarator(outfile, args, "uint64_t", classname, "binary_offset",
@@ -807,10 +946,10 @@ class csr_composite_object (csr_object):
                 outfile.write(");\n")
             else:
                 jtype = "json::number"
-                access = "n->val"
+                access = " = n->val"
                 if a.top_level():
                     jtype = "json::string"
-                    access = "*n"
+                    access = ".set(n->c_str(), nullptr)"
                 outfile.write("%sif (%s *n = dynamic_cast<%s *>(" % (indent, jtype, jtype))
                 indent += "  "
                 if index_num > 0:
@@ -821,7 +960,7 @@ class csr_composite_object (csr_object):
                 if a.count != (1,):
                     for i in range(0, len(a.count)):
                         outfile.write("[i%d]" % i)
-                outfile.write(" = %s;\n" % access)
+                outfile.write("%s;\n" % access)
                 if a.top_level():
                     outfile.write("%s} else if (json::number *n = dynamic_cast<json::number *>(" %
                                   indent[2:])
@@ -1335,6 +1474,8 @@ class csr_composite_object (csr_object):
         if args.emit_binary:
             self.gen_uint_conversion(outfile, args, classname, indent)
             self.gen_emit_binary_method(outfile, args, classname, indent)
+        if args.input_binary:
+            self.gen_input_binary_method(outfile, args, classname, indent)
         if args.binary_offset:
             self.gen_binary_offset_method(outfile, args, classname, indent)
         if args.emit_fieldname:
@@ -1993,6 +2134,100 @@ class reg(csr_composite_object):
         indent = indent[2:]
         outfile.write("%s}\n" % indent)
 
+    def gen_input_binary_method(self, outfile, args, classname, indent):
+        outfile.write(indent)
+        if self.gen_method_declarator(outfile, args, "void", classname, "input_binary",
+                ["uint64_t a", "char t", "uint32_t *d", "size_t l"], ""):
+            return
+        indent += '  '
+        words = (self.width + 31) // 32
+        indirect = self.parent.parent == "memories" or (self.name in args.write_dma) or words == 1
+        # words == 1 is not really indirect, but we don't need to figure out which word is
+        # being written, so we can use the simpler code
+        zero_default = True
+        for a in self.fields:
+            if isinstance(a.default, tuple):
+                if reduce(ior, a.default, 0) != 0:
+                    zero_default = False
+                    break
+            elif a.default is None or a.default != 0:
+                zero_default = False
+                break
+        if indirect:
+            outfile.write('%sBUG_CHECK(l == %d, "expecting %d words, got %%zd in %s", l);\n' %
+                          (indent, words, words, self.name))
+            if zero_default:
+                outfile.write('%sif ((d[0]' % indent)
+                for i in range(1,words):
+                    outfile.write('|d[%d]' % i)
+                outfile.write(') == 0) return;\n')
+        else:
+            outfile.write('%sBUG_CHECK(t == \'R\' && l == 1, "expecting direct in %s");\n' %
+                          (indent, self.name))
+            if zero_default:
+                outfile.write('%sif (d[0] == 0) return;\n' % indent)
+            outfile.write('%sa /= 4;\n' % indent)
+        for a in self.fields:
+            field_name = a.name
+            if field_name in args.cpp_reserved:
+                field_name += '_'
+            lsb = a.lsb
+            size = a.msb - a.lsb + 1
+            def input_ubits_field(index_list):
+                nonlocal lsb
+                outfile.write(indent)
+                if indirect:
+                    word = lsb//32
+                    aop = '='
+                else:
+                    outfile.write('if (a == %d) ' % (lsb//32))
+                    word = 0
+                    aop = '|='
+                outfile.write('%s%s %s ' % (field_name, array_str(index_list), aop))
+                if lsb%32 + size < 32:
+                    outfile.write('(d[%d] >> %d) & 0x%x;\n' % (word,
+                                  lsb%32, (1 << size) - 1))
+                elif lsb%32 + size == 32:
+                    outfile.write('d[%d] >> %d;\n' % (word, lsb%32))
+                else:
+                    outfile.write('(d[%d] >> %d)' % (word, lsb%32))
+                    if indirect:
+                        outfile.write(' | ')
+                    else:
+                        outfile.write(';\n')
+                    msb = lsb+size-1
+                    for i in range(lsb//32 + 1, msb//32):
+                        if indirect:
+                            outfile.write('((uint64_t)d[%d] << %d) | ' % (i, i*32 - lsb))
+                        else:
+                            outfile.write('%sif (a == %d) %s%s |= (uint64_t)d[0] << %d;\n' %
+                                      (indent, i, field_name, array_str(index_list), i*32 - lsb))
+                    if indirect:
+                        outfile.write('(((uint64_t)d[%d] & 0x%x) << %d);\n' % (msb//32,
+                            (1 << (msb%32 + 1)) - 1, msb//32*32 - lsb))
+                    else:
+                        outfile.write('%sif (a == %d) %s%s |= ((uint64_t)d[0] & 0x%x) << %d;\n' %
+                                      (indent, msb//32, field_name, array_str(index_list),
+                                       (1 << (msb%32 + 1)) - 1, msb//32*32 - lsb))
+                lsb += size
+            def input_widereg_field(index_list):
+                nonlocal lsb
+                outfile.write('%sBUG("widereg input not implemented");\n' % indent)
+                lsb += size
+            if a.count != (1,):
+                if a.msb - a.lsb + 1 > 64:
+                    count_array_loop(a.count, input_widereg_field)
+                else:
+                    count_array_loop(a.count, input_ubits_field)
+            else:
+                if a.msb - a.lsb + 1 > 64:
+                    input_widereg_field(None)
+                else:
+                    input_ubits_field(None)
+
+        indent = indent[2:]
+        outfile.write('%s}\n' % indent)
+
     def gen_binary_offset_method(self, outfile, args, classname, indent):
         outfile.write(indent)
         if self.gen_method_declarator(outfile, args, "uint64_t", classname, "binary_offset",
@@ -2087,6 +2322,9 @@ class scanset_reg(reg):
         for i in range(0, len(self.count) + (2 if args.enable_disable else 0)):
             indent = indent[2:]
             outfile.write("%s}\n" % indent)
+
+    def input_binary(self, outfile, args, indent, address_unit, width_unit):
+        raise CsrException("scanset_reg.input_binary not implemented")
 
 
 class field(csr_object):

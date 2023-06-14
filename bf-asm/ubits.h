@@ -1,7 +1,9 @@
 #ifndef BF_ASM_UBITS_H_  //  NOLINT(build/header_guard)
 #define BF_ASM_UBITS_H_
 
+#include <inttypes.h>
 #include <limits.h>
+#include <stdint.h>
 #include <iostream>
 #include <functional>
 #include <sstream>
@@ -12,6 +14,7 @@ void declare_registers(const void *addr, size_t sz,
         std::function<void(std::ostream &, const char *, const void *)> fn);
 void undeclare_registers(const void *addr);
 void print_regname(std::ostream &out, const void *addr, const void *end);
+std::string string_regname(const void *addr, const void *end);
 
 struct ubits_base;
 

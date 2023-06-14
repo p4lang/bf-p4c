@@ -5,6 +5,7 @@ global:
   - emit_fieldname
   - emit_json
   - enable_disable
+  - input_binary
   - widereg
   # - write_dma=galois_field_matrix
 generate:

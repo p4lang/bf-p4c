@@ -48,6 +48,12 @@ void print_regname(std::ostream &out, const void *addr, const void *end) {
         out << "???";
 }
 
+std::string string_regname(const void *addr, const void *end) {
+    std::stringstream tmp;
+    print_regname(tmp, addr, end);
+    return tmp.str();
+}
+
 void ubits_base::log(const char *op, uint64_t v) const {
     if (LOGGING(1)) {
         std::ostringstream tmp;
