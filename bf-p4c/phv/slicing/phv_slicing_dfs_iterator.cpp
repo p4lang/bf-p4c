@@ -1180,6 +1180,9 @@ void DfsItrContext::iterate(const IterateCb& cb) {
     has_itr_i = true;
 
     LOG3("Making Itr for " << sc_i);
+    LOG7("Homogeneous slicing enabled: " << config_i.homogeneous_slicing <<
+         " Rejected slice options: " << Log::indent);
+    for (auto sz :  reject_sizes) LOG7(int(sz));
 
     // no slice list supercluster, a simpler case.
     if (sc_i->slice_lists().size() == 0) {
@@ -1274,8 +1277,9 @@ void DfsItrContext::iterate(const IterateCb& cb) {
     // start searching.
     auto res = dfs(cb, to_be_split_i);
     LOG1("DFS Result: " << res
-            << ", n_steps_since_last_solution: " << n_steps_since_last_solution
-            << ", max_search_steps_per_solution: " << config_i.max_search_steps_per_solution);
+         << ", n_steps_since_last_solution: " << n_steps_since_last_solution
+         << ", max_search_steps_per_solution: " << config_i.max_search_steps_per_solution <<
+         Log::unindent);
 
     // true indicates that we had troubles in finding a solution. Try aggressively presplit
     // large fieldslice to 32-bit chunks first and then rerun dfs.
@@ -2034,22 +2038,38 @@ bool DfsItrContext::dfs(const IterateCb& yield, const ordered_set<SuperCluster*>
     // try all possible way to split out the first N bits of the slicelist
     // then recursion.
     auto choices = make_choices(*target);
-    if (LOGGING(5)) {
+    bool has_non_rejected_slice_choice = false;
+    std::optional<SplitChoice> max_slice_choice = std::nullopt;
         std::stringstream ss;
         ss << "{ ";
         for (const auto& c : choices) {
+            if (!reject_sizes.count(c)) has_non_rejected_slice_choice = true;
+            if (!max_slice_choice) max_slice_choice = c;
+            else if (c > max_slice_choice) max_slice_choice = c;
             ss << int(c) << " ";
         }
         ss << "}";
         LOG5("dfs_depth-" << dfs_depth_i << ": possible choices: " << ss.str());
-    }
     for (const auto& choice : choices) {
         LOG5("dfs_depth-" << dfs_depth_i << ": try to split @" << int(choice));
+
+        // If slicing choice has been rejected by other slicelist do not use it unless:
+        //   1. there are no non-rejected choices or
+        //   2. the rejected choice is the maximum available slicing choice
+        if ((has_non_rejected_slice_choice && reject_sizes.count(choice)) &&
+            (choice != max_slice_choice)) {
+            LOG5("Split size " << int(choice) << " has been previously rejected");
+            continue;
+        }
 
         // create metadata for making a split.
         const auto split_meta = make_split_meta(sc, sl, int(choice));
         if (!split_meta) {
             LOG5("dfs_depth-" << dfs_depth_i << ": cannot split by " << int(choice));
+            if (config_i.homogeneous_slicing) {
+                reject_sizes.insert(choice);
+                LOG5("Adding split option " << int(choice) << " to reject_sizes");
+            }
             continue;
         }
         auto rst = PHV::Slicing::split(sc, split_meta->first);

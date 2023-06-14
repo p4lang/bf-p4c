@@ -122,6 +122,9 @@ class DfsItrContext : public IteratorInterface {
     // last solution was found at n_steps_since_last_solution before.
     int n_steps_since_last_solution = 0;
 
+       // Set of rejected SplitChoice options from previous slice-lists
+    std::set<SplitChoice> reject_sizes;
+
     // if not nullptr, backtrack to the stack that to_invalidate is not on stack,
     // i.e. not a part of the DFS path.
     const SuperCluster::SliceList* to_invalidate = nullptr;
@@ -158,7 +161,7 @@ class DfsItrContext : public IteratorInterface {
           parser_packing_validator_i(parser_packing_validator),
           has_pack_conflict_i(pack_conflict),
           is_used_i(is_used),
-          config_i(false, false, true, true, (1 << 25), (1 << 19)),
+          config_i(false, false, true, true, false, (1 << 25), (1 << 19)),
           check_write_mode_consistency_i(phv, field_to_states, parser_info) {}
 
     /// iterate will pass valid slicing results to cb. Stop when cb returns false.

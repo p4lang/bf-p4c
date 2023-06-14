@@ -58,6 +58,9 @@ struct IteratorConfig {
     /// TODO(yumin): prefer to enable but still alt-phv-alloc only because of regression.
     bool smart_slicing = true;
 
+    /// Do not examine split decisions rejected by previous slicings
+    bool homogeneous_slicing = false;
+
     /// the total number of steps that the search can take.
     int max_search_steps = (1 << 25);
 
@@ -73,12 +76,13 @@ struct IteratorConfig {
     bool disable_packing_check = false;
 
     IteratorConfig(bool minimal_packing_mode, bool loose_action_packing_check_mode,
-                   bool smart_backtracking_mode, bool smart_slicing, int max_search_steps,
-                   int max_search_steps_per_solution)
+                   bool smart_backtracking_mode, bool smart_slicing, bool same_slices,
+                   int max_search_steps, int max_search_steps_per_solution)
         : minimal_packing_mode(minimal_packing_mode),
           loose_action_packing_check_mode(loose_action_packing_check_mode),
           smart_backtracking_mode(smart_backtracking_mode),
           smart_slicing(smart_slicing),
+          homogeneous_slicing(same_slices),
           max_search_steps(max_search_steps),
           max_search_steps_per_solution(max_search_steps_per_solution) {}
 };

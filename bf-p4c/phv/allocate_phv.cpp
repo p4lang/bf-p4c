@@ -581,8 +581,8 @@ void print_or_throw_slicing_error(const PHV::AllocUtils& utils, const PHV::Super
     }
 }
 
-const auto slicing_config =
-    PHV::Slicing::IteratorConfig{false, true, false, false, (1 << 25), (1 << 19)};
+const auto slicing_config = PHV::Slicing::IteratorConfig{false, true, false, false, false,
+                                                         (1 << 25), (1 << 19)};
 
 // Create callback for creating FileLog objects
 // Those can locally redirect LOG* macros to another file which

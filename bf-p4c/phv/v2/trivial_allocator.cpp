@@ -137,7 +137,7 @@ TrivialAllocator::PreSlicingResult TrivialAllocator::pre_slice(const Allocation&
     auto pre_slicing_ctx = kit_i.make_slicing_ctx(sc);
     // max-packing mode with loose action constraints checks.
     pre_slicing_ctx->set_config(
-        Slicing::IteratorConfig{false, true, true, true, (1 << 25), (1 << 16)});
+        Slicing::IteratorConfig{false, true, true, true, false, (1 << 25), (1 << 16)});
     pre_slicing_ctx->iterate([&](std::list<SuperCluster*> sliced) {
         n_pre_slicing_tried++;
         LOG3("Pre-slicing-attempt-" << n_pre_slicing_tried);
@@ -148,7 +148,7 @@ TrivialAllocator::PreSlicingResult TrivialAllocator::pre_slice(const Allocation&
             LOG3("Check possibility of allocation of " << sc);
             auto sc_rst = slice_and_allocate_sc(
                 empty_alloc, sc, PhvStatus(), make_container_groups_merged_by_size(), alloc_metrics,
-                try_minimal_packing_first, max_pre_slicing_try);
+                /* homogeneous_sizes */ false, try_minimal_packing_first, max_pre_slicing_try);
             if (!sc_rst->ok()) {
                 LOG3("Unallocatable cluster found: SC-" << sc->uid);
                 rst.invalid = sc;
@@ -205,7 +205,8 @@ const AllocError* TrivialAllocator::diagnose_invalid_cluster(
     // Use minimal_packing_slicing mode disable action-related packing checks.
     // This allows conflicting action constraints to be caught during PHV allocation
     // so that detailed error logs (trace) can be printed to user.
-    auto slicing_cfg = Slicing::IteratorConfig{true, true, false, true, (1 << 25), (1 << 16)};
+    auto slicing_cfg = Slicing::IteratorConfig{true, true, false, true, false,
+                                               (1 << 25), (1 << 16)};
     slicing_cfg.disable_packing_check = true;
     auto slicing_ctx = kit_i.make_slicing_ctx(sc);
     slicing_ctx->set_config(slicing_cfg);
@@ -239,6 +240,7 @@ const AllocError* TrivialAllocator::diagnose_invalid_cluster(
 const TrivialAllocator::PartialAllocResult *TrivialAllocator::slice_and_allocate_sc(
     const Allocation &empty_alloc, const PHV::SuperCluster *sc, PhvStatus phv_status,
     const ContainerGroupsBySize &container_groups, AllocatorMetrics &alloc_metrics,
+    bool homogeneous_sizes,
     bool minimal_packing_slicing, const int max_slicings, std::ostream *history) const {
     LOG2("Slice and Allocate SuperCluster");
     auto* search_config = new SearchConfig();
@@ -257,7 +259,8 @@ const TrivialAllocator::PartialAllocResult *TrivialAllocator::slice_and_allocate
     auto slicing_ctx = kit_i.make_slicing_ctx(sc);
     // use @p minimal_packing_slicing mode with strict action packing checking mode.
     slicing_ctx->set_config(
-        Slicing::IteratorConfig{minimal_packing_slicing, false, true, true, (1 << 25), (1 << 16)});
+        Slicing::IteratorConfig{minimal_packing_slicing, false, true, true,
+                homogeneous_sizes, (1 << 25), (1 << 16)});
     slicing_ctx->iterate([&](std::list<PHV::SuperCluster*> sliced) {
         n_tried++;
         if (LOGGING(3)) {
@@ -376,6 +379,7 @@ bool TrivialAllocator::allocate(const std::list<PHV::SuperCluster *> &clusters,
             history << "Allocating: \n" << sc;
             auto rst =
                 slice_and_allocate_sc(empty_alloc, sc, phv_status, container_groups, alloc_metrics,
+                                      /* homogeneous_sizes */ true,
                                       true, max_try_alloc_slicing_try, &history);
             // unlikely to happen here, because pre_slicing has validated.
             if (!rst->ok()) {
@@ -425,7 +429,7 @@ bool TrivialAllocator::can_be_allocated(const Allocation& empty_alloc,
             << " with max slicings " << max_slicings << indent);
     const auto rst =
         slice_and_allocate_sc(empty_alloc, sc, PhvStatus(), make_container_groups_merged_by_size(),
-                              alloc_metrics, true, max_slicings);
+                              alloc_metrics, /*homogeneous_sizes*/ false, true, max_slicings);
     return rst->ok();
 }
 

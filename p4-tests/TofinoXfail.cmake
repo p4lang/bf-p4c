@@ -1603,12 +1603,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/psa-action-selector6.p4
 )
 
-# dev env update 2023-04-20 (counter STF failures)
-p4c_add_xfail_reason("tofino"
-   "counter .* bytes value is .*, expected .*"
-   extensions/p4_tests/p4_16/stf/p4c-2911-2.p4
-)
-
 # ALT-PHV: tests that do not work yet with the alternative allocator.
 # If you make an ALT-PHV test pass (or get close to it but if fails on later
 # error), please update the xfails accordingly.

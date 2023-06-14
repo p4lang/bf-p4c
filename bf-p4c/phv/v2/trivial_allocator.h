@@ -78,6 +78,7 @@ class TrivialAllocator : public AllocatorBase {
                                                     PhvStatus phv_status,
                                                     const ContainerGroupsBySize& container_groups,
                                                     AllocatorMetrics& alloc_metrics,
+                                                    bool homogeneous_sizes = false,
                                                     bool minimal_packing_slicing = true,
                                                     const int max_slicings = 128,
                                                     std::ostream* history = nullptr) const;

@@ -116,7 +116,8 @@ class SuperClusterMetrics {
 
     void calc_non_sliceable(const SuperCluster* sc) {
         auto itr_ctx = kit_i.make_slicing_ctx(sc);
-        itr_ctx->set_config(Slicing::IteratorConfig{true, false, true, true, (1 << 25), (1 << 16)});
+        itr_ctx->set_config(Slicing::IteratorConfig{true, false, true, true, false,
+                    (1 << 25), (1 << 16)});
         int n = 0;
         bool sliceable = false;
         itr_ctx->iterate([&](std::list<SuperCluster*> clusters) {
@@ -394,7 +395,7 @@ GreedyAllocator::AllocResultWithSlicingDetails GreedyAllocator::slice_and_alloca
     auto slicing_ctx = kit_i.make_slicing_ctx(sc);
     // max packing and strict mode.
     slicing_ctx->set_config(
-        Slicing::IteratorConfig{false, false, true, true, (1 << 25), (1 << 16)});
+        Slicing::IteratorConfig{false, false, true, true, false, (1 << 25), (1 << 16)});
     int n_tried = 0;
     std::optional<Transaction> best_tx;
     std::optional<TxScore*> best_score;
