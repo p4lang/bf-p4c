@@ -593,9 +593,12 @@ const AllocError* AllocatorBase::check_container_scope_constraints(
     LOG6("Checking container scope constraints" << indent);
     // check parser packing.
     FieldSliceAllocStartMap fs_starts;
-    for (const auto& slice : alloc.slices(c)) {
-        if (slice.getEarliestLiveness().first != -1) continue;  // filter our non-parsed slice
-        fs_starts[FieldSlice(slice.field(), slice.field_slice())] = slice.container_slice().lo;
+    // For trivial allocation no need to check parser packing across slicelists
+    if (!kit_i.settings.trivial_alloc) {
+        for (const auto& slice : alloc.slices(c)) {
+            if (slice.getEarliestLiveness().first != -1) continue;  // filter our non-parsed slice
+            fs_starts[FieldSlice(slice.field(), slice.field_slice())] = slice.container_slice().lo;
+        }
     }
     for (const auto& slice : candidates) {
         if (slice.getEarliestLiveness().first != -1) continue;  // filter out non-parsed slice
