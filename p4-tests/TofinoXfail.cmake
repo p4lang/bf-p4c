@@ -1619,13 +1619,6 @@ if (TEST_ALT_PHV_ALLOC)
       "Error code: CONTAINER_PARSER_PACKING_INVALID"
       extensions/p4_tests/p4_16/customer/arista/obfuscated-map.p4
     )
-
-    # Depth assertion
-    p4c_add_xfail_reason("tofino"
-      "Assertion `current.depth < 10000' failed"
-       extensions/p4_tests/p4_16/customer/kaloom/p4c-5223-leaf-tof1.p4
-    )
-
 endif (TEST_ALT_PHV_ALLOC)
 
 # P4C-4689: On Tofino1, this test compiles incorrectly but we only report a warning

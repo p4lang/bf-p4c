@@ -1,5 +1,6 @@
 #include "bf-p4c/phv/finalize_physical_liverange.h"
 #include <sstream>
+#include <utility>
 #include "bf-p4c/common/field_defuse.h"
 #include "bf-p4c/device.h"
 #include "bf-p4c/ir/bitrange.h"
@@ -239,6 +240,7 @@ void FinalizePhysicalLiverange::end_apply() {
         bool have_read_to_read_live_range = false;
         std::vector<AllocSlice> live_start_rw;
         std::set<AllocSlice> uninit_read_allocs;
+        std::multiset<AllocSlice> all_slices;
         for (auto& slice : f.get_alloc()) {
             BUG_CHECK(
                 slice.isPhysicalStageBased(),
@@ -258,15 +260,55 @@ void FinalizePhysicalLiverange::end_apply() {
                 }
                 const auto old = LiveRange(slice.getEarliestLiveness(), slice.getLatestLiveness());
                 const auto& updated = live_ranges_i.at(slice);
-                LOG3("Finalizing " << old << " => " << updated << " : " << slice);
+                LOG3("Adjusting " << old << " => " << updated << " : " << slice);
                 slice.setLiveness(updated.start, updated.end);
+            }
+            all_slices.emplace(slice);
+        }
 
-                if (slice.getEarliestLiveness().second.isReadAndWrite()) {
-                    LOG5("Found RW start of liverange for" << slice);
-                    live_start_rw.push_back(slice);
-                    int stg = slice.getEarliestLiveness().first;
-                    slice.setEarliestLiveness(std::make_pair(stg, FieldUse(FieldUse::WRITE)));
+        // Merge slices with overlapping live ranges
+        safe_vector<PHV::AllocSlice> new_slices;
+        if (all_slices.size()) {
+            int merge_count = 0;
+
+            PHV::AllocSlice merged(*all_slices.begin());
+            const auto invalid_liveness =
+                std::make_pair(-2 /* never used stage */, PHV::FieldUse(PHV::FieldUse::READ));
+            merged.setEarliestLiveness(invalid_liveness);
+            merged.setLatestLiveness(invalid_liveness);
+
+            auto record_slice = [&new_slices](const PHV::AllocSlice& slice, int count) {
+                if (slice.getEarliestLiveness().first >= -1) {
+                    new_slices.push_back(slice);
+                    if (count > 1) LOG3("Merging " << count << " slices to produce " << slice);
                 }
+            };
+
+            for (auto& slice : all_slices) {
+                if (slice.container() == merged.container() &&
+                    slice.representsSameFieldSlice(merged) && !slice.isLiveRangeDisjoint(merged)) {
+                    merged.setEarliestLiveness(
+                        std::min(slice.getEarliestLiveness(), merged.getEarliestLiveness()));
+                    merged.setLatestLiveness(
+                        std::max(slice.getLatestLiveness(), merged.getLatestLiveness()));
+                    merge_count++;
+                } else {
+                    record_slice(merged, merge_count);
+                    merged = slice;
+                    merge_count = 1;
+                }
+            }
+            record_slice(merged, merge_count);
+            f.set_alloc(new_slices);
+            f.sort_alloc();
+        }
+
+        for (auto& slice : f.get_alloc()) {
+            if (slice.getEarliestLiveness().second.isReadAndWrite()) {
+                LOG5("Found RW start of liverange for" << slice);
+                live_start_rw.push_back(slice);
+                int stg = slice.getEarliestLiveness().first;
+                slice.setEarliestLiveness(std::make_pair(stg, FieldUse(FieldUse::WRITE)));
             }
         }
 
