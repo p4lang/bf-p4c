@@ -165,6 +165,7 @@ parser SwitchIngressParser(
                           hdr.fabric_base.pkt_sub_sub_type,
                           hdr.fabric_base.pkt_sub_sub_sub_type) {
             (0x1, 0x2, 0x3, 0x4) : parse_ipv4;
+            (0x1, 0x2, 0x3, 0x6) : parse_ipv6;
             (0x80, 0x2, 0x3, 0x4) : parser_igfpga_eth_ac;
             default: accept;
         }

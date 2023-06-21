@@ -445,12 +445,6 @@ p4c_add_xfail_reason("tofino2"
 # If you make an ALT-PHV test pass (or get close to it but if fails on later
 # error), please update the xfails accordingly.
 if (TEST_ALT_PHV_ALLOC)
-    # Bugs
-    p4c_add_xfail_reason("tofino2"
-        "bfa:.*: error: forward_if_ethernet_parsed_0 gateway sharing search bus 4.0 with table1_0, but wants a different match group"
-        extensions/p4_tests/p4_16/stf/parser_scratch_reg_3.p4
-    )
-
     # Actions and constraints errors
     p4c_add_xfail_reason("tofino2"
         "error: PHV allocation creates an invalid container action within a Tofino ALU"
