@@ -124,8 +124,16 @@ struct FsPacker {
 
 bool IxbarFriendlyPacking::can_pack(const std::vector<FieldSlice>& slices,
                                     const FieldSlice& fs) const {
+    if (fs.field()->is_solitary()) {
+        return false;
+        LOG3("Found pa_solitary constraint in " << fs);
+    }
     // action packing constraints
     for (const auto& packed : slices) {
+        if (packed.field()->is_solitary()) {
+            return false;
+            LOG3("Found pa_solitary constraint in " << packed);
+        }
         if (fs.field() != packed.field() && has_pack_conflict_i(packed, fs)) {
             LOG3("Found action packing conflict " << packed << " vs " << fs);
             return false;

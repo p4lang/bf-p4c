@@ -119,7 +119,7 @@ bool PragmaNoOverlay::preorder(const IR::BFN::Pipe* pipe) {
             no_overlay.insert(&nf.second);
         }
     }
-
+    LOG3(*this);
     return true;
 }
 
