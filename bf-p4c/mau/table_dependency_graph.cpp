@@ -138,7 +138,8 @@ std::ostream &operator<<(std::ostream &out, const DependencyGraph &dg) {
     for (auto &msi : min_stage_info) {
         out << " Stage #" << msi.first << std::endl;
         for (auto val : msi.second) {
-            out << "     " << val.first->name << " " << val.second.dep_stages_control_anti << " "
+            out << "     " << val.first->name << " (" << val.first->externalName() << ") "
+                << val.second.dep_stages_control_anti << " "
                 << val.second.dep_stages_control_anti_split << std::endl;
             if (!dg.display_min_edges)
                 continue;
@@ -146,6 +147,7 @@ std::ostream &operator<<(std::ostream &out, const DependencyGraph &dg) {
                 continue;
             for (auto edge : dg.min_stage_edges.at(val.first)) {
                 out << "\t- Edge " << dep_types(edge.second) << " " << edge.first->name
+                    << " ( " << edge.first->externalName() << " )"
                     << std::endl;
             }
         }

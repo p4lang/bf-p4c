@@ -2949,9 +2949,13 @@ TablePlacement::Placed *DecidePlacement::try_backfill_table(
     }
     pl->placed[self.uid(tbl)] = 1;
     pl->match_placed[self.uid(tbl)] = 1;
-    LOG1("placing " << pl->entries << " entries of " << pl->name << (pl->gw ? " (with gw " : "") <<
-         (pl->gw ? pl->gw->name : "") << (pl->gw ? ")" : "") << " in stage " << pl->stage << "(" <<
-         hex(pl->logical_id) << ") " << pl->use.format_type << " (backfilled)");
+    auto tbl_log_str =
+        pl->table ? pl->name + " ( " + pl->table->externalName() + " ) " : pl->name;
+    auto gw_log_str = pl->gw ?
+        " (with gw " + pl->gw->name + ", result tag " + pl->gw_result_tag + ")" : "";
+    LOG1("placing " << pl->entries << " entries of " << tbl_log_str << gw_log_str
+                    << " in stage " << pl->stage << "(" << hex(pl->logical_id) << ") "
+                    << pl->use.format_type << " (backfilled)");
     BUG_CHECK(pl->table->next.empty(), "Can't backfill table with control dependencies");
     return whole_stage.front();
 }
@@ -3009,20 +3013,24 @@ const TablePlacement::Placed *TablePlacement::add_starter_pistols(const Placed *
 const TablePlacement::Placed *
 DecidePlacement::place_table(ordered_set<const GroupPlace *>&work, const Placed *pl) {
     if (LOGGING(1)) {
+        auto tbl_log_str =
+            pl->table ? pl->name + " ( " + pl->table->externalName() + " ) " : pl->name;
         auto gw_log_str = pl->gw ?
             " (with gw " + pl->gw->name + ", result tag " + pl->gw_result_tag + ")" : "";
         auto need_more_match_str = pl->need_more_match ?
             " (need more match)" : pl->need_more ? " (need more)" : "";
-        LOG1("placing " << pl->entries << " entries of " << pl->name << gw_log_str
-                << " in stage " << pl->stage << "(" << hex(pl->logical_id) << ") "
-                << pl->use.format_type << need_more_match_str);
+        LOG1("placing " << pl->entries << " entries of " << tbl_log_str << gw_log_str
+                        << " in stage " << pl->stage << "(" << hex(pl->logical_id) << ") "
+                        << pl->use.format_type << need_more_match_str);
     }
 
     CHECK_NULL(pl->table);
 
     int dep_chain = self.deps.stage_info[pl->table].dep_stages_control_anti;
     if (pl->stage + dep_chain >= Device::numStages())
-        LOG1(" Dependence chain longer than available stages");
+        LOG1(" Dependence chain (" << pl->stage + dep_chain + 1
+                                   << ") longer than available stages (" << Device::numStages()
+                                   << ")");
     int stage_pragma = pl->table->get_provided_stage(pl->stage);
     if (stage_pragma >= 0 && stage_pragma != pl->stage)
         LOG1("  placing in stage " << pl->stage << " despite @stage(" << stage_pragma << ")");
@@ -4674,14 +4682,18 @@ DecidePlacement::alt_table_placement(const IR::BFN::Pipe *pipe) {
                 placed->name, placed->table->name, placed->stage, alt_stage_to_place);
         }
         if (LOGGING(1)) {
-            auto gw_log_str = placed->gw ?
-                " (with gw " + placed->gw->name + ", result tag "
-                             + placed->gw_result_tag + ")" : "";
-            auto need_more_match_str = placed->need_more_match ?
-                " (need more match)" : placed->need_more ? " (need more)" : "";
-            LOG1("placing " << placed->entries << " entries of " << placed->name << gw_log_str
-                    << " in stage " << placed->stage << "(" << hex(placed->logical_id) << ") "
-                    << placed->use.format_type << need_more_match_str);
+            auto tbl_log_str = placed->table
+                                   ? placed->name + " ( " + placed->table->externalName() + " ) "
+                                   : placed->name;
+            auto gw_log_str = placed->gw ? " (with gw " + placed->gw->name + ", result tag " +
+                                               placed->gw_result_tag + ")"
+                                         : "";
+            auto need_more_match_str = placed->need_more_match
+                                           ? " (need more match)"
+                                           : placed->need_more ? " (need more)" : "";
+            LOG1("placing " << placed->entries << " entries of " << tbl_log_str << gw_log_str
+                            << " in stage " << placed->stage << "(" << hex(placed->logical_id)
+                            << ") " << placed->use.format_type << need_more_match_str);
         }
     }
     LOG1("Alt placement finished all table placement decisions on pipe " << pipe->canon_name());

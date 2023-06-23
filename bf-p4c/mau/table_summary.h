@@ -147,14 +147,24 @@ class TableSummary: public MauInspector {
 
         unsigned logicalId;
 
-        int stage;
-        int entries;
+        int stage       = -1;
+        int min_stage   = -1;
+        int max_stage   = -1;
+        int entries     = -1;
+        int entries_req = -1;
+        int srams       = -1;
+        int tcams       = -1;
+        int maprams     = -1;
+        int ways        = -1;
+        int key_size    = -1;
+
+        bool gateway_only = false;
 
         LayoutOption layout;
 
         ordered_map<cstring, int> attached_entries;
 
-        explicit PlacedTable(const IR::MAU::Table *t, State::state_t &state);
+        PlacedTable(const IR::MAU::Table *t, State::state_t &state, const DependencyGraph &dg);
         void add(const IR::MAU::Table *t);
     };
     friend std::ostream &operator<<(std::ostream &out, const PlacedTable &pl);

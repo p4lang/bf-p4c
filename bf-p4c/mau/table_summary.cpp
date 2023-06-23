@@ -252,7 +252,7 @@ bool TableSummary::preorder(const IR::MAU::Table *t) {
         }
     }
     if (!pTMerge)
-        placedTables[*t->global_id()] = new PlacedTable(t, state);
+        placedTables[*t->global_id()] = new PlacedTable(t, state, deps);
 
     return true;
 }
@@ -749,16 +749,112 @@ void TableSummary::printTablePlacement() {
     LOG1("Number of tables allocated: " << order.size());
 
     std::stringstream ss;
-    TablePrinter tp(ss, {"Stage", "Table Name"}, TablePrinter::Align::LEFT);
+    std::vector<std::string> headers;
 
-    for (auto tbl : tableAlloc) {
-        for (int logical_id : tbl.second) {
-            int stage = logical_id / NUM_LOGICAL_TABLES_PER_STAGE;
-            tp.addRow({std::to_string(stage), std::string(tbl.first.c_str())});
-        }
+    headers.push_back("Stage");
+    headers.push_back("Min / Max Stage");
+    headers.push_back("Table Name");
+    if (LOGGING(3)) {
+        headers.push_back("Internal Table Name");
+        headers.push_back("Gateway");
+        headers.push_back("Key Size");
+        headers.push_back("Entries Allocated");
+        headers.push_back("Entries Required");
+        headers.push_back("SRAMs");
+        headers.push_back("Ways");
+        headers.push_back("TCAMs");
+        headers.push_back("Attached Table");
+        headers.push_back("MapRAMs");
     }
 
+    TablePrinter tp(ss, headers, TablePrinter::Align::CENTER);
+
+    auto toStr = [](bool cond, int metric) {
+        std::string mStr = "-";
+        if (cond) mStr = std::to_string(metric);
+        return mStr;
+    };
+
+    for (auto pt : placedTables) {
+        auto logical_id = pt.first;
+        auto table_stage_i = logical_id / NUM_LOGICAL_TABLES_PER_STAGE;
+        auto table_stage = std::to_string(table_stage_i);
+
+        auto *table = pt.second;
+        auto table_name          = table->tableName.c_str();
+        auto table_min_stage     = toStr((table->min_stage      >= 0), table->min_stage);
+        auto table_max_stage     = toStr((table->max_stage      >= 0), table->max_stage);
+        auto table_min_max_stage = "[ " + table_min_stage + ", " + table_max_stage + " ]";
+        if (table->max_stage >= 0 && table_stage_i > table->max_stage)
+            table_min_max_stage += "*";
+        else
+            table_min_max_stage += " ";
+
+        if (LOGGING(3)) {
+            auto table_internal_name = table->internalTableName.c_str();
+            auto table_entries       = toStr((table->entries        >  0), table->entries);
+            auto table_entries_req   = toStr((table->entries_req    >  0), table->entries_req);
+            auto table_srams         = toStr((table->layout.srams   >  0), table->layout.srams);
+            auto table_tcams         = toStr((table->layout.tcams   >  0), table->layout.tcams);
+            auto table_maprams       = toStr((table->layout.maprams >  0), table->layout.maprams);
+            auto table_ways          = toStr((table->ways           >  0), table->ways);
+            auto table_key_size      = toStr((table->key_size       >  0), table->key_size);
+
+            std::string table_gateway = "N";
+            if (table->gateway_only) {
+                table_gateway       = "Y";
+            } else if (!table->gatewayName.isNullOrEmpty()) {
+                table_gateway       = "Y";
+                if (!table->gatewayMergeCond.isNullOrEmpty())
+                    table_gateway   += "(Merge)";
+            }
+
+            std::string table_attached = "-";
+            for (auto att : table->attached_entries) {
+                table_attached = "( ";
+                table_attached += att.first;
+                table_attached += ", ";
+                table_attached += toStr(att.second >= 0, att.second);
+                table_attached += " )";
+            }
+
+            tp.addRow({
+                table_stage,
+                table_min_max_stage,
+                table_name,
+                table_internal_name,
+                table_gateway,
+                table_key_size,
+                table_entries,
+                table_entries_req,
+                table_srams,
+                table_ways,
+                table_tcams,
+                table_attached,
+                table_maprams,
+            });
+        } else {
+            tp.addRow({
+                table_stage,
+                table_min_max_stage,
+                table_name,
+            });
+        }
+    }
     tp.print();
+
+    ss << std::endl;
+    ss << "NOTES: ";
+    ss << " - A '*' next to the min / max stage column indicates the table is placed outside its "
+          "allowed scope"
+       << std::endl;
+    if (LOGGING(3)) {
+        ss << " - Entries requested indicate no. of entries specified in P4. Entries allocated "
+              "will depend on the total entries allocated by the compiler based on RAM usage, "
+              "packing etc. This can be more than requested entries."
+           << std::endl;
+        ss << " - A gateway can be a stand alone gateway or merged with a match table" << std::endl;
+    }
     LOG1(ss.str());
 }
 
@@ -881,7 +977,8 @@ void TableSummary::PlacedTable::add(const IR::MAU::Table *t) {
     }
 }
 
-TableSummary::PlacedTable::PlacedTable(const IR::MAU::Table *t, state_t &state) {
+TableSummary::PlacedTable::PlacedTable(const IR::MAU::Table *t, state_t &state,
+                                       const DependencyGraph &dg) {
     BUG_CHECK(t, "PlacedTable called with no valid table");
     Log::TempIndent indent;
     LOG5("Populating PlacedTable for Table : " << t->name << indent);
@@ -894,9 +991,22 @@ TableSummary::PlacedTable::PlacedTable(const IR::MAU::Table *t, state_t &state) 
         gatewayMergeCond = t->gateway_result_tag;
     }
 
+    gateway_only = t->is_a_gateway_table_only();
+
     stage = t->stage();
-    logicalId = *t->logical_id;
-    entries = t->layout.entries;
+    if (dg.stage_info.count(t)) {
+        auto stage_info = dg.stage_info.at(t);
+        min_stage = stage_info.min_stage;
+        max_stage = stage_info.max_stage;
+    }
+    logicalId   = *t->logical_id;
+    entries     = t->layout.entries;
+    ways        = t->ways.size();
+    key_size    = t->get_match_key_width();
+    if (t->match_table) {
+        if (auto size = t->match_table->getConstantProperty("size"))
+            entries_req = size->asInt();
+    }
     LOG3("Adding " << entries << " entries to table");
 
     if (t->layout.atcam &&
@@ -924,9 +1034,14 @@ std::ostream &operator<<(std::ostream &out, const TableSummary::PlacedTable &pl)
     out << "Placed Table : " << pl.tableName << "(" << pl.internalTableName << ")";
     if (pl.gatewayName)
         out << " gateway: " << pl.gatewayName << "(" << pl.gatewayMergeCond << ")";
+    out << " key size: " << pl.key_size;
     out << indent << Log::endl;
     out << "stage: " << pl.stage << ", logicalId: " << pl.logicalId;
     out << ", entries: " << pl.entries << Log::endl;
+    out << "min_stage: " << pl.min_stage << ", max_stage: " << pl.max_stage;
+    out << ", entries_req: " << pl.entries_req << Log::endl;
+    out << "srams: " << pl.srams << ", tcams: " << pl.tcams;
+    out << ", maprams: " << pl.maprams << ", ways: " << pl.ways << Log::endl;
     for (auto att : pl.attached_entries)
         out << "Attached Table : " << att.first << ", entries : " << att.second << Log::endl;
     out << pl.layout << Log::endl;
