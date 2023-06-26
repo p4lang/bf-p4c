@@ -112,6 +112,20 @@ apt-get update
 # Install packages.
 apt-get install -y ${P4C_DEPS} ${P4C_RUNTIME_DEPS}
 
+pushd /tmp
+{
+    curl -o gc-7.6.4.tar.gz https://hboehm.info/gc/gc_source/gc-7.6.4.tar.gz
+    tar -xvf gc-7.6.4.tar.gz
+    cd gc-7.6.4
+    ./autogen.sh
+    ./configure --enable-large-config --enable-cplusplus --enable-shared
+    make -$MAKEFLAGS
+    make install -$MAKEFLAGS
+    ldconfig
+}
+popd
+
+
 # Dependencies for benchmarks
 apt-get install -y time
 
