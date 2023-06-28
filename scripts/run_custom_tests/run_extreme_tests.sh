@@ -8,6 +8,7 @@ if [[ $PWD == *"mnt"* ]]; then
     sed -i 's/bfn\/bf-p4c-compilers/mnt/g' $bfnhome/p4-tests/p4_16/customer/extreme/npb-master-ptf/tests/test.json
     sed -i 's/bfn\/bf-p4c-compilers/mnt/g' $bfnhome/p4-tests/p4_16/customer/extreme/npb-multi-prog/tests/test.json
     sed -i 's/bfn\/bf-p4c-compilers/mnt/g' $bfnhome/p4-tests/p4_16/customer/extreme/npb-folded-pipe/tests/test.json
+    sed -i 's/bfn\/bf-p4c-compilers/mnt/g' $bfnhome/p4-tests/p4_16/customer/extreme/p4c-5244/tests/test.json
 fi
 
 # Remove scapy for python3
@@ -42,6 +43,8 @@ echo "Running ptf test"
 # happens after a different value is read from a register, so maybe it really is
 # some race-condition during test setup.
 export RERUN_PTF_ON_FAILURE=1
+# FIXME: run p4c-5244
+#cd $bfnhome/build/p4c && ctest -R "^tofino2/.*(npb-master-ptf|npb-multi-prog|npb-folded-pipe|p4c-5244)"
 cd $bfnhome/build/p4c && ctest -R "^tofino2/.*(npb-master-ptf|npb-multi-prog|npb-folded-pipe)"
 
 # If running in jarvis container, reset test.json patch
@@ -49,5 +52,6 @@ if [[ $PWD == *"mnt"* ]]; then
     sed -i 's/mnt/bfn\/bf-p4c-compilers/g' $bfnhome/p4-tests/p4_16/customer/extreme/npb-master-ptf/tests/test.json
     sed -i 's/mnt/bfn\/bf-p4c-compilers/g' $bfnhome/p4-tests/p4_16/customer/extreme/npb-multi-prog/tests/test.json
     sed -i 's/mnt/bfn\/bf-p4c-compilers/g' $bfnhome/p4-tests/p4_16/customer/extreme/npb-folded-pipe/tests/test.json
+    sed -i 's/mnt/bfn\/bf-p4c-compilers/g' $bfnhome/p4-tests/p4_16/customer/extreme/p4c-5244/tests/test.json
     bfnhome="/bfn/bf-p4c-compilers"
 fi

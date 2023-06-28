@@ -398,6 +398,15 @@ bfn_set_ptf_ports_json_file("tofino2" "npb-master-ptf" "${CMAKE_CURRENT_SOURCE_D
 set_tests_properties("tofino2/npb-master-ptf" PROPERTIES TIMEOUT ${extended_timeout_4times})
 
 p4c_add_ptf_test_with_ptfdir (
+    "tofino2" "p4c-5244"
+    "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-5244/src/pgm_sp_npb_vcpFw_top.p4"
+    "${testExtraArgs} -target tofino2 -arch t2na -bfrt"
+    "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-5244/tests")
+bfn_set_p4_build_flag("tofino2" "p4c-5244" "-I${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-5244/src -I${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-5244/src/pipeline_npb")
+bfn_set_ptf_ports_json_file("tofino2" "p4c-5244" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/p4c-5244/tests/ports.json")
+set_tests_properties("tofino2/p4c-5244" PROPERTIES TIMEOUT ${extended_timeout_4times})
+
+p4c_add_ptf_test_with_ptfdir (
     "tofino2" "npb-multi-prog"
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/extreme/npb-multi-prog/src/pgm_mp_npb_igOnly_npb_igOnly_npb_igOnly_npb_egOnly_top.p4"
     "${testExtraArgs} -target tofino2 -arch t2na -bfrt"

@@ -185,6 +185,9 @@ void IR::BFN::Transition::dbprint(std::ostream &out) const {
         for (const auto& save : saves) {
             out << endl << save; }
 
+        for (const auto& scratch : scratches) {
+            out << endl << scratch; }
+
         out << endl;
     }
 
@@ -209,6 +212,8 @@ void IR::BFN::LoweredParserMatch::dbprint(std::ostream &out) const {
             out << endl << *st;
         for (auto *save : saves)
             out << endl << *save;
+        for (auto scratch : scratches)
+            out << endl << scratch;
         for (auto *chk : checksums)
             out << endl << *chk;
         for (auto *ctr : counters)

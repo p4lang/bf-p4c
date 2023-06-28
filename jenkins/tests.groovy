@@ -50,7 +50,7 @@ CTEST_LABEL_EXCLUDE_ALT_PASS = 'UNSTABLE|GTS_WEEKLY|NON_PR_TOFINO|SWITCH16_PTF|p
 CTEST_LABEL_EXCLUDE_ALL = "${CTEST_LABEL_EXCLUDE_ALT_PASS}|METRICS"
 
 CTEST_PATH_EXCLUDE_T1 = 'smoketest_switch_'
-CTEST_PATH_EXCLUDE_T2 = 'ignore_test_|smoketest_switch_|/p4_16/customer/extreme/p4c-1([^3]|3[^1]).*|npb-master-ptf|npb-folded-pipe|npb-multi-prog'
+CTEST_PATH_EXCLUDE_T2 = 'ignore_test_|smoketest_switch_|/p4_16/customer/extreme/p4c-1([^3]|3[^1]).*|npb-master-ptf|npb-folded-pipe|npb-multi-prog|p4c-5244'
 
 // this Jenkins file is not intended to be executed directly, instead it shold
 // be loaded by a top-level scripted pipeline

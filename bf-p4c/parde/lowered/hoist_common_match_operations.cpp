@@ -260,6 +260,8 @@ bool HoistCommonMatchOperations::can_hoist(const IR::BFN::LoweredParserMatch* a,
         a_clone->saves.push_back(save->to<IR::BFN::LoweredSave>());
     }
 
+    a_clone->scratches.insert(b->scratches.begin(), b->scratches.end());
+
     std::vector<const IR::BFN::LoweredParserChecksum*> checksums;
     for (auto checksum : a->checksums) {
         checksums.push_back(checksum);

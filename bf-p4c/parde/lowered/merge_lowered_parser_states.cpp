@@ -144,6 +144,8 @@ void MergeLoweredParserStates::do_merge(IR::BFN::LoweredParserMatch* match,
         match->saves.push_back(s->to<IR::BFN::LoweredSave>());
     }
 
+    match->scratches.insert(next->scratches.begin(), next->scratches.end());
+
     for (auto e : next->checksums) {
         auto s = e->apply(shifter);
         auto cs = s->apply(csum_shifter);

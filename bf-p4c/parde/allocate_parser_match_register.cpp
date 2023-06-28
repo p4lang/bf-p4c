@@ -1732,6 +1732,9 @@ can_remove(const IR::BFN::ParserState* state) {
     if (!t->saves.empty())
         return nullptr;
 
+    if (!t->scratches.empty())
+        return nullptr;
+
     if (t->shift == 0)
         return t->next;
 
