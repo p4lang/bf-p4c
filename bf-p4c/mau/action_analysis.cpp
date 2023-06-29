@@ -2210,6 +2210,56 @@ bool ActionAnalysis::ContainerAction::verify_overwritten(const PHV::Container co
             }
         }
     }
+    bool valid_overwrite = false;
+    // If there is a set operation that sets values to a field that is in a mocha container packed
+    // with other fields, then it is a invalid operation. Since mocha containers do not have ALUs
+    // and value will be set to the whole container, other fields will be overwritten. However,
+    // there is one exception, which is that if a set operation is assigning field a to field b, and
+    // field a and field b are in the same mocha container and occupy same bits, then this set
+    // operation is essentially a noop and will not overwrite other fields in that mocha container.
+    if ((name == "set") && !container.is(PHV::Kind::normal)) {
+        for (auto& fa : field_actions) {
+            BUG_CHECK(fa.name == "set", "set container action contains non-set field action");
+            BUG_CHECK(fa.reads.size() == 1, "set operation reads from multiple source");
+            auto& read = fa.reads[0];
+            if (read.type == ActionParam::PHV) {
+                le_bitrange range;
+                auto *field = phv.field(read.expr, &range);
+                PHV::FieldUse use(PHV::FieldUse::READ);
+                PHV::Container container_read;
+                bool first_alloc_slice = true;
+                bitvec read_range;
+                field->foreach_alloc(range, table_context, &use, [&](const PHV::AllocSlice &alloc) {
+                    BUG_CHECK(alloc.container_slice().lo >= 0, "Invalid negative container bit");
+                    if (first_alloc_slice) {
+                        container_read = alloc.container();
+                        first_alloc_slice = false;
+                    } else {
+                        BUG_CHECK(container_read == alloc.container(),
+                            "set operation assign value from two different containers");
+                    }
+                    le_bitrange slice = alloc.container_slice();
+                    read_range.setrange(slice.lo, slice.size());
+                });
+
+                // same container and same bits
+                if ((read_range == total_write_bits) && (container_read == container)) {
+                    valid_overwrite = true;
+                } else {
+                    valid_overwrite = false;
+                    break;
+                }
+            } else {
+                valid_overwrite = false;
+                break;
+            }
+        }
+    }
+
+    if (valid_overwrite) {
+        return true;
+    }
+
     LOG4("Overwrite masks - preserved:" << preserved_bits);
 
     LOG5("Total write bits: " << total_write_bits << ", preserved_bits: " << preserved_bits);

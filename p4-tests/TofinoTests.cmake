@@ -473,6 +473,7 @@ p4c_add_bf_backend_tests("tofino" "tofino" "psa" "base" "${TOFINO_PSA_TEST_SUITE
 
 # p4_16/compile_only/p4c-5109.p4 -- longer timeout needed for alt-phv
 set_tests_properties("tofino/extensions/p4_tests/p4_16/compile_only/p4c-5109.p4" PROPERTIES TIMEOUT ${extended_timeout_2times})
+set_tests_properties("tofino/extensions/p4_tests/p4_16/compile_only/p4c-2035-name.p4" PROPERTIES TIMEOUT ${extended_timeout_150percent})
 
 # Add labels for tests to be run as MUST PASS in Jenkins
 p4c_add_test_label("tofino" "CUST_MUST_PASS" "extensions/p4_tests/p4_14/customer/rdp/case9757.p4")

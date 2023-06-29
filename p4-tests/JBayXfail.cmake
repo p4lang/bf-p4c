@@ -445,12 +445,6 @@ p4c_add_xfail_reason("tofino2"
 # If you make an ALT-PHV test pass (or get close to it but if fails on later
 # error), please update the xfails accordingly.
 if (TEST_ALT_PHV_ALLOC)
-    # Actions and constraints errors
-    p4c_add_xfail_reason("tofino2"
-        "error: PHV allocation creates an invalid container action within a Tofino ALU"
-        extensions/p4_tests/p4_16/stf/meter_dest_16_32_flexible.p4
-    )
-
     p4c_add_xfail_reason("tofino2"
         "error: The table .* with no key cannot have the action .*"
         p4_16_internal_p4_16_hwlrn
