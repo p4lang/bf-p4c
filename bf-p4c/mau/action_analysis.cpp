@@ -176,6 +176,7 @@ unsigned ActionAnalysis::ConstantInfo::build_constant() {
     unsigned rv = 0;
     BUG_CHECK(!positions.empty(), "Building a constant over a container when no constants are "
               "contained within this container action");
+    BUG_CHECK(container_size > 0, "ConstantInfo::container_size not set up");
     for (auto position : positions) {
         unsigned mask;
         if (position.range.size() == sizeof(unsigned) * 8)
@@ -184,6 +185,12 @@ unsigned ActionAnalysis::ConstantInfo::build_constant() {
             mask = (1U << position.range.size()) - 1;
         unsigned pre_shift = position.value & mask;
         rv |= (pre_shift << position.range.lo);
+    }
+    unsigned alt = rv | alignment.unused_container_bits.getrange(0, container_size);
+    if (alt > rv && (1ULL << container_size) - alt < rv) {
+        // using a negative value with extra set bits (for unused bits) will fit better
+        // as a "small" constant in an instruction, so use that instead.
+        rv = alt;
     }
     return rv;
 }
@@ -1191,6 +1198,7 @@ void ActionAnalysis::determine_unused_bits(PHV::Container container,
     if (cont_action.ci.initialized) {
         cont_action.ci.alignment.unused_container_bits = unused_bits;
         cont_action.ci.alignment.verbose = verbose;
+        cont_action.ci.container_size = container.size();
     }
     for (auto &ta : Values(cont_action.phv_alignment)) {
          ta.unused_container_bits = unused_bits;

@@ -221,12 +221,6 @@ p4c_add_xfail_reason("tofino2"
   testdata/p4_14_samples/issue894.p4
 )
 
-# Failed after P4C-4507
-p4c_add_xfail_reason("tofino2"
-  "tofino2 supports up to 20 stages, using|error: table allocation .* 20 stages. Allocation state: ALT_FINALIZE_TABLE"
-  extensions/p4_tests/p4_16/compile_only/p4c-3175.p4
-)
-
 # Not being tracked by JBay regression yet
 p4c_add_xfail_reason("tofino2"
   "Field key is not a member of header pktgen_recirc_header_t"
@@ -445,11 +439,6 @@ p4c_add_xfail_reason("tofino2"
 # If you make an ALT-PHV test pass (or get close to it but if fails on later
 # error), please update the xfails accordingly.
 if (TEST_ALT_PHV_ALLOC)
-    p4c_add_xfail_reason("tofino2"
-        "error: The table .* with no key cannot have the action .*"
-        p4_16_internal_p4_16_hwlrn
-    )
-
     # Table fitting errors
     p4c_add_xfail_reason("tofino2"
         "Overlapping field bit information on an input xbar byte"
@@ -473,5 +462,11 @@ if (NOT TEST_ALT_PHV_ALLOC)
         "PHV allocation was not successful"
         extensions/p4_tests/p4_16/customer/kaloom/p4c-5223-leaf-tof2.p4
     )                        
+
+    # Failed after P4C-4507
+    p4c_add_xfail_reason("tofino2"
+      "tofino2 supports up to 20 stages, using|error: table allocation .* 20 stages. Allocation state: ALT_FINALIZE_TABLE"
+      extensions/p4_tests/p4_16/compile_only/p4c-3175.p4
+    )
 
 endif()

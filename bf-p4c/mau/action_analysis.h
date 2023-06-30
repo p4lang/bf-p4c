@@ -303,6 +303,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
         bool initialized = false;
         TotalAlignment alignment;
         safe_vector<ConstantPosition> positions;
+        int container_size = -1;
         unsigned build_constant();
         unsigned build_shiftable_constant();
         // built as part of the check_constant_to_actiondata function
