@@ -67,6 +67,7 @@ set (P16_TNA_EXCLUDE_FILES "digest_tna\\.p4" "p4c-1323-b\\.p4" "p4c-2143\\.p4"
     "p4c-3241\\.p4" "p4c-3139\\.p4" "p4c-3254\\.p4" "p4c-3255\\.p4" "p4c-2423\\.p4"
     "p4c-2534\\.p4" "p4c-3678-leaf\\.p4" "p4c-2722\\.p4" "p4c-3920-b\\.p4" "p4c_3926\\.p4"
     "p4c_4158\\.p4" "p4c-4064\\.p4" "forensics\\.p4" "mirror_constants\\.p4" "p4c_2601\\.p4"
+    "p4c-2602\\.p4"
     "hash_extern_xor\\.p4" "hash_field_expression\\.p4" "hash_field_expression_sym\\.p4"
     "p4c-4770\\.p4" "p4c-2269\\.p4" "p4c-3582\\.p4" "p4c-5164\\.p4" "p4c-5223-leaf-tof1\\.p4")
 set (P16_TNA_EXCLUDE_FILES "${P16_TNA_EXCLUDE_FILES}" 
@@ -275,6 +276,11 @@ p4c_add_ptf_test_with_ptfdir(
     "${testExtraArgs} -target tofino -arch tna -bfrt --p4runtime-force-std-externs"
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/mirror_constants.ptf")
 bfn_needs_scapy("tofino" "mirror_constants")
+
+p4c_add_ptf_test_with_ptfdir(
+    "tofino" "p4c-2602" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/p4c-2602.p4"
+    "${testExtraArgs} -target tofino -arch tna -bfrt --p4runtime-force-std-externs"
+    "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/p4c-2602.ptf")
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino" "p4c_4158" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/bfrt/p4c_4158/p4c_4158.p4"

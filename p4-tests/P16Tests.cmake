@@ -313,6 +313,7 @@ p4c_add_xfail_reason("p4"
   extensions/p4_tests/p4_16/ptf/udpv4_and_v6_checksum.p4
   extensions/p4_tests/p4_16/ptf/tna_parser_counter.p4
   extensions/p4_tests/p4_16/ptf/p4c_2601.p4
+  extensions/p4_tests/p4_16/ptf/p4c-2602.p4
   extensions/p4_tests/p4_16/ptf/mirror_constants.p4
   extensions/p4_tests/p4_16/ptf/hash_extern_xor.p4
   extensions/p4_tests/p4_16/ptf/p4c_4411.p4

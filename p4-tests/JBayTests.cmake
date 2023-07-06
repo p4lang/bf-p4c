@@ -112,6 +112,7 @@ set (P16_JNA_EXCLUDE_PATTERNS
   "p4c-4127\\.p4"
   "p4c-3288\\.p4"
   "p4c_2601\\.p4"
+  "p4c-2602\\.p4"
   "mirror_constants\\.p4"
   "hash_extern_xor\\.p4"
   "hash_field_expression\\.p4"
@@ -293,6 +294,11 @@ p4c_add_ptf_test_with_ptfdir (
     "${testExtraArgs} -target tofino2 -arch t2na -bfrt --p4runtime-force-std-externs"
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/p4c_2601.ptf")
 bfn_needs_scapy("tofino2" "p4c_2601")
+
+p4c_add_ptf_test_with_ptfdir(
+    "tofino2" "p4c-2602" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/p4c-2602.p4"
+    "${testExtraArgs} -target tofino2 -arch t2na -bfrt --p4runtime-force-std-externs"
+    "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/p4c-2602.ptf")
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino2" "hash_extern_xor" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/ptf/hash_extern_xor.p4"

@@ -424,11 +424,81 @@ void ExtractDeparser::generateDigest(IR::BFN::Digest *&digest, cstring name,
             } else {
                 sources.push_back(new IR::BFN::FieldLVal(item->expression)); }
         }
+
+        // Merge padding fields and convert to temp vars for sections occupying whole bytes
+        IR::Vector<IR::BFN::FieldLVal> adj_sources;
+        if (name == "mirror") {
+            bool is_mirror_id = true;
+            int offset = 0;
+            IR::BFN::FieldLVal* prev_pad_lval = nullptr;
+            for (auto* lval : sources) {
+                int width = lval->field->type->width_bits();
+                if (lval->field->is<IR::Padding>()) {
+                    // Merge with existing padding
+                    if (prev_pad_lval) {
+                        LOG5("Merging pad of " << width << "b and "
+                                               << prev_pad_lval->field->type->width_bits() << "b");
+                        width += prev_pad_lval->field->type->width_bits();
+                        lval = new IR::BFN::FieldLVal(new IR::Padding(IR::Type::Bits::get(width)));
+                    }
+
+                    // Output padding for chunks that don't start on a byte boundary but which reach
+                    // the end of a byte
+                    if ((offset % 8 != 0) && (offset % 8 + width >= 8)) {
+                        LOG7("Outputting " << (8 - offset % 8) << "b pad");
+                        int pad_width = 8 - offset % 8;
+                        adj_sources.push_back(new IR::BFN::FieldLVal(
+                            new IR::Padding(IR::Type::Bits::get(pad_width))));
+                        offset += pad_width;
+                        width -= pad_width;
+                    }
+
+                    // Output tempvar for any byte-aligned 8b chunks
+                    if (width >= 8) {
+                        LOG7("Outputting " << (width & ~0x7) << "b temp var");
+                        auto t = new IR::TempVar(IR::Type::Bits::get(width & ~0x7));
+                        t->deparsed_zero = true;
+                        adj_sources.push_back(new IR::BFN::FieldLVal(t));
+
+                        offset += width & ~0x7;
+                        width &= 0x7;
+                    }
+
+                    // Record any remaining pad bits
+                    prev_pad_lval =
+                        width ? new IR::BFN::FieldLVal(new IR::Padding(IR::Type::Bits::get(width)))
+                              : nullptr;
+                } else {
+                    if (prev_pad_lval) {
+                        LOG7("Outputting " << prev_pad_lval->field->type->width_bits() << "b pad");
+                        adj_sources.push_back(prev_pad_lval);
+                        offset += prev_pad_lval->field->type->width_bits();
+                    }
+                    adj_sources.push_back(lval);
+                    offset += width;
+                    prev_pad_lval = nullptr;
+                }
+
+                // First field is the mirror id/session and is not emitted, so ignore in offset calc
+                if (is_mirror_id) {
+                    offset = 0;
+                    is_mirror_id = false;
+                }
+            }
+            if (prev_pad_lval) {
+                LOG7("Outputting " << prev_pad_lval->field->type->width_bits() << "b pad");
+                adj_sources.push_back(prev_pad_lval);
+                offset += prev_pad_lval->field->type->width_bits();
+            }
+        } else {
+            adj_sources = sources;
+        }
+
         auto type = expr->type->to<IR::Type_StructLike>();
         if (type == nullptr)
             ::error("Digest field list %1% must be a struct/header type", expr);
         auto* fieldList =
-            new IR::BFN::DigestFieldList(digest_index, sources, type, controlPlaneName);
+            new IR::BFN::DigestFieldList(digest_index, adj_sources, type, controlPlaneName);
         digest->fieldLists.push_back(fieldList);
     } else if (auto session_id = expr->to<IR::Member>()) {
         // e.g. emit(mirror.session_id)
