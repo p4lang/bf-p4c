@@ -923,8 +923,9 @@ template<> void MeterTable::meter_color_logical_to_phys(Target::Tofino::mau_regs
             adrdist.movereg_idle_ctl[logical_id].movereg_idle_ctl_mc = 1;
             for (auto lo : color_maprams) {
                  int bus_index = lo.bus.at(Layout::IDLE_BUS);
-                 // If color mapram start on upper half, it will be overflow in the lower half
-                 if (color_maprams[0].row >= UPPER_MATCH_CENTRAL_FIRST_ROW)
+                 // upper and lower idletime busses appear to be independent with
+                 // no overflow between them
+                 if (lo.row >= UPPER_MATCH_CENTRAL_FIRST_ROW)
                      bus_index += IDLETIME_BUSSES_PER_HALF;
                  adrdist.adr_dist_idletime_adr_oxbar_ctl[bus_index/4]
                      .set_subfield(logical_id | 0x10, 5 * (bus_index%4), 5);

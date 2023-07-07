@@ -1,0 +1,12 @@
+
+add ns_acl_meter meter_id:0x010101 set_color()
+add ns_acl_meter meter_id:0x020202 set_color()
+add ns_acl_meter meter_id:0x030303 set_color()
+add ns_acl_meter meter_id:0x040404 set_color()
+add ns_acl_meter meter_id:0x050505 set_color()
+add ns_acl_meter meter_id:0x060606 set_color()
+add ns_acl_meter meter_id:0x070707 set_color()
+add ns_acl_meter meter_id:0x080808 set_color()
+
+packet 4 01010101 22222222 dead ff ff 01 02 03 04 05 06 07 08 09 0a 0b 0c 0d 0e 0f 10
+expect 4 01010101 22222222 dead fc ff 01 02 03 04 05 06 07 08 09 0a 0b 0c 0d 0e 0f 10
