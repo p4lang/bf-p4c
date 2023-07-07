@@ -69,7 +69,8 @@ set (P16_TNA_EXCLUDE_FILES "digest_tna\\.p4" "p4c-1323-b\\.p4" "p4c-2143\\.p4"
     "p4c_4158\\.p4" "p4c-4064\\.p4" "forensics\\.p4" "mirror_constants\\.p4" "p4c_2601\\.p4"
     "p4c-2602\\.p4"
     "hash_extern_xor\\.p4" "hash_field_expression\\.p4" "hash_field_expression_sym\\.p4"
-    "p4c-4770\\.p4" "p4c-2269\\.p4" "p4c-3582\\.p4" "p4c-5164\\.p4" "p4c-5223-leaf-tof1\\.p4")
+    "p4c-4770\\.p4" "p4c-2269\\.p4" "p4c-3582\\.p4" "p4c-5164\\.p4" "p4c-5223-leaf-tof1\\.p4"
+    "p4c-5240\\.p4")
 set (P16_TNA_EXCLUDE_FILES "${P16_TNA_EXCLUDE_FILES}" 
                            "${P16_TNA_ARISTA_FILES}" 
                            "${DIAGNOSTIC_TESTS_TOFINO}")
@@ -382,6 +383,9 @@ set (P16_TNA_ARISTA_EXCL_PASS_TF_CHK
 
 # Kaloom leaf profile needs extra flags.
 p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/kaloom/p4c-5223-leaf-tof1.p4" "-Xp4c=\"--traffic-limit 95 --disable-power-check --disable-parse-depth-limit\"")
+
+# Sino Telecom profile needs extra flags.
+p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/sino-telecom/p4c-5240.p4" "-Xp4c=\"--disable-power-check --disable-parse-depth-limit\"")
 
 cmake_policy(SET CMP0057 NEW)
 # p4_16/customer/arista/obfuscated-*.p4

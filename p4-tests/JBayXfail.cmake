@@ -453,7 +453,7 @@ if (TEST_ALT_PHV_ALLOC)
     p4c_add_xfail_reason("tofino2"
         "Compiler Bug: incomplete placement for table _ipv4_lpm"
         smoketest_switch_16_y2
-   )
+    )
 endif (TEST_ALT_PHV_ALLOC)
 
 if (NOT TEST_ALT_PHV_ALLOC)
