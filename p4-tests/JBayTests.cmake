@@ -201,6 +201,7 @@ set_tests_properties("tofino2/extensions/p4_tests/p4_16/stf/p4c-4535.p4" PROPERT
 # Arista profiles need a longer timeout
 p4c_add_bf_backend_tests("tofino2" "jbay" "t2na" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/obfuscated-msee_tofino2.p4" "-Xp4c=--disable-power-check")
 set_tests_properties("tofino2/extensions/p4_tests/p4_16/customer/arista/obfuscated-msee_tofino2.p4" PROPERTIES TIMEOUT ${extended_timeout_8times})
+
 p4c_add_bf_backend_tests("tofino2" "jbay" "t2na" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/obfuscated-l2_dci.p4" "-Xp4c=--disable-power-check")
 set_tests_properties("tofino2/extensions/p4_tests/p4_16/customer/arista/obfuscated-l2_dci.p4" PROPERTIES TIMEOUT ${extended_timeout_8times})
 p4c_add_bf_backend_tests("tofino2" "jbay" "t2na" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/ruijie/p4c-4127.p4")

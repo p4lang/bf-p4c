@@ -41,6 +41,7 @@ class FinalizePhysicalLiverange : public Inspector, TofinoWriteContext {
     ordered_map<const PHV::Field*, LiveRange> temp_var_live_ranges_i;
 
     const PragmaNoInit& pa_no_init;
+    ordered_map<const PHV::Field *, ordered_set<const PHV::Field *>> alias_map;
 
     /// mark or extends live range of AllocSlices of (@p f, @p bits) to @p unit.
     /// When @p allow_unallocated is false, it will also run a BUG_CHECK to make sure that

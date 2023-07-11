@@ -70,6 +70,12 @@ bool FinalizePhysicalLiverange::preorder(const IR::BFN::Pipe* pipe) {
     BUG_CHECK(pipe->headerStackInfo != nullptr,
               "Running FinalizePhysicalLiverange without running CollectHeaderStackInfo first?");
     headerStacks = pipe->headerStackInfo;
+
+    // build map to find all interchangeable fields.
+    for (auto [src, dst] : phv_i.getAliasMap()) {
+        alias_map[src].insert(dst);
+        alias_map[dst].insert(src);
+    }
     return true;
 }
 
@@ -118,13 +124,17 @@ void FinalizePhysicalLiverange::mark_access(const PHV::Field* f, le_bitrange bit
 
     update_liverange(alloc_slices, access);
 
-    // Handle aliased fields
-    if (const PHV::Field* alias_dest = phv_i.getAliasDestination(f)) {
-        LOG2("   field " << f->name << " has alias dest: " << alias_dest->name);
-        const auto dest_slices =
-            find_all_overlapping_alloc_slices(alias_dest, bits, AllocContext::of_unit(unit),
-                                              is_write);
-        update_liverange(dest_slices, access);
+    // alias fields have the same live range
+    if (alias_map.count(f)) {
+        for (auto alias_field : alias_map[f]) {
+            auto alias_slices = find_all_overlapping_alloc_slices(alias_field, bits,
+                AllocContext::of_unit(unit), is_write);
+            for (auto slice : alias_slices) {
+                LOG5("update alias_slice: " << slice);
+                LOG5("access is " << access.first << " " << access.second);
+            }
+            update_liverange(alias_slices, access);
+        }
     }
 }
 

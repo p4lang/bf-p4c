@@ -439,12 +439,6 @@ p4c_add_xfail_reason("tofino2"
 # If you make an ALT-PHV test pass (or get close to it but if fails on later
 # error), please update the xfails accordingly.
 if (TEST_ALT_PHV_ALLOC)
-    # Table fitting errors
-    p4c_add_xfail_reason("tofino2"
-        "Overlapping field bit information on an input xbar byte"
-        extensions/p4_tests/p4_16/customer/arista/obfuscated-msee_tofino2.p4
-    )
-
     p4c_add_xfail_reason("tofino2"
         "error: GreedyAllocation failed because these clusters have unsatisfiable constraints"
         extensions/p4_tests/p4_16/stf/p4c-4535.p4
