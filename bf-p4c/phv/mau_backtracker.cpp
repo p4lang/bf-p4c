@@ -171,5 +171,4 @@ void MauBacktracker::clear() {
     metaInitDisable = false;
     ignorePackConflicts = false;
     firstRoundFit = false;
-    has_table_placement = false;
 }
