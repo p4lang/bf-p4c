@@ -109,9 +109,6 @@ else()
 endif()
 include_directories(${LIBDYNHASH_INCLUDE_DIR})
 
-set(Z3_MIN_VERSION "4.8.8")
-find_package(Z3 ${Z3_MIN_VERSION} REQUIRED)
-
 # Additional P4C_CPP_FLAGS may be passed (via bootstrap_bfn_compilers.sh script)
 # from p4factory when configuring bf-p4c-compilers to specify certain predefined
 # features when building the compiler
@@ -211,6 +208,7 @@ set (ENABLE_BMV2 OFF CACHE BOOL "")
 set (ENABLE_EBPF OFF CACHE BOOL "")
 set (ENABLE_UBPF OFF CACHE BOOL "")
 set (ENABLE_DPDK OFF CACHE BOOL "")
+set (ENABLE_P4TC OFF CACHE BOOL "")
 set (ENABLE_P4C_GRAPHS OFF CACHE BOOL "")
 add_subdirectory(p4c)
 

@@ -2,6 +2,14 @@
 
 MESSAGE("-- Adding p4c-barefoot")
 
+# Try to find Z3 in the system, only use the static Z3 library.
+set(Z3_MIN_VERSION "4.8.8")
+# TODO: Move this option into the Z3 CMake module.
+set(_z3_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
+set(CMAKE_FIND_LIBRARY_SUFFIXES .a)
+find_package(Z3 ${Z3_MIN_VERSION} REQUIRED)
+set(CMAKE_FIND_LIBRARY_SUFFIXES ${_z3_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES})
+
 # An option to configure the chunk size we use for unified builds in bf-p4c. By
 # default, this is tuned to use smaller chunks than the p4c repo uses. The goal
 # is to gain most of the benefit of unified builds when many files change, while
@@ -363,6 +371,7 @@ set (BF_P4C_BACKEND_MAU_SRCS
   mau/jbay_next_table.cpp
   mau/mau_alloc.cpp
   mau/mau_power.cpp
+  mau/mau_spec.cpp
   mau/memories.cpp
   mau/payload_gateway.cpp
   mau/reduction_or.cpp

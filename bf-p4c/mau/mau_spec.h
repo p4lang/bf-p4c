@@ -1,88 +1,89 @@
 #ifndef EXTENSIONS_BF_P4C_MAU_MAU_SPEC_H_
 #define EXTENSIONS_BF_P4C_MAU_MAU_SPEC_H_
 
-#define UNSUPPORTED BUG("Unsupported: a base class was used in a context/place " \
-                        "where only a derived one is permitted.");
-
 #include "ir/ir.h"
 
 // device-specific parameters for MAU/PPU.
 
 class IMemSpec {
  public:
-    virtual int rows()       const = 0;  //  pure virtual
-    virtual int colors()     const = 0;  //  pure virtual
+    virtual int rows() const = 0;        //  pure virtual
+    virtual int colors() const = 0;      //  pure virtual
     virtual int color_bits() const = 0;  //  pure virtual
     virtual int address_bits() const = 0;
     virtual int map_table_entries() const = 0;
 };
 
 class TofinoIMemSpec : public IMemSpec {
-    int rows()       const override { return 32; };
-    int colors()     const override { return  2; };
-    int color_bits() const override { return  1; };
-    int address_bits() const override { return 6; }
-    int map_table_entries() const override { return 8; }
+    int rows() const override;
+    int colors() const override;
+    int color_bits() const override;
+    int address_bits() const override;
+    int map_table_entries() const override;
 };
 
+#if HAVE_FLATROCK
 class FlatrockIMemSpec : public IMemSpec {
-    int rows()       const override { return 8; };
-    int colors()     const override { return 4; };
-    int color_bits() const override { return 2; };
-    int address_bits() const override { return 5; }
-    int map_table_entries() const override { return 16; }
+    int rows() const override;
+    int colors() const override;
+    int color_bits() const override;
+    int address_bits() const override;
+    int map_table_entries() const override;
 };
+#endif
 
 class IXBarSpec {
  public:
     /* --- common --- */
     virtual int ternaryBytesPerGroup() const = 0;  //  pure virtual
-    virtual int ternaryGroups()        const = 0;  //  pure virtual
+    virtual int ternaryGroups() const = 0;         //  pure virtual
 
     // the next two: support for "legacy code" [as of Nov. 10 2022] that gets these via IXBarSpec
-    virtual int tcam_rows()            const = 0;  //  pure virtual
-    virtual int tcam_columns()         const = 0;  //  pure virtual
+    virtual int tcam_rows() const = 0;     //  pure virtual
+    virtual int tcam_columns() const = 0;  //  pure virtual
 
     /* --- Tofino[1, 2, 3] --- */
-    virtual int byteGroups()                  const { UNSUPPORTED };
-    virtual int exactBytesPerGroup()          const { UNSUPPORTED };
-    virtual int exactGroups()                 const { UNSUPPORTED };
-    virtual int fairModeHashBits()            const { UNSUPPORTED };
-    virtual int gatewaySearchBytes()          const { UNSUPPORTED };
-    virtual int hashDistBits()                const { UNSUPPORTED };
-    virtual int hashDistExpandBits()          const { UNSUPPORTED };
-    virtual int hashDistMaxMaskBits()         const { UNSUPPORTED };
-    virtual int hashDistSlices()              const { UNSUPPORTED };
-    virtual int hashDistUnits()               const { UNSUPPORTED };
-    virtual int hashGroups()                  const { UNSUPPORTED };
-    virtual int hashIndexGroups()             const { UNSUPPORTED };
-    virtual int hashMatrixSize()              const { UNSUPPORTED };
-    virtual int hashParityBit()               const { UNSUPPORTED };
-    virtual int hashSingleBits()              const { UNSUPPORTED };
-    virtual int hashTables()                  const { UNSUPPORTED };
-    virtual int lpfInputBytes()               const { UNSUPPORTED };
-    virtual int maxHashBits()                 const { UNSUPPORTED };
-    virtual int meterAluHashBits()            const { UNSUPPORTED };
-    virtual int meterAluHashParityByteStart() const { UNSUPPORTED };
-    virtual int meterPrecolorSize()           const { UNSUPPORTED };
-    virtual int ramLineSelectBits()           const { UNSUPPORTED };
-    virtual int ramSelectBitStart()           const { UNSUPPORTED };
-    virtual int repeatingConstraintSect()     const { UNSUPPORTED };
-    virtual int resilientModeHashBits()       const { UNSUPPORTED };
-    virtual int ternaryBytesPerBigGroup()     const { UNSUPPORTED };
-    virtual int tofinoMeterAluByteOffset()    const { UNSUPPORTED };
+    virtual int byteGroups() const;
+    virtual int exactBytesPerGroup() const;
+    virtual int exactGroups() const;
+    virtual int fairModeHashBits() const;
+    virtual int gatewaySearchBytes() const;
+    virtual int hashDistBits() const;
+    virtual int hashDistExpandBits() const;
+    virtual int hashDistMaxMaskBits() const;
+    virtual int hashDistSlices() const;
+    virtual int hashDistUnits() const;
+    virtual int hashGroups() const;
+    virtual int hashIndexGroups() const;
+    virtual int hashMatrixSize() const;
+    virtual int hashParityBit() const;
+    virtual int hashSingleBits() const;
+    virtual int hashTables() const;
+    virtual int lpfInputBytes() const;
+    virtual int maxHashBits() const;
+    virtual int meterAluHashBits() const;
+    virtual int meterAluHashParityByteStart() const;
+    virtual int meterPrecolorSize() const;
+    virtual int ramLineSelectBits() const;
+    virtual int ramSelectBitStart() const;
+    virtual int repeatingConstraintSect() const;
+    virtual int resilientModeHashBits() const;
+    virtual int ternaryBytesPerBigGroup() const;
+    virtual int tofinoMeterAluByteOffset() const;
 
+#if HAVE_FLATROCK
     /* --- FlatRock --- */
-    virtual int bytesPerWord()                const { UNSUPPORTED };
-    virtual int exactBytes()                  const { UNSUPPORTED };
-    virtual int exactMatchSTMUnits()          const { UNSUPPORTED };
-    virtual int exactMatchUnits()             const { UNSUPPORTED };
-    virtual int exactWords()                  const { UNSUPPORTED };
-    virtual int gatewayFixedBytes()           const { UNSUPPORTED };
-    virtual int gatewayRows()                 const { UNSUPPORTED };
-    virtual int gatewayVecBytes()             const { UNSUPPORTED };
-    virtual int xcmpBytes()                   const { UNSUPPORTED };
-    virtual int xcmpWords()                   const { UNSUPPORTED };
+    virtual int bytesPerWord() const;
+    virtual int exactBytes() const;
+    virtual int exactMatchSTMUnits() const;
+    virtual int exactMatchUnits() const;
+    virtual int exactWords() const;
+    virtual int gatewayFixedBytes() const;
+    virtual int gatewayRows() const;
+    virtual int gatewayVecBytes() const;
+    virtual int xcmpBytes() const;
+    virtual int xcmpWords() const;
+#endif
 
     virtual int getExactOrdBase(int group) const = 0;
     virtual int getTernaryOrdBase(int group) const = 0;
@@ -93,165 +94,167 @@ class IXBarSpec {
 
 // TU-local constants to avoid circular dependencies between IXBarSpec subclasses
 //   and their respective MauSpec subclasses, while still preserving DRY compliance.
-static constexpr int Flatrock_tcam_rows    = 20;
-static constexpr int   Tofino_tcam_rows    = 12;
-static constexpr int   Tofino_tcam_columns =  2;
-static constexpr int Flatrock_tcam_columns =  1;
+static constexpr int Tofino_tcam_rows = 12;
+static constexpr int Tofino_tcam_columns = 2;
+#if HAVE_FLATROCK
+static constexpr int Flatrock_tcam_rows = 20;
+static constexpr int Flatrock_tcam_columns = 1;
+#endif
 
 class MauSpec {
  public:
-    virtual const IXBarSpec& getIXBarSpec() const = 0;  //  pure virtual
-    virtual const  IMemSpec&  getIMemSpec() const = 0;  //  pure virtual
+    virtual const IXBarSpec &getIXBarSpec() const = 0;  //  pure virtual
+    virtual const IMemSpec &getIMemSpec() const = 0;    //  pure virtual
 
     // Called at the end of table rewriting in TablePlacement::TransformTables to do
     // any target-specific fixups needed
-    virtual IR::Node* postTransformTables(IR::MAU::Table* const table) const { return table; }
+    virtual IR::Node *postTransformTables(IR::MAU::Table *const table) const;
 
     // The next 4 lines: correct data for Tof.1 + Tof.2 + Tof.3; must override elsewhere for Tof.5
-    virtual int tcam_rows()    const { return Tofino_tcam_rows   ; }
-    virtual int tcam_columns() const { return Tofino_tcam_columns; }
-    virtual int tcam_width()   const { return  44;                 }
-    virtual int tcam_depth()   const { return 512;                 }
+    virtual int tcam_rows() const;
+    virtual int tcam_columns() const;
+    virtual int tcam_width() const;
+    virtual int tcam_depth() const;
 };
 
 class TofinoIXBarSpec : public IXBarSpec {
  public:
-    TofinoIXBarSpec() {}
+    TofinoIXBarSpec();
 
-    int byteGroups()                  const override
-        { return StageUse::MAX_TERNARY_GROUPS/2; }
+    int byteGroups() const override;
 
-    int hashDistMaxMaskBits()         const override
-        { return hashDistBits() + hashDistExpandBits(); }
+    int hashDistMaxMaskBits() const override;
 
-    int hashMatrixSize()              const override
-        { return ramSelectBitStart() + hashSingleBits(); }
+    int hashMatrixSize() const override;
 
-    int ternaryGroups()               const override
-        { return StageUse::MAX_TERNARY_GROUPS; }
+    int ternaryGroups() const override;
 
-    int exactBytesPerGroup()          const override { return  16; }
-    int exactGroups()                 const override { return   8; }
-    int fairModeHashBits()            const override { return  14; }
-    int gatewaySearchBytes()          const override { return   4; }
-    int hashDistBits()                const override { return  16; }
-    int hashDistExpandBits()          const override { return   7; }
-    int hashDistSlices()              const override { return   3; }
-    int hashDistUnits()               const override { return   2; }
-    int hashGroups()                  const override { return   8; }
+    int exactBytesPerGroup() const override;
+    int exactGroups() const override;
+    int fairModeHashBits() const override;
+    int gatewaySearchBytes() const override;
+    int hashDistBits() const override;
+    int hashDistExpandBits() const override;
+    int hashDistSlices() const override;
+    int hashDistUnits() const override;
+    int hashGroups() const override;
 
-    int hashIndexGroups()             const override { return   4; }
-        /* groups of 10 bits for indexing */
+    int hashIndexGroups() const override;
+    /* groups of 10 bits for indexing */
 
-    int hashParityBit()               const override { return  51; }
-        /* If enabled reserved parity bit position */
+    int hashParityBit() const override;
+    /* If enabled reserved parity bit position */
 
-    int hashSingleBits()              const override { return  12; }
-        /* top 12 bits of hash table individually */
+    int hashSingleBits() const override;
+    /* top 12 bits of hash table individually */
 
-    int hashTables()                  const override { return  16; }
-    int lpfInputBytes()               const override { return   4; }
-    int maxHashBits()                 const override { return  52; }
-    int meterAluHashBits()            const override { return  52; }
-    int meterAluHashParityByteStart() const override { return  48; }
-    int meterPrecolorSize()           const override { return   2; }
-    int ramLineSelectBits()           const override { return  10; }
-    int ramSelectBitStart()           const override { return  40; }
-    int repeatingConstraintSect()     const override { return   4; }
-    int resilientModeHashBits()       const override { return  51; }
-    int ternaryBytesPerBigGroup()     const override { return  11; }
-    int ternaryBytesPerGroup()        const override { return   5; }
-    int tofinoMeterAluByteOffset()    const override { return   8; }
+    int hashTables() const override;
+    int lpfInputBytes() const override;
+    int maxHashBits() const override;
+    int meterAluHashBits() const override;
+    int meterAluHashParityByteStart() const override;
+    int meterPrecolorSize() const override;
+    int ramLineSelectBits() const override;
+    int ramSelectBitStart() const override;
+    int repeatingConstraintSect() const override;
+    int resilientModeHashBits() const override;
+    int ternaryBytesPerBigGroup() const override;
+    int ternaryBytesPerGroup() const override;
+    int tofinoMeterAluByteOffset() const override;
 
     // the next two: support for "legacy code" [as of Nov. 10 2022] that gets these via IXBarSpec
-    int tcam_rows()    const override { return Tofino_tcam_rows   ; }
-    int tcam_columns() const override { return Tofino_tcam_columns; }
+    int tcam_rows() const override;
+    int tcam_columns() const override;
 
     int getExactOrdBase(int group) const override;
     int getTernaryOrdBase(int group) const override;
 
-    int exactMatchTotalBytes()          const override { return 8*16; }
-    int ternaryMatchTotalBytes()        const override { return 6*11; }
-    int xcmpMatchTotalBytes()           const override { return 0; }
+    int exactMatchTotalBytes() const override;
+    int ternaryMatchTotalBytes() const override;
+    int xcmpMatchTotalBytes() const override;
 };
 
+#if HAVE_FLATROCK
 class FlatrockIXBarSpec : public IXBarSpec {
  public:
-    FlatrockIXBarSpec() {}
+    FlatrockIXBarSpec();
 
-    int bytesPerWord()         const override { return   4; }
-    int exactBytes()           const override { return  20; }
-    int exactMatchSTMUnits()   const override { return   4; }  /* first 4 units */
-    int exactMatchUnits()      const override { return   8; }  /* 4 STM + 4 LAMB */
-    int exactWords()           const override { return   5; }
-    int gatewayFixedBytes()    const override { return   5; }
-    int gatewayRows()          const override { return  24; }
-    int gatewayVecBytes()      const override { return   8; }
-    int ramSelectBitStart()    const override { return   0; }   // any bits can be ram select
-    int ramLineSelectBits()    const override { return  10; }   // FIXME 6 for lamb, 10 for STM
-    int ternaryBytesPerGroup() const override { return   5; }
-    int ternaryGroups()        const override { return  20; }
-    int xcmpBytes()            const override { return  16; }
-    int xcmpWords()            const override { return  12; }
+    int bytesPerWord() const override;
+    int exactBytes() const override;
+    int exactMatchSTMUnits() const override; /* first 4 units */
+    int exactMatchUnits() const override;    /* 4 STM + 4 LAMB */
+    int exactWords() const override;
+    int gatewayFixedBytes() const override;
+    int gatewayRows() const override;
+    int gatewayVecBytes() const override;
+    int ramSelectBitStart() const override;  // any bits can be ram select
+    int ramLineSelectBits() const override;  // FIXME 6 for lamb, 10 for STM
+    int ternaryBytesPerGroup() const override;
+    int ternaryGroups() const override;
+    int xcmpBytes() const override;
+    int xcmpWords() const override;
 
     // the next two: support for "legacy code" [as of Nov. 10 2022] that gets these via IXBarSpec
-    int tcam_rows()            const override { return Flatrock_tcam_rows   ; }
-    int tcam_columns()         const override { return Flatrock_tcam_columns; }
+    int tcam_rows() const override;
+    int tcam_columns() const override;
 
-    int getExactOrdBase(int group) const;
-    int getTernaryOrdBase(int group) const;
+    int getExactOrdBase(int group) const override;
+    int getTernaryOrdBase(int group) const override;
 
-    int exactMatchTotalBytes()          const override { return 2*20; }
-    int ternaryMatchTotalBytes()        const override { return 20*5; }
-    int xcmpMatchTotalBytes()           const override { return 4*16; }
+    int exactMatchTotalBytes() const override;
+    int ternaryMatchTotalBytes() const override;
+    int xcmpMatchTotalBytes() const override;
 };
+#endif
 
 class TofinoMauSpec : public MauSpec {
     const TofinoIXBarSpec ixbar_;
-    const TofinoIMemSpec   imem_;
+    const TofinoIMemSpec imem_;
 
  public:
-    TofinoMauSpec() {}
-    const IXBarSpec& getIXBarSpec() const override { return ixbar_; }
-    const  IMemSpec&  getIMemSpec() const override { return  imem_; }
+    TofinoMauSpec() = default;
+    const IXBarSpec &getIXBarSpec() const override;
+    const IMemSpec &getIMemSpec() const override;
 };
 
 class JBayMauSpec : public MauSpec {
     const TofinoIXBarSpec ixbar_;
-    const TofinoIMemSpec   imem_;
+    const TofinoIMemSpec imem_;
 
  public:
-    JBayMauSpec() {}
-    const IXBarSpec& getIXBarSpec() const override { return ixbar_; }
-    const  IMemSpec&  getIMemSpec() const override { return  imem_; }
+    JBayMauSpec() = default;
+    const IXBarSpec &getIXBarSpec() const override;
+    const IMemSpec &getIMemSpec() const override;
 };
 
 class CloudbreakMauSpec : public MauSpec {
     const TofinoIXBarSpec ixbar_;
-    const TofinoIMemSpec   imem_;
+    const TofinoIMemSpec imem_;
 
  public:
     CloudbreakMauSpec() {}
-    const IXBarSpec& getIXBarSpec() const override { return ixbar_; }
-    const  IMemSpec&  getIMemSpec() const override { return  imem_; }
+    const IXBarSpec &getIXBarSpec() const override;
+    const IMemSpec &getIMemSpec() const override;
 };
 
+#if HAVE_FLATROCK
 class FlatrockMauSpec : public MauSpec {
     const FlatrockIXBarSpec ixbar_;
     const FlatrockIMemSpec imem_;
 
  public:
     FlatrockMauSpec() {}
-    const IXBarSpec& getIXBarSpec() const override { return ixbar_; }
-    const  IMemSpec&  getIMemSpec() const override { return  imem_; }
+    const IXBarSpec &getIXBarSpec() const override;
+    const IMemSpec &getIMemSpec() const override;
 
-    int tcam_width()                const override { return  40;                   }
-    int tcam_depth()                const override { return 512;                   }
-    int tcam_rows()                 const override { return Flatrock_tcam_rows   ; }
-    int tcam_columns()              const override { return Flatrock_tcam_columns; }
+    int tcam_width() const override;
+    int tcam_depth() const override;
+    int tcam_rows() const override;
+    int tcam_columns() const override;
 
-    IR::Node* postTransformTables(IR::MAU::Table*) const override;
+    IR::Node *postTransformTables(IR::MAU::Table *) const override;
     //  preceding line`s decl.: implemented in "flatrock/mau_spec.cpp"
 };
+#endif
 
-#endif  /* EXTENSIONS_BF_P4C_MAU_MAU_SPEC_H_ */
+#endif /* EXTENSIONS_BF_P4C_MAU_MAU_SPEC_H_ */

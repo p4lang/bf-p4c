@@ -34,7 +34,7 @@ static const IR::Entry* create_static_entry(unsigned key_size,
 
     auto method = new IR::PathExpression(type, new IR::Path(action->name));
     auto call = new IR::MethodCallExpression(type, method, args);
-    auto entry = new IR::Entry(keys, call, false);
+    auto entry = new IR::Entry(true, nullptr, keys, call, false);
 
     return entry;
 }
