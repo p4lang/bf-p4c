@@ -16,7 +16,7 @@ class GreedyAllocator : public AllocatorBase {
     /// current pipe, used for logging.
     const int pipe_id_i;
     /// the total number of slicing that we will try for a super cluster.
-    const int max_slicing_tries_i = 64;
+    const int max_slicing_tries_i = 256;
 
  private:
     /// @returns a map from PHV::Size to container groups.

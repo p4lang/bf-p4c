@@ -446,11 +446,6 @@ if (TEST_ALT_PHV_ALLOC)
     )
 
     p4c_add_xfail_reason("tofino2"
-        "error: GreedyAllocation failed because these clusters have unsatisfiable constraints"
-        extensions/p4_tests/p4_16/stf/p4c-4535.p4
-    )
-
-    p4c_add_xfail_reason("tofino2"
         "Compiler Bug: incomplete placement for table _ipv4_lpm"
         smoketest_switch_16_y2
     )
