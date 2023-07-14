@@ -1,5 +1,5 @@
-// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_NAT_TOFINO2=1 -Ibf_arista_switch_nat_tofino2/includes -I/usr/share/p4c-bleeding/p4include -DTOFINO2=1 --skip-precleaner -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino2-t2na --o bf_arista_switch_nat_tofino2 --bf-rt-schema bf_arista_switch_nat_tofino2/context/bf-rt.json
-// p4c 9.11.2 (SHA: 4328321)
+// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_NAT_TOFINO2=1 -Ibf_arista_switch_nat_tofino2/includes -I/usr/share/p4c-bleeding/p4include -DTOFINO2=1 -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino2-t2na --o bf_arista_switch_nat_tofino2 --bf-rt-schema bf_arista_switch_nat_tofino2/context/bf-rt.json
+// p4c 9.13.0 (SHA: 11c23cb)
 
 #include <core.p4>
 #include <tofino2_specs.p4>
@@ -750,6 +750,7 @@ struct Rudolph {
     bit<12>   Oilmont;
     bit<16>   Tornillo;
     bit<16>   Satolah;
+    bit<1>    Dalton;
     bit<16>   RedElm;
     bit<16>   Renick;
     bit<16>   Pajaros;
@@ -2697,7 +2698,19 @@ control Lignite(inout Tenstrike Cairo, inout Rochert Exeter, in egress_intrinsic
         Cairo.Potosi.Commack = Exeter.Emden.Commack;
         Cairo.Potosi.Bonney = Exeter.Emden.Bonney;
     }
+    @name(".Hatteras") action Hatteras(bit<2> Armona, bit<16> Norcatur, bit<4> Burrel, bit<12> Talbert, bit<12> Madawaska) {
+        Clarkdale(Armona, Norcatur, Burrel, Talbert);
+        Cairo.Mattapex.Exton[11:0] = Madawaska;
+        Cairo.Potosi.Commack = Exeter.Emden.Commack;
+        Cairo.Potosi.Bonney = Exeter.Emden.Bonney;
+    }
     @name(".Catlin") action Catlin(bit<2> Armona, bit<16> Norcatur, bit<4> Burrel, bit<12> Talbert) {
+        Clarkdale(Armona, Norcatur, Burrel, Talbert);
+        Cairo.Mattapex.Exton[11:0] = Exeter.Emden.Edwards;
+        Cairo.Potosi.Commack = Exeter.Emden.Commack;
+        Cairo.Potosi.Bonney = Exeter.Emden.Bonney;
+    }
+    @name(".LaCueva") action LaCueva(bit<2> Armona, bit<16> Norcatur, bit<4> Burrel, bit<12> Talbert) {
         Clarkdale(Armona, Norcatur, Burrel, Talbert);
         Cairo.Mattapex.Exton[11:0] = Exeter.Emden.Edwards;
         Cairo.Potosi.Commack = Exeter.Emden.Commack;
@@ -2710,7 +2723,9 @@ control Lignite(inout Tenstrike Cairo, inout Rochert Exeter, in egress_intrinsic
     @disable_atomic_modify(1) @name(".Romeo") table Romeo {
         actions = {
             Brunson();
+            Hatteras();
             Catlin();
+            LaCueva();
             Antoine();
         }
         key = {
@@ -4694,6 +4709,7 @@ control Hookstown(inout Tenstrike Cairo, inout Rochert Exeter, in ingress_intrin
     @name(".Munday") action Munday(bit<32> Chugwater, bit<16> Norcatur, bit<32> LaFayette) {
         Carrizozo(Chugwater, LaFayette);
         Exeter.Geistown.Satolah = Norcatur;
+        Exeter.Geistown.Dalton = (bit<1>)1w1;
     }
     @idletime_precision(1) @disable_atomic_modify(1) @name(".Hecker") table Hecker {
         actions = {
@@ -4702,9 +4718,9 @@ control Hookstown(inout Tenstrike Cairo, inout Rochert Exeter, in ingress_intrin
             @defaultonly Andrade();
         }
         key = {
-            Cairo.Cadwell.Teigen   : exact @name("Cadwell.Teigen") ;
-            Exeter.Geistown.Corydon: exact @name("Geistown.Corydon") ;
-            Exeter.Geistown.Bells  : exact @name("Geistown.Bells") ;
+            Cairo.Cadwell.Teigen   : exact @hash_mask(1) @name("Cadwell.Teigen") ;
+            Exeter.Geistown.Corydon: exact @hash_mask(0) @name("Geistown.Corydon") ;
+            Exeter.Geistown.Bells  : exact @hash_mask(0) @name("Geistown.Bells") ;
             Cairo.Cadwell.Chugwater: exact @name("Cadwell.Chugwater") ;
             Cairo.Tillson.Montross : exact @name("Tillson.Montross") ;
         }
@@ -4735,6 +4751,7 @@ control Holcut(inout Tenstrike Cairo, inout Rochert Exeter, in ingress_intrinsic
     @name(".Munday") action Munday(bit<32> Chugwater, bit<16> Norcatur, bit<32> LaFayette) {
         Carrizozo(Chugwater, LaFayette);
         Exeter.Geistown.Satolah = Norcatur;
+        Exeter.Geistown.Dalton = (bit<1>)1w1;
     }
     @idletime_precision(1) @disable_atomic_modify(1) @name(".FarrWest") table FarrWest {
         actions = {
@@ -4743,9 +4760,9 @@ control Holcut(inout Tenstrike Cairo, inout Rochert Exeter, in ingress_intrinsic
             @defaultonly Andrade();
         }
         key = {
-            Cairo.Cadwell.Teigen   : exact @name("Cadwell.Teigen") ;
-            Exeter.Geistown.Corydon: exact @name("Geistown.Corydon") ;
-            Exeter.Geistown.Bells  : exact @name("Geistown.Bells") ;
+            Cairo.Cadwell.Teigen   : exact @hash_mask(1) @name("Cadwell.Teigen") ;
+            Exeter.Geistown.Corydon: exact @hash_mask(0) @name("Geistown.Corydon") ;
+            Exeter.Geistown.Bells  : exact @hash_mask(0) @name("Geistown.Bells") ;
             Cairo.Cadwell.Chugwater: exact @name("Cadwell.Chugwater") ;
             Cairo.Tillson.Montross : exact @name("Tillson.Montross") ;
         }
@@ -4784,7 +4801,7 @@ control Dante(inout Tenstrike Cairo, inout Rochert Exeter, in ingress_intrinsic_
             @defaultonly Andrade();
         }
         key = {
-            Cairo.Cadwell.Teigen   : exact @name("Cadwell.Teigen") ;
+            Cairo.Cadwell.Teigen   : exact @hash_mask(1) @name("Cadwell.Teigen") ;
             Cairo.Cadwell.Almedia  : exact @name("Cadwell.Almedia") ;
             Cairo.Tillson.Knierim  : exact @name("Tillson.Knierim") ;
             Cairo.Cadwell.Chugwater: exact @name("Cadwell.Chugwater") ;
@@ -4825,7 +4842,7 @@ control Darden(inout Tenstrike Cairo, inout Rochert Exeter, in ingress_intrinsic
             @defaultonly Andrade();
         }
         key = {
-            Cairo.Cadwell.Teigen   : exact @name("Cadwell.Teigen") ;
+            Cairo.Cadwell.Teigen   : exact @hash_mask(1) @name("Cadwell.Teigen") ;
             Cairo.Cadwell.Almedia  : exact @name("Cadwell.Almedia") ;
             Cairo.Tillson.Knierim  : exact @name("Tillson.Knierim") ;
             Cairo.Cadwell.Chugwater: exact @name("Cadwell.Chugwater") ;
@@ -4952,7 +4969,7 @@ control McCartys(inout Tenstrike Cairo, inout Rochert Exeter, in ingress_intrins
             @defaultonly Andrade();
         }
         key = {
-            Cairo.Cadwell.Teigen   : exact @name("Cadwell.Teigen") ;
+            Cairo.Cadwell.Teigen   : exact @hash_mask(1) @name("Cadwell.Teigen") ;
             Cairo.Cadwell.Almedia  : exact @name("Cadwell.Almedia") ;
             Cairo.Tillson.Knierim  : exact @name("Tillson.Knierim") ;
             Cairo.Cadwell.Chugwater: exact @name("Cadwell.Chugwater") ;
@@ -5567,6 +5584,7 @@ control Belcher(inout Tenstrike Cairo, inout Rochert Exeter, in ingress_intrinsi
     @name(".Munday") action Munday(bit<32> Chugwater, bit<16> Norcatur, bit<32> LaFayette) {
         Carrizozo(Chugwater, LaFayette);
         Exeter.Geistown.Satolah = Norcatur;
+        Exeter.Geistown.Dalton = (bit<1>)1w1;
     }
     @name(".Bridgton") action Bridgton(bit<32> Chugwater, bit<32> LaFayette, bit<32> Barnhill) {
         Carrizozo(Chugwater, LaFayette);
@@ -5759,7 +5777,7 @@ control Belcher(inout Tenstrike Cairo, inout Rochert Exeter, in ingress_intrinsi
         }
         key = {
             Exeter.Geistown.Heuvelton: exact @name("Geistown.Heuvelton") ;
-            Exeter.Geistown.Teigen   : exact @name("Geistown.Teigen") ;
+            Exeter.Geistown.Teigen   : exact @hash_mask(1) @name("Geistown.Teigen") ;
             Exeter.Geistown.Pinole   : exact @name("Geistown.Pinole") ;
         }
         const default_action = Keenes();
@@ -5823,11 +5841,13 @@ control Belcher(inout Tenstrike Cairo, inout Rochert Exeter, in ingress_intrinsi
         key = {
             Cairo.Forepaugh.isValid(): ternary @name("Forepaugh") ;
             Cairo.Campo.isValid()    : ternary @name("Campo") ;
+            Cairo.Campo.Powderly     : ternary @name("Campo.Powderly") ;
             Cairo.SanPablo.isValid() : ternary @name("SanPablo") ;
             Cairo.Westview.isValid() : ternary @name("Westview") ;
             Cairo.Tillson.isValid()  : ternary @name("Tillson") ;
             Cairo.Boring.isValid()   : ternary @name("Boring") ;
             Cairo.Cadwell.isValid()  : ternary @name("Cadwell") ;
+            Cairo.Cadwell.Powderly   : ternary @name("Cadwell.Powderly") ;
             Cairo.Potosi.isValid()   : ternary @name("Potosi") ;
         }
         const default_action = Andrade();
@@ -5846,11 +5866,13 @@ control Belcher(inout Tenstrike Cairo, inout Rochert Exeter, in ingress_intrinsi
         key = {
             Cairo.Forepaugh.isValid(): ternary @name("Forepaugh") ;
             Cairo.Campo.isValid()    : ternary @name("Campo") ;
+            Cairo.Campo.Powderly     : ternary @name("Campo.Powderly") ;
             Cairo.SanPablo.isValid() : ternary @name("SanPablo") ;
             Cairo.Westview.isValid() : ternary @name("Westview") ;
             Cairo.Tillson.isValid()  : ternary @name("Tillson") ;
             Cairo.Boring.isValid()   : ternary @name("Boring") ;
             Cairo.Cadwell.isValid()  : ternary @name("Cadwell") ;
+            Cairo.Cadwell.Powderly   : ternary @name("Cadwell.Powderly") ;
         }
         size = 512;
         requires_versioning = false;
@@ -5908,9 +5930,9 @@ control Belcher(inout Tenstrike Cairo, inout Rochert Exeter, in ingress_intrinsi
             @defaultonly Andrade();
         }
         key = {
-            Cairo.Cadwell.Teigen   : exact @name("Cadwell.Teigen") ;
-            Exeter.Geistown.Corydon: exact @name("Geistown.Corydon") ;
-            Exeter.Geistown.Bells  : exact @name("Geistown.Bells") ;
+            Cairo.Cadwell.Teigen   : exact @hash_mask(1) @name("Cadwell.Teigen") ;
+            Exeter.Geistown.Corydon: exact @hash_mask(0) @name("Geistown.Corydon") ;
+            Exeter.Geistown.Bells  : exact @hash_mask(0) @name("Geistown.Bells") ;
             Cairo.Cadwell.Chugwater: exact @name("Cadwell.Chugwater") ;
             Cairo.Tillson.Montross : exact @name("Tillson.Montross") ;
         }
@@ -5925,9 +5947,9 @@ control Belcher(inout Tenstrike Cairo, inout Rochert Exeter, in ingress_intrinsi
             @defaultonly Andrade();
         }
         key = {
-            Cairo.Cadwell.Teigen   : exact @name("Cadwell.Teigen") ;
-            Exeter.Geistown.Corydon: exact @name("Geistown.Corydon") ;
-            Exeter.Geistown.Bells  : exact @name("Geistown.Bells") ;
+            Cairo.Cadwell.Teigen   : exact @hash_mask(1) @name("Cadwell.Teigen") ;
+            Exeter.Geistown.Corydon: exact @hash_mask(0) @name("Geistown.Corydon") ;
+            Exeter.Geistown.Bells  : exact @hash_mask(0) @name("Geistown.Bells") ;
             Cairo.Cadwell.Chugwater: exact @name("Cadwell.Chugwater") ;
             Cairo.Tillson.Montross : exact @name("Tillson.Montross") ;
         }
@@ -5942,7 +5964,7 @@ control Belcher(inout Tenstrike Cairo, inout Rochert Exeter, in ingress_intrinsi
             @defaultonly Andrade();
         }
         key = {
-            Cairo.Cadwell.Teigen   : exact @name("Cadwell.Teigen") ;
+            Cairo.Cadwell.Teigen   : exact @hash_mask(1) @name("Cadwell.Teigen") ;
             Cairo.Cadwell.Almedia  : exact @name("Cadwell.Almedia") ;
             Cairo.Tillson.Knierim  : exact @name("Tillson.Knierim") ;
             Cairo.Cadwell.Chugwater: exact @name("Cadwell.Chugwater") ;
@@ -5959,7 +5981,7 @@ control Belcher(inout Tenstrike Cairo, inout Rochert Exeter, in ingress_intrinsi
             @defaultonly Andrade();
         }
         key = {
-            Cairo.Cadwell.Teigen   : exact @name("Cadwell.Teigen") ;
+            Cairo.Cadwell.Teigen   : exact @hash_mask(1) @name("Cadwell.Teigen") ;
             Cairo.Cadwell.Almedia  : exact @name("Cadwell.Almedia") ;
             Cairo.Tillson.Knierim  : exact @name("Tillson.Knierim") ;
             Cairo.Cadwell.Chugwater: exact @name("Cadwell.Chugwater") ;
@@ -7027,7 +7049,7 @@ control Kulpmont(inout Tenstrike Cairo, inout Rochert Exeter, in ingress_intrins
         Vinita.apply();
         Laramie.apply(Cairo, Exeter, Coryville, Yulee, Oconee, Bellamy);
         Fentress.apply(Cairo, Exeter, Coryville, Yulee, Oconee, Bellamy);
-        if (Exeter.Starkey.Emida == 1w1 && Exeter.Starkey.Doddridge & 4w0x1 == 4w0x1 && Exeter.Geistown.Rockham == 3w0x1 && Bellamy.copy_to_cpu == 1w0) {
+        if (Exeter.Starkey.Emida == 1w1 && Exeter.Starkey.Doddridge & 4w0x1 == 4w0x1 && Exeter.Geistown.Rockham == 3w0x1 && Bellamy.copy_to_cpu == 1w0 && Cairo.Mattapex.isValid() == false) {
             if (Exeter.Geistown.Staunton == 1w0 || Exeter.Geistown.Lugert == 1w0) {
                 if ((Exeter.Geistown.Staunton == 1w1 || Exeter.Geistown.Lugert == 1w1) && Cairo.Lattimore.isValid() == true && Exeter.Geistown.LaConner == 1w1 || Exeter.Geistown.Staunton == 1w0 && Exeter.Geistown.Lugert == 1w0) {
                     switch (Newkirk.apply().action_run) {

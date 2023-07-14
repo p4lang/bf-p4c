@@ -1,5 +1,5 @@
-// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_STATELESS_LOAD_BALANCE_V4V6=1 -Ibf_arista_switch_stateless_load_balance_v4v6/includes -I/usr/share/p4c-bleeding/p4include  --skip-precleaner -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino-tna --o bf_arista_switch_stateless_load_balance_v4v6 --bf-rt-schema bf_arista_switch_stateless_load_balance_v4v6/context/bf-rt.json
-// p4c 9.11.2 (SHA: 4328321)
+// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_STATELESS_LOAD_BALANCE_V4V6=1 -Ibf_arista_switch_stateless_load_balance_v4v6/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino-tna --o bf_arista_switch_stateless_load_balance_v4v6 --bf-rt-schema bf_arista_switch_stateless_load_balance_v4v6/context/bf-rt.json
+// p4c 9.13.0 (SHA: 11c23cb)
 
 #include <core.p4>
 #include <tofino1_specs.p4>
@@ -5803,11 +5803,13 @@ control Wyanet(inout Hookdale Levasy, inout Jayton Indios, in ingress_intrinsic_
         key = {
             Levasy.Emden.isValid()   : ternary @name("Emden") ;
             Levasy.Lindy.isValid()   : ternary @name("Lindy") ;
+            Levasy.Lindy.Hampton     : ternary @name("Lindy.Hampton") ;
             Levasy.Brady.isValid()   : ternary @name("Brady") ;
             Levasy.Swanlake.isValid(): ternary @name("Swanlake") ;
             Levasy.Jerico.isValid()  : ternary @name("Jerico") ;
             Levasy.Thurmond.isValid(): ternary @name("Thurmond") ;
             Levasy.Glenoma.isValid() : ternary @name("Glenoma") ;
+            Levasy.Glenoma.Hampton   : ternary @name("Glenoma.Hampton") ;
             Levasy.Ambler.isValid()  : ternary @name("Ambler") ;
         }
         const default_action = Amherst();
@@ -5826,11 +5828,13 @@ control Wyanet(inout Hookdale Levasy, inout Jayton Indios, in ingress_intrinsic_
         key = {
             Levasy.Emden.isValid()   : ternary @name("Emden") ;
             Levasy.Lindy.isValid()   : ternary @name("Lindy") ;
+            Levasy.Lindy.Hampton     : ternary @name("Lindy.Hampton") ;
             Levasy.Brady.isValid()   : ternary @name("Brady") ;
             Levasy.Swanlake.isValid(): ternary @name("Swanlake") ;
             Levasy.Jerico.isValid()  : ternary @name("Jerico") ;
             Levasy.Thurmond.isValid(): ternary @name("Thurmond") ;
             Levasy.Glenoma.isValid() : ternary @name("Glenoma") ;
+            Levasy.Glenoma.Hampton   : ternary @name("Glenoma.Hampton") ;
         }
         size = 512;
         requires_versioning = false;

@@ -1,5 +1,5 @@
-// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_SMALL_SCALE_TEST=1 -Ibf_arista_switch_small_scale_test/includes -I/usr/share/p4c-bleeding/p4include  --skip-precleaner -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino-tna --o bf_arista_switch_small_scale_test --bf-rt-schema bf_arista_switch_small_scale_test/context/bf-rt.json
-// p4c 9.11.2 (SHA: 4328321)
+// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_SMALL_SCALE_TEST=1 -Ibf_arista_switch_small_scale_test/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino-tna --o bf_arista_switch_small_scale_test --bf-rt-schema bf_arista_switch_small_scale_test/context/bf-rt.json
+// p4c 9.13.0 (SHA: 11c23cb)
 
 #include <core.p4>
 #include <tofino1_specs.p4>
@@ -2375,7 +2375,7 @@ control Kotzebue(inout Milano Olmitz, inout Sequim Baker, in ingress_intrinsic_m
         Baker.Daisytown.Newfolden = Asharoken;
         Baker.Lindsborg.Broussard = Broussard;
     }
-    @name(".Weissert") action Weissert(bit<12> Turkey, bit<32> Asharoken, bit<8> Belview, bit<4> Broussard) {
+    @name(".Weissert") action Weissert(bit<12> Turkey, bit<32> Asharoken, bit<8> Belview, bit<4> Broussard, bit<16> Overton) {
         Baker.Empire.Clarion = Turkey;
         Baker.Empire.Sledge = Turkey;
         Anawalt(Asharoken, Belview, Broussard);
@@ -5362,11 +5362,13 @@ control Rixford(inout Milano Olmitz, inout Sequim Baker, in egress_intrinsic_met
         key = {
             Olmitz.Mayflower.isValid(): ternary @name("Mayflower") ;
             Olmitz.Hookdale.isValid() : ternary @name("Hookdale") ;
+            Olmitz.Hookdale.Armona    : ternary @name("Hookdale.Armona") ;
             Olmitz.Funston.isValid()  : ternary @name("Funston") ;
             Olmitz.Almota.isValid()   : ternary @name("Almota") ;
             Olmitz.Saugatuck.isValid(): ternary @name("Saugatuck") ;
             Olmitz.Peoria.isValid()   : ternary @name("Peoria") ;
             Olmitz.Wanamassa.isValid(): ternary @name("Wanamassa") ;
+            Olmitz.Wanamassa.Armona   : ternary @name("Wanamassa.Armona") ;
             Olmitz.Cotter.isValid()   : ternary @name("Cotter") ;
         }
         const default_action = Midas();
@@ -5385,11 +5387,13 @@ control Rixford(inout Milano Olmitz, inout Sequim Baker, in egress_intrinsic_met
         key = {
             Olmitz.Mayflower.isValid(): ternary @name("Mayflower") ;
             Olmitz.Hookdale.isValid() : ternary @name("Hookdale") ;
+            Olmitz.Hookdale.Armona    : ternary @name("Hookdale.Armona") ;
             Olmitz.Funston.isValid()  : ternary @name("Funston") ;
             Olmitz.Almota.isValid()   : ternary @name("Almota") ;
             Olmitz.Saugatuck.isValid(): ternary @name("Saugatuck") ;
             Olmitz.Peoria.isValid()   : ternary @name("Peoria") ;
             Olmitz.Wanamassa.isValid(): ternary @name("Wanamassa") ;
+            Olmitz.Wanamassa.Armona   : ternary @name("Wanamassa.Armona") ;
         }
         size = 512;
         requires_versioning = false;

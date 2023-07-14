@@ -1,5 +1,5 @@
-// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_NAT_SCALE=1 -Ibf_arista_switch_nat_scale/includes -I/usr/share/p4c-bleeding/p4include  --skip-precleaner -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino-tna --o bf_arista_switch_nat_scale --bf-rt-schema bf_arista_switch_nat_scale/context/bf-rt.json
-// p4c 9.11.2 (SHA: 4328321)
+// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_NAT_SCALE=1 -Ibf_arista_switch_nat_scale/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino-tna --o bf_arista_switch_nat_scale --bf-rt-schema bf_arista_switch_nat_scale/context/bf-rt.json
+// p4c 9.13.0 (SHA: 11c23cb)
 
 #include <core.p4>
 #include <tofino1_specs.p4>
@@ -752,6 +752,7 @@ struct Lovewell {
     bit<12>   Gause;
     bit<16>   Norland;
     bit<16>   Pathfork;
+    bit<1>    Roxboro;
     bit<16>   Tombstone;
     bit<16>   Subiaco;
     bit<16>   Marcus;
@@ -1487,6 +1488,7 @@ control Hagaman(inout Skillman BigPoint, inout Kinde Tenstrike, in ingress_intri
             Crown();
         }
         key = {
+            Tenstrike.Almota.Hoven : exact @name("Almota.Hoven") ;
             BigPoint.Levasy.Denhoff: exact @name("Levasy.Denhoff") ;
             BigPoint.Levasy.Provo  : exact @name("Levasy.Provo") ;
         }
@@ -2701,7 +2703,19 @@ control Chappell(inout Skillman BigPoint, inout Kinde Tenstrike, in egress_intri
         BigPoint.Ponder.Hampton = Tenstrike.Saugatuck.Hampton;
         BigPoint.Ponder.Tallassee = Tenstrike.Saugatuck.Tallassee;
     }
+    @name(".Timken") action Timken(bit<2> Wallula, bit<16> Palmhurst, bit<4> Comfrey, bit<12> Inkom, bit<12> Fairhaven) {
+        Estero(Wallula, Palmhurst, Comfrey, Inkom);
+        BigPoint.Volens.Connell[11:0] = Fairhaven;
+        BigPoint.Ponder.Hampton = Tenstrike.Saugatuck.Hampton;
+        BigPoint.Ponder.Tallassee = Tenstrike.Saugatuck.Tallassee;
+    }
     @name(".BurrOak") action BurrOak(bit<2> Wallula, bit<16> Palmhurst, bit<4> Comfrey, bit<12> Inkom) {
+        Estero(Wallula, Palmhurst, Comfrey, Inkom);
+        BigPoint.Volens.Connell[11:0] = Tenstrike.Saugatuck.Juneau;
+        BigPoint.Ponder.Hampton = Tenstrike.Saugatuck.Hampton;
+        BigPoint.Ponder.Tallassee = Tenstrike.Saugatuck.Tallassee;
+    }
+    @name(".Lamboglia") action Lamboglia(bit<2> Wallula, bit<16> Palmhurst, bit<4> Comfrey, bit<12> Inkom) {
         Estero(Wallula, Palmhurst, Comfrey, Inkom);
         BigPoint.Volens.Connell[11:0] = Tenstrike.Saugatuck.Juneau;
         BigPoint.Ponder.Hampton = Tenstrike.Saugatuck.Hampton;
@@ -2714,7 +2728,9 @@ control Chappell(inout Skillman BigPoint, inout Kinde Tenstrike, in egress_intri
     @disable_atomic_modify(1) @name(".Verdery") table Verdery {
         actions = {
             Gowanda();
+            Timken();
             BurrOak();
+            Lamboglia();
             Gardena();
         }
         key = {
@@ -4701,6 +4717,7 @@ control Decorah(inout Skillman BigPoint, inout Kinde Tenstrike, in ingress_intri
     @name(".Blunt") action Blunt(bit<32> Provo, bit<16> Palmhurst, bit<32> Moxley) {
         Stout(Provo, Moxley);
         Tenstrike.Wanamassa.Pathfork = Palmhurst;
+        Tenstrike.Wanamassa.Roxboro = (bit<1>)1w1;
     }
     @idletime_precision(1) @disable_atomic_modify(1) @placement_priority(1) @pack(6) @stage(0) @name(".Ludowici") table Ludowici {
         actions = {
@@ -4709,9 +4726,9 @@ control Decorah(inout Skillman BigPoint, inout Kinde Tenstrike, in ingress_intri
             @defaultonly Crown();
         }
         key = {
-            BigPoint.Levasy.Galloway   : exact @name("Levasy.Galloway") ;
-            Tenstrike.Wanamassa.Pajaros: exact @name("Wanamassa.Pajaros") ;
-            Tenstrike.Wanamassa.Renick : exact @name("Wanamassa.Renick") ;
+            BigPoint.Levasy.Galloway   : exact @hash_mask(1) @name("Levasy.Galloway") ;
+            Tenstrike.Wanamassa.Pajaros: exact @hash_mask(0) @name("Wanamassa.Pajaros") ;
+            Tenstrike.Wanamassa.Renick : exact @hash_mask(0) @name("Wanamassa.Renick") ;
             BigPoint.Levasy.Provo      : exact @name("Levasy.Provo") ;
             BigPoint.Rhinebeck.Fairland: exact @name("Rhinebeck.Fairland") ;
         }
@@ -4742,6 +4759,7 @@ control Forbes(inout Skillman BigPoint, inout Kinde Tenstrike, in ingress_intrin
     @name(".Blunt") action Blunt(bit<32> Provo, bit<16> Palmhurst, bit<32> Moxley) {
         Stout(Provo, Moxley);
         Tenstrike.Wanamassa.Pathfork = Palmhurst;
+        Tenstrike.Wanamassa.Roxboro = (bit<1>)1w1;
     }
     @idletime_precision(1) @disable_atomic_modify(1) @name(".Calverton") table Calverton {
         actions = {
@@ -4750,9 +4768,9 @@ control Forbes(inout Skillman BigPoint, inout Kinde Tenstrike, in ingress_intrin
             @defaultonly Crown();
         }
         key = {
-            BigPoint.Levasy.Galloway   : exact @name("Levasy.Galloway") ;
-            Tenstrike.Wanamassa.Pajaros: exact @name("Wanamassa.Pajaros") ;
-            Tenstrike.Wanamassa.Renick : exact @name("Wanamassa.Renick") ;
+            BigPoint.Levasy.Galloway   : exact @hash_mask(1) @name("Levasy.Galloway") ;
+            Tenstrike.Wanamassa.Pajaros: exact @hash_mask(0) @name("Wanamassa.Pajaros") ;
+            Tenstrike.Wanamassa.Renick : exact @hash_mask(0) @name("Wanamassa.Renick") ;
             BigPoint.Levasy.Provo      : exact @name("Levasy.Provo") ;
             BigPoint.Rhinebeck.Fairland: exact @name("Rhinebeck.Fairland") ;
         }
@@ -4791,7 +4809,7 @@ control Longport(inout Skillman BigPoint, inout Kinde Tenstrike, in ingress_intr
             @defaultonly Crown();
         }
         key = {
-            BigPoint.Levasy.Galloway   : exact @name("Levasy.Galloway") ;
+            BigPoint.Levasy.Galloway   : exact @hash_mask(1) @name("Levasy.Galloway") ;
             BigPoint.Levasy.Denhoff    : exact @name("Levasy.Denhoff") ;
             BigPoint.Rhinebeck.Pridgen : exact @name("Rhinebeck.Pridgen") ;
             BigPoint.Levasy.Provo      : exact @name("Levasy.Provo") ;
@@ -4832,7 +4850,7 @@ control Mabelvale(inout Skillman BigPoint, inout Kinde Tenstrike, in ingress_int
             @defaultonly Crown();
         }
         key = {
-            BigPoint.Levasy.Galloway   : exact @name("Levasy.Galloway") ;
+            BigPoint.Levasy.Galloway   : exact @hash_mask(1) @name("Levasy.Galloway") ;
             BigPoint.Levasy.Denhoff    : exact @name("Levasy.Denhoff") ;
             BigPoint.Rhinebeck.Pridgen : exact @name("Rhinebeck.Pridgen") ;
             BigPoint.Levasy.Provo      : exact @name("Levasy.Provo") ;
@@ -4959,7 +4977,7 @@ control Salamonia(inout Skillman BigPoint, inout Kinde Tenstrike, in ingress_int
             @defaultonly Crown();
         }
         key = {
-            BigPoint.Levasy.Galloway   : exact @name("Levasy.Galloway") ;
+            BigPoint.Levasy.Galloway   : exact @hash_mask(1) @name("Levasy.Galloway") ;
             BigPoint.Levasy.Denhoff    : exact @name("Levasy.Denhoff") ;
             BigPoint.Rhinebeck.Pridgen : exact @name("Rhinebeck.Pridgen") ;
             BigPoint.Levasy.Provo      : exact @name("Levasy.Provo") ;
@@ -5599,6 +5617,7 @@ control Lenox(inout Skillman BigPoint, inout Kinde Tenstrike, in ingress_intrins
     @name(".Blunt") action Blunt(bit<32> Provo, bit<16> Palmhurst, bit<32> Moxley) {
         Stout(Provo, Moxley);
         Tenstrike.Wanamassa.Pathfork = Palmhurst;
+        Tenstrike.Wanamassa.Roxboro = (bit<1>)1w1;
     }
     @name(".Kenyon") action Kenyon(bit<32> Provo, bit<32> Moxley, bit<32> ElkNeck) {
         Stout(Provo, Moxley);
@@ -5791,7 +5810,7 @@ control Lenox(inout Skillman BigPoint, inout Kinde Tenstrike, in ingress_intrins
         }
         key = {
             Tenstrike.Wanamassa.Wauconda: exact @name("Wanamassa.Wauconda") ;
-            Tenstrike.Wanamassa.Galloway: exact @name("Wanamassa.Galloway") ;
+            Tenstrike.Wanamassa.Galloway: exact @hash_mask(1) @name("Wanamassa.Galloway") ;
             Tenstrike.Wanamassa.RedElm  : exact @name("Wanamassa.RedElm") ;
         }
         const default_action = Netarts();
@@ -5855,11 +5874,13 @@ control Lenox(inout Skillman BigPoint, inout Kinde Tenstrike, in ingress_intrins
         key = {
             BigPoint.Ossining.isValid() : ternary @name("Ossining") ;
             BigPoint.Uniopolis.isValid(): ternary @name("Uniopolis") ;
+            BigPoint.Uniopolis.Naruna   : ternary @name("Uniopolis.Naruna") ;
             BigPoint.Moosic.isValid()   : ternary @name("Moosic") ;
             BigPoint.Bellamy.isValid()  : ternary @name("Bellamy") ;
             BigPoint.Rhinebeck.isValid(): ternary @name("Rhinebeck") ;
             BigPoint.Indios.isValid()   : ternary @name("Indios") ;
             BigPoint.Levasy.isValid()   : ternary @name("Levasy") ;
+            BigPoint.Levasy.Naruna      : ternary @name("Levasy.Naruna") ;
             BigPoint.Ponder.isValid()   : ternary @name("Ponder") ;
         }
         const default_action = Crown();
@@ -5878,11 +5899,13 @@ control Lenox(inout Skillman BigPoint, inout Kinde Tenstrike, in ingress_intrins
         key = {
             BigPoint.Ossining.isValid() : ternary @name("Ossining") ;
             BigPoint.Uniopolis.isValid(): ternary @name("Uniopolis") ;
+            BigPoint.Uniopolis.Naruna   : ternary @name("Uniopolis.Naruna") ;
             BigPoint.Moosic.isValid()   : ternary @name("Moosic") ;
             BigPoint.Bellamy.isValid()  : ternary @name("Bellamy") ;
             BigPoint.Rhinebeck.isValid(): ternary @name("Rhinebeck") ;
             BigPoint.Indios.isValid()   : ternary @name("Indios") ;
             BigPoint.Levasy.isValid()   : ternary @name("Levasy") ;
+            BigPoint.Levasy.Naruna      : ternary @name("Levasy.Naruna") ;
         }
         size = 512;
         requires_versioning = false;
@@ -5940,9 +5963,9 @@ control Lenox(inout Skillman BigPoint, inout Kinde Tenstrike, in ingress_intrins
             @defaultonly Crown();
         }
         key = {
-            BigPoint.Levasy.Galloway   : exact @name("Levasy.Galloway") ;
-            Tenstrike.Wanamassa.Pajaros: exact @name("Wanamassa.Pajaros") ;
-            Tenstrike.Wanamassa.Renick : exact @name("Wanamassa.Renick") ;
+            BigPoint.Levasy.Galloway   : exact @hash_mask(1) @name("Levasy.Galloway") ;
+            Tenstrike.Wanamassa.Pajaros: exact @hash_mask(0) @name("Wanamassa.Pajaros") ;
+            Tenstrike.Wanamassa.Renick : exact @hash_mask(0) @name("Wanamassa.Renick") ;
             BigPoint.Levasy.Provo      : exact @name("Levasy.Provo") ;
             BigPoint.Rhinebeck.Fairland: exact @name("Rhinebeck.Fairland") ;
         }
@@ -5957,9 +5980,9 @@ control Lenox(inout Skillman BigPoint, inout Kinde Tenstrike, in ingress_intrins
             @defaultonly Crown();
         }
         key = {
-            BigPoint.Levasy.Galloway   : exact @name("Levasy.Galloway") ;
-            Tenstrike.Wanamassa.Pajaros: exact @name("Wanamassa.Pajaros") ;
-            Tenstrike.Wanamassa.Renick : exact @name("Wanamassa.Renick") ;
+            BigPoint.Levasy.Galloway   : exact @hash_mask(1) @name("Levasy.Galloway") ;
+            Tenstrike.Wanamassa.Pajaros: exact @hash_mask(0) @name("Wanamassa.Pajaros") ;
+            Tenstrike.Wanamassa.Renick : exact @hash_mask(0) @name("Wanamassa.Renick") ;
             BigPoint.Levasy.Provo      : exact @name("Levasy.Provo") ;
             BigPoint.Rhinebeck.Fairland: exact @name("Rhinebeck.Fairland") ;
         }
@@ -5974,7 +5997,7 @@ control Lenox(inout Skillman BigPoint, inout Kinde Tenstrike, in ingress_intrins
             @defaultonly Crown();
         }
         key = {
-            BigPoint.Levasy.Galloway   : exact @name("Levasy.Galloway") ;
+            BigPoint.Levasy.Galloway   : exact @hash_mask(1) @name("Levasy.Galloway") ;
             BigPoint.Levasy.Denhoff    : exact @name("Levasy.Denhoff") ;
             BigPoint.Rhinebeck.Pridgen : exact @name("Rhinebeck.Pridgen") ;
             BigPoint.Levasy.Provo      : exact @name("Levasy.Provo") ;
@@ -5991,7 +6014,7 @@ control Lenox(inout Skillman BigPoint, inout Kinde Tenstrike, in ingress_intrins
             @defaultonly Crown();
         }
         key = {
-            BigPoint.Levasy.Galloway   : exact @name("Levasy.Galloway") ;
+            BigPoint.Levasy.Galloway   : exact @hash_mask(1) @name("Levasy.Galloway") ;
             BigPoint.Levasy.Denhoff    : exact @name("Levasy.Denhoff") ;
             BigPoint.Rhinebeck.Pridgen : exact @name("Rhinebeck.Pridgen") ;
             BigPoint.Levasy.Provo      : exact @name("Levasy.Provo") ;
@@ -6951,7 +6974,7 @@ control Cavalier(inout Skillman BigPoint, inout Kinde Tenstrike, in ingress_intr
         Zeeland.apply();
         FlatLick.apply(BigPoint, Tenstrike, Thurmond, Castle, Aguila, Lauada);
         Mellott.apply(BigPoint, Tenstrike, Thurmond, Castle, Aguila, Lauada);
-        if (Tenstrike.Almota.Ramos == 1w1 && Tenstrike.Almota.Shirley & 4w0x1 == 4w0x1 && Tenstrike.Wanamassa.Atoka == 3w0x1 && Lauada.copy_to_cpu == 1w0) {
+        if (Tenstrike.Almota.Ramos == 1w1 && Tenstrike.Almota.Shirley & 4w0x1 == 4w0x1 && Tenstrike.Wanamassa.Atoka == 3w0x1 && Lauada.copy_to_cpu == 1w0 && BigPoint.Volens.isValid() == false) {
             if (Tenstrike.Wanamassa.Raiford == 1w0 || Tenstrike.Wanamassa.Ayden == 1w0) {
                 if ((Tenstrike.Wanamassa.Raiford == 1w1 || Tenstrike.Wanamassa.Ayden == 1w1) && BigPoint.Boyle.isValid() == true && Tenstrike.Wanamassa.Sardinia == 1w1 || Tenstrike.Wanamassa.Raiford == 1w0 && Tenstrike.Wanamassa.Ayden == 1w0) {
                     switch (Anaconda.apply().action_run) {

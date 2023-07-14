@@ -1,5 +1,5 @@
-// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_MEDIA=1 -Ibf_arista_switch_media/includes -I/usr/share/p4c-bleeding/p4include  --skip-precleaner -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino-tna --o bf_arista_switch_media --bf-rt-schema bf_arista_switch_media/context/bf-rt.json
-// p4c 9.11.2 (SHA: 4328321)
+// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_MEDIA=1 -Ibf_arista_switch_media/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino-tna --o bf_arista_switch_media --bf-rt-schema bf_arista_switch_media/context/bf-rt.json
+// p4c 9.13.0 (SHA: 11c23cb)
 
 #include <core.p4>
 #include <tofino1_specs.p4>
@@ -696,6 +696,7 @@ struct Panaca {
     bit<12> Pathfork;
     bit<16> Tombstone;
     bit<16> Subiaco;
+    bit<1>  Caldwell;
     bit<8>  Marcus;
     bit<8>  Pittsboro;
     bit<8>  Ericsburg;
@@ -5791,10 +5792,12 @@ control Tusayan(inout Fishers Vanoss, inout Sunbury Potosi, in egress_intrinsic_
         key = {
             Vanoss.Hester.isValid()   : ternary @name("Hester") ;
             Vanoss.Hemlock.isValid()  : ternary @name("Hemlock") ;
+            Vanoss.Hemlock.Commack    : ternary @name("Hemlock.Commack") ;
             Vanoss.Mabana.isValid()   : ternary @name("Mabana") ;
             Vanoss.Ossining.isValid() : ternary @name("Ossining") ;
             Vanoss.Uniopolis.isValid(): ternary @name("Uniopolis") ;
             Vanoss.Tularosa.isValid() : ternary @name("Tularosa") ;
+            Vanoss.Tularosa.Commack   : ternary @name("Tularosa.Commack") ;
             Vanoss.Hettinger.isValid(): ternary @name("Hettinger") ;
         }
         const default_action = Penzance();
@@ -5813,10 +5816,12 @@ control Tusayan(inout Fishers Vanoss, inout Sunbury Potosi, in egress_intrinsic_
         key = {
             Vanoss.Hester.isValid()   : ternary @name("Hester") ;
             Vanoss.Hemlock.isValid()  : ternary @name("Hemlock") ;
+            Vanoss.Hemlock.Commack    : ternary @name("Hemlock.Commack") ;
             Vanoss.Mabana.isValid()   : ternary @name("Mabana") ;
             Vanoss.Ossining.isValid() : ternary @name("Ossining") ;
             Vanoss.Uniopolis.isValid(): ternary @name("Uniopolis") ;
             Vanoss.Tularosa.isValid() : ternary @name("Tularosa") ;
+            Vanoss.Tularosa.Commack   : ternary @name("Tularosa.Commack") ;
         }
         size = 512;
         requires_versioning = false;

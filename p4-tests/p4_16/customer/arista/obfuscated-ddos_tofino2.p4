@@ -1,5 +1,5 @@
-// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_DDOS_TOFINO2=1 -Ibf_arista_switch_ddos_tofino2/includes -I/usr/share/p4c-bleeding/p4include -DTOFINO2=1 --skip-precleaner -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino2-t2na --o bf_arista_switch_ddos_tofino2 --bf-rt-schema bf_arista_switch_ddos_tofino2/context/bf-rt.json
-// p4c 9.11.2 (SHA: 4328321)
+// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_DDOS_TOFINO2=1 -Ibf_arista_switch_ddos_tofino2/includes -I/usr/share/p4c-bleeding/p4include -DTOFINO2=1 -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino2-t2na --o bf_arista_switch_ddos_tofino2 --bf-rt-schema bf_arista_switch_ddos_tofino2/context/bf-rt.json
+// p4c 9.13.0 (SHA: 11c23cb)
 
 #include <core.p4>
 #include <tofino2_specs.p4>
@@ -1632,9 +1632,9 @@ control Vanoss(inout Almota Virgilina, inout Wyndmoor Dwight, in ingress_intrins
         Dwight.Jayton.Sunflower = Chewalla;
         Dwight.Humeston.Norma = Norma;
     }
-    @name(".WildRose") action WildRose(bit<13> Newfane, bit<32> Chewalla, bit<10> Darien, bit<4> Norma) {
+    @name(".WildRose") action WildRose(bit<13> Newfane, bit<32> Chewalla, bit<10> Darien, bit<4> Norma, bit<16> Needles) {
         Dwight.Circle.Aguilita = Newfane;
-        Dwight.Circle.Waubun = Newfane;
+        Dwight.Circle.Waubun = (bit<13>)Needles;
         Forepaugh(Chewalla, Darien, Norma);
     }
     @name(".Kellner") action Kellner() {
@@ -6276,11 +6276,13 @@ control Weslaco(inout Almota Virgilina, inout Wyndmoor Dwight, in ingress_intrin
         key = {
             Virgilina.Rochert.isValid()  : ternary @name("Rochert") ;
             Virgilina.Clearmont.isValid(): ternary @name("Clearmont") ;
+            Virgilina.Clearmont.Beasley  : ternary @name("Clearmont.Beasley") ;
             Virgilina.Ruffin.isValid()   : ternary @name("Ruffin") ;
             Virgilina.Jerico.isValid()   : ternary @name("Jerico") ;
             Virgilina.Lauada.isValid()   : ternary @name("Lauada") ;
             Virgilina.Glenoma.isValid()  : ternary @name("Glenoma") ;
             Virgilina.Baker.isValid()    : ternary @name("Baker") ;
+            Virgilina.Baker.Beasley      : ternary @name("Baker.Beasley") ;
             Virgilina.Rienzi.isValid()   : ternary @name("Rienzi") ;
         }
         const default_action = Indios();
@@ -6299,11 +6301,13 @@ control Weslaco(inout Almota Virgilina, inout Wyndmoor Dwight, in ingress_intrin
         key = {
             Virgilina.Rochert.isValid()  : ternary @name("Rochert") ;
             Virgilina.Clearmont.isValid(): ternary @name("Clearmont") ;
+            Virgilina.Clearmont.Beasley  : ternary @name("Clearmont.Beasley") ;
             Virgilina.Ruffin.isValid()   : ternary @name("Ruffin") ;
             Virgilina.Jerico.isValid()   : ternary @name("Jerico") ;
             Virgilina.Lauada.isValid()   : ternary @name("Lauada") ;
             Virgilina.Glenoma.isValid()  : ternary @name("Glenoma") ;
             Virgilina.Baker.isValid()    : ternary @name("Baker") ;
+            Virgilina.Baker.Beasley      : ternary @name("Baker.Beasley") ;
         }
         size = 512;
         requires_versioning = false;

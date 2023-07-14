@@ -1,5 +1,5 @@
-// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_NAT_STATIC=1 -Ibf_arista_switch_nat_static/includes -I/usr/share/p4c-bleeding/p4include  --skip-precleaner -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'   -Xp4c='--traffic-limit 95 --excludeBackendPasses=ResetInvalidatedChecksumHeaders' --target tofino-tna --o bf_arista_switch_nat_static --bf-rt-schema bf_arista_switch_nat_static/context/bf-rt.json
-// p4c 9.11.2 (SHA: 4328321)
+// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_NAT_STATIC=1 -Ibf_arista_switch_nat_static/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'   -Xp4c='--traffic-limit 95 --excludeBackendPasses=ResetInvalidatedChecksumHeaders' --target tofino-tna --o bf_arista_switch_nat_static --bf-rt-schema bf_arista_switch_nat_static/context/bf-rt.json
+// p4c 9.13.0 (SHA: 11c23cb)
 
 #include <core.p4>
 #include <tofino1_specs.p4>
@@ -643,6 +643,7 @@ struct Morstein {
     bit<12> Ipava;
     bit<16> McCammon;
     bit<16> Lapoint;
+    bit<1>  Hercules;
     bit<16> Wamego;
     bit<16> Brainard;
     bit<16> Fristoe;
@@ -2080,7 +2081,7 @@ control Amalga(inout Baker Noyack, inout Harriet Hettinger, in ingress_intrinsic
             Millikin();
         }
         key = {
-            Hettinger.Bratt.Coalwood  : exact @name("Bratt.Coalwood") ;
+            Hettinger.Bratt.Coalwood  : exact @hash_mask(1) @name("Bratt.Coalwood") ;
             Noyack.Rochert.Commack    : exact @name("Rochert.Commack") ;
             Noyack.Lindy.Joslin       : exact @name("Lindy.Joslin") ;
             Noyack.Rochert.Bonney     : exact @name("Rochert.Bonney") ;
@@ -2164,7 +2165,7 @@ control Barnsboro(inout Baker Noyack, inout Harriet Hettinger, in ingress_intrin
             Millikin();
         }
         key = {
-            Hettinger.Bratt.Coalwood  : exact @name("Bratt.Coalwood") ;
+            Hettinger.Bratt.Coalwood  : exact @hash_mask(1) @name("Bratt.Coalwood") ;
             Noyack.Rochert.Commack    : exact @name("Rochert.Commack") ;
             Noyack.Lindy.Joslin       : exact @name("Lindy.Joslin") ;
             Noyack.Rochert.Bonney     : exact @name("Rochert.Bonney") ;
@@ -2429,7 +2430,7 @@ control Danbury(inout Baker Noyack, inout Harriet Hettinger, in ingress_intrinsi
         const default_action = Papeton();
     }
     apply {
-        if (Hettinger.Bratt.RockPort == 1w0 && Hettinger.Biggers.Sherack == 1w1 && Hettinger.Biggers.McGonigle & 4w0x1 == 4w0x1 && Hettinger.Bratt.Minto == 3w0x1 && Lemont.copy_to_cpu == 1w0) {
+        if (Hettinger.Bratt.RockPort == 1w0 && Hettinger.Biggers.Sherack == 1w1 && Noyack.Thurmond.isValid() == false && Hettinger.Biggers.McGonigle & 4w0x1 == 4w0x1 && Hettinger.Bratt.Minto == 3w0x1 && Lemont.copy_to_cpu == 1w0) {
             switch (Ihlen.apply().action_run) {
                 Millikin: {
                     switch (ElCentro.apply().action_run) {
@@ -2661,7 +2662,7 @@ control Franktown(inout Baker Noyack, inout Harriet Hettinger, in ingress_intrin
             Millikin();
         }
         key = {
-            Hettinger.Bratt.Coalwood  : exact @name("Bratt.Coalwood") ;
+            Hettinger.Bratt.Coalwood  : exact @hash_mask(1) @name("Bratt.Coalwood") ;
             Hettinger.Bratt.Sardinia  : exact @name("Bratt.Sardinia") ;
             Hettinger.Bratt.Bonduel   : exact @name("Bratt.Bonduel") ;
             Noyack.Rochert.Bonney     : exact @name("Rochert.Bonney") ;
@@ -2867,9 +2868,9 @@ control Ugashik(inout Baker Noyack, inout Harriet Hettinger, in ingress_intrinsi
             Millikin();
         }
         key = {
-            Hettinger.Bratt.Coalwood  : exact @name("Bratt.Coalwood") ;
-            Hettinger.Bratt.Sardinia  : exact @name("Bratt.Sardinia") ;
-            Hettinger.Bratt.Bonduel   : exact @name("Bratt.Bonduel") ;
+            Hettinger.Bratt.Coalwood  : exact @hash_mask(1) @name("Bratt.Coalwood") ;
+            Hettinger.Bratt.Sardinia  : exact @hash_mask(0) @name("Bratt.Sardinia") ;
+            Hettinger.Bratt.Bonduel   : exact @hash_mask(0) @name("Bratt.Bonduel") ;
             Noyack.Rochert.Bonney     : exact @name("Rochert.Bonney") ;
             Noyack.Lindy.Weyauwega    : exact @name("Lindy.Weyauwega") ;
             Hettinger.Biggers.Stennett: exact @name("Biggers.Stennett") ;
@@ -4526,7 +4527,19 @@ control Dresden(inout Baker Noyack, inout Harriet Hettinger, in egress_intrinsic
         Noyack.Wabbaseka.Littleton = Hettinger.Moultrie.Littleton;
         Noyack.Wabbaseka.Killen = Hettinger.Moultrie.Killen;
     }
+    @name(".Hanamaulu") action Hanamaulu(bit<2> Helton, bit<16> Weinert, bit<4> Cornell, bit<12> Dundalk, bit<12> StarLake) {
+        Lorane(Helton, Weinert, Cornell, Dundalk);
+        Noyack.Thurmond.Connell[11:0] = StarLake;
+        Noyack.Wabbaseka.Littleton = Hettinger.Moultrie.Littleton;
+        Noyack.Wabbaseka.Killen = Hettinger.Moultrie.Killen;
+    }
     @name(".DeerPark") action DeerPark(bit<2> Helton, bit<16> Weinert, bit<4> Cornell, bit<12> Dundalk) {
+        Lorane(Helton, Weinert, Cornell, Dundalk);
+        Noyack.Thurmond.Connell[11:0] = Hettinger.Moultrie.Pettry;
+        Noyack.Wabbaseka.Littleton = Hettinger.Moultrie.Littleton;
+        Noyack.Wabbaseka.Killen = Hettinger.Moultrie.Killen;
+    }
+    @name(".Donna") action Donna(bit<2> Helton, bit<16> Weinert, bit<4> Cornell, bit<12> Dundalk) {
         Lorane(Helton, Weinert, Cornell, Dundalk);
         Noyack.Thurmond.Connell[11:0] = Hettinger.Moultrie.Pettry;
         Noyack.Wabbaseka.Littleton = Hettinger.Moultrie.Littleton;
@@ -4539,7 +4552,9 @@ control Dresden(inout Baker Noyack, inout Harriet Hettinger, in egress_intrinsic
     @disable_atomic_modify(1) @name(".Renfroe") table Renfroe {
         actions = {
             Bellville();
+            Hanamaulu();
             DeerPark();
+            Donna();
             Boyes();
         }
         key = {
@@ -6620,7 +6635,7 @@ control Needles(inout Baker Noyack, inout Harriet Hettinger, in egress_intrinsic
         }
         key = {
             Hettinger.Bratt.Kaaawa  : exact @name("Bratt.Kaaawa") ;
-            Hettinger.Bratt.Coalwood: exact @name("Bratt.Coalwood") ;
+            Hettinger.Bratt.Coalwood: exact @hash_mask(1) @name("Bratt.Coalwood") ;
             Hettinger.Bratt.Ayden   : exact @name("Bratt.Ayden") ;
         }
         const default_action = Hagerman();
@@ -6706,11 +6721,13 @@ control Needles(inout Baker Noyack, inout Harriet Hettinger, in egress_intrinsic
         key = {
             Noyack.Robstown.isValid() : ternary @name("Robstown") ;
             Noyack.Dwight.isValid()   : ternary @name("Dwight") ;
+            Noyack.Dwight.Solomon     : ternary @name("Dwight.Solomon") ;
             Noyack.RockHill.isValid() : ternary @name("RockHill") ;
             Noyack.Ravinia.isValid()  : ternary @name("Ravinia") ;
             Noyack.Lindy.isValid()    : ternary @name("Lindy") ;
             Noyack.Swanlake.isValid() : ternary @name("Swanlake") ;
             Noyack.Rochert.isValid()  : ternary @name("Rochert") ;
+            Noyack.Rochert.Solomon    : ternary @name("Rochert.Solomon") ;
             Noyack.Wabbaseka.isValid(): ternary @name("Wabbaseka") ;
         }
         const default_action = Millikin();
@@ -6729,11 +6746,13 @@ control Needles(inout Baker Noyack, inout Harriet Hettinger, in egress_intrinsic
         key = {
             Noyack.Robstown.isValid(): ternary @name("Robstown") ;
             Noyack.Dwight.isValid()  : ternary @name("Dwight") ;
+            Noyack.Dwight.Solomon    : ternary @name("Dwight.Solomon") ;
             Noyack.RockHill.isValid(): ternary @name("RockHill") ;
             Noyack.Ravinia.isValid() : ternary @name("Ravinia") ;
             Noyack.Lindy.isValid()   : ternary @name("Lindy") ;
             Noyack.Swanlake.isValid(): ternary @name("Swanlake") ;
             Noyack.Rochert.isValid() : ternary @name("Rochert") ;
+            Noyack.Rochert.Solomon   : ternary @name("Rochert.Solomon") ;
         }
         size = 512;
         requires_versioning = false;

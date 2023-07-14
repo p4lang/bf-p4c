@@ -1,5 +1,5 @@
-// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_DEFAULT=1 -Ibf_arista_switch_default/includes -I/usr/share/p4c-bleeding/p4include  --skip-precleaner -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino-tna --o bf_arista_switch_default --bf-rt-schema bf_arista_switch_default/context/bf-rt.json
-// p4c 9.11.2 (SHA: 4328321)
+// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_DEFAULT=1 -Ibf_arista_switch_default/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino-tna --o bf_arista_switch_default --bf-rt-schema bf_arista_switch_default/context/bf-rt.json
+// p4c 9.13.0 (SHA: 11c23cb)
 
 #include <core.p4>
 #include <tofino1_specs.p4>
@@ -2626,7 +2626,7 @@ control Somis(inout Emden Aguila, inout Cranbury Nixon, in ingress_intrinsic_met
         Nixon.Cotter.Osyka = BigFork;
         Nixon.Flaherty.Broadwell = Broadwell;
     }
-    @name(".Kenvil") action Kenvil(bit<12> Loris, bit<32> BigFork, bit<8> Maumee, bit<4> Broadwell) {
+    @name(".Kenvil") action Kenvil(bit<12> Loris, bit<32> BigFork, bit<8> Maumee, bit<4> Broadwell, bit<16> Danforth) {
         Nixon.Bronwood.Freeman = Loris;
         Nixon.Bronwood.Orrick = Loris;
         Ironia(BigFork, Maumee, Broadwell);
@@ -5954,11 +5954,13 @@ control Sahuarita(inout Emden Aguila, inout Cranbury Nixon, in egress_intrinsic_
         key = {
             Aguila.Nason.isValid()    : ternary @name("Nason") ;
             Aguila.Moosic.isValid()   : ternary @name("Moosic") ;
+            Aguila.Moosic.Galloway    : ternary @name("Moosic.Galloway") ;
             Aguila.Ossining.isValid() : ternary @name("Ossining") ;
             Aguila.Tularosa.isValid() : ternary @name("Tularosa") ;
             Aguila.Rhinebeck.isValid(): ternary @name("Rhinebeck") ;
             Aguila.Indios.isValid()   : ternary @name("Indios") ;
             Aguila.Levasy.isValid()   : ternary @name("Levasy") ;
+            Aguila.Levasy.Galloway    : ternary @name("Levasy.Galloway") ;
             Aguila.Ponder.isValid()   : ternary @name("Ponder") ;
         }
         const default_action = Flynn();
@@ -5977,11 +5979,13 @@ control Sahuarita(inout Emden Aguila, inout Cranbury Nixon, in egress_intrinsic_
         key = {
             Aguila.Nason.isValid()    : ternary @name("Nason") ;
             Aguila.Moosic.isValid()   : ternary @name("Moosic") ;
+            Aguila.Moosic.Galloway    : ternary @name("Moosic.Galloway") ;
             Aguila.Ossining.isValid() : ternary @name("Ossining") ;
             Aguila.Tularosa.isValid() : ternary @name("Tularosa") ;
             Aguila.Rhinebeck.isValid(): ternary @name("Rhinebeck") ;
             Aguila.Indios.isValid()   : ternary @name("Indios") ;
             Aguila.Levasy.isValid()   : ternary @name("Levasy") ;
+            Aguila.Levasy.Galloway    : ternary @name("Levasy.Galloway") ;
         }
         size = 512;
         requires_versioning = false;

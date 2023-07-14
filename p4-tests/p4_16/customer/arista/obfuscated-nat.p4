@@ -1,5 +1,5 @@
-// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_NAT=1 -Ibf_arista_switch_nat/includes -I/usr/share/p4c-bleeding/p4include  --skip-precleaner -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'   -Xp4c='--traffic-limit 95 --excludeBackendPasses=ResetInvalidatedChecksumHeaders' --target tofino-tna --o bf_arista_switch_nat --bf-rt-schema bf_arista_switch_nat/context/bf-rt.json
-// p4c 9.11.2 (SHA: 4328321)
+// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_NAT=1 -Ibf_arista_switch_nat/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'   -Xp4c='--traffic-limit 95 --excludeBackendPasses=ResetInvalidatedChecksumHeaders' --target tofino-tna --o bf_arista_switch_nat --bf-rt-schema bf_arista_switch_nat/context/bf-rt.json
+// p4c 9.13.0 (SHA: 11c23cb)
 
 #include <core.p4>
 #include <tofino1_specs.p4>
@@ -634,6 +634,7 @@ struct Nenana {
     bit<12> Orrick;
     bit<16> Ipava;
     bit<16> McCammon;
+    bit<1>  Vinita;
     bit<16> Lapoint;
     bit<16> Wamego;
     bit<16> Brainard;
@@ -2034,7 +2035,7 @@ control Rives(inout Monrovia Philip, inout Orting Levasy, in ingress_intrinsic_m
             Exeter();
         }
         key = {
-            Levasy.Thawville.Garcia : exact @name("Thawville.Garcia") ;
+            Levasy.Thawville.Garcia : exact @hash_mask(1) @name("Thawville.Garcia") ;
             Philip.Nephi.Beasley    : exact @name("Nephi.Beasley") ;
             Philip.Wabbaseka.Whitten: exact @name("Wabbaseka.Whitten") ;
             Philip.Nephi.Commack    : exact @name("Nephi.Commack") ;
@@ -2081,7 +2082,7 @@ control Jenifer(inout Monrovia Philip, inout Orting Levasy, in ingress_intrinsic
             Exeter();
         }
         key = {
-            Levasy.Thawville.Garcia : exact @name("Thawville.Garcia") ;
+            Levasy.Thawville.Garcia : exact @hash_mask(1) @name("Thawville.Garcia") ;
             Philip.Nephi.Beasley    : exact @name("Nephi.Beasley") ;
             Philip.Wabbaseka.Whitten: exact @name("Wabbaseka.Whitten") ;
             Philip.Nephi.Commack    : exact @name("Nephi.Commack") ;
@@ -2333,7 +2334,7 @@ control Luttrell(inout Monrovia Philip, inout Orting Levasy, in ingress_intrinsi
         const default_action = Ranburne();
     }
     apply {
-        if (Levasy.Thawville.Jenners == 1w0 && Levasy.Garrison.McCaskill == 1w1 && Levasy.Garrison.Minturn & 4w0x1 == 4w0x1 && Levasy.Thawville.Waubun == 3w0x1 && Sunbury.copy_to_cpu == 1w0) {
+        if (Levasy.Thawville.Jenners == 1w0 && Levasy.Garrison.McCaskill == 1w1 && Philip.Ambler.isValid() == false && Levasy.Garrison.Minturn & 4w0x1 == 4w0x1 && Levasy.Thawville.Waubun == 3w0x1 && Sunbury.copy_to_cpu == 1w0) {
             switch (Wolverine.apply().action_run) {
                 Exeter: {
                     switch (Bostic.apply().action_run) {
@@ -2478,7 +2479,7 @@ control Poneto(inout Monrovia Philip, inout Orting Levasy, in ingress_intrinsic_
             Exeter();
         }
         key = {
-            Levasy.Thawville.Garcia : exact @name("Thawville.Garcia") ;
+            Levasy.Thawville.Garcia : exact @hash_mask(1) @name("Thawville.Garcia") ;
             Levasy.Thawville.Bonduel: exact @name("Thawville.Bonduel") ;
             Levasy.Thawville.Ayden  : exact @name("Thawville.Ayden") ;
             Philip.Nephi.Commack    : exact @name("Nephi.Commack") ;
@@ -2659,9 +2660,9 @@ control Faulkton(inout Monrovia Philip, inout Orting Levasy, in ingress_intrinsi
             Exeter();
         }
         key = {
-            Levasy.Thawville.Garcia : exact @name("Thawville.Garcia") ;
-            Levasy.Thawville.Bonduel: exact @name("Thawville.Bonduel") ;
-            Levasy.Thawville.Ayden  : exact @name("Thawville.Ayden") ;
+            Levasy.Thawville.Garcia : exact @hash_mask(1) @name("Thawville.Garcia") ;
+            Levasy.Thawville.Bonduel: exact @hash_mask(0) @name("Thawville.Bonduel") ;
+            Levasy.Thawville.Ayden  : exact @hash_mask(0) @name("Thawville.Ayden") ;
             Philip.Nephi.Commack    : exact @name("Nephi.Commack") ;
             Philip.Wabbaseka.Joslin : exact @name("Wabbaseka.Joslin") ;
         }
@@ -3928,7 +3929,19 @@ control Advance(inout Monrovia Philip, inout Orting Levasy, in egress_intrinsic_
         Philip.Lauada.Glendevey = Levasy.Bratt.Glendevey;
         Philip.Lauada.Littleton = Levasy.Bratt.Littleton;
     }
+    @name(".Faith") action Faith(bit<2> Noyes, bit<16> Garibaldi, bit<4> Weinert, bit<12> Redfield, bit<12> Grannis) {
+        Rockfield(Noyes, Garibaldi, Weinert, Redfield);
+        Philip.Ambler.Connell[11:0] = Grannis;
+        Philip.Lauada.Glendevey = Levasy.Bratt.Glendevey;
+        Philip.Lauada.Littleton = Levasy.Bratt.Littleton;
+    }
     @name(".Wakenda") action Wakenda(bit<2> Noyes, bit<16> Garibaldi, bit<4> Weinert, bit<12> Redfield) {
+        Rockfield(Noyes, Garibaldi, Weinert, Redfield);
+        Philip.Ambler.Connell[11:0] = Levasy.Bratt.Buncombe;
+        Philip.Lauada.Glendevey = Levasy.Bratt.Glendevey;
+        Philip.Lauada.Littleton = Levasy.Bratt.Littleton;
+    }
+    @name(".Dilia") action Dilia(bit<2> Noyes, bit<16> Garibaldi, bit<4> Weinert, bit<12> Redfield) {
         Rockfield(Noyes, Garibaldi, Weinert, Redfield);
         Philip.Ambler.Connell[11:0] = Levasy.Bratt.Buncombe;
         Philip.Lauada.Glendevey = Levasy.Bratt.Glendevey;
@@ -3941,7 +3954,9 @@ control Advance(inout Monrovia Philip, inout Orting Levasy, in egress_intrinsic_
     @disable_atomic_modify(1) @name(".Crystola") table Crystola {
         actions = {
             Baskin();
+            Faith();
             Wakenda();
+            Dilia();
             Mynard();
         }
         key = {
@@ -5907,7 +5922,7 @@ control Lovilia(inout Monrovia Philip, inout Orting Levasy, in egress_intrinsic_
         }
         key = {
             Levasy.Thawville.Sardinia: exact @name("Thawville.Sardinia") ;
-            Levasy.Thawville.Garcia  : exact @name("Thawville.Garcia") ;
+            Levasy.Thawville.Garcia  : exact @hash_mask(1) @name("Thawville.Garcia") ;
             Levasy.Thawville.Raiford : exact @name("Thawville.Raiford") ;
         }
         const default_action = Sigsbee();
@@ -5983,11 +5998,13 @@ control Lovilia(inout Monrovia Philip, inout Orting Levasy, in egress_intrinsic_
         key = {
             Philip.Westoak.isValid()  : ternary @name("Westoak") ;
             Philip.Skillman.isValid() : ternary @name("Skillman") ;
+            Philip.Skillman.Kendrick  : ternary @name("Skillman.Kendrick") ;
             Philip.Olcott.isValid()   : ternary @name("Olcott") ;
             Philip.Brady.isValid()    : ternary @name("Brady") ;
             Philip.Wabbaseka.isValid(): ternary @name("Wabbaseka") ;
             Philip.Tofte.isValid()    : ternary @name("Tofte") ;
             Philip.Nephi.isValid()    : ternary @name("Nephi") ;
+            Philip.Nephi.Kendrick     : ternary @name("Nephi.Kendrick") ;
             Philip.Lauada.isValid()   : ternary @name("Lauada") ;
         }
         const default_action = Exeter();
@@ -6006,11 +6023,13 @@ control Lovilia(inout Monrovia Philip, inout Orting Levasy, in egress_intrinsic_
         key = {
             Philip.Westoak.isValid()  : ternary @name("Westoak") ;
             Philip.Skillman.isValid() : ternary @name("Skillman") ;
+            Philip.Skillman.Kendrick  : ternary @name("Skillman.Kendrick") ;
             Philip.Olcott.isValid()   : ternary @name("Olcott") ;
             Philip.Brady.isValid()    : ternary @name("Brady") ;
             Philip.Wabbaseka.isValid(): ternary @name("Wabbaseka") ;
             Philip.Tofte.isValid()    : ternary @name("Tofte") ;
             Philip.Nephi.isValid()    : ternary @name("Nephi") ;
+            Philip.Nephi.Kendrick     : ternary @name("Nephi.Kendrick") ;
         }
         size = 512;
         requires_versioning = false;

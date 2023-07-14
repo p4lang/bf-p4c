@@ -1,5 +1,5 @@
-// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_MSEE_TOFINO2=1 -Ibf_arista_switch_msee_tofino2/includes -I/usr/share/p4c-bleeding/p4include -DTOFINO2=1 --skip-precleaner -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino2-t2na --o bf_arista_switch_msee_tofino2 --bf-rt-schema bf_arista_switch_msee_tofino2/context/bf-rt.json
-// p4c 9.11.2 (SHA: 4328321)
+// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_MSEE_TOFINO2=1 -Ibf_arista_switch_msee_tofino2/includes -I/usr/share/p4c-bleeding/p4include -DTOFINO2=1 -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino2-t2na --o bf_arista_switch_msee_tofino2 --bf-rt-schema bf_arista_switch_msee_tofino2/context/bf-rt.json
+// p4c 9.13.0 (SHA: 11c23cb)
 
 #include <core.p4>
 #include <tofino2_specs.p4>
@@ -71,6 +71,7 @@
 @pa_no_init("ingress" , "Lefor.Gamaliel.Ackley")
 @pa_no_init("egress" , "Lefor.Orting.Ackley")
 @pa_no_init("ingress" , "Lefor.HighRock.Dolores")
+@pa_container_size("pipe_a" , "ingress" , "Lefor.Paisley.McGovern" , 8)
 @pa_container_size("pipe_b" , "ingress" , "Westoak.Frederika.Algodones" , 8)
 @pa_container_size("pipe_b" , "ingress" , "Westoak.Frederika.Lacona" , 16)
 @pa_atomic("pipe_b" , "ingress" , "Westoak.Frederika.Topanga")
@@ -1651,9 +1652,9 @@ control Nixon(inout Wanamassa Westoak, inout Talco Lefor, in ingress_intrinsic_m
         Lefor.WebbCity.RossFork = Pimento;
         Lefor.Jayton.Juneau = Juneau;
     }
-    @name(".Campo") action Campo(bit<13> Westboro, bit<32> Pimento, bit<10> SourLake, bit<4> Juneau) {
+    @name(".Campo") action Campo(bit<13> Westboro, bit<32> Pimento, bit<10> SourLake, bit<4> Juneau, bit<16> Gaston) {
         Lefor.HighRock.Aguilita = Westboro;
-        Lefor.HighRock.Eastwood = Westboro;
+        Lefor.HighRock.Eastwood = (bit<13>)Gaston;
         Westview(Pimento, SourLake, Juneau);
     }
     @name(".SanPablo") action SanPablo() {
@@ -5853,6 +5854,7 @@ control Almont(inout Wanamassa Westoak, inout Talco Lefor, in ingress_intrinsic_
     @entries_with_ranges(8) @hidden @disable_atomic_modify(1) @name(".NewRoads") table NewRoads {
         key = {
             Westoak.Rochert.Sutherlin: ternary @name("Rochert.Sutherlin") ;
+            Westoak.Rochert.Buckfield: ternary @name("Rochert.Buckfield") ;
             Westoak.Rochert.Guadalupe: ternary @name("Rochert.Guadalupe") ;
             Westoak.Sespe.isValid()  : ternary @name("Sespe") ;
             Lefor.HighRock.Antlers   : range @name("HighRock.Antlers") ;
@@ -5866,29 +5868,35 @@ control Almont(inout Wanamassa Westoak, inout Talco Lefor, in ingress_intrinsic_
         requires_versioning = false;
         const default_action = NoAction();
         const entries = {
-                        (6w0x4 &&& 6w0x4, default, default, default) : NoAction();
+                        (6w0x4 &&& 6w0x4, default, default, default, default) : NoAction();
 
-                        (6w0x2 &&& 6w0x2, default, default, default) : NoAction();
+                        (6w0x2 &&& 6w0x2, default, default, default, default) : NoAction();
 
-                        (6w0x1 &&& 6w0x1, default, default, default) : NoAction();
+                        (6w0x1 &&& 6w0x1, default, default, default, default) : NoAction();
 
-                        (default, default, true, 16w0 .. 16w51) : NoAction();
+                        (default, default, default, true, 16w0 .. 16w51) : NoAction();
 
-                        (default, default, false, 16w0 .. 16w31) : NoAction();
+                        (default, default, default, false, 16w0 .. 16w31) : NoAction();
 
-                        (6w0x20 &&& 6w0x20, default, default, default) : Bairoil();
+                        (default, 2w0x0, default, default, default) : NoAction();
 
-                        (6w0x10 &&& 6w0x10, default, default, default) : Bairoil();
+                        (default, 2w0x1, default, default, default) : NoAction();
 
-                        (default, 5w0, default, default) : Baroda();
+                        (default, 2w0x2, default, default, default) : Bairoil();
 
-                        (default, default, default, default) : Bairoil();
+                        (6w0x20 &&& 6w0x20, default, default, default, default) : Bairoil();
+
+                        (6w0x10 &&& 6w0x10, default, default, default, default) : Bairoil();
+
+                        (default, default, 5w0, default, default) : Baroda();
+
+                        (default, default, default, default, default) : Bairoil();
 
         }
 
     }
     apply {
-        if (Westoak.Rochert.isValid() && Westoak.Rochert.Fairmount == 3w1 && Westoak.Rochert.Buckfield == 2w3 && Westoak.Rochert.Moquah != 8w0 && Westoak.Rochert.Forkville == 8w24) {
+        if (Westoak.Rochert.isValid() && Westoak.Rochert.Fairmount == 3w1 && Westoak.Rochert.Moquah != 8w0 && Westoak.Rochert.Forkville == 8w24) {
             switch (NewRoads.apply().action_run) {
                 Bairoil: 
                 Baroda: {
@@ -15147,11 +15155,13 @@ control Simla(inout Wanamassa Westoak, inout Talco Lefor, in ingress_intrinsic_m
         key = {
             Westoak.Nephi.isValid()   : ternary @name("Nephi") ;
             Westoak.RichBar.isValid() : ternary @name("RichBar") ;
+            Westoak.RichBar.Coalwood  : ternary @name("RichBar.Coalwood") ;
             Westoak.Harding.isValid() : ternary @name("Harding") ;
             Westoak.Thurmond.isValid(): ternary @name("Thurmond") ;
             Westoak.Rienzi.isValid()  : ternary @name("Rienzi") ;
             Westoak.Callao.isValid()  : ternary @name("Callao") ;
             Westoak.Sespe.isValid()   : ternary @name("Sespe") ;
+            Westoak.Sespe.Coalwood    : ternary @name("Sespe.Coalwood") ;
             Westoak.Arapahoe.isValid(): ternary @name("Arapahoe") ;
         }
         const default_action = Robstown();
@@ -15170,11 +15180,13 @@ control Simla(inout Wanamassa Westoak, inout Talco Lefor, in ingress_intrinsic_m
         key = {
             Westoak.Nephi.isValid()   : ternary @name("Nephi") ;
             Westoak.RichBar.isValid() : ternary @name("RichBar") ;
+            Westoak.RichBar.Coalwood  : ternary @name("RichBar.Coalwood") ;
             Westoak.Harding.isValid() : ternary @name("Harding") ;
             Westoak.Thurmond.isValid(): ternary @name("Thurmond") ;
             Westoak.Rienzi.isValid()  : ternary @name("Rienzi") ;
             Westoak.Callao.isValid()  : ternary @name("Callao") ;
             Westoak.Sespe.isValid()   : ternary @name("Sespe") ;
+            Westoak.Sespe.Coalwood    : ternary @name("Sespe.Coalwood") ;
         }
         size = 512;
         requires_versioning = false;
@@ -15391,14 +15403,9 @@ control Simla(inout Wanamassa Westoak, inout Talco Lefor, in ingress_intrinsic_m
             Macedonia();
         }
         key = {
-            Lefor.Jayton.SourLake: exact @name("Jayton.SourLake") ;
+            Lefor.HighRock.Eastwood: exact @name("HighRock.Eastwood") ;
         }
         const default_action = Macedonia(8w0);
-        const entries = {
-                        10w0 : Macedonia(8w1);
-
-        }
-
         size = 8192;
     }
     @disable_atomic_modify(1) @name(".Gould") table Gould {
@@ -15406,11 +15413,12 @@ control Simla(inout Wanamassa Westoak, inout Talco Lefor, in ingress_intrinsic_m
             Angus();
         }
         key = {
-            Lefor.Paisley.McGovern : exact @name("Paisley.McGovern") ;
-            Lefor.Lookeba.Tallassee: ternary @name("Lookeba.Tallassee") ;
-            Lefor.HighRock.Welcome : ternary @name("HighRock.Welcome") ;
-            Lefor.HighRock.Powderly: ternary @name("HighRock.Powderly") ;
-            Lefor.HighRock.Commack : ternary @name("HighRock.Commack") ;
+            Lefor.Paisley.McGovern        : exact @name("Paisley.McGovern") ;
+            Lefor.Lookeba.Tallassee       : ternary @name("Lookeba.Tallassee") ;
+            Lefor.HighRock.Welcome        : ternary @name("HighRock.Welcome") ;
+            Lefor.HighRock.Powderly       : ternary @name("HighRock.Powderly") ;
+            Lefor.HighRock.Commack        : ternary @name("HighRock.Commack") ;
+            Lefor.HighRock.Placedo & 3w0x3: exact @name("HighRock.Placedo") ;
         }
         const default_action = Angus(16w0);
         size = 1024;
@@ -15425,11 +15433,6 @@ control Simla(inout Wanamassa Westoak, inout Talco Lefor, in ingress_intrinsic_m
         }
         size = 1024;
         const default_action = NoAction();
-        const entries = {
-                        10w1 : Dalkeith(true, 6w0, false, 3w0, 7w0);
-
-        }
-
     }
     apply {
         if (Westoak.Farson.isValid()) {

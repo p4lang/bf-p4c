@@ -1,5 +1,5 @@
-// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_BAREMETAL=1 -Ibf_arista_switch_baremetal/includes -I/usr/share/p4c-bleeding/p4include  --skip-precleaner -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino-tna --o bf_arista_switch_baremetal --bf-rt-schema bf_arista_switch_baremetal/context/bf-rt.json
-// p4c 9.11.2 (SHA: 4328321)
+// /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_BAREMETAL=1 -Ibf_arista_switch_baremetal/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino-tna --o bf_arista_switch_baremetal --bf-rt-schema bf_arista_switch_baremetal/context/bf-rt.json
+// p4c 9.13.0 (SHA: 11c23cb)
 
 #include <core.p4>
 #include <tofino1_specs.p4>
@@ -663,6 +663,7 @@ struct Nenana {
     bit<12> McCammon;
     bit<16> Lapoint;
     bit<16> Wamego;
+    bit<1>  Caliente;
     bit<16> Cisco;
     bit<8>  Higginson;
     bit<8>  Brainard;
@@ -2959,7 +2960,7 @@ control Wakefield(inout Frederika Westoak, inout WebbCity Lefor, in ingress_intr
         Lefor.Crump.Wisdom = Beeler;
         Lefor.Alstown.RossFork = RossFork;
     }
-    @name(".Slinger") action Slinger(bit<12> Fairhaven, bit<32> Beeler, bit<10> Aldan, bit<4> RossFork) {
+    @name(".Slinger") action Slinger(bit<12> Fairhaven, bit<32> Beeler, bit<10> Aldan, bit<4> RossFork, bit<16> Ellinger) {
         Lefor.Ekwok.Clarion = Fairhaven;
         Lefor.Ekwok.Morstein = Fairhaven;
         Cropper(Beeler, Aldan, RossFork);
@@ -6259,11 +6260,13 @@ control Fentress(inout Frederika Westoak, inout WebbCity Lefor, in egress_intrin
         key = {
             Westoak.Jerico.isValid()  : ternary @name("Jerico") ;
             Westoak.Nephi.isValid()   : ternary @name("Nephi") ;
+            Westoak.Nephi.Kendrick    : ternary @name("Nephi.Kendrick") ;
             Westoak.Tofte.isValid()   : ternary @name("Tofte") ;
             Westoak.RichBar.isValid() : ternary @name("RichBar") ;
             Westoak.Olmitz.isValid()  : ternary @name("Olmitz") ;
             Westoak.Monrovia.isValid(): ternary @name("Monrovia") ;
             Westoak.Wagener.isValid() : ternary @name("Wagener") ;
+            Westoak.Wagener.Kendrick  : ternary @name("Wagener.Kendrick") ;
             Westoak.Arapahoe.isValid(): ternary @name("Arapahoe") ;
         }
         const default_action = Anita();
@@ -6282,11 +6285,13 @@ control Fentress(inout Frederika Westoak, inout WebbCity Lefor, in egress_intrin
         key = {
             Westoak.Jerico.isValid()  : ternary @name("Jerico") ;
             Westoak.Nephi.isValid()   : ternary @name("Nephi") ;
+            Westoak.Nephi.Kendrick    : ternary @name("Nephi.Kendrick") ;
             Westoak.Tofte.isValid()   : ternary @name("Tofte") ;
             Westoak.RichBar.isValid() : ternary @name("RichBar") ;
             Westoak.Olmitz.isValid()  : ternary @name("Olmitz") ;
             Westoak.Monrovia.isValid(): ternary @name("Monrovia") ;
             Westoak.Wagener.isValid() : ternary @name("Wagener") ;
+            Westoak.Wagener.Kendrick  : ternary @name("Wagener.Kendrick") ;
         }
         size = 512;
         requires_versioning = false;
