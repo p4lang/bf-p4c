@@ -300,9 +300,11 @@ std::set<const IR::MAU::Table*> TableSummary::getTablePtr(const cstring t_name){
 }
 
 bool TableSummary::find_problematic_table() {
-    if ((table_replay_result == PlacementResult::FAIL_ON_ADB ||
-        table_replay_result == PlacementResult::FAIL_ON_IXBAR ||
-        table_replay_result == PlacementResult::FAIL_ON_MEM) && order.size() == 0) {
+    if ((table_replay_result == PlacementResult::FAIL_ON_ADB
+        || table_replay_result == PlacementResult::FAIL_ON_IXBAR
+        || table_replay_result == PlacementResult::FAIL_ON_MEM
+        || table_replay_result == PlacementResult::FAIL)
+        && order.size() == 0) {
         // If table replay failed when placing the first table, then this table is problematic.
         table_replay_problematic_table = trivial_table_info.begin()->second;
         return true;

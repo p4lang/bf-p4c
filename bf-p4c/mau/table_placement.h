@@ -41,6 +41,7 @@ class TablePlacement : public PassManager {
     SplitAttachedInfo &att_info;
     TableSummary &summary;
     MauBacktracker &mau_backtracker;
+    bool success = false;
 
     struct Placed;
     struct RewriteForSplitAttached;

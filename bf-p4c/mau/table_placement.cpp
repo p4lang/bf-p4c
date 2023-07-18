@@ -4548,14 +4548,14 @@ bool DecidePlacement::preorder(const IR::BFN::Pipe *pipe) {
         self.summary.getActualState() == State::ALT_FINALIZE_TABLE_SAME_ORDER_TABLE_FIXED);
 
     const Placed *placed = nullptr;
-    bool success = true;
+    self.success = true;
     if (alt_finalize_table_same_order) {
-        std::tie(success, placed) = alt_table_placement(pipe);
+        std::tie(self.success, placed) = alt_table_placement(pipe);
     } else {
         placed = default_table_placement(pipe);
     }
 
-    if (success && placed) {
+    if (self.success && placed) {
         LOG_FEATURE("stage_advance", 2,
                     "Stage " << placed->stage << IndentCtl::indent << Log::endl <<
                     StageSummary(placed->stage, placed) << IndentCtl::unindent); }
@@ -5163,8 +5163,19 @@ void TablePlacement::find_dependency_stages(const IR::MAU::Table *tbl,
         if (pl->second->table == pred) {
             while (pl->second->need_more_match) {
                 ++pl;
+                // Do not run the BUG_CHECK when placement has failed. For failed placement table
+                // can be incompletely placed. This will cause compilation to stop. However for non
+                // failed placement this is an invalid condition and should be checked.
+                // NOTE: Currently, this function (and the BUG_CHECKs) are only run when logging is
+                // enabled.
+                if ((pl == table_placed.end() || pl->second->table != pred) && (!success)) {
+                    --pl;
+                    break;
+                }
                 BUG_CHECK(pl != table_placed.end() && pl->second->table == pred,
-                          "incomplete placement for table %s", pred->name); } }
+                          "incomplete placement for table %s", pred->name);
+            }
+        }
         int stage = pl->second->stage;
         if (need_different_stage.count(pred)) ++stage;
         earliest_stage[stage].emplace(pl->second, dep_kind);
