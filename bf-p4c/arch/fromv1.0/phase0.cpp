@@ -883,7 +883,13 @@ UpdatePhase0NodeInParser::preorder(IR::BFN::TnaParser *parser) {
                     fieldType));
     }
     auto phase0_type = new IR::Type_Header(hdrName, *parserPackedFields);
-    declarations->push_back(phase0_type);
+    if (auto *old = declarations->getDeclaration(hdrName)) {
+        if (!phase0_type->equiv(*old->getNode()))
+            error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "Inconsistent use of %1% between "
+                  "different parsers in the program", phase0_type);
+    } else {
+        declarations->push_back(phase0_type);
+    }
 
     LOG4("Adding phase0 to Ingress Parser " << parser->phase0);
     return parser;
