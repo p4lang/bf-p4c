@@ -45,6 +45,8 @@ void pretty_print_live_range_info(std::ostream& out, const LiveRangeInfo& info,
 
 }  // namespace
 
+int LiveRangeInfo::num_table_stages = 0;
+
 // result table
 //    D  R  W  RW L
 // D  D  R  W  RW L
@@ -381,7 +383,8 @@ void FieldSliceLiveRangeDB::DBSetter::end_apply() {
         return;
     }
     using OpInfo = LiveRangeInfo::OpInfo;
-    // collect all field slice. Note that because defuse analysis is still based on
+    // collect all field slice and identify the max stage used by a table.
+    // Note that because defuse analysis is still based on
     // whole fields instead of slices, it is okay to use the whole field.
     // TODO(yumin):
     //   (1) use MakeSlices info from make_clsuters.
@@ -389,9 +392,35 @@ void FieldSliceLiveRangeDB::DBSetter::end_apply() {
     ordered_set<PHV::FieldSlice> fs_set;
     ordered_map<FieldSlice, LiveRangeInfo> fs_info_map;
     ordered_map<FieldSlice, LiveRangeInfo> table_access_logs;
+
+    int max_stage = -1;
+    auto update_max_stage = [&max_stage](const Location& loc) {
+        if (loc.u == Location::TABLE) {
+            int loc_max = *std::max_element(loc.stages.begin(), loc.stages.end());
+            max_stage = std::max(max_stage, loc_max);
+        }
+    };
+
     for (const auto& kv : phv.get_all_fields()) {
         const auto fs = PHV::FieldSlice(&kv.second);
         fs_set.insert(fs);
+
+        const auto* field = fs.field();
+        for (const FieldDefUse::locpair& use : defuse->getAllUses(field->id)) {
+            auto loc = to_location(field, use, true);
+            update_max_stage(*to_location(field, use, true));
+            const auto& defs_of_use = defuse->getDefs(use);
+            for (const auto& def : defs_of_use) {
+                auto loc = to_location(field, def, false);
+                if (loc) update_max_stage(*loc);
+            }
+        }
+    }
+    LiveRangeInfo::set_num_table_stages(max_stage + 1);
+
+    // Set up data structures _after_ the number of table stages has been identified
+    // to ensure that the LiveRangeInfo objects are correctly sized
+    for (const auto& fs : fs_set) {
         fs_info_map.emplace(fs, LiveRangeInfo());
         table_access_logs.emplace(fs, LiveRangeInfo());
     }

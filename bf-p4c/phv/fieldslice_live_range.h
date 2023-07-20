@@ -1,6 +1,8 @@
 #ifndef EXTENSIONS_BF_P4C_PHV_FIELDSLICE_LIVE_RANGE_H_
 #define EXTENSIONS_BF_P4C_PHV_FIELDSLICE_LIVE_RANGE_H_
 
+#include <algorithm>
+
 #include "bf-p4c/parde/clot/clot_info.h"
 #include "mau_backtracker.h"
 #include "lib/safe_vector.h"
@@ -39,21 +41,39 @@ class LiveRangeInfo {
     };
 
  private:
+    /// Number of table stages
+    /// Initialized to zero, but calls to set_num_table_stages enforce a minimum of
+    /// `Device::numStages()`. (Can't enforce this minimum at initialization time as the device is
+    /// not yet know.)
+    static int num_table_stages;
+
     // -1 = parser
-    // 0..Device::numStages() - 1 = physical MAU stages
-    // Device::numStages() = deparser
+    // 0..num_table_stages - 1 = physical MAU stages
+    // num_table_stages = deparser
     // we merge all together because we need to uniformly iterate
     // parser + mau + deparser.
     safe_vector<OpInfo> lives_i;
 
  public:
-    LiveRangeInfo() : lives_i(Device::numStages() + 2, OpInfo::DEAD) {}
+    LiveRangeInfo() {
+        // Static variable can't be initialized to Device::numStages() as the device isn't known at
+        // initialization time. Instead, check here that it's been set to a positive value.
+        if (num_table_stages <= 0) num_table_stages = Device::numStages();
+        lives_i.resize(num_table_stages + 2, OpInfo::DEAD);
+    }
     OpInfo& parser() { return lives_i[0]; }
     const OpInfo& parser() const { return lives_i[0]; }
-    OpInfo& deparser() { return lives_i[Device::numStages() + 1]; }
-    const OpInfo& deparser() const { return lives_i[Device::numStages() + 1]; }
+    OpInfo& deparser() { return lives_i[num_table_stages + 1]; }
+    const OpInfo& deparser() const { return lives_i[num_table_stages + 1]; }
     OpInfo& stage(int i) { return lives_i[i + 1]; }
     const OpInfo& stage(int i) const { return lives_i[i + 1]; }
+
+    /// Record the number of table stages in use
+    ///
+    /// Minimum size is `Device::numStages()`
+    static void set_num_table_stages(int stage) {
+        num_table_stages = std::max(stage, Device::numStages());
+    }
 
     /// @returns live info in a vector: [Parser 0 1 ... max_stage Deparser]
     const safe_vector<OpInfo>& vec() const { return lives_i; }
