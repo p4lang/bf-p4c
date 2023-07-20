@@ -1121,14 +1121,22 @@ bool ActionAnalysis::init_simple_alignment(const ActionParam &read,
         BUG_CHECK(read.expr->is<IR::Constant>(), "Constant parameter not configured properly "
                                                   "in ActionAnalysis pass");
 
-    le_bitrange read_bits = write_bits;
-    // FIXME: This looks wrong, read and write bits are assigned the same here.
-    // It will cover up any issues with misaligned operands.
-    // One possible explanation is to allow deposit field instructions to work since they can be
-    // misaligned. But that should be fixed via checks (which exist?) to verify deposit fields
-    // Below fix sets the read bits correctly.
-    // le_bitrange read_bits = read.range();
     if (read.type == ActionParam::ACTIONDATA) {
+        le_bitrange read_bits;
+        if (cont_action.is_deposit_field_variant || cont_action.convert_instr_to_deposit_field ||
+            cont_action.convert_instr_to_byte_rotate_merge || cont_action.name == "set") {
+            // if the instruction is or could be a deposit field or byte rotate, then we don't
+            // need alignment for one of the operands.  We hack this by setting the read_bits
+            // equal to the write bits.  This only works for one operand, and only for bytes on
+            // a byte-rotate-merge, so there are certainly some cases where this is wrong
+            read_bits = write_bits;
+        } else if (read.speciality == ActionParam::NO_SPECIAL) {
+            // if this is action data, we can 'align' it by adding padding, so as above we hack
+            // the alignment to be the same as the destination
+            read_bits = write_bits;
+        } else {
+            read_bits = read.range();
+        }
         cont_action.adi.alignment.add_alignment(write_bits, read_bits);
         cont_action.adi.initialized = true;
         cont_action.adi.specialities.setbit(read.speciality);

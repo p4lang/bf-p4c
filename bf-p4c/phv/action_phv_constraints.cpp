@@ -227,8 +227,8 @@ void ActionPhvConstraints::ConstraintTracker::add_action(
                     std::pair<int, int> read_range_pair = std::make_pair(lo, hi);
                     statefulWrites[write_field][write_range][act].insert(read_range_pair);
                     LOG5("\t  ...adding stateful read range [" << lo << ", " << hi << "] and "
-                         "write range [" << write_range.lo << ", " <<
-                         write_range.hi << "] for action " << act << " in table " << tbl->name);
+                         "write range [" << write_range.lo << ", " << write_range.hi << "] "
+                         "for action " << act->name << " in table " << tbl->name);
                 }
             }
 
