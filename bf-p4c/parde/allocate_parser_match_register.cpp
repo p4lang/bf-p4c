@@ -144,6 +144,222 @@ bool equiv(const std::vector<std::pair<MatchRegister, nw_bitrange>>& a,
     return true;
 }
 
+/// @brief Delay Defs used by select statements
+///
+/// P4 select statements require the data being matched on to be loaded into the parser match
+/// registers. There are only a small number of match (plus scratch) registers, and so it's
+/// possible that the allocator runs out of registers.
+///
+/// The select match data must be extracted into match registers before it is shifted out of
+/// the parser's processing window. Allocation can sometimes be aided by delaying when data is
+/// shifted out, allowing the match register(s) for that data to be allocated in a later state.
+///
+/// Consider this P4 parser fragment:
+///
+///     state s1 {
+///         pkt.extract(h1);
+///         transition select (h1.field_32b) {
+///             val1: s2;
+///             // ...
+///         }
+///     }
+///     state s2 {
+///         pkt.extract(h2);
+///         transition select (h1.field_8b) {
+///             // ...
+///         }
+///     }
+///
+/// In this fragment, header `h1` is extracted and fields `h1.field_32b` and `h1.field_8b` are used
+/// in select statements. Normally, the compiler will choose to extract `h1` _and shift all of the
+/// data out` in state `s1`, but this would require it to allocate 40b of match registers to the two
+/// select fields. Tofino 1 only has 32b total of match registers and so allocation is impossible.
+///
+/// Only `h1.field_32b` is used in `s1`; `h1.field_8b` is not used until `s2`. If the compiler
+/// delays the shift in `s1` so that `h1.field_8b` remains in the buffer, then the compiler can
+/// delay the match allocation for this field until `s2`, allowing allocation to succeed.
+///
+/// The match register allocation pass identifies def points for each value used in a select
+/// statement. Def points are chosen to be the last state in which a value still exists in the
+/// parser buffer prior to being shifted out.
+///
+/// This pass delays one or more defs identified during allocation. It does so by delaying the
+/// shifts that cover the def data, allowing the def to be delayed until a later state.
+///
+/// Currently defs are delayed by only a single transition: defs are not delayed across multiple
+/// transitions. (This is an optimization to consider in the future.)
+struct DelayDefs : public ParserModifier {
+    explicit DelayDefs(
+        const CollectParserInfo &parser_info,
+        const std::map<gress_t, std::map<const Def *, std::set<const IR::BFN::ParserState *>>>
+            &delay_defs)
+        : parser_info(parser_info), delay_defs(delay_defs) {}
+
+    std::map<std::pair<const IR::BFN::ParserState*, const IR::BFN::ParserState*>, int>
+        delay_amount;
+    std::map<const IR::BFN::ParserState*, int> extra_shift;
+
+    profile_t init_apply(const IR::Node* root) override {
+        delay_amount.clear();
+        extra_shift.clear();
+
+        // Identify the minimum bit index to keep for each transition
+        std::map<std::pair<const IR::BFN::ParserState*, const IR::BFN::ParserState*>, int> min_bits;
+        for (auto& [gress, delay_def_info] : delay_defs) {
+            for (auto& [def, next_states] : delay_def_info) {
+                auto* rval = def->rval->to<IR::BFN::InputBufferRVal>();
+                BUG_CHECK(rval, "Expecting an InputBufferRVal");
+                for (auto* next_state : next_states) {
+                    auto transition = std::make_pair(def->state, next_state);
+                    if (min_bits.count(transition)) {
+                        min_bits[transition] = std::min(rval->range.lo, min_bits[transition]);
+                    } else {
+                        min_bits.emplace(transition, rval->range.lo);
+                    }
+                    LOG5("Min bit for " << def->state->name << " -> " << next_state->name << ": "
+                                        << min_bits[transition]);
+                }
+            }
+        }
+
+        // For each bit position to keep, calculate how much to delay (subtract from) the transition
+        // out of the state, and how much additional shift to add to the target state
+        for (auto [transition, amt] : min_bits) {
+            auto& [state, next_state] = transition;
+
+            // Identify how much is being shifted
+            bool seen = false;
+            unsigned shift = 0;
+            for (auto* trans : state->transitions) {
+                if (!trans->next || trans->next != next_state) continue;
+
+                BUG_CHECK(!seen || shift == trans->shift,
+                          "Multiple transitions seen from %1% to %2% with different shift amounts: "
+                          "%1% %2%",
+                          state->name, trans->next->name, shift, trans->shift);
+                shift = trans->shift;
+                seen = true;
+            }
+
+            // Calculate the amount to delay the shift in the transition out of the state and how
+            // much additional shift to add to the following state
+            delay_amount[transition] = std::max(0, static_cast<int>(shift) - amt / 8);
+            for (auto *trans : state->transitions) {
+                if (!trans->next || trans->next != next_state) continue;
+                extra_shift[trans->next] =
+                    std::max(delay_amount[transition], extra_shift[trans->next]);
+            }
+        }
+
+        if (LOGGING(5)) {
+            LOG5("Shift delay:");
+            for (auto [transition, amt] : delay_amount)
+                LOG5("  " << transition.first->name << " -> " << transition.second->name << ": "
+                          << amt);
+            LOG5("Additional shift:");
+            for (auto [state, amt] : extra_shift) LOG5("  " << state->name << ": " << amt);
+        }
+
+        return ParserModifier::init_apply(root);
+    }
+
+    bool preorder(IR::BFN::ParserState* state) override {
+        const auto* orig = getOriginal<IR::BFN::ParserState>();
+
+        // Add any additional shift amount to the extracts/select offsets
+        if (extra_shift.count(orig)) {
+            LOG3("Adjusting extracts/selects for " << state->name << " by " << extra_shift.at(orig)
+                                                   << " bytes");
+            LOG5("Original: " << state);
+
+            // Adjust extract statements by the extra shift amount
+            IR::Vector<IR::BFN::ParserPrimitive> new_statements;
+            for (auto stmt : state->statements) {
+                if (auto* extract = stmt->to<IR::BFN::Extract>()) {
+                    if (auto* rval = extract->source->to<IR::BFN::InputBufferRVal>()) {
+                        auto* new_rval = rval->clone();
+                        new_rval->range  = new_rval->range.shiftedByBytes(extra_shift.at(orig));
+                        auto* new_extract = extract->clone();
+                        new_extract->source = new_rval;
+                        new_statements.push_back(new_extract);
+                        continue;
+                    }
+                }
+                new_statements.push_back(stmt);
+            }
+            state->statements = new_statements;
+
+            // Adjust select statements by the extra shift amount
+            IR::Vector<IR::BFN::Select> new_selects;
+            for (auto select : state->selects) {
+                if (auto* saved_rval = select->source->to<IR::BFN::SavedRVal>()) {
+                    if (auto* buf_rval = saved_rval->source->to<IR::BFN::InputBufferRVal>()) {
+                        auto* new_buf_rval = buf_rval->clone();
+                        new_buf_rval->range =
+                            new_buf_rval->range.shiftedByBytes(extra_shift.at(orig));
+                        auto *new_saved_rval = saved_rval->clone();
+                        new_saved_rval->source = new_buf_rval;
+                        auto* new_select = select->clone();
+                        new_select->source = new_saved_rval;
+                        new_selects.push_back(new_select);
+                        continue;
+                    }
+                }
+                new_selects.push_back(select);
+            }
+            state->selects = new_selects;
+
+            LOG5("Adjusted: " << state);
+        }
+
+        return true;
+    }
+
+    bool preorder(IR::BFN::Transition* trans) override {
+        const auto* orig = getOriginal<IR::BFN::Transition>();
+        const auto* state = findOrigCtxt<IR::BFN::ParserState>();
+
+        // Adjust shifts on transitions, taking into account how much to delay the transition _from_
+        // the state, and how much additional shift to add from delayed transitions _to_ the state.
+        int adj = 0;
+        auto transition = std::pair(state, orig->next);
+        if (delay_amount.count(transition)) adj -= delay_amount.at(transition);
+        if (extra_shift.count(state)) adj += extra_shift.at(state);
+
+        if (adj) {
+            auto orig_shift = trans->shift;
+            trans->shift = static_cast<unsigned>(static_cast<int>(trans->shift) + adj);
+            LOG3("Adjust shift on transition from "
+                 << state->name << " to " << (trans->next ? trans->next->name : "DONE") << " by "
+                 << adj << ": orig=" << orig_shift << " new=" << trans->shift);
+        }
+
+        return true;
+    }
+
+    /// Check whether a def can be delayed
+    ///
+    /// Current check(s):
+    ///   - next state is only reachable from the current state
+    ///
+    /// Open questions:
+    ///   - Do we need to restrict delays to cases where the new shift value never exceed the
+    ///     maximum shift (32B)?
+    ///   - If we allow cases where a new shift exceeds the max, do we need to rerun the split state
+    ///     pass?
+    static bool can_delay_def(const IR::BFN::ParserGraph &graph, const IR::BFN::ParserState *state,
+                              const IR::BFN::Transition *transition) {
+        for (auto t : graph.transitions_to(transition->next)) {
+            if (graph.get_src(t) != state) return false;
+        }
+        return true;
+    }
+
+    const CollectParserInfo& parser_info;
+    const std::map<gress_t, std::map<const Def *, std::set<const IR::BFN::ParserState *>>>
+        &delay_defs;
+};
+
 typedef std::map<const IR::BFN::Transition*, const IR::BFN::ParserState*> DefSet;
 
 struct AllocationResult {
@@ -175,6 +391,18 @@ class MatcherAllocator : public Visitor {
 
  public:
     AllocationResult result;
+
+    /// Defs to delay in an attempt to create a valid allocation.
+    /// An empty set at the end of the pass indicates not to retry (no further
+    /// potential defs to delay could be identified).
+    std::map<gress_t, std::map<const Def*, std::set<const IR::BFN::ParserState*>>> delay_defs;
+
+    /// Summary of delay defs from previous round. ParserState objects replaced by strings since
+    /// the pointers change from round to round.
+    std::map<std::pair<cstring, nw_bitrange>, std::set<cstring>> prev_delay_defs;
+
+    /// Final iteration: return an error if allocation fails, even if delay_defs are identified
+    bool final_iteration = false;
 
  private:
     /// Represents a group of select fields that can be coalesced into
@@ -215,7 +443,7 @@ class MatcherAllocator : public Visitor {
         }
 
         DefSet get_pred_def_set(const IR::BFN::ParserGraph& graph,
-                                const std::vector<const IR::BFN::ParserState*> def_states) {
+                                const std::vector<const IR::BFN::ParserState*> def_states) const {
             DefSet def_set;
 
             for (auto def_state : def_states) {
@@ -463,6 +691,24 @@ class MatcherAllocator : public Visitor {
     };
 
  private:
+    profile_t init_apply(const IR::Node* root) override {
+        // Record the delay defs before clearing
+        // This data structure should be cleared externally before
+        // running multiple allocations.
+        for (auto& [_, delay_def_info] : delay_defs)
+            for (auto& [def, next_states] : delay_def_info)
+                for (auto* ns : next_states)
+                    prev_delay_defs[std::make_pair(def->state->name, def->rval->range)].emplace(
+                        ns ? ns->name : "NULL");
+
+        result.transition_saves.clear();
+        result.transition_scratches.clear();
+        result.save_reg_slices.clear();
+        delay_defs.clear();
+
+        return Visitor::init_apply(root);
+    }
+
     const IR::Node *apply_visitor(const IR::Node *root, const char *) override {
         for (auto& kv : parser_use_def)
             allocate_all(kv.first, kv.second);
@@ -1268,7 +1514,8 @@ class MatcherAllocator : public Visitor {
     /// UseGroups to allow matching on them.
     bool allocate_group(const IR::BFN::Parser* parser, const UseGroup* group,
                         Allocation& allocation, bool do_bind_allocation,
-                        bool allow_scratch_regs) {
+                        bool allow_scratch_regs,
+                        bool is_top_down) {
         // Run the group allocation in struct "allocation_tmp" in case scratch registers
         // are required: scratch register allocation requires two allocations and the second
         // allocation must take into account the updates from the first.  Structure
@@ -1324,6 +1571,55 @@ class MatcherAllocator : public Visitor {
                 success = false;
         }
 
+        // If allocation fails, identify whether the defs could potentially be delayed.
+        //
+        // Only record this information during a top-down allocation. (Could do
+        // either top-down or bottom-up.)
+        if (!success && is_top_down) {
+            auto& graph = parser_info.graph(parser);
+            auto* use_state = group->get_use_state();
+            bool defs_safe = true;
+            std::map<const Def*, std::set<const IR::BFN::ParserState*>> defs_to_delay;
+            for (auto& def_set : group->def_transition_sets) {
+                for (auto& [transition, state] : def_set) {
+                    for (auto& alloc : allocation.group_to_alloc_regs) {
+                        auto alloc_state = alloc.first;
+                        auto& alloc_defs = allocation.group_to_def_set.at(alloc_state);
+
+                        if (interfere(graph, group, def_set, alloc_state, alloc_defs)) {
+                            auto* alloc_use = alloc_state->get_use_state();
+                            if (graph.is_ancestor(state, alloc_use) &&
+                                graph.is_ancestor(alloc_use, use_state)) {
+                                auto* def = group->get_def(state);
+                                for (auto t : def->state->transitions) {
+                                    if (t->next && (t->next == alloc_use ||
+                                                    graph.is_ancestor(t->next, alloc_use))) {
+                                        defs_safe &= DelayDefs::can_delay_def(graph, state, t);
+                                        if (defs_safe) {
+                                            auto def_pair =
+                                                std::make_pair(def->state->name, def->rval->range);
+                                            if (!prev_delay_defs.count(def_pair) ||
+                                                !prev_delay_defs.at(def_pair).count(
+                                                    t->next ? t->next->name : "NULL"))
+                                                defs_to_delay[def].emplace(t->next);
+                                        }
+                                    }
+                                }
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            if (defs_safe) {
+                delay_defs[parser->gress].insert(defs_to_delay.begin(), defs_to_delay.end());
+                if (LOGGING(3)) {
+                    LOG3("defs to possibly delay:");
+                    for (auto& [def, _] : defs_to_delay) LOG3(def->print());
+                }
+            }
+        }
+
         if (success) {
             if (do_bind_allocation)
                 bind_allocation(parser, allocation_tmp, group, scratch_groups);
@@ -1345,10 +1641,11 @@ class MatcherAllocator : public Visitor {
         auto saved_result = result;  // save result
 
         LOG3("try allocating top down:");
-        auto top_down_unalloc = try_allocate_all(parser, coalesced_groups);
+        auto top_down_unalloc = try_allocate_all(parser, coalesced_groups, true);
 
         if (!top_down_unalloc) {
             LOG3("top down allocation successful!");
+            delay_defs[parser->gress].clear();
             return;
         }
 
@@ -1356,20 +1653,23 @@ class MatcherAllocator : public Visitor {
 
         LOG3("try allocating bottom up:");
         std::reverse(coalesced_groups.begin(), coalesced_groups.end());
-        auto bottom_up_unalloc = try_allocate_all(parser, coalesced_groups);
+        auto bottom_up_unalloc = try_allocate_all(parser, coalesced_groups, false);
 
         if (!bottom_up_unalloc) {
             LOG3("bottom up allocation successful!");
+            delay_defs[parser->gress].clear();
             return;
         }
 
-        fail(top_down_unalloc);
+        if (!delay_defs[parser->gress].size() || final_iteration)
+            fail(top_down_unalloc);
     }
 
     std::vector<const UseGroup*> allocate_scratch_groups(const IR::BFN::Parser* parser,
                                             const UseGroup*group,
                                             const std::vector<MatchRegister> &scratch_regs,
-                                            Allocation& allocation) {
+                                            Allocation& allocation,
+                                            bool is_top_down = false) {
         const IR::BFN::ParserState *state = group->get_use_state();
         std::vector<const UseGroup*> scratch_groups;
         UseDef *use_def = new UseDef();
@@ -1407,7 +1707,7 @@ class MatcherAllocator : public Visitor {
 
         for (auto& scratch_group : scratch_groups) {
             LOG3("allocating match registers for scratch group " << scratch_group->print());
-            if (!allocate_group(parser, scratch_group, allocation, false, false))
+            if (!allocate_group(parser, scratch_group, allocation, false, false, is_top_down))
                 return {};
 
             // Match registers allocated to handle matching of scratch register.
@@ -1432,7 +1732,8 @@ class MatcherAllocator : public Visitor {
     }
 
     const UseGroup* try_allocate_all(const IR::BFN::Parser* parser,
-                                     const std::vector<const UseGroup*>& coalesced_groups) {
+                                     const std::vector<const UseGroup*>& coalesced_groups,
+                                     bool is_top_down) {
         Allocation allocation;
 
         for (auto group : coalesced_groups) {
@@ -1441,7 +1742,7 @@ class MatcherAllocator : public Visitor {
                     continue;
 
                 if (!allocate_group(parser, group, allocation, true,
-                                    !Device::pardeSpec().scratchRegisters().empty()))
+                                    !Device::pardeSpec().scratchRegisters().empty(), is_top_down))
                     return group;
 
                 if (Device::pardeSpec().scratchRegisters().empty()) {
@@ -1449,7 +1750,8 @@ class MatcherAllocator : public Visitor {
                         if (!allocation.group_to_alloc_regs.count(other)) {
                             if (group->have_subset_defs(other) ||
                                 other->have_subset_defs(group)) {
-                                if (!allocate_group(parser, other, allocation, true, false))
+                                if (!allocate_group(parser, other, allocation, true, false,
+                                                    is_top_down))
                                     return other;
                             }
                         }
@@ -1782,6 +2084,10 @@ struct RemoveEmptyStallState : public ParserModifier {
 };
 
 AllocateParserMatchRegisters::AllocateParserMatchRegisters(const PhvInfo& phv) {
+    // Maximum number of allocation attempts. Each attempt will adjust shift amounts
+    // in order to reduce the number of "live" select values at any given time.
+    static const int MAX_ALLOC_ATTEMPTS = 16;
+
     auto* parserInfo = new CollectParserInfo;
     auto* collectUseDef = new CollectParserUseDef(phv, *parserInfo);
     auto* resolveOobDefs = new ResolveOutOfBufferSaves(collectUseDef->parser_use_def);
@@ -1794,9 +2100,35 @@ AllocateParserMatchRegisters::AllocateParserMatchRegisters(const PhvInfo& phv) {
         collectUseDef,
         resolveOobDefs,
         LOGGING(4) ? new DumpParser("after_resolve_oob_saves") : nullptr,
-        parserInfo,
-        collectUseDef,
-        allocator,
+        [allocator, this]() {
+            // Resets that need to occur before the first iteration of the allocator.
+            //
+            // delay_defs are stored for comparison with the last round, so reset these here
+            // so that an empty set it copied
+            this->iteration = 0;
+            allocator->prev_delay_defs.clear();
+            allocator->delay_defs.clear();
+        },
+        new PassRepeated(
+            {
+                parserInfo,
+                collectUseDef,
+                [allocator, this]() {
+                    // Record whether this is the final iteration so that
+                    // the allocator can report an error even if it can identify
+                    // potential defs to delay
+                    allocator->final_iteration = ++this->iteration == MAX_ALLOC_ATTEMPTS;
+                },
+                allocator,
+                new PassIf(
+                    [allocator]() {
+                        return allocator->delay_defs[INGRESS].size() != 0 ||
+                               allocator->delay_defs[EGRESS].size() != 0;
+                    },
+                    {
+                        new DelayDefs(*parserInfo, allocator->delay_defs),
+                    }),
+            }, MAX_ALLOC_ATTEMPTS),
         new InsertSaveAndSelect(allocator->result),
         new AdjustMatchValue,
         new RemoveEmptyStartStateAndMatchExtract,
