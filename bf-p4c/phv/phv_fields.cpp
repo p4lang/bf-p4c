@@ -1590,7 +1590,48 @@ struct ComputeFieldAlignments : public Inspector {
         return false;
     }
 
+    bool preorder(const IR::MAU::AttachedOutput *ao) {
+        LOG5("Postorder AttachedOutput: " << *ao << ",  size: " <<
+             ao->to<IR::Expression>()->type->width_bits());
+        visitAgain();
+        attached_output = ao;
+        return true;
+    }
+
+    void postorder(const IR::MAU::Instruction* instr) {
+        Log::TempIndent indent;
+        LOG5("Preorder Instruction: " << *instr << indent);
+        PHV::Field *dst_f;
+        // For non-set instructions accessing an AttachedOutput
+        if ((attached_output != nullptr) && (instr->name != "set")) {
+            int op_id = 0;
+            for (auto op_f : instr->operands) {
+                if (!op_id) {
+                    // Keep destination field that may need alignment setting
+                    dst_f = phv.field(op_f);
+                } else {
+                    if (auto slc = op_f->to<IR::Slice>()) {
+                        if (slc->e0->to<IR::MAU::AttachedOutput>() == attached_output) {
+                            int rng = slc->e0->to<IR::Expression>()->type->width_bits();
+                            LOG5("Slice: " << slc->e0 << "[" << slc->getH() << ":" << slc->getL()
+                                 << "]");
+                            nw_bitrange dst_bits(rng - slc->getH() - 1, rng - slc->getL() - 1);
+                            LOG5("dest: " << dst_f->name << "  dst_bits: " << dst_bits);
+                            dst_f->updateAlignment(PHV::AlignmentReason::PARSER,
+                                                   FieldAlignment(dst_bits),
+                                                   instr->operands[0]->getSourceInfo());
+                            break;
+                        }
+                    }
+                }
+                op_id++;
+            }
+        }
+        attached_output = nullptr;
+    }
+
     PhvInfo& phv;
+    const IR::MAU::AttachedOutput *attached_output = nullptr;
 };
 
 
