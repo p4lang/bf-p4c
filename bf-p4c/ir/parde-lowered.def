@@ -113,6 +113,13 @@ class LoweredExtractClot : LoweredParserPrimitive {
     /// implemented by this low-level extract.
     ::BFN::DebugInfo debug;
 #end
+
+    dump_fields {
+        LoweredParserPrimitive::dump_fields(out);
+        out << " is_start=" << is_start;
+        out << " dest=" << dest;
+        out << " higher_parser_state=" << DBPrint::Brief << higher_parser_state;
+    }
 }
 
 class LoweredParserChecksum : LoweredParserPrimitive {

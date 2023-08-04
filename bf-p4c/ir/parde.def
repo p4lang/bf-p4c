@@ -178,6 +178,11 @@ class Extract : ParserPrimitive {
 
     /// This extract expects that data on the wire is marshaled from a `field`.
     optional std::optional<MarshaledFrom> marshaled_from;  // not visited
+
+    dump_fields {
+       ParserPrimitive::dump_fields(out);
+       out << " write_mode=" << write_mode;
+       out << " original_state=" << DBPrint::Brief << original_state; }
 }
 
 /// An Extract node that is destined to become a LoweredExtractPhv. This is a
