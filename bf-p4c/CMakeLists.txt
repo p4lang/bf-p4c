@@ -1059,6 +1059,7 @@ else()
 endif()
 add_dependencies(tofinobackend ir-generated frontend genLogging bfn_p4runtime)
 target_include_directories(tofinobackend PRIVATE "${BFN_P4C_SOURCE_DIR}/third_party/spdlog/include")
+target_include_directories(tofinobackend SYSTEM BEFORE PUBLIC ${Protobuf_INCLUDE_DIR})
 
 if(BUILD_STATIC_BFP4C_LIBS)
     add_library(bfp4c STATIC ${P4C_BAREFOOT_SRCS})
@@ -1434,14 +1435,13 @@ add_custom_command(
   OUTPUT ${BFN_P4RUNTIME_INFO_GEN_SRCS} ${BFN_P4RUNTIME_INFO_GEN_HDRS}
   COMMAND ${PROTOBUF_PROTOC_EXECUTABLE}
           --proto_path ${BFN_P4RUNTIME_DIR}
-          --proto_path ${P4C_SOURCE_DIR}/control-plane/p4runtime/proto
+          --proto_path ${P4RUNTIME_STD_DIR}
           --cpp_out ${P4C_BINARY_DIR}/control-plane
           --python_out ${P4C_BINARY_DIR}/control-plane
           ${BFN_P4RUNTIME_INFO_PROTO}
   DEPENDS ${BFN_P4RUNTIME_INFO_PROTO}
   COMMENT "Generating protobuf files for p4info."
   )
-
 if(BUILD_STATIC_BFP4C_LIBS)
     add_library(bfn_p4runtime STATIC ${BFN_P4RUNTIME_INFO_GEN_SRCS})
 else()
@@ -1449,6 +1449,7 @@ else()
 endif()
 set_source_files_properties(${BFN_P4RUNTIME_INFO_GEN_SRCS} PROPERTIES GENERATED TRUE)
 add_dependencies(bfn_p4runtime barefootdir controlplane)
+target_include_directories(bfn_p4runtime SYSTEM BEFORE PUBLIC ${Protobuf_INCLUDE_DIR})
 
 ################ Testing
 

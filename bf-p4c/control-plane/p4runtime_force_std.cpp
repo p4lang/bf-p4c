@@ -3,16 +3,21 @@
 
 #include "p4runtime_force_std.h"
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#pragma GCC diagnostic ignored "-Wpedantic"
+#include <p4/config/v1/p4info.pb.h>
+
 #include <functional>
 #include <unordered_map>
 #include <unordered_set>
 
 #include "barefoot/p4info.pb.h"
+#pragma GCC diagnostic pop
 #include "control-plane/p4RuntimeSerializer.h"
 #include "lib/exceptions.h"
 #include "lib/log.h"
 #include "lib/null.h"
-#include "p4/config/v1/p4info.pb.h"
 
 namespace p4configv1 = ::p4::config::v1;
 

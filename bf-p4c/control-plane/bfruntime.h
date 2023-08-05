@@ -19,7 +19,13 @@
 #include "lib/json.h"
 #include "lib/log.h"
 #include "lib/null.h"
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#pragma GCC diagnostic ignored "-Wpedantic"
 #include "p4/config/v1/p4info.pb.h"
+#include "p4/config/v1/p4types.pb.h"
+#pragma GCC diagnostic pop
 
 namespace p4configv1 = ::p4::config::v1;
 

@@ -37,8 +37,6 @@
 #include "lib/log.h"
 #include "midend/eliminateTypedefs.h"
 
-#include "p4/config/v1/p4info.pb.h"
-
 using P4::ReferenceMap;
 using P4::TypeMap;
 using P4::ControlPlaneAPI::p4rt_id_t;

@@ -1,10 +1,14 @@
 #ifndef EXTENSIONS_BF_P4C_CONTROL_PLANE_BFRUNTIME_EXT_H_
 #define EXTENSIONS_BF_P4C_CONTROL_PLANE_BFRUNTIME_EXT_H_
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#pragma GCC diagnostic ignored "-Wpedantic"
+#include "barefoot/p4info.pb.h"
+#pragma GCC diagnostic pop
+#include "bf-p4c/device.h"
 #include "bfruntime.h"
 #include "dynamic_hash/bfn_hash_algorithm.h"
-#include "barefoot/p4info.pb.h"
-#include "bf-p4c/device.h"
 
 namespace BFN {
 
