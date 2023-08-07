@@ -4,6 +4,7 @@
 #include "field_slice_extract_info.h"
 #include "field_pov_analysis.h"
 #include "header_removal_analysis.h"
+#include "bf-p4c/common/utils.h"
 #include "bf-p4c/parde/count_strided_header_refs.h"
 #include "bf-p4c/parde/parser_info.h"
 
@@ -341,7 +342,6 @@ class GreedyClotAllocator : public Visitor {
     /// then this conservatively returns true.
     bool needInterClotGap(const ClotCandidate* c1,
                           const ClotCandidate* c2,
-                          const FieldExtractInfo* fei,
                           const HeaderRemovalAnalysis::ResultMap header_removals) const {
         BUG_CHECK(c1->thread() == c2->thread(),
                   "Candidate %1% comes from %2%, but candidate %3% comes from %4%",
@@ -481,49 +481,23 @@ class GreedyClotAllocator : public Visitor {
                     // The two CLOT candidates might be separated if there is a path through the
                     // parser in which c1 is parsed immediately before c2, and f is also parsed.
                     //
-                    // fei->fieldMap will contain an entry for f if f is parsed.
-                    if (fei->fieldMap.count(f)) {
-                        BUG_CHECK(fei->fieldMap.count(c1_first_field),
-                                  "Field %1% is part of a CLOT candidate, but has no fieldMap "
-                                  "entry",
-                                  c1_first_field);
-                        BUG_CHECK(fei->fieldMap.count(c2_last_field),
-                                  "Field %1% is part of a CLOT candidate, but has no fieldMap "
-                                  "entry",
-                                  c2_last_field);
-
-                        const auto* fExtractInfo = fei->fieldMap.at(f);
-                        const auto* c1ExtractInfo = fei->fieldMap.at(c1_first_field);
-                        const auto* c2ExtractInfo = fei->fieldMap.at(c2_last_field);
-
-                        // Get the set of states in which the first field of c1 is extracted, and
-                        // that field comes after f in the packet.
-                        const auto fC1Gaps = fExtractInfo->bit_gaps(parserInfo, c1ExtractInfo);
-                        ordered_set<const IR::BFN::ParserState*> c1States;
-                        for (const auto& statePairSet : Values(fC1Gaps)) {
-                            for (const auto& statePair : statePairSet) {
-                                c1States.insert(statePair.second);
-                            }
-                        }
-
-                        // Get the set of states in which the last field of c2 is extracted, and
-                        // that field comes before f in the packet.
-                        const auto c2FGaps = c2ExtractInfo->bit_gaps(parserInfo, fExtractInfo);
-                        ordered_set<const IR::BFN::ParserState*> c2States;
-                        for (const auto& statePairSet : Values(c2FGaps)) {
-                            for (const auto& statePair : statePairSet) {
-                                c2States.insert(statePair.first);
-                            }
-                        }
-
-                        // Look at the states in which c1 is extracted immediately before c2. If
-                        // any of those states are contained in c1States or c2States, then c1 might
-                        // be separated from c2.
-                        for (const auto& [c1State, c2State] : gaps.at(0)) {
-                            if (c1States.count(c1State) || c2States.count(c2State)) {
-                                LOG5("      Field " << f->name
-                                                    << " might be inserted between candidates");
-                                return true;
+                    // fei->fieldMap only contains an entry for f if f is parsed from packet data,
+                    // not if it is parsed from a constant. So look directly at the
+                    // field_to_parser_states_ map as that contains packet and constant extracts.
+                    if (clotInfo.field_to_parser_states_.count(f)) {
+                        for (const auto* fState : Keys(clotInfo.field_to_parser_states_.at(f))) {
+                            for (const auto& [c1State, c2State] : gaps.at(0)) {
+                                // Look at cases where f comes before c1 or after c2, or at the same
+                                // time as either.
+                                // (c1 and c2 are adjacent, so we can't have a case of f after c1
+                                // without also being after c2 and vice versa)
+                                if (fState == c1State || fState == c2State ||
+                                    parserInfo.graph(fState).is_ancestor(fState, c1State) ||
+                                    parserInfo.graph(fState).is_ancestor(c2State, fState)) {
+                                    LOG5("      Field " << f->name
+                                                        << " might be inserted between candidates");
+                                    return true;
+                                }
                             }
                         }
                     }
@@ -538,7 +512,6 @@ class GreedyClotAllocator : public Visitor {
     /// candidate.
     ClotCandidateSet* adjust_for_allocation(const ClotCandidate* to_adjust,
             const ClotCandidate* allocated,
-            const FieldExtractInfo* fei,
             const HeaderRemovalAnalysis::ResultMap header_removals) const {
         const auto GAP_BYTES = Device::pardeSpec().byteInterClotGap();
         const auto GAP_BITS = 8 * GAP_BYTES;
@@ -569,10 +542,10 @@ class GreedyClotAllocator : public Visitor {
         }
 
         // Determine the inter-CLOT gap sizes needed before and after the allocated candidate.
-        bool allocatedNeedsPreGap = needInterClotGap(to_adjust, allocated, fei, header_removals);
+        bool allocatedNeedsPreGap = needInterClotGap(to_adjust, allocated, header_removals);
         int preGapBits = allocatedNeedsPreGap ? GAP_BITS : 0;
 
-        bool allocatedNeedsPostGap = needInterClotGap(allocated, to_adjust, fei, header_removals);
+        bool allocatedNeedsPostGap = needInterClotGap(allocated, to_adjust, header_removals);
         int postGapBits = allocatedNeedsPostGap ? GAP_BITS : 0;
 
         // If the candidate occurs immediately after a CLOT that has already been allocated, and
@@ -954,7 +927,6 @@ class GreedyClotAllocator : public Visitor {
 
     /// Uses a greedy algorithm to allocate the given candidates.
     void allocate(ClotCandidateSet* candidates,
-                  const FieldExtractInfo* fei,
                   const HeaderRemovalAnalysis::ResultMap header_removals) {
         const auto MAX_CLOTS_PER_GRESS = Device::pardeSpec().numClotsPerGress();
 
@@ -1143,7 +1115,7 @@ class GreedyClotAllocator : public Visitor {
                     if (candidate == other_candidate) continue;
 
                     auto adjusted =
-                        adjust_for_allocation(other_candidate, candidate, fei, header_removals);
+                        adjust_for_allocation(other_candidate, candidate, header_removals);
                     new_candidates->insert(adjusted->begin(), adjusted->end());
                 }
 
@@ -1341,7 +1313,7 @@ class GreedyClotAllocator : public Visitor {
             auto header_removals = analyze_header_removals(candidates, mau);
 
             // Perform allocation.
-            allocate(candidates, field_extract_info, header_removals);
+            allocate(candidates, header_removals);
         }
 
         if (logAllocation)
