@@ -64,6 +64,7 @@ class LayoutChoices {
     SplitAttachedInfo &att_info;        // rewrites for splitting
 
  public:
+    const ReductionOrInfo &red_info;    // needed by action analysis
     FindPayloadCandidates fpc;
 
  private:
@@ -133,9 +134,9 @@ class LayoutChoices {
         fpc.clear();
     }
 
-    static LayoutChoices* create(PhvInfo &p, SplitAttachedInfo &a);
-    LayoutChoices(PhvInfo &p, SplitAttachedInfo &a)
-        : phv(p), att_info(a), fpc(phv) {}
+    static LayoutChoices* create(PhvInfo &p, const ReductionOrInfo &ri, SplitAttachedInfo &a);
+    LayoutChoices(PhvInfo &p, const ReductionOrInfo &ri, SplitAttachedInfo &a)
+        : phv(p), att_info(a), red_info(ri), fpc(phv) {}
     void add_payload_gw_layout(const IR::MAU::Table *tbl, const LayoutOption &base_option);
 };
 

@@ -2944,7 +2944,8 @@ bool Format::analyze_actions(FormatType_t format_type) {
     for (auto action : Values(tbl->actions)) {
         LOG5("For action : " << action);
         container_actions_map.clear();
-        ActionAnalysis aa(phv, true, false, tbl, /* allow_unalloc = */ !format_type.normal());
+        ActionAnalysis aa(phv, true, false, tbl, red_info,
+                          /* allow_unalloc = */ !format_type.normal());
         aa.set_container_actions_map(&container_actions_map);
         // If the split parameters exist within the PHV allocation, then add the objects
         // to the IR action in order to correctly understand the split action

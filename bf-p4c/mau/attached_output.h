@@ -59,7 +59,7 @@ class Format : public MauInspector {
     void end_apply() override;
 
  public:
-    Format(const PhvInfo &p, LayoutChoices &l);
+    Format(const PhvInfo &p, LayoutChoices &l) : phv(p), layout_choices(l) {}
 };
 
 }  // namespace MeterALU

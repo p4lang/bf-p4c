@@ -13,7 +13,7 @@ Visitor::profile_t IdentifyDeparserZeroCandidates::init_apply(const IR::Node* ro
 
 bool IdentifyDeparserZeroCandidates::preorder(const IR::MAU::Action* act) {
     auto* tbl = findContext<IR::MAU::Table>();
-    ActionAnalysis aa(phv, false, false, tbl);
+    ActionAnalysis aa(phv, false, false, tbl, red_info);
     ActionAnalysis::FieldActionsMap fieldActionsMap;
     aa.set_field_actions_map(&fieldActionsMap);
     act->apply(aa);
@@ -191,10 +191,11 @@ IR::Node* ImplementDeparserZero::preorder(IR::MAU::Instruction* inst) {
 DeparserZeroOptimization::DeparserZeroOptimization(
         PhvInfo& p,
         const FieldDefUse& d,
+        const ReductionOrInfo& ri,
         const PragmaDeparserZero& pf,
         const ClotInfo& c) {
     addPasses({
-        new IdentifyDeparserZeroCandidates(p, d, pf, candidateFields),
+        new IdentifyDeparserZeroCandidates(p, d, ri, pf, candidateFields),
         new ImplementDeparserZero(p, candidateFields, c)
     });
 }

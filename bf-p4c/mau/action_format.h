@@ -1064,6 +1064,7 @@ class Format {
  private:
     PhvInfo &phv;
     const IR::MAU::Table *tbl;
+    const ReductionOrInfo &red_info;
     safe_vector<Use> *uses = nullptr;
     SplitAttachedInfo &att_info;
     int calc_max_size = 0;
@@ -1151,8 +1152,8 @@ class Format {
  public:
     void set_uses(safe_vector<Use> *u) { uses = u; }
     void allocate_format(IR::MAU::Table::ImmediateControl_t imm_ctrl, FormatType_t format_type);
-    Format(PhvInfo &p, const IR::MAU::Table *t, SplitAttachedInfo &sai)
-        : phv(p), tbl(t), att_info(sai) {}
+    Format(PhvInfo &p, const IR::MAU::Table *t, const ReductionOrInfo &ri, SplitAttachedInfo &sai)
+        : phv(p), tbl(t), red_info(ri), att_info(sai) {}
 };
 
 }  // namespace ActionData

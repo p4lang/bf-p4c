@@ -21,8 +21,8 @@ class LayoutChoices : public ::LayoutChoices {
             const int entries, const int single_entry_bits,
             const int overhead_bits, const int index);
  public:
-    LayoutChoices(PhvInfo &p, SplitAttachedInfo &a)
-        : ::LayoutChoices(p, a) {}
+    LayoutChoices(PhvInfo &p, const ReductionOrInfo &ri, SplitAttachedInfo &a)
+        : ::LayoutChoices(p, ri, a) {}
 };
 
 }  // namespace Flatrock

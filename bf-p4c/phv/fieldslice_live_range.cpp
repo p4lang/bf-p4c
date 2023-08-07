@@ -259,7 +259,7 @@ Visitor::profile_t FieldSliceLiveRangeDB::MapFieldSliceToAction::init_apply(cons
 bool FieldSliceLiveRangeDB::MapFieldSliceToAction::preorder(const IR::MAU::Action *act) {
     auto *tbl = findContext<IR::MAU::Table>();
     BUG_CHECK(tbl != nullptr, "unable to find a table in context");
-    ActionAnalysis aa(phv, false, false, tbl);
+    ActionAnalysis aa(phv, false, false, tbl, red_info);
     ActionAnalysis::FieldActionsMap field_actions_map;
     aa.set_field_actions_map(&field_actions_map);
     act->apply(aa);

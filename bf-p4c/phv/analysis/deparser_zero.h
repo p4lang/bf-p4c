@@ -24,6 +24,7 @@ class IdentifyDeparserZeroCandidates : public Inspector {
  private:
     PhvInfo&                            phv;
     const FieldDefUse&                  defuse;
+    const ReductionOrInfo&              red_info;
     const PragmaDeparserZero&           pragmaFields;
     ordered_set<const PHV::Field*>&     candidateFields;
 
@@ -50,9 +51,10 @@ class IdentifyDeparserZeroCandidates : public Inspector {
     explicit IdentifyDeparserZeroCandidates(
             PhvInfo& p,
             const FieldDefUse& d,
+            const ReductionOrInfo& ri,
             const PragmaDeparserZero& f,
             ordered_set<const PHV::Field*>& c)
-        : phv(p), defuse(d), pragmaFields(f), candidateFields(c) { }
+        : phv(p), defuse(d), red_info(ri), pragmaFields(f), candidateFields(c) { }
 };
 
 /** Remove all extracts and initializations for the deparsed zero fields.
@@ -82,6 +84,7 @@ class DeparserZeroOptimization : public PassManager {
     explicit DeparserZeroOptimization(
             PhvInfo& p,
             const FieldDefUse& d,
+            const ReductionOrInfo& ri,
             const PragmaDeparserZero& pf,
             const ClotInfo &c);
 };

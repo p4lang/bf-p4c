@@ -145,8 +145,9 @@ ingress::headers.h1.f7 [28:31] { ingress.a7: (move AD_OR_CONST) }
 
     ASSERT_TRUE(test);
     PhvInfo phv;
+    ReductionOrInfo red_info;
     auto *post_pm_pipe = ActionSourceTrackerTestNs::runInitialPassManager(test->pipe, &phv);
-    PHV::ActionSourceTracker tracker(phv);
+    PHV::ActionSourceTracker tracker(phv, red_info);
     post_pm_pipe = post_pm_pipe->apply(tracker);
     std::stringstream ss;
     ss << tracker;

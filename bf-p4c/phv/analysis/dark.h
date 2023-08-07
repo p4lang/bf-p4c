@@ -15,6 +15,7 @@
 class CollectNonDarkUses : public MauInspector {
  private:
     const PhvInfo&    phv;
+    const ReductionOrInfo &red_info;
     bitvec            nonDarkMauUses;
 
     profile_t init_apply(const IR::Node* root) override;
@@ -24,7 +25,7 @@ class CollectNonDarkUses : public MauInspector {
     bool contextNeedsIXBar();
 
  public:
-    explicit CollectNonDarkUses(const PhvInfo& p) : phv(p) { }
+    CollectNonDarkUses(const PhvInfo& p, const ReductionOrInfo &ri) : phv(p), red_info(ri) { }
 
     bool hasNonDarkUse(const PHV::Field* f) const;
 };
@@ -66,7 +67,7 @@ class CollectDarkCandidates : public PassManager {
  private:
     CollectNonDarkUses  nonDarkUses;
  public:
-    explicit CollectDarkCandidates(PhvInfo& p, PhvUse& u) : nonDarkUses(p) {
+    CollectDarkCandidates(PhvInfo& p, PhvUse& u, const ReductionOrInfo &ri) : nonDarkUses(p, ri) {
         addPasses({
             &nonDarkUses,
             new MarkDarkCandidates(p, u, nonDarkUses)

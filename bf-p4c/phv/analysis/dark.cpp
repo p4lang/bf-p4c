@@ -40,7 +40,7 @@ bool CollectNonDarkUses::preorder(const IR::Expression *e) {
 
 bool CollectNonDarkUses::preorder(const IR::MAU::Action* act) {
     auto* tbl = findContext<IR::MAU::Table>();
-    ActionAnalysis aa(phv, false, false, tbl);
+    ActionAnalysis aa(phv, false, false, tbl, red_info);
     ActionAnalysis::FieldActionsMap fieldActionsMap;
     aa.set_field_actions_map(&fieldActionsMap);
     act->apply(aa);

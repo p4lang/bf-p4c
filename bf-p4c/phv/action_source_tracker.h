@@ -34,6 +34,7 @@ using ActionClassifiedSources = ordered_map<const IR::MAU::Action*, safe_vector<
 /// ActionSourceTracker collects all source-to-destination for all field slices.
 class ActionSourceTracker : public Inspector {
     const PhvInfo& phv;
+    const ReductionOrInfo &red_info;
 
     /// sources[f][range1][act] = {src_op1, src_op2...} means that
     /// f[range1] is written in act, sourcing from src_op1, src_op2....
@@ -66,7 +67,8 @@ class ActionSourceTracker : public Inspector {
     void end_apply() override;
 
  public:
-    explicit ActionSourceTracker(const PhvInfo& phv) : phv(phv) {}
+    explicit ActionSourceTracker(const PhvInfo& phv, const ReductionOrInfo &ri)
+        : phv(phv), red_info(ri) {}
 
     /// @returns action classified sources of @p fs for all actions.
     /// @p fs must be fine-sliced: every bit of @p fs must write by the same set of instructions.

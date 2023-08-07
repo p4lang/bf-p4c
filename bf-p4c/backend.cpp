@@ -162,7 +162,7 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
     longBranchDisabled() {
     BUG_CHECK(pipe_id >= 0, "Invalid pipe id in backend : %d", pipe_id);
     flexibleLogging = new LogFlexiblePacking(phv);
-    phvLoggingInfo = new CollectPhvLoggingInfo(phv, uses);
+    phvLoggingInfo = new CollectPhvLoggingInfo(phv, uses, deps.red_info);
     phvLoggingDefUseInfo = options.debugInfo ? new PhvLogging::CollectDefUseInfo(defuse) : nullptr;
     auto *PHV_Analysis = new PHV_AnalysisPass(options, phv, uses, clot,
                                               defuse, deps, decaf, mau_backtracker,
@@ -235,7 +235,8 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
         new CollectPhvInfo(phv),    // Needs to be rerun after CreateThreadLocalInstances.
         new HeaderPushPop,
         new CollectPhvInfo(phv),
-        new InstructionSelection(options, phv),
+        new GatherReductionOrReqs(deps.red_info),
+        new InstructionSelection(options, phv, deps.red_info),
         new DumpPipe("After InstructionSelection"),
         new FindDependencyGraph(phv, deps, &options, "program_graph",
                                 "After Instruction Selection"),
@@ -411,7 +412,7 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
 
         new SplitPadding(phv),
         allocateClot == nullptr ? nullptr : new ClotAdjuster(clot, phv),
-        new ValidateActions(phv, false, true, false),
+        new ValidateActions(phv, deps.red_info, false, true, false),
         new PHV::AddAliasAllocation(phv),
         new ReinstateAliasSources(phv),    // revert AliasMembers/Slices to their original sources
         // This pass must be called before instruction adjustment since the primitive info
@@ -433,7 +434,7 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
         // allocated in above AllocateTempsAndFinalizeLiverange.
         !options.alt_phv_alloc
             ? new CheckForUnallocatedTemps(phv, uses, clot, PHV_Analysis) : nullptr,
-        new InstructionAdjustment(phv),
+        new InstructionAdjustment(phv, deps.red_info),
         &nextTblProp,  // Must be run after all modifications to the table graph have finished!
         new DumpPipe("Final table graph"),
         new CheckFieldCorruption(defuse, phv, PHV_Analysis->get_pragmas()),

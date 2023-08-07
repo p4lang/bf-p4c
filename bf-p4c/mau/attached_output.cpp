@@ -140,7 +140,7 @@ bool Format::preorder(const IR::MAU::Table *tbl) {
     ActionAnalysis::ContainerActionsMap container_actions_map;
     for (auto action : Values(tbl->actions)) {
         container_actions_map.clear();
-        ActionAnalysis aa(phv, true, false, tbl);
+        ActionAnalysis aa(phv, true, false, tbl, layout_choices.red_info);
         aa.set_container_actions_map(&container_actions_map);
         action->apply(aa);
         create_alu_ops_for_action(container_actions_map, action->name.name, ops_per_action);
@@ -227,8 +227,6 @@ void Format::end_apply() {
         }
     }
 }
-
-Format::Format(const PhvInfo &p, LayoutChoices &l) : phv(p), layout_choices(l) { }
 
 /**
  *

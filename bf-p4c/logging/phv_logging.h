@@ -34,6 +34,7 @@ struct CollectPhvLoggingInfo : public MauInspector {
     /// Information about PHV fields.
     const PhvInfo       &phv;
     const PhvUse        &uses;
+    const ReductionOrInfo &red_info;
 
     /// Mapping of table names in the backend to the P4 name.
     ordered_map<cstring, cstring> tableNames;
@@ -80,7 +81,8 @@ struct CollectPhvLoggingInfo : public MauInspector {
     /// Gather information related to input xbar reads.
     bool preorder(const IR::MAU::TableKey* read) override;
 
-    explicit CollectPhvLoggingInfo(const PhvInfo& p, const PhvUse& u) : phv(p), uses(u) { }
+    CollectPhvLoggingInfo(const PhvInfo& p, const PhvUse& u, const ReductionOrInfo &ri)
+        : phv(p), uses(u), red_info(ri) { }
 
  private:
     /// Get a set of FieldSlices matching the field uses for writes/reads in actions and

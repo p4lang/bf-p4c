@@ -137,13 +137,14 @@ void runClotTest(std::optional<TofinoPipeTestCase> test,
     PhvInfo phvInfo;
     PhvUse phvUse(phvInfo);
     ClotInfo clotInfo(phvUse);
+    ReductionOrInfo red_info;
 
     CollectHeaderStackInfo collectHeaderStackInfo;
     CollectPhvInfo collectPhvInfo(phvInfo);
     PragmaDoNotUseClot pragmaDoNotUseClot(phvInfo);
     FieldPovAnalysis fieldPovAnalysis(clotInfo, phvInfo);
     CollectClotInfo collectClotInfo(phvInfo, clotInfo, pragmaDoNotUseClot);
-    InstructionSelection instructionSelection(BackendOptions(), phvInfo);
+    InstructionSelection instructionSelection(BackendOptions(), phvInfo, red_info);
     AllocateClot allocateClot(clotInfo, phvInfo, phvUse, pragmaDoNotUseClot, false);
 
     PassManager passes = {

@@ -76,13 +76,13 @@ Visitor::profile_t DoTableLayout::init_apply(const IR::Node *root) {
     return MauModifier::init_apply(root);
 }
 
-LayoutChoices* LayoutChoices::create(PhvInfo &p, SplitAttachedInfo &a) {
+LayoutChoices* LayoutChoices::create(PhvInfo &p, const ReductionOrInfo &ri, SplitAttachedInfo &a) {
 #if HAVE_FLATROCK
     // FIXME -- add Device::newLayoutChoices() method?
     if (Device::currentDevice() == Device::FLATROCK)
-        return new Flatrock::LayoutChoices(p, a);
+        return new Flatrock::LayoutChoices(p, ri, a);
 #endif
-    return new LayoutChoices(p, a);
+    return new LayoutChoices(p, ri, a);
 }
 
 void LayoutChoices::add_payload_gw_layout(const IR::MAU::Table *tbl,
@@ -620,7 +620,7 @@ void LayoutChoices::compute_action_formats(const IR::MAU::Table *tbl,
                                            ActionData::FormatType_t format_type) {
     LOG5("Computing action formats for table " << tbl->name);
     BUG_CHECK(format_type.valid(), "invalid format type in LayoutChoices::compute_action_formats");
-    ActionData::Format af(phv, tbl, att_info);
+    ActionData::Format af(phv, tbl, red_info, att_info);
     af.set_uses(&cache_action_formats[std::make_pair(tbl->name, format_type)]);
 
     IR::MAU::Table::ImmediateControl_t imm_ctrl = tbl->get_immediate_ctrl();

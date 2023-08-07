@@ -412,6 +412,7 @@ TEST_F(ActionAnalysisTest, ParallelAction) {
     ASSERT_TRUE(test);
 
     PhvInfo phv;
+    ReductionOrInfo red_info;
     PassManager validate = {
             new CollectHeaderStackInfo,
             // Instructions in actions are sequential.
@@ -421,7 +422,7 @@ TEST_F(ActionAnalysisTest, ParallelAction) {
             new BackendCopyPropagation(phv),
             // Instructions in actions are now parallel
             new CollectPhvInfo(phv),
-            new ValidateActions(phv, false, false, false)
+            new ValidateActions(phv, red_info, false, false, false)
     };
 
     testing::internal::CaptureStderr();

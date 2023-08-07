@@ -145,10 +145,11 @@ const switch_pkt_type_t FABRIC_PKT_TYPE_IP = 0x05;
 const IR::BFN::Pipe *runCustomPassManager(const IR::BFN::Pipe* pipe,
                                            const BFN_Options& option,
                                            PhvInfo *phv) {
+    ReductionOrInfo red_info;
     PassManager quick_backend = {
         new CollectHeaderStackInfo,
         new CollectPhvInfo(*phv),
-        new InstructionSelection(option, *phv)
+        new InstructionSelection(option, *phv, red_info)
     };
 
     return pipe->apply(quick_backend);

@@ -124,6 +124,7 @@ class SplitInstructions : public MauTransform, TofinoWriteContext {
  */
 class ConstantsToActionData : public MauTransform, TofinoWriteContext {
     const PhvInfo &phv;
+    const ReductionOrInfo &red_info;
     ActionAnalysis::ContainerActionsMap container_actions_map;
 
     const IR::MAU::Action *preorder(IR::MAU::Action *) override;
@@ -149,11 +150,13 @@ class ConstantsToActionData : public MauTransform, TofinoWriteContext {
     cstring action_name;
 
  public:
-    explicit ConstantsToActionData(const PhvInfo &p) : phv(p) { visitDagOnce = false; }
+    ConstantsToActionData(const PhvInfo &p, const ReductionOrInfo &ri) : phv(p), red_info(ri) {
+        visitDagOnce = false; }
 };
 
 class ExpressionsToHash : public MauTransform {
     const PhvInfo &phv;
+    const ReductionOrInfo &red_info;
     ActionAnalysis::ContainerActionsMap container_actions_map;
     ordered_set<PHV::Container> expr_to_hash_containers;
 
@@ -163,7 +166,8 @@ class ExpressionsToHash : public MauTransform {
     const IR::MAU::StatefulAlu *preorder(IR::MAU::StatefulAlu *s) override { prune(); return s; }
 
  public:
-    explicit ExpressionsToHash(const PhvInfo &p) : phv(p) { visitDagOnce = false; }
+    ExpressionsToHash(const PhvInfo &p, const ReductionOrInfo &ri) : phv(p), red_info(ri) {
+        visitDagOnce = false; }
 };
 
 /** Responsible for converting all FieldInstructions within a single Container operation into
@@ -190,6 +194,7 @@ class MergeInstructions : public MauTransform, TofinoWriteContext {
     bool saturationArith = false;
 
     const PhvInfo &phv;
+    const ReductionOrInfo &red_info;
     ActionAnalysis::ContainerActionsMap container_actions_map;
 
     const IR::MAU::Action *preorder(IR::MAU::Action *) override;
@@ -241,7 +246,8 @@ class MergeInstructions : public MauTransform, TofinoWriteContext {
     const IR::Constant *find_field_action_constant(ActionAnalysis::ContainerAction &cont_action);
 
  public:
-    explicit MergeInstructions(const PhvInfo &p) : phv(p) { visitDagOnce = false; }
+    MergeInstructions(const PhvInfo &p, const ReductionOrInfo &ri) : phv(p), red_info(ri) {
+        visitDagOnce = false; }
 };
 
 class AdjustStatefulInstructions : public MauTransform {
@@ -290,7 +296,7 @@ class EliminateNoopInstructions: public MauTransform {
 
 class InstructionAdjustment : public PassManager {
  public:
-    explicit InstructionAdjustment(const PhvInfo &p);
+    InstructionAdjustment(const PhvInfo &p, const ReductionOrInfo &ri);
 };
 
 #endif /* BF_P4C_MAU_INSTRUCTION_ADJUSTMENT_H_ */

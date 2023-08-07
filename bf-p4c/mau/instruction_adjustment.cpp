@@ -503,7 +503,7 @@ const IR::MAU::Action *ConstantsToActionData::preorder(IR::MAU::Action *act) {
     container_actions_map.clear();
     constant_containers.clear();
     auto tbl = findContext<IR::MAU::Table>();
-    ActionAnalysis aa(phv, true, true, tbl);
+    ActionAnalysis aa(phv, true, true, tbl, red_info);
     aa.set_container_actions_map(&container_actions_map);
     act->apply(aa);
 
@@ -696,7 +696,7 @@ const IR::MAU::Action *ExpressionsToHash::preorder(IR::MAU::Action *act) {
     container_actions_map.clear();
     expr_to_hash_containers.clear();
     auto tbl = findContext<IR::MAU::Table>();
-    ActionAnalysis aa(phv, true, true, tbl);
+    ActionAnalysis aa(phv, true, true, tbl, red_info);
     aa.set_container_actions_map(&container_actions_map);
     act->apply(aa);
 
@@ -787,7 +787,7 @@ const IR::MAU::Action *MergeInstructions::preorder(IR::MAU::Action *act) {
     container_actions_map.clear();
     merged_fields.clear();
     auto tbl = findContext<IR::MAU::Table>();
-    ActionAnalysis aa(phv, true, true, tbl);
+    ActionAnalysis aa(phv, true, true, tbl, red_info);
     aa.set_container_actions_map(&container_actions_map);
     aa.set_verbose();
     act->apply(aa);
@@ -1448,6 +1448,11 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
  *  This assumes that the stateful alu is accessing its data through the search bus rather
  *  than the hash bus, as the input xbar algorithm can only put it on the search bus.  When
  *  we add hash matrix support for stateful ALUs, we will add that as well.
+ *
+ *  Also handle reduction-or of stateful ALU outputs -- having multiple stateful ALUs in the
+ *  same stage write to the same action data slot, which implicitly ORs the values together.
+ *  Simple `set` instructions should be used instead of `or` for those SALUs in the first
+ *  stage (if split across stages, SALUs in later stages still need to `or`)
  */
 const IR::Annotations *AdjustStatefulInstructions::preorder(IR::Annotations *annot) {
     prune();
@@ -1647,6 +1652,48 @@ const IR::Expression *AdjustStatefulInstructions::preorder(IR::Expression *expr)
     return rv;
 }
 
+class RewriteReductionOr : public MauModifier {
+    const PhvInfo &phv;
+    const ReductionOrInfo &red_info;
+    std::set<const IR::MAU::Instruction *> reduction_or;
+
+    bool preorder(IR::MAU::Action *act) {
+        reduction_or.clear();
+        ActionAnalysis::ContainerActionsMap container_actions_map;
+        auto tbl = findOrigCtxt<IR::MAU::Table>();
+        ActionAnalysis aa(phv, true, true, tbl, red_info);
+        aa.set_container_actions_map(&container_actions_map);
+        act->apply(aa);
+
+        for (auto &cact : Values(container_actions_map)) {
+            if (aa.isReductionOr(cact)) {
+                for (auto &fact : cact.field_actions) {
+                    reduction_or.insert(fact.instruction);
+                }
+            }
+        }
+        return true;
+    }
+    const IR::Expression *ignoreSlice(const IR::Expression *e) {
+        while (auto sl = e->to<IR::Slice>()) e = sl->e0;
+        return e;
+    }
+    bool preorder(IR::MAU::Instruction *inst) {
+        if (reduction_or.count(getOriginal<IR::MAU::Instruction>())) {
+            BUG_CHECK(inst->name == "or" && inst->operands.size() == 3, "not an or: %s", inst);
+            inst->name = "set";
+            auto op2 = inst->operands.at(2);
+            if (!ignoreSlice(op2)->to<IR::MAU::AttachedOutput>()) op2 = nullptr;
+            inst->operands.resize(2);
+            if (op2) inst->operands[1] = op2;
+        }
+        return false;
+    }
+
+ public:
+    RewriteReductionOr(const PhvInfo &p, const ReductionOrInfo &ri) : phv(p), red_info(ri) {}
+};
+
 /** Eliminate Instructions */
 const IR::MAU::Synth2Port* EliminateNoopInstructions::preorder(IR::MAU::Synth2Port *s) {
     LOG3("EliminateNoopInstructions preorder on synth2port: " << s);
@@ -1726,14 +1773,15 @@ EliminateNoopInstructions::preorder(IR::MAU::Instruction *ins) {
 }
 
 /** Instruction Adjustment */
-InstructionAdjustment::InstructionAdjustment(const PhvInfo &phv) {
+InstructionAdjustment::InstructionAdjustment(const PhvInfo &phv, const ReductionOrInfo &ri) {
     addPasses({
         new EliminateNoopInstructions(phv),
         new AdjustShiftInstructions(phv),
+        new RewriteReductionOr(phv, ri),
         new SplitInstructions(phv),
-        new ConstantsToActionData(phv),
-        new ExpressionsToHash(phv),
-        new MergeInstructions(phv),
+        new ConstantsToActionData(phv, ri),
+        new ExpressionsToHash(phv, ri),
+        new MergeInstructions(phv, ri),
         new AdjustStatefulInstructions(phv)
     });
 }

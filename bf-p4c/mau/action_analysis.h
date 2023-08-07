@@ -4,6 +4,7 @@
 #include "bf-p4c/ir/bitrange.h"
 #include "bf-p4c/ir/tofino_write_context.h"
 #include "bf-p4c/mau/mau_visitor.h"
+#include "bf-p4c/mau/reduction_or.h"
 #include "lib/safe_vector.h"
 
 class PhvInfo;
@@ -97,6 +98,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
     struct FieldAction {
         bool write_found = false;
         cstring name;
+        const IR::MAU::Instruction *instruction;
         ActionParam write;
         safe_vector<ActionParam> reads;
         void clear() {
@@ -563,6 +565,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
     FieldActionsMap *field_actions_map = nullptr;
     ContainerActionsMap *container_actions_map = nullptr;
     const IR::MAU::Table *tbl;
+    const ReductionOrInfo &red_info;
     FieldAction field_action;
     ordered_set<std::pair<cstring, le_bitrange>> single_ad_params;
     ordered_set<std::pair<cstring, le_bitrange>> multiple_ad_params;
@@ -640,6 +643,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
     const IR::Expression *isStrengthReducible(const IR::Expression *expr);
     const IR::MAU::ActionArg *isActionArg(const IR::Expression *expr,
         le_bitrange *bits_out = nullptr);
+    bool isReductionOr(ContainerAction &cont_action) const;
 
     bool misaligned_actiondata() {
         return action_data_misaligned;
@@ -672,9 +676,9 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
     const ContainerActionsMap* get_container_actions_map() const { return container_actions_map; }
 
     ActionAnalysis(const PhvInfo &p, bool pa, bool aa, const IR::MAU::Table *t,
-            bool au = false, bool seq = true)
-        : phv(p), phv_alloc(pa), ad_alloc(aa), allow_unalloc(au), sequential(seq), tbl(t)
-        {visitDagOnce = false;}
+            const ReductionOrInfo &ri, bool au = false, bool seq = true)
+        : phv(p), phv_alloc(pa), ad_alloc(aa), allow_unalloc(au), sequential(seq), tbl(t),
+          red_info(ri) {visitDagOnce = false;}
 };
 
 std::ostream &operator<<(std::ostream &out, const ActionAnalysis&);

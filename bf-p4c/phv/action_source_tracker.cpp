@@ -37,7 +37,7 @@ SourceOp SourceOp::slice(int start, int len) const {
 
 bool ActionSourceTracker::preorder(const IR::MAU::Action *act) {
     auto *tbl = findContext<IR::MAU::Table>();
-    ActionAnalysis aa(phv, false, false, tbl);
+    ActionAnalysis aa(phv, false, false, tbl, red_info);
     ActionAnalysis::FieldActionsMap field_actions_map;
     aa.set_field_actions_map(&field_actions_map);
     act->apply(aa);

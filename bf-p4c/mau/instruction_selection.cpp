@@ -3088,6 +3088,7 @@ const IR::Node* SimplifyConditionalActionArg::postorder(IR::Mux* mux) {
  */
 class ExpandInstructions : public MauTransform {
     const PhvInfo& phv_i;
+    const ReductionOrInfo &red_info;
     std::vector<IR::MAU::Instruction*> m_precompute;
     std::set<const IR::Expression*> m_preload;
 
@@ -3119,7 +3120,7 @@ class ExpandInstructions : public MauTransform {
         auto tbl = findContext<IR::MAU::Table>();
         BUG_CHECK(tbl, "Action doesn't have any table context!");
         ActionAnalysis::FieldActionsMap field_actions_map;
-        ActionAnalysis aa(phv_i, false, false, tbl, false, false);
+        ActionAnalysis aa(phv_i, false, false, tbl, red_info, false, false);
         aa.set_field_actions_map(&field_actions_map);
         act->apply(aa);
         // Capture action inputs which are not PHV related. Only one non-PHV action input is allowed
@@ -3203,13 +3204,14 @@ class ExpandInstructions : public MauTransform {
     }
 
  public:
-    explicit ExpandInstructions(const PhvInfo& p) : phv_i(p) {}
+    ExpandInstructions(const PhvInfo& p, const ReductionOrInfo &ri) : phv_i(p), red_info(ri) {}
 };
 
 /** EliminateAllButLastWrite has to follow VerifyParallelWritesAndReads.  Look at the example
  *  above EliminateAllButLastWrite
  */
-InstructionSelection::InstructionSelection(const BFN_Options& options, PhvInfo &phv) : PassManager {
+InstructionSelection::InstructionSelection(const BFN_Options& options, PhvInfo &phv,
+                                           const ReductionOrInfo &ri) : PassManager {
     new CheckInvalidate(phv),           // Instructions in actions are sequential.
     new UnimplementedRegisterMethodCalls,
     new ConvertFunnelShiftExtern,
@@ -3231,7 +3233,7 @@ InstructionSelection::InstructionSelection(const BFN_Options& options, PhvInfo &
     new EliminateAllButLastWrite(phv),
     new ArithCompareAdjustment(phv),
     new RemoveUnnecessaryActionArgSlice,
-    new ExpandInstructions(phv),
+    new ExpandInstructions(phv, ri),
     new CollectPhvInfo(phv),
-    new ValidateActions(phv, false, false, false)
+    new ValidateActions(phv, ri, false, false, false)
 } {}

@@ -14,7 +14,7 @@ Visitor::profile_t NonMochaDarkFields::init_apply(const IR::Node* root) {
 bool NonMochaDarkFields::preorder(const IR::MAU::Action* act) {
     auto* tbl = findContext<IR::MAU::Table>();
     BUG_CHECK(tbl, "Could not find table");
-    ActionAnalysis aa(phv, false, false, tbl);
+    ActionAnalysis aa(phv, false, false, tbl, red_info);
     ActionAnalysis::FieldActionsMap fieldActionsMap;
     aa.set_field_actions_map(&fieldActionsMap);
     act->apply(aa);

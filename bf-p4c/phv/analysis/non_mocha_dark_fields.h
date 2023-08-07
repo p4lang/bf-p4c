@@ -20,6 +20,7 @@ class NonMochaDarkFields : public Inspector {
     const PhvInfo &phv;
     const PhvUse &uses;
     const FieldDefUse &defuse;
+    const ReductionOrInfo &red_info;
 
     /// List of fields that are marked as pa_no_init, which means that we assume the live range of
     /// these fields is from the first use of it to the last use.
@@ -38,10 +39,11 @@ class NonMochaDarkFields : public Inspector {
 
  public:
     NonMochaDarkFields(const PhvInfo &phv, const PhvUse &uses, const FieldDefUse &defuse,
-                       const PHV::Pragmas &pragmas)
+                       const ReductionOrInfo &ri, const PHV::Pragmas &pragmas)
         : phv(phv),
           uses(uses),
           defuse(defuse),
+          red_info(ri),
           noInitFields(pragmas.pa_no_init().getFields()),
           notParsedFields(pragmas.pa_deparser_zero().getNotDeparsedFields()),
           notDeparsedFields(pragmas.pa_deparser_zero().getNotDeparsedFields()) {}

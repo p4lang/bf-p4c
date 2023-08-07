@@ -134,7 +134,8 @@ class ContainerAction: public BackendTest {
     };
 
     Result analyze_container_actions() {
-        ActionAnalysis aa(phv, true, false, tbl);
+        ReductionOrInfo red_info;
+        ActionAnalysis aa(phv, true, false, tbl, red_info);
 
         ActionAnalysis::ContainerActionsMap container_actions_map;
         aa.set_container_actions_map(&container_actions_map);

@@ -907,8 +907,8 @@ class FindDataDependencyGraph::AddDependencies : public MauInspector, TofinoWrit
             candidateFields.insert(self.phv.getAliasMap().at(originalField));
         for (const PHV::Field* field : candidateFields) {
             cstring red_or_key;
-            bool is_red_or = self.red_info.is_reduction_or(findContext<IR::MAU::Instruction>(),
-                                                           table, red_or_key);
+            bool is_red_or = self.dg.red_info.is_reduction_or(findContext<IR::MAU::Instruction>(),
+                                                              table, red_or_key);
             bool non_first_write_red_or = false;
 
             std::set<cstring> field_slice_set = self.getFieldNameSlice(field, range);
@@ -1076,9 +1076,9 @@ class FindDataDependencyGraph::UpdateAccess : public MauInspector , TofinoWriteC
                     a.reduction_or_write.clear();
                     a.reduction_or_read.clear();
                     a.write.clear();
-                    bool is_red_or = self.red_info.is_reduction_or(
+                    bool is_red_or = self.dg.red_info.is_reduction_or(
                                                     findContext<IR::MAU::Instruction>(),
-                                                        table, red_or_key);
+                                                    table, red_or_key);
                     if (is_red_or) {
                         a.reduction_or_write.insert(std::make_pair(table, action_context));
                         self.red_or_use[field_name] = red_or_key;
@@ -1091,7 +1091,7 @@ class FindDataDependencyGraph::UpdateAccess : public MauInspector , TofinoWriteC
                     if (isIxbarRead()) {
                         a.ixbar_read.insert(std::make_pair(table, action_context));
                     } else {
-                        bool is_red_or = self.red_info.is_reduction_or(
+                        bool is_red_or = self.dg.red_info.is_reduction_or(
                                                         findContext<IR::MAU::Instruction>(),
                                                         table, red_or_key);
                         if (is_red_or) {
@@ -2384,10 +2384,10 @@ FindDependencyGraph::FindDependencyGraph(const PhvInfo &phv,
         &ntp,
         &con_paths,
         &ignore,
-        new GatherReductionOrReqs(red_info),
+        new GatherReductionOrReqs(dg.red_info),
         new PrintPipe,
         new TableFindInjectedDependencies(phv, dg, fg, options, summary),
-        new FindDataDependencyGraph(phv, dg, red_info, mutex, ignore),
+        new FindDataDependencyGraph(phv, dg, mutex, ignore),
         new DepStagesThruDomFrontier(ntp, dg, *this, s)
     });
 }

@@ -99,7 +99,8 @@ const IR::BFN::Pipe* runMockPasses(
     PassManager quick_backend = {
         new CollectHeaderStackInfo,
         new CollectPhvInfo(phv),
-        new InstructionSelection(*options, phv),
+        new GatherReductionOrReqs(deps.red_info),
+        new InstructionSelection(*options, phv, deps.red_info),
         &defuse,
         new ElimUnused(phv, defuse, zeroInitFields),
         new ElimUnusedHeaderStackInfo,

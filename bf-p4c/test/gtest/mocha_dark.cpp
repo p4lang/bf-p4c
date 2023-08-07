@@ -142,17 +142,18 @@ apply {
     PhvInfo phv;
     FieldDefUse defuse(phv);
     PhvUse uses(phv);
+    ReductionOrInfo red_info;
     PHV::Pragmas pragmas(phv);
-    NonMochaDarkFields nonMochaDark(phv, uses, defuse, pragmas);
+    NonMochaDarkFields nonMochaDark(phv, uses, defuse, red_info, pragmas);
 
     auto* pipe = runMockPasses(test->pipe, phv, defuse, uses);
     ASSERT_TRUE(pipe);
 
-    auto* mocha = new CollectMochaCandidates(phv, uses, nonMochaDark);
+    auto* mocha = new CollectMochaCandidates(phv, uses, red_info, nonMochaDark);
     auto* after_analysis = pipe->apply(*mocha);
     ASSERT_TRUE(after_analysis);
 
-    CollectNonDarkUses  nonDarkUses(phv);
+    CollectNonDarkUses  nonDarkUses(phv, red_info);
     auto* dark = new MarkDarkCandidates(phv, uses, nonDarkUses);
     after_analysis = after_analysis->apply(nonDarkUses);
     after_analysis = after_analysis->apply(*dark);

@@ -5,6 +5,7 @@
 #include "bf-p4c/common/utils.h"
 #include "bf-p4c/ir/tofino_write_context.h"
 #include "bf-p4c/mau/mau_visitor.h"
+#include "bf-p4c/mau/reduction_or.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "ir/ir-generated.h"
 
@@ -679,7 +680,7 @@ class SimplifyConditionalActionArg : public MauTransform {
 
 class InstructionSelection : public PassManager {
  public:
-    InstructionSelection(const BFN_Options&, PhvInfo &);
+    InstructionSelection(const BFN_Options&, PhvInfo &, const ReductionOrInfo &);
 };
 
 #endif /* BF_P4C_MAU_INSTRUCTION_SELECTION_H_ */

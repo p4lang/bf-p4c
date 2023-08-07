@@ -22,7 +22,7 @@ Visitor::profile_t CollectMochaCandidates::init_apply(const IR::Node* root) {
 
 bool CollectMochaCandidates::preorder(const IR::MAU::Action* act) {
     auto* tbl = findContext<IR::MAU::Table>();
-    ActionAnalysis aa(phv, false, false, tbl);
+    ActionAnalysis aa(phv, false, false, tbl, red_info);
     ActionAnalysis::FieldActionsMap fieldActionsMap;
     aa.set_field_actions_map(&fieldActionsMap);
     act->apply(aa);

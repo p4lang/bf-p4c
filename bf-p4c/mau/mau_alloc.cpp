@@ -19,7 +19,7 @@ TableAllocPass::TableAllocPass(const BFN_Options& options, PhvInfo& phv, Depende
                                TableSummary &summary, Util::JsonObject* jsonGraph,
                                MauBacktracker &mau_backtracker)
     : Logging::PassManager("table_placement_"), att_info(phv), options(options) {
-    lc = LayoutChoices::create(phv, att_info);
+    lc = LayoutChoices::create(phv, deps.red_info, att_info);
     siaa = new SharedIndirectAttachedAnalysis(mutex, ignore, action_mutex, *lc);
     addPasses({
         new GatewayOpt(phv),   // must be before TableLayout?  or just TablePlacement?

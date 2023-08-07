@@ -105,11 +105,12 @@ V1Switch(parse(), verifyChecksum(), igrs(), my_egress(),
 
 const IR::BFN::Pipe *runMockPasses(const IR::BFN::Pipe* pipe, PhvInfo& phv, FieldDefUse& defuse) {
     auto options = new BFN_Options();  // dummy options used in Pass
+    ReductionOrInfo red_info;
     PassManager quick_backend = {
         new MultipleApply(BackendOptions()),
         new CollectHeaderStackInfo,
         new CollectPhvInfo(phv),
-        new InstructionSelection(*options, phv),
+        new InstructionSelection(*options, phv, red_info),
         new CollectPhvInfo(phv),
         &defuse,
     };

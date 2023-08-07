@@ -91,7 +91,7 @@ PHV_AnalysisPass::PHV_AnalysisPass(
       action_constraints(phv, uses, pack_conflicts, tableActionsMap, deps),
       domTree(flowGraph),
       meta_live_range(phv, deps, defuse, pragmas, uses, alloc),
-      non_mocha_dark(phv, uses, defuse, pragmas),
+      non_mocha_dark(phv, uses, defuse, deps.red_info, pragmas),
       dark_live_range(phv, clot, deps, defuse, pragmas, uses, action_constraints, domTree,
                       tableActionsMap, alloc, non_mocha_dark),
       meta_init(phv, defuse, deps, pragmas.pa_no_init(), meta_live_range, action_constraints,
@@ -100,8 +100,8 @@ PHV_AnalysisPass::PHV_AnalysisPass(
                  action_constraints, defuse, deps, table_mutex, settings, alloc),
       strided_headers(phv),
       tb_keys(phv),
-      physical_liverange_db(&alloc, &defuse, phv, clot, pragmas),
-      source_tracker(phv),
+      physical_liverange_db(&alloc, &defuse, phv, deps.red_info, clot, pragmas),
+      source_tracker(phv, deps.red_info),
       tablePackOpt(phv),
       utils(phv, clot, clustering, uses, defuse, action_constraints, meta_init, dark_live_range,
             field_to_parser_states, parser_critical_path, parser_info, strided_headers,
@@ -121,15 +121,16 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             // Determine candidates for mocha PHVs.
             Device::phvSpec().hasContainerKind(PHV::Kind::mocha) ? &non_mocha_dark : nullptr,
             Device::phvSpec().hasContainerKind(PHV::Kind::mocha)
-                ? new CollectMochaCandidates(phv, uses, non_mocha_dark) : nullptr,
+                ? new CollectMochaCandidates(phv, uses, deps.red_info, non_mocha_dark) : nullptr,
             Device::phvSpec().hasContainerKind(PHV::Kind::dark)
-                ? new CollectDarkCandidates(phv, uses) : nullptr,
+                ? new CollectDarkCandidates(phv, uses, deps.red_info) : nullptr,
             // Pragmas need to be run here because the later passes may add constraints encoded as
             // pragmas to various fields after the initial pragma processing is done.
             // parse and fold PHV-related pragmas
             &pragmas,
             // Identify fields for deparsed-zero optimization
-            new DeparserZeroOptimization(phv, defuse, pragmas.pa_deparser_zero(), clot),
+            new DeparserZeroOptimization(phv, defuse, deps.red_info,
+                                         pragmas.pa_deparser_zero(), clot),
             // Produce pairs of mutually exclusive header fields, e.g. (arpSrc, ipSrc)
             new MutexOverlay(phv, pragmas, uses),
             // map fields to parser states

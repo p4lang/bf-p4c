@@ -90,6 +90,7 @@ struct DependencyGraph {
         boost::property<boost::vertex_table_t, const IR::MAU::Table*>,  // Vertex labels
         dependencies_t  // Edge labels.
     > Graph;
+    ReductionOrInfo red_info;
 
     /** A map of all tables that cannot be placed in the same stage as the key table, because
      *  they share an ALU operation over a container.  The following example will indicate why
@@ -880,7 +881,6 @@ class FindDataDependencyGraph : public MauInspector, BFN::ControlFlowVisitor {
  private:
     const PhvInfo&                                        phv;
     DependencyGraph&                                      dg;
-    const ReductionOrInfo&                                red_info;
     const TablesMutuallyExclusive&                        mutex;
     const IgnoreTableDeps&                                ignore;
     ordered_map<cstring, access_t>                           access;
@@ -921,9 +921,9 @@ class FindDataDependencyGraph : public MauInspector, BFN::ControlFlowVisitor {
     class UpdateAttached;
 
  public:
-    FindDataDependencyGraph(const PhvInfo &phv, DependencyGraph& out, const ReductionOrInfo &ri,
+    FindDataDependencyGraph(const PhvInfo &phv, DependencyGraph& out,
         const TablesMutuallyExclusive &m, const IgnoreTableDeps &ig)
-    : phv(phv), dg(out), red_info(ri), mutex(m), ignore(ig) {
+    : phv(phv), dg(out), mutex(m), ignore(ig) {
         joinFlows = true;
     }
 };
@@ -1035,7 +1035,6 @@ class FindDependencyGraph : public Logging::PassManager {
     DependencyGraph &dg;
     const BFN_Options *options;
     FlowGraph fg;
-    ReductionOrInfo red_info;
     ControlPathwaysToTable con_paths;
     CalculateNextTableProp ntp;
     IgnoreTableDeps ignore;

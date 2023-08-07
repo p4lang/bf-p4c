@@ -1624,12 +1624,6 @@ if (TEST_ALT_PHV_ALLOC)
       "CRASH with signal 6"
       extensions/p4_tests/p4_16/customer/sino-telecom/p4c-5240.p4
     )
-
-    p4c_add_xfail_reason("tofino"
-      "error: PHV allocation creates an invalid container action within a Tofino ALU"
-      switch_l3_heavy_int_leaf
-      switch_generic_int_leaf
-    )
 endif (TEST_ALT_PHV_ALLOC)
 
 # P4C-4689: On Tofino1, this test compiles incorrectly but we only report a warning

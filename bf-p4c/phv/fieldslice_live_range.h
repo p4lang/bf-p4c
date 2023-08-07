@@ -140,6 +140,7 @@ class IFieldSliceLiveRangeDB {
 class FieldSliceLiveRangeDB : public IFieldSliceLiveRangeDB, public PassManager  {
     class MapFieldSliceToAction : public Inspector {
         const PhvInfo& phv;
+        const ReductionOrInfo &red_info;
         Visitor::profile_t init_apply(const IR::Node *root) override;
 
      public:
@@ -152,7 +153,8 @@ class FieldSliceLiveRangeDB : public IFieldSliceLiveRangeDB, public PassManager 
         ordered_map<const IR::MAU::Action *, ordered_set<PHV::FieldSlice>> action_to_reads;
 
         bool preorder(const IR::MAU::Action *act) override;
-        explicit MapFieldSliceToAction(const PhvInfo& phv) : phv(phv){}
+        MapFieldSliceToAction(const PhvInfo& phv, const ReductionOrInfo &ri)
+            : phv(phv), red_info(ri) {}
     };
 
     class DBSetter : public Inspector {
@@ -226,9 +228,10 @@ class FieldSliceLiveRangeDB : public IFieldSliceLiveRangeDB, public PassManager 
 
  public:
     FieldSliceLiveRangeDB(const MauBacktracker *backtracker, const FieldDefUse *defuse,
-                          const PhvInfo &phv, const ClotInfo& clot, const PHV::Pragmas &pragmas)
+                          const PhvInfo &phv, const ReductionOrInfo &red_info,
+                          const ClotInfo& clot, const PHV::Pragmas &pragmas)
         : pragmas(pragmas) {
-        fs_action_map = new MapFieldSliceToAction(phv);
+        fs_action_map = new MapFieldSliceToAction(phv, red_info);
         setter = new DBSetter(phv, clot, backtracker, defuse, fs_action_map, *this, pragmas);
         addPasses({fs_action_map, setter});
     }

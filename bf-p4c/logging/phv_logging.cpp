@@ -83,7 +83,7 @@ bool CollectPhvLoggingInfo::preorder(const IR::MAU::Action* act) {
                        // irrelevant.
     actionsToTables[act] = tbl;
     // Call action analysis pass to gather information about field usage.
-    ActionAnalysis aa(phv, false, false, tbl);
+    ActionAnalysis aa(phv, false, false, tbl, red_info);
     ActionAnalysis::FieldActionsMap fieldActionsMap;
     aa.set_field_actions_map(&fieldActionsMap);
     act->apply(aa);

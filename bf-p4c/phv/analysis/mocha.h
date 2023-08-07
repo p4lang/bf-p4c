@@ -20,6 +20,7 @@ class CollectMochaCandidates : public Inspector {
  private:
     PhvInfo                  &phv;
     const PhvUse             &uses;
+    const ReductionOrInfo    &red_info;
     const NonMochaDarkFields &nonMochaDark;
     bool                      pov_on_mocha = false;
 
@@ -33,8 +34,9 @@ class CollectMochaCandidates : public Inspector {
     void end_apply() override;
 
  public:
-    explicit CollectMochaCandidates(PhvInfo& p, const PhvUse& u, const NonMochaDarkFields &nmd) :
-        phv(p), uses(u), nonMochaDark(nmd), mochaCount(0), mochaSize(0) { }
+    CollectMochaCandidates(PhvInfo& p, const PhvUse& u, const ReductionOrInfo &ri,
+                           const NonMochaDarkFields &nmd) :
+        phv(p), uses(u), red_info(ri), nonMochaDark(nmd), mochaCount(0), mochaSize(0) { }
 
     /// @returns true when @p f is a field from a packet (not metadata, pov, or bridged field).
     static bool isPacketField(const PHV::Field* f) {

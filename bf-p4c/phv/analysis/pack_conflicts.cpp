@@ -38,7 +38,7 @@ bool PackConflicts::GatherWrites::preorder(const IR::MAU::Action *act) {
     // Create a mapping of tables to all the actions it may invoke
     self.tableActions[tbl].insert(act);
 
-    ActionAnalysis aa(self.phv, false, false, tbl);
+    ActionAnalysis aa(self.phv, false, false, tbl, self.dg.red_info);
     ActionAnalysis::FieldActionsMap field_actions_map;
     aa.set_field_actions_map(&field_actions_map);
     act->apply(aa);

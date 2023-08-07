@@ -104,7 +104,7 @@ Visitor::profile_t ActionPhvConstraints::init_apply(const IR::Node *root) {
 
 bool ActionPhvConstraints::preorder(const IR::MAU::Action *act) {
     auto *tbl = findContext<IR::MAU::Table>();
-    ActionAnalysis aa(phv, false, false, tbl);
+    ActionAnalysis aa(phv, false, false, tbl, dg.red_info);
     ActionAnalysis::FieldActionsMap field_actions_map;
     aa.set_field_actions_map(&field_actions_map);
     act->apply(aa);

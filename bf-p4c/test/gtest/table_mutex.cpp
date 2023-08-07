@@ -535,10 +535,11 @@ TEST_F(TableMutexTest, Tofino2MultiApplyChain) {
 const IR::BFN::Pipe *runInitialPassManager(const IR::BFN::Pipe* pipe,
                                            const BFN_Options& option,
                                            PhvInfo *phv) {
+    ReductionOrInfo red_info;
     PassManager quick_backend = {
         new CollectHeaderStackInfo,
         new CollectPhvInfo(*phv),
-        new InstructionSelection(option, *phv)
+        new InstructionSelection(option, *phv, red_info)
     };
 
     return pipe->apply(quick_backend);
@@ -626,8 +627,9 @@ TEST_F(TableMutexTest, IndirectAttachedActionAnalysis) {
     TablesMutuallyExclusive mutex;
     ActionMutuallyExclusive action_mutex;
     PhvInfo phv;
+    ReductionOrInfo red_info;
     SplitAttachedInfo att_info(phv);
-    LayoutChoices lc(phv, att_info);
+    LayoutChoices lc(phv, red_info, att_info);
     SharedIndirectAttachedAnalysis sia(mutex, ignore, action_mutex, lc);
     auto options = new BFN_Options();
     auto *post_pm_pipe = runInitialPassManager(test->pipe, *options, &phv);

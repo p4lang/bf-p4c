@@ -353,6 +353,7 @@ bool ActionAnalysis::preorder(const IR::MAU::Instruction *instr) {
     LOG4("ActionAnalysis preorder on instruction : " << *instr);
     field_action.clear();
     field_action.name = instr->name;
+    field_action.instruction = instr;
     return true;
 }
 
@@ -512,6 +513,7 @@ void ActionAnalysis::postorder(const IR::MAU::Instruction *instr) {
             } else {
                 FieldAction field_action_split;
                 field_action_split.name = field_action.name;
+                field_action_split.instruction = field_action.instruction;
                 field_action_split.requires_split = true;
                 auto *write_slice = MakeSliceDestination(field_action.write.expr,
                         alloc.field_slice().lo, alloc.field_slice().hi);
@@ -1106,6 +1108,18 @@ bool ActionAnalysis::init_constant_alignment(const ActionParam &read,
     return true;
 }
 
+bool ActionAnalysis::isReductionOr(ContainerAction &cont_action) const {
+    if (cont_action.field_actions.size() != 1) return false;
+    cstring red_key;
+    if (!red_info.is_reduction_or(cont_action.field_actions[0].instruction, tbl, red_key))
+        return false;
+    if (tbl->stage() >= 0) {
+        for (auto *t : red_info.tbl_reduction_or_group.at(red_key))
+            if (t->stage() >= 0 && t->stage() < tbl->stage()) return false;
+    }
+    return true;
+}
+
 /** For action data before PHV allocation or constants.  Just guarantees that the write bits
  *  match up directly with the read bits
  */
@@ -1123,6 +1137,7 @@ bool ActionAnalysis::init_simple_alignment(const ActionParam &read,
 
     if (read.type == ActionParam::ACTIONDATA) {
         le_bitrange read_bits;
+        cstring key;
         if (cont_action.is_deposit_field_variant || cont_action.convert_instr_to_deposit_field ||
             cont_action.convert_instr_to_byte_rotate_merge || cont_action.name == "set") {
             // if the instruction is or could be a deposit field or byte rotate, then we don't
@@ -1133,6 +1148,9 @@ bool ActionAnalysis::init_simple_alignment(const ActionParam &read,
         } else if (read.speciality == ActionParam::NO_SPECIAL) {
             // if this is action data, we can 'align' it by adding padding, so as above we hack
             // the alignment to be the same as the destination
+            read_bits = write_bits;
+        } else if (isReductionOr(cont_action)) {
+            // this is a reduction-or, so it will turn into a set (deposit-field)
             read_bits = write_bits;
         } else {
             read_bits = read.range();
