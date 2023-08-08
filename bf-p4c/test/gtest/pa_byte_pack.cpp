@@ -11,7 +11,6 @@
 
 #include "ir/ir.h"
 #include "lib/error.h"
-#include "test/frameworks/gtest/googlemock/include/gmock/gmock-matchers.h"
 #include "test/gtest/helpers.h"
 #include "bf-p4c/common/header_stack.h"
 #include "bf-p4c/phv/phv_fields.h"

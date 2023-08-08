@@ -89,6 +89,12 @@ while [ $# -gt 0 ]; do
     -D*)
         otherArgs+=" $1"
         ;;
+    build-*)
+        builddir="$1"
+        ;;
+    Debug|Release|RelWithDebInfo)
+        buildtype="$1"
+        ;;
     *)
         echo >&2 "Invalid argument supplied"
         show_help

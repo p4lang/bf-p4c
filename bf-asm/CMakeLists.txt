@@ -367,14 +367,13 @@ if (ENABLE_GTESTS)
   ${BFN_P4C_LIB_DIR}/options.cpp
   ${BFN_P4C_LIB_DIR}/source_file.cpp
   ${BFN_P4C_LIB_DIR}/stringify.cpp
-  )
+)
 
   # Do not use a unity build for gtestasm (for now).
   set_source_files_properties (${BFAS_GTEST_SOURCES} PROPERTIES SKIP_UNITY_BUILD_INCLUSION TRUE)
 
   add_executable (gtestasm ${BFAS_GTEST_SOURCES} ${BFP4C_SOURCES})
   include_directories(
-    ${BFN_P4C_SOURCE_DIR}/p4c/test/frameworks/gtest/googletest/include
     ${BFN_P4C_SOURCE_DIR}/p4c
   )
   target_link_libraries (gtestasm PRIVATE bfas_lib gtest)

@@ -1096,13 +1096,11 @@ if (ENABLE_BAREFOOT_INTERNAL)
 endif()
 target_include_directories(bfp4c
   INTERFACE ${LIBDYNHASH_INCLUDE_DIR}
-  INTERFACE ${BFN_P4C_SOURCE_DIR}/p4c/test/frameworks/gtest/googlemock/include
   INTERFACE ${PROTOBUF_INCLUDE_DIRS}
   INTERFACE ${P4C_SOURCE_DIR}/frontends
   INTERFACE ${P4C_SOURCE_DIR}/backends
   INTERFACE ${P4C_SOURCE_DIR}/extensions
   INTERFACE ${P4C_SOURCE_DIR}
-  INTERFACE ${P4C_SOURCE_DIR}/test/frameworks/gtest/googletest/include
   INTERFACE ${P4C_BINARY_DIR}
   INTERFACE ${BFN_P4C_SOURCE_DIR}
   INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}
@@ -1453,7 +1451,7 @@ target_include_directories(bfn_p4runtime SYSTEM BEFORE PUBLIC ${Protobuf_INCLUDE
 
 ################ Testing
 
-if (ENABLE_TESTING)
+if (ENABLE_GTESTS)
   # # Tofino-specific GTests.
 
   # bf_gtest_support library
@@ -1536,9 +1534,7 @@ if (ENABLE_TESTING)
                                 # test_bf_gtest_helpers should be in its own testlib - & requies 'whole_archive' hack!
                                 # Leave it in GTEST_BF_P4C_SOURCES for now.
   target_include_directories (bf_gtest_support PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/test/gtest}" PRIVATE "${P4C_BINARY_DIR}")
-  add_dependencies (bf_gtest_support p4headers_h p4headers_cpp ir-generated)  # Indirectly we #include "ir/gen-tree-macro.h"
-
-
+  add_dependencies (bf_gtest_support p4headers_h p4headers_cpp ir-generated gtest)  # Indirectly we #include "ir/gen-tree-macro.h"
 
   set (GTEST_BF_P4C_SOURCES
     # Currently all gtests need to be built directly into the gtestp4c binary.
