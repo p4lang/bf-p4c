@@ -188,6 +188,12 @@ const bit<32> SNAT_TABLE_SIZE = 4 * 1024;
 //-----------------------------------------------------------------------------
 
 
+@pa_no_pack("egress" , "local_md.checks.stp" , "local_md.flags.acl_deny")
+@pa_no_pack("ingress" , "local_md.flags.myip" , "local_md.flags.port_vlan_miss")
+@pa_no_pack("ingress" , "local_md.flags.fib_drop" , "local_md.flags.port_vlan_miss")
+@pa_no_pack("egress" , "local_md.flags.port_isolation_packet_drop" , "local_md.checks.stp")
+@pa_no_pack("ingress" , "local_md.flags.fib_lpm_miss" , "local_md.flags.acl_deny")
+@pa_no_pack("ingress" , "local_md.flags.meter_packet_action" , "local_md.flags.glean")
 
 
 typedef bit<48> mac_addr_t;
