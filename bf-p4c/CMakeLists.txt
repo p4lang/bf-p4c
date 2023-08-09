@@ -1663,7 +1663,7 @@ if (ENABLE_GTESTS)
     WORKING_DIRECTORY ${P4C_BINARY_DIR})
   set_tests_properties(test_p4c_driver PROPERTIES LABELS lint)
 
-endif(ENABLE_TESTING)
+endif(ENABLE_GTESTS)
 
 
 set (EVEN_MORE_FILES_TO_LINT
