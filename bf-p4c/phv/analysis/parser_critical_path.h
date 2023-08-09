@@ -75,26 +75,27 @@ class CollectUserSpecifiedCriticalStates : public Inspector {
         if (state->gress != gress)
             return false;
 
-        auto p4State = state->p4State;
-        if (!p4State) return true;
+        for (const auto* p4State : state->p4States) {
+            for (auto annot : p4State->annotations->annotations) {
+                if (annot->name.name == "critical") {
+                    auto& exprs = annot->expr;
+                    if (exprs.size() == 1) {
+                        auto gress = exprs[0]->to<IR::StringLiteral>();
+                        if (!gress) {
+                            ::error("Invalid use of %1%, correct usage is: "
+                                         "@pragma critical [ingress/egress]", annot);
+                        }
 
-        for (auto annot : p4State->annotations->annotations) {
-            if (annot->name.name == "critical") {
-                auto& exprs = annot->expr;
-                if (exprs.size() == 1) {
-                    auto gress = exprs[0]->to<IR::StringLiteral>();
-                    if (!gress) {
-                        ::error("Invalid use of %1%, correct usage is: "
-                                     "@pragma critical [ingress/egress]", annot);
-                    }
-
-                    if (gress && gress->value == toString(state->gress)) {
+                        if (gress && gress->value == toString(state->gress)) {
+                            LOG3("@critical specified on " << state->name);
+                            critical_states.insert(state);
+                            return true;
+                        }
+                    } else if (exprs.size() == 0) {
                         LOG3("@critical specified on " << state->name);
                         critical_states.insert(state);
+                        return true;
                     }
-                } else if (exprs.size() == 0) {
-                    LOG3("@critical specified on " << state->name);
-                    critical_states.insert(state);
                 }
             }
         }

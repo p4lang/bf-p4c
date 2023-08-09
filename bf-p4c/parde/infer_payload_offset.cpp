@@ -752,7 +752,8 @@ class InsertStallState : public ParserTransform {
 
             unsigned  new_shift = transition->shift - hdr_stop;
             cstring new_state_name = state->name + ".$hdr_len_stop_stall";
-            auto new_state = new IR::BFN::ParserState(state->p4State, new_state_name, state->gress);
+            auto new_state =
+                new IR::BFN::ParserState(state->p4States, new_state_name, state->gress);
             auto orig_state_new_transition = new IR::BFN::Transition(match_t(),
                                              hdr_stop, new_state);
 

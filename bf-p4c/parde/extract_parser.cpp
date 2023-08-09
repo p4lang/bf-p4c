@@ -321,7 +321,7 @@ struct AncestorStates {
 
         for (auto state : stack) {
             GetHeaderStackIndex getHeaderStackIndex(header, true);
-            state->p4State->apply(getHeaderStackIndex);
+            state->p4State()->apply(getHeaderStackIndex);
 
             if (getHeaderStackIndex.rv > rv)
                 rv = getHeaderStackIndex.rv;
@@ -524,9 +524,9 @@ struct ResolveHeaderStackIndex : public Transform {
                     LOG3("mark " << s->name << " as strided");
                 }
             }
-            stridedStates.insert(state->p4State->name);
+            stridedStates.insert(state->p4State()->name);
             state->stride = true;
-            LOG3("mark " << state->p4State->name << " as strided");
+            LOG3("mark " << state->p4State()->name << " as strided");
             return 0;
         } else if (indexToState.size() == 1) {
             return indexToState.begin()->first + 1;
@@ -699,14 +699,14 @@ GetBackendParser::createBackendParser() {
 
                 ordered_map<cstring, const IR::ParserState*> ancestors;
 
-                for (auto anc : pg.get_all_ancestors(state->p4State)) {
+                for (auto anc : pg.get_all_ancestors(state->p4State())) {
                     if (resolved_map.count(anc->name))
                         ancestors[anc->name] = resolved_map.at(anc->name);
                 }
 
                 ResolveHeaderStackIndex resolveHeaderStackIndex(state, backendStates,
                                                                        &ancestors, &pg);
-                auto resolved = state->p4State->apply(resolveHeaderStackIndex)
+                auto resolved = state->p4State()->apply(resolveHeaderStackIndex)
                                      ->to<IR::ParserState>();
                 if (resolveHeaderStackIndex.stackOutOfBound) {
                     LOG4("stack out of bound at " << state->name);
@@ -716,7 +716,7 @@ GetBackendParser::createBackendParser() {
                 }
                 for (auto stridedState : resolveHeaderStackIndex.stridedStates) {
                     if (stridedState == name) continue;
-                    auto resolved_stride = backendStates.at(stridedState)->p4State
+                    auto resolved_stride = (*backendStates.at(stridedState)->p4States.begin())
                                           ->apply(ResetHeaderStackIndex())->to<IR::ParserState>();
                     resolved_map[resolved_stride->name] = resolved_stride;
                 }
@@ -724,8 +724,10 @@ GetBackendParser::createBackendParser() {
         }
         for (auto &backendState : backendStates) {
              auto* state = backendState.second;
-             if (resolved_map.count(state->p4State->name)) {
-                 state->p4State = resolved_map.at(state->p4State->name);
+             if (resolved_map.count(state->p4State()->name)) {
+                 const auto* p4State = resolved_map.at(state->p4State()->name);
+                 state->p4States.clear();
+                 state->p4States.emplace(p4State);
              }
         }
     }
@@ -1439,7 +1441,7 @@ struct RewriteParserChecksums : public Transform {
 
         auto& currState = declNameToOffset[stateName];
         for (const auto anc : ancestors) {
-            for (const auto& kv : declNameToOffset[anc->p4State->controlPlaneName()]) {
+            for (const auto& kv : declNameToOffset[(*anc->p4States.begin())->controlPlaneName()]) {
                 const auto declName = kv.first;
                 const int ancOffset = kv.second;
 
@@ -1899,28 +1901,31 @@ IR::BFN::ParserState* GetBackendParser::convertState(cstring name, bool& isLoopS
 
 IR::BFN::ParserState* GetBackendParser::convertBody(IR::BFN::ParserState* state) {
     ResolveHeaderStackIndex resolveHeaderStackIndex(state, &ancestors);
-    auto resolved = state->p4State->apply(resolveHeaderStackIndex)->to<IR::ParserState>();
+    auto resolved =
+        state->p4State()->apply(resolveHeaderStackIndex)->to<IR::ParserState>();
 
     if (resolveHeaderStackIndex.stackOutOfBound) {
         LOG4("stack out of bound at " << state->name);
         return nullptr;
     }
 
-    state->p4State = resolved;
-
-    BUG_CHECK(state->p4State != nullptr,
+    BUG_CHECK(resolved != nullptr,
               "Converting a parser state that didn't come from the frontend?");
 
+    state->p4States.clear();
+    state->p4States.emplace(resolved);
+
     // Lower the parser statements from frontend IR to backend IR.
-    RewriteParserStatements rewriteStatements(typeMap, state->p4State->controlPlaneName(),
+    RewriteParserStatements rewriteStatements(typeMap,
+                                              state->p4State()->controlPlaneName(),
                                               state->gress, extractedFields[state], bitOffsets);
     applyRewrite(state, rewriteStatements);
 
     // Compute the new state's shift.
     auto bitShift = rewriteStatements.bitTotalShift();
 
-    if (parserPragmas.force_shift.count(state->p4State)) {
-        bitShift = parserPragmas.force_shift.at(state->p4State);
+    if (parserPragmas.force_shift.count(state->p4State())) {
+        bitShift = parserPragmas.force_shift.at(state->p4State());
         ::warning("state %1% will shift %2% bits because of @pragma force_shift",
                   state->name, bitShift);
     }
@@ -1929,30 +1934,31 @@ IR::BFN::ParserState* GetBackendParser::convertBody(IR::BFN::ParserState* state)
 
     if (!bitsAdvanced.isHiAligned()) {
         ::fatal_error("Parser state %1% is not byte-aligned (%2% bit shifted)",
-                      state->p4State->controlPlaneName(), bitShift);
+                      state->p4State()->controlPlaneName(), bitShift);
     }
 
     auto shift = bitsAdvanced.nextByte();
 
     // case 1: no select
-    if (!state->p4State->selectExpression) return state;
+    if (!state->p4State()->selectExpression) return state;
 
     // case 2: @pragma terminate_parsing applied on this state
-    if (parserPragmas.terminate_parsing.count(state->p4State)) {
+    if (parserPragmas.terminate_parsing.count(state->p4State())) {
         addTransition(state, match_t(), shift, "accept");
         return state;
     }
 
     // case 3: unconditional transition, e.g. accept/reject
-    if (auto* path = state->p4State->selectExpression->to<IR::PathExpression>()) {
+    if (auto* path = state->p4State()->selectExpression->to<IR::PathExpression>()) {
         addTransition(state, match_t(), shift, path->path->name);
         return state;
     }
 
     // case 4: we have a select expression. Lower it to Tofino IR.
-    auto* p4Select = state->p4State->selectExpression->to<IR::SelectExpression>();
+    auto* p4Select = state->p4State()->selectExpression->to<IR::SelectExpression>();
 
-    BUG_CHECK(p4Select, "Invalid select expression %1%", state->p4State->selectExpression);
+    BUG_CHECK(p4Select, "Invalid select expression %1%",
+              state->p4State()->selectExpression);
 
     auto& selectExprs = p4Select->select->components;
     auto& selectCases = p4Select->selectCases;
@@ -1984,7 +1990,7 @@ IR::BFN::ParserState* GetBackendParser::convertBody(IR::BFN::ParserState* state)
 }
 
 void GetBackendParser::applyRewrite(IR::BFN::ParserState* state, Transform& rewrite) {
-    for (auto* statement : state->p4State->components) {
+    for (auto* statement : state->p4State()->components) {
         // Checksum add might have added a BlockStatement
         if (auto* bs = statement->to<IR::BlockStatement>()) {
             for (auto* s : bs->components) {
@@ -2013,7 +2019,7 @@ void GetBackendParser::rewriteChecksums(IR::BFN::Parser* parser, IR::BFN::Parser
             ancestors = preds->second;
         }
 
-        const auto name = state->p4State->controlPlaneName();
+        const auto name = state->p4State()->controlPlaneName();
         RewriteParserChecksums rpc(name, ancestors, declNameToOffset, offsetsPerState[state],
                                    extractedFields[state], bitOffsets, checksumErrors, checksums);
 
@@ -2040,7 +2046,7 @@ void GetBackendParser::rewriteChecksums(IR::BFN::Parser* parser, IR::BFN::Parser
                 msg << "Checksum %1% operates on an odd number of bytes inside a loop consisting "
                        "of states [ ";
                 for (const auto state : loop) {
-                    msg << state->p4State->controlPlaneName() << " ";
+                    msg << state->p4State()->controlPlaneName() << " ";
                 }
                 msg << "] which makes it impossible to implement on Tofino. Consider adding an add "
                        "/ subtract instruction with a constant argument 8w0 in one of the states "

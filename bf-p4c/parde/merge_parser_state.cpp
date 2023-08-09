@@ -33,16 +33,18 @@ struct CollectStateUses : public ParserInspector {
 };
 
 /// Shift all input packet extracts to the right by the given
-    /// amount. Works for SaveToRegister and Extract.
-    /// The coordinate system:
-    /// [0............31]
-    /// left..........right
+/// amount. Works for SaveToRegister and Extract.
+/// The coordinate system:
+/// [0............31]
+/// left..........right
 struct RightShiftPacketRVal : public Modifier {
     int byteDelta = 0;
-    explicit RightShiftPacketRVal(int byteDelta) : byteDelta(byteDelta) { }
-    bool preorder(IR::BFN::PacketRVal* rval) override {
+    bool allowNegative = false;
+    explicit RightShiftPacketRVal(int byteDelta, bool allowNegative = false)
+        : byteDelta(byteDelta), allowNegative(allowNegative) {}
+    bool preorder(IR::BFN::PacketRVal *rval) override {
         rval->range  = rval->range.shiftedByBytes(byteDelta);
-        BUG_CHECK(rval->range.lo >= 0, "Shifting extract to negative position.");
+        BUG_CHECK(rval->range.lo >= 0 || allowNegative, "Shifting extract to negative position.");
         return true;
     }
 };
@@ -92,9 +94,7 @@ class ComputeMergeableState : public ParserInspector {
         if (is_merge_point(next_state))
             return;
 
-        // TODO(zma) this could use more thoughts
-        if (!next_state->selects.empty())
-            return;
+        // grg: removed check that prevented merging with a state containing a select
 
         // TODO(zma) more thoughts can be given to this
         for (auto stmt : next_state->statements) {
@@ -136,12 +136,13 @@ class ComputeMergeableState : public ParserInspector {
 
         IR::Vector<IR::BFN::ParserPrimitive>    extractions;
         IR::Vector<IR::BFN::SaveToRegister>     saves;
+        std::set<const IR::ParserState*>        p4_states;
 
         // Merge all except the tail state.
         bool is_first = true;
         for (auto itr = states.rbegin(); itr != states.rend(); ++itr) {
             auto& st = *itr;
-            BUG_CHECK(st->transitions.size() == 1,
+            BUG_CHECK(st->transitions.size() == 1 || itr == states.rend() - 1,
                       "branching state can not be merged, unless the last");
             auto* transition = *st->transitions.begin();
 
@@ -167,15 +168,24 @@ class ComputeMergeableState : public ParserInspector {
                                 (shifted)))->to<IR::BFN::SaveToRegister>()); }
                 shifted += transition->shift;
             }
+
+            p4_states.insert(st->p4States.begin(), st->p4States.end());
         }
 
-        auto* merged_state = new IR::BFN::ParserState(nullptr, name, tail->gress);
-        merged_state->selects = tail->selects;
+        IR::Vector<IR::BFN::Select> selects;
+        for (const auto* select : tail->selects)
+            selects.push_back(
+                (select->apply(RightShiftPacketRVal(shifted, true)))->to<IR::BFN::Select>());
+
+        auto *merged_state = new IR::BFN::ParserState(nullptr, name, tail->gress);
+        merged_state->selects = selects;
         merged_state->statements = extractions;
         for (const auto* transition : tail->transitions) {
             auto* new_transition = createMergedTransition(shifted, transition, saves);
             merged_state->transitions.push_back(new_transition);
         }
+        merged_state->stride = tail->stride;
+        merged_state->p4States.insert(p4_states.begin(), p4_states.end());
 
         LOG3("Created " << merged_state->name);
 

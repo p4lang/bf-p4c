@@ -1229,6 +1229,30 @@ struct AllocateParserState : public ParserTransform {
 
             shift = std::min(shift, Device::pardeSpec().byteInputBufferSize() * 8);
 
+            // Trim the shift amount to ensure that no selects start within the shift range and
+            // extend beyond the parser buffer range.
+            //
+            // This is necessary because parser match register allocation
+            // (AllocateParserMatchRegisters) will generate an illegal allocation because either the
+            // select data is saved in the first state (illegal because the data extends beyond the
+            // buffer range) or the second state (illegal because some of the data has already been
+            // shifted out).
+            bool select_changed_shift = false;
+            do {
+                select_changed_shift = false;
+                for (auto* select : state->selects) {
+                    if (auto* source = select->source->to<IR::BFN::SavedRVal>()) {
+                        if (auto* rval = source->source->to<IR::BFN::InputBufferRVal>()) {
+                            if (rval->range.lo < shift &&
+                                rval->range.hi >= Device::pardeSpec().byteInputBufferSize() * 8) {
+                                shift = (rval->range.lo / 8) * 8;
+                                select_changed_shift = true;
+                            }
+                        }
+                    }
+                }
+            } while (select_changed_shift);
+
             return shift;
         }
 
@@ -1314,7 +1338,7 @@ struct AllocateParserState : public ParserTransform {
         IR::BFN::ParserState*
         create_split_state(const IR::BFN::ParserState* state, cstring prefix, unsigned iteration) {
             cstring split_name = prefix + ".$split_" + cstring::to_cstring(iteration);
-            auto split = new IR::BFN::ParserState(state->p4State, split_name, state->gress);
+            auto split = new IR::BFN::ParserState(state->p4States, split_name, state->gress);
 
             LOG2("created split state " << split);
             return split;
@@ -1382,7 +1406,7 @@ struct AllocateParserState : public ParserTransform {
                 return nullptr;
 
             cstring name = prefix + ".$stall_" + cstring::to_cstring(idx);
-            auto stall = new IR::BFN::ParserState(state->p4State, name, state->gress);
+            auto stall = new IR::BFN::ParserState(state->p4States, name, state->gress);
 
             auto stall_amt = Device::pardeSpec().byteInputBufferSize();
             auto new_shift = shift - stall_amt;
@@ -1559,7 +1583,7 @@ struct InsertParserCounterStall : public ParserTransform {
 
         int suffix = stall_counts[src->name]++;
         cstring name = src->name + ".$ctr_stall" + std::to_string(suffix).c_str();
-        auto stall = new IR::BFN::ParserState(src->p4State, name, src->gress);
+        auto stall = new IR::BFN::ParserState(src->p4States, name, src->gress);
 
         LOG2("created stall state for counter select on "
               << src->name << " -> " << t->next->name);

@@ -1,6 +1,7 @@
 #ifndef EXTENSIONS_BF_P4C_PARDE_COLLECT_PARSER_USEDEF_H_
 #define EXTENSIONS_BF_P4C_PARDE_COLLECT_PARSER_USEDEF_H_
 
+#include <optional>
 #include "bf-p4c/common/utils.h"
 #include "bf-p4c/parde/dump_parser.h"
 #include "bf-p4c/parde/parde_utils.h"
@@ -467,6 +468,57 @@ struct CollectParserUseDef : PassManager {
             }
         }
 
+        std::vector<std::pair<const IR::BFN::ParserState*, const IR::BFN::InputBufferRVal*>>
+        defer_defs_to_children(const IR::BFN::InputBufferRVal* rval,
+                               const IR::BFN::ParserGraph& graph,
+                               const IR::BFN::ParserState* use_state,
+                               const IR::BFN::ParserState* def_state,
+                               const PHV::Field* field, const PHV::Field* saved,
+                               const le_bitrange& field_bits, const le_bitrange& saved_bits) {
+            if (def_state == use_state) return {};
+
+            // Adjust the rval
+            auto def_rval = rval->clone();
+            if (saved_bits.size() != field_bits.size()) {
+                auto nw_f_bits = field_bits.toOrder<Endian::Network>(field->size);
+                auto nw_s_bits = saved_bits.toOrder<Endian::Network>(saved->size);
+
+                auto full_rval = rval->clone();
+                full_rval->range.lo -= nw_f_bits.lo;
+                full_rval->range.hi += field->size - nw_f_bits.hi + 1;
+
+                def_rval = full_rval->clone();
+                def_rval->range.lo += nw_s_bits.lo;
+                def_rval->range.hi -= saved->size - nw_s_bits.hi + 1;
+            }
+
+            // Check whether we can defer to the children
+            bool def_deferred = false;
+            bool def_invalid = false;
+            std::vector<std::pair<const IR::BFN::ParserState *, const IR::BFN::InputBufferRVal *>>
+                new_defs;
+            for (const auto *trans : def_state->transitions) {
+                if (trans->loop) {
+                    def_invalid = true;
+                    break;
+                }
+
+                if (!trans->next) continue;
+                if (!graph.is_reachable(trans->next, use_state)) continue;
+
+                auto *shifted_rval =
+                    def_rval->apply(ShiftPacketRVal(trans->shift * 8, true))
+                        ->to<IR::BFN::InputBufferRVal>();
+                def_deferred = true;
+                def_invalid |= shifted_rval->range.lo < 0;
+                new_defs.push_back(std::make_pair(trans->next, shifted_rval));
+            }
+
+            if (def_deferred && !def_invalid) return new_defs;
+
+            return {};
+        }
+
         // defs have absolute offsets from current state
         ordered_set<Parser::Def*>
         find_defs(const IR::BFN::InputBufferRVal* rval,
@@ -516,21 +568,29 @@ struct CollectParserUseDef : PassManager {
                             auto s = phv.field(saved, &s_bits);
 
                             if (f == s) {
-                                if (s_bits.size() == f_bits.size()) {
-                                    add_def(rv, def_state, rval);
+                                auto child_rvals = defer_defs_to_children(
+                                    rval, graph, state, def_state, f, s, f_bits, s_bits);
+
+                                if (child_rvals.size()) {
+                                    for (auto& [def_state, rval] : child_rvals)
+                                        add_def(rv, def_state, rval);
                                 } else {
-                                    auto nw_f_bits = f_bits.toOrder<Endian::Network>(f->size);
-                                    auto nw_s_bits = s_bits.toOrder<Endian::Network>(s->size);
+                                    if (s_bits.size() == f_bits.size()) {
+                                        add_def(rv, def_state, rval);
+                                    } else {
+                                        auto nw_f_bits = f_bits.toOrder<Endian::Network>(f->size);
+                                        auto nw_s_bits = s_bits.toOrder<Endian::Network>(s->size);
 
-                                    auto full_rval = rval->clone();
-                                    full_rval->range.lo -= nw_f_bits.lo;
-                                    full_rval->range.hi += f->size - nw_f_bits.hi + 1;
+                                        auto full_rval = rval->clone();
+                                        full_rval->range.lo -= nw_f_bits.lo;
+                                        full_rval->range.hi += f->size - nw_f_bits.hi + 1;
 
-                                    auto slice_rval = full_rval->clone();
-                                    slice_rval->range.lo += nw_s_bits.lo;
-                                    slice_rval->range.hi -= s->size - nw_s_bits.hi + 1;
+                                        auto slice_rval = full_rval->clone();
+                                        slice_rval->range.lo += nw_s_bits.lo;
+                                        slice_rval->range.hi -= s->size - nw_s_bits.hi + 1;
 
-                                    add_def(rv, def_state, slice_rval);
+                                        add_def(rv, def_state, slice_rval);
+                                    }
                                 }
                             }
                         }

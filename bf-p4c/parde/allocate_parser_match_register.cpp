@@ -51,7 +51,7 @@ struct ResolveOutOfBufferSaves : public ParserTransform {
 
         auto cnt = orig_state_to_stall_cnt[src->name]++;
         cstring name = src->name + ".$oob_stall_" + cstring::to_cstring(cnt);
-        auto stall = new IR::BFN::ParserState(src->p4State, name, src->gress);
+        auto stall = new IR::BFN::ParserState(src->p4States, name, src->gress);
 
         LOG2("created stall state for out of buffer select on "
               << src->name << " -> " << t->next->name);
@@ -2076,8 +2076,8 @@ struct RemoveEmptyStallState : public ParserModifier {
     void postorder(IR::BFN::Transition* t) override {
         if (t->next && t->next->name.find("$oob_stall")) {
             if (auto next = can_remove(t->next)) {
-                t->next = next;
                 LOG4("removed empty parser stall state  " << t->next->name);
+                t->next = next;
             }
         }
     }

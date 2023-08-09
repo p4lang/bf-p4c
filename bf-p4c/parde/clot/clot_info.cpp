@@ -58,8 +58,19 @@ cstring ClotInfo::sanitize_state_name(cstring state_name, gress_t gress) const {
     std::string st(state_name.c_str());
     auto pos = st.find(".$");
 
+    // Even though we want to strip off split information, we want to keep
+    // loop unroll iteration counts
+    auto it_pos = st.find(".$it");
+    std::string it_str;
+    if (it_pos != std::string::npos) {
+        auto it_str_untrimmed = st.substr(it_pos + 1, st.length());
+        auto pos = it_str_untrimmed.find(".");
+        it_str = "." + it_str_untrimmed.substr(0, pos);
+    }
+
     return (!state_name.startsWith(ss.str())  // if not prefixed with gress
-        ? (ss.str() + "::") : "") + st.substr(0, pos);  // add the prefix, cut generated appendix
+        ? (ss.str() + "::") : "") + st.substr(0, pos)  // add the prefix, cut generated appendix
+        + it_str;  // add any iteration number
 }
 
 const Clot* ClotInfo::parser_state_to_clot(const IR::BFN::LoweredParserState *state,
@@ -1020,8 +1031,9 @@ std::string ClotInfo::print(const PhvInfo* phvInfo) const {
                 << "states:" << std::endl;
             for (auto state : *largest->second) {
                 int num_clots_in_state = 0;
-                if (state_to_clots.count(state->name))
-                    num_clots_in_state = state_to_clots.at(state->name).size();
+                auto state_name = sanitize_state_name(state->name, state->thread());
+                if (state_to_clots.count(state_name))
+                    num_clots_in_state = state_to_clots.at(state_name).size();
                 out << "    " << state->name << " (" << num_clots_in_state << " CLOTs)"
                     << std::endl;
             }
@@ -1184,8 +1196,9 @@ std::pair<unsigned, ordered_set<const IR::BFN::ParserState*>*>* ClotInfo::find_l
     }
 
     // Add the current state's result to the table and return.
-    if (parser_state_to_clots.count(state->name))
-        max_clots += parser_state_to_clots.at(state->name).size();
+    auto state_name = sanitize_state_name(state->name, state->thread());
+    if (parser_state_to_clots.count(state_name))
+        max_clots += parser_state_to_clots.at(state_name).size();
     max_path_states->insert(state);
     auto result =
         new std::pair<unsigned, ordered_set<const IR::BFN::ParserState*>*>(

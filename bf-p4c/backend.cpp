@@ -300,6 +300,7 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
         // The zeroInitFields are then used to skip eliminating the POV assignments in ElimUnused
         // pass later on. The implicit zero initializations on these fields will ensure they are
         // deparsed as zero.
+        &defuse,
         new RemoveMetadataInits(phv, defuse, zeroInitFields),
         new CollectPhvInfo(phv),
         &defuse,

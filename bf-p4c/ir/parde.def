@@ -459,7 +459,9 @@ class Select {
 /// field-like objects.
 class ParserState : Unit {
     ParserState(IR::ParserState p4State, cstring name, gress_t gr)
-        : p4State(p4State), name(name), gress(gr) { }
+        : name(name), gress(gr) { if (p4State) p4States.emplace(p4State); }
+    ParserState(std::set<const IR::ParserState*> p4States, cstring name, gress_t gr)
+        : p4States(p4States), name(name), gress(gr) { }
 
     int stage() const override { return -1; }
     gress_t thread() const override { return gress; }
@@ -468,11 +470,17 @@ class ParserState : Unit {
         statements.visit_children(v);
         selects.visit_children(v);
         transitions.parallel_visit_children(v); }
+    const IR::ParserState* p4State() const {
+        BUG_CHECK(p4States.size() == 1, "Expecing exactly one state in p4States but saw %1%",
+                  p4States.size());
+        return *p4States.begin();
+    }
 
 #emit
-    /// The original P4 state. Null if this is a generated state that doesn't
+    /// The original P4 state(s). Empty if this is a generated state that doesn't
     /// correspond to anything in the P4 program. Not visited.
-    const IR::ParserState* p4State = nullptr;
+    /// Can contain multiple states due to state merging.
+    std::set<const IR::ParserState*> p4States;
 
     /// Debugging information about the P4 state or states that were used to
     /// generate this ParserState.

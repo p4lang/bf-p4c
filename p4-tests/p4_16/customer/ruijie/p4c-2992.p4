@@ -2516,7 +2516,7 @@ parser IgParser_fabric(packet_in pkt, out switch_header_t hdr, out switch_ingres
 parser EgParser_fabric(packet_in pkt, out switch_header_t hdr, out switch_egress_metadata_t eg_md, out egress_intrinsic_metadata_t eg_intr_md) {
     value_set<bit<16>>(1) udp_port_vxlan;
     value_set<switch_cpu_port_value_set_t>(1) cpu_port;
-    @critical state start {
+    /*@critical*/ state start {
         pkt.extract(eg_intr_md);
         eg_md.common.pkt_length = eg_intr_md.pkt_length;
         eg_md.qos.qdepth = eg_intr_md.deq_qdepth;
@@ -2995,7 +2995,7 @@ parser IgParser_downlink(packet_in pkt, out switch_header_t hdr, out switch_ingr
 parser EgParser_downlink(packet_in pkt, out switch_header_t hdr, out switch_egress_metadata_t eg_md, out egress_intrinsic_metadata_t eg_intr_md) {
     value_set<bit<16>>(1) udp_port_vxlan;
     value_set<switch_cpu_port_value_set_t>(1) cpu_port;
-    @critical state start {
+    /*@critical*/ state start {
         pkt.extract(eg_intr_md);
         eg_md.common.pkt_length = eg_intr_md.pkt_length;
         eg_md.qos.qdepth = eg_intr_md.deq_qdepth;

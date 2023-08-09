@@ -360,7 +360,7 @@ struct ResolveNegativeExtract : public PassManager {
                 // for this purpose.
                 unsigned state_shift = collectNegative.remainder_before_exit.at(orig_transition);
 
-                auto remainder_state = new IR::BFN::ParserState(state->p4State,
+                auto remainder_state = new IR::BFN::ParserState(state->p4States,
                                                           state->name + "$final_shift",
                                                           state->gress);
                 transition->next = remainder_state;
@@ -379,7 +379,7 @@ struct ResolveNegativeExtract : public PassManager {
                                                           << orig_transition->value << " to state "
                                                           << orig_state->name);
                 auto duplicated_state = new IR::BFN::ParserState(
-                    orig_state->p4State, orig_state->name + "$dup", orig_state->gress);
+                    orig_state->p4States, orig_state->name + "$dup", orig_state->gress);
                 transition->next = duplicated_state;
                 for (auto tr : orig_state->transitions) {
                     auto new_trans = new IR::BFN::Transition(tr->srcInfo,

@@ -16,8 +16,12 @@ bool EliminateEmptyStates::is_empty(const IR::BFN::ParserState* state) {
     if (state->name.find(".$ctr_stall"))  // compiler generated stall
         return false;
 
+    if (state->name.find(".$oob_stall"))  // compiler generated stall
+        return false;
+
     if (state->name.endsWith("$hdr_len_stop_stall"))  // compiler generated stall
         return false;
+
     auto parser = findOrigCtxt<IR::BFN::Parser>();
     // do not merge loopback state for now, need to maitain loopback pointer TODO
     // p4-tests/p4_16/compile_only/p4c-2153.p4
