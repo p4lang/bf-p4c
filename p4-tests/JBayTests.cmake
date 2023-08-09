@@ -636,9 +636,8 @@ bfn_add_test_with_args ("tofino2" "jbay" "p4_16_internal_p4_16_mirror"
 
 # PTF, disable failing tests
 bfn_add_test_with_args ("tofino2" "jbay" "p4_16_programs_tna_checksum"
-    ${p4_16_programs_path}/tna_checksum/tna_checksum.p4 "${testExtraArgs} -arch t2na -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/tna_checksum" "")
-bfn_set_ptf_test_spec("tofino2" "p4_16_programs_tna_checksum"
-    "all ^test.Ipv4UdpTranslateSpecialUpdTest")
+    ${p4_16_programs_path}/tna_checksum/tna_checksum.p4 "${testExtraArgs} -arch t2na -bfrt -I${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs/tna_checksum" "")
+bfn_needs_scapy("tofino2" "p4_16_programs_tna_checksum")
 bfn_set_ptf_test_spec("tofino2" "p4_16_programs_tna_snapshot"
     "all ^test.SnapshotTest")
 

@@ -486,6 +486,18 @@ if [ "$ptftestdir" = "" ]; then
         # has ptf and no stf, so run the ptf
         run_ptf=true
     fi
+
+    # If we haven't yet found PTF/STF, see if there are python
+    # files in the current directory and assume PTF.
+    if ! $run_ptf && ! $has_stf; then
+        ptftestdir=`dirname $file`
+        if ls "${ptftestdir}/*.py" &> /dev/null; then
+            run_ptf=true
+        else
+            # Reset the ptftestdir -- some tests rely on this behavior
+            ptftestdir=${file%.p4}.ptf
+        fi
+    fi
 fi
 
 if $run_ptf && ! $run_bfrt && ! $run_pd && [ -d ${ptftestdir} ]; then
