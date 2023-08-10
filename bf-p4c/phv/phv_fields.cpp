@@ -1590,36 +1590,33 @@ struct ComputeFieldAlignments : public Inspector {
         return false;
     }
 
-    bool preorder(const IR::MAU::AttachedOutput *ao) {
-        LOG5("Postorder AttachedOutput: " << *ao << ",  size: " <<
-             ao->to<IR::Expression>()->type->width_bits());
-        visitAgain();
-        attached_output = ao;
-        return true;
-    }
-
-    void postorder(const IR::MAU::Instruction* instr) {
+    bool preorder(const IR::MAU::Instruction* instr) {
         Log::TempIndent indent;
-        LOG5("Preorder Instruction: " << *instr << indent);
+        LOG5("Preorder Instruction: " << *instr << "  name: " << instr->name << indent);
         PHV::Field *dst_f;
+
         // For non-set instructions accessing an AttachedOutput
-        if ((attached_output != nullptr) && (instr->name != "set")) {
+        if ((instr->operands.size() == 3) && (instr->name != "set")) {
             int op_id = 0;
             for (auto op_f : instr->operands) {
                 if (!op_id) {
                     // Keep destination field that may need alignment setting
                     dst_f = phv.field(op_f);
                 } else {
+                    // Check if source operand is slice of AttachedOutput node
                     if (auto slc = op_f->to<IR::Slice>()) {
-                        if (slc->e0->to<IR::MAU::AttachedOutput>() == attached_output) {
+                        if (slc->e0->to<IR::MAU::AttachedOutput>()) {
                             int rng = slc->e0->to<IR::Expression>()->type->width_bits();
                             LOG5("Slice: " << slc->e0 << "[" << slc->getH() << ":" << slc->getL()
-                                 << "]");
-                            nw_bitrange dst_bits(rng - slc->getH() - 1, rng - slc->getL() - 1);
-                            LOG5("dest: " << dst_f->name << "  dst_bits: " << dst_bits);
-                            dst_f->updateAlignment(PHV::AlignmentReason::PARSER,
-                                                   FieldAlignment(dst_bits),
-                                                   instr->operands[0]->getSourceInfo());
+                                 << "]" << " width: " << rng);
+                            size_t lo_bit = slc->getL();
+                            for (auto cnt_sz : Device::phvSpec().containerSizes()) {
+                                if ((int)cnt_sz < rng) continue;
+                                // Set container LSbit constraint
+                                dst_f->setStartBits(cnt_sz, bitvec(lo_bit, 1));
+                                LOG5("setStartBits(" << lo_bit << ", 1) for " << dst_f->name <<
+                                     " at container size: " << cnt_sz);
+                            }
                             break;
                         }
                     }
@@ -1627,11 +1624,10 @@ struct ComputeFieldAlignments : public Inspector {
                 op_id++;
             }
         }
-        attached_output = nullptr;
+        return false;
     }
 
     PhvInfo& phv;
-    const IR::MAU::AttachedOutput *attached_output = nullptr;
 };
 
 
