@@ -430,7 +430,7 @@ class GreedyClotAllocator : public Visitor {
                 // 0 ∈ gaps, c1's last slice must cover the last bit of its field, and c2's first
                 // slice must cover the first bit of its field. It suffices, then, to check
                 // entities that might be deparsed between those two fields.
-                for (const auto nodeInfo : deparse_graph.nodesBetween(c1_last_field,
+                for (const auto &nodeInfo : deparse_graph.nodesBetween(c1_last_field,
                                                                       c2_first_field)) {
                     if (nodeInfo.isConstant()) {
                         LOG5("      Constant " << nodeInfo.constant << " might be deparsed "

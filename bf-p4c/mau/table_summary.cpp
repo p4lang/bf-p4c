@@ -777,7 +777,7 @@ void TableSummary::printTablePlacement() {
         return mStr;
     };
 
-    for (auto pt : placedTables) {
+    for (auto &pt : placedTables) {
         auto logical_id = pt.first;
         auto table_stage_i = logical_id / NUM_LOGICAL_TABLES_PER_STAGE;
         auto table_stage = std::to_string(table_stage_i);
@@ -812,7 +812,7 @@ void TableSummary::printTablePlacement() {
             }
 
             std::string table_attached = "-";
-            for (auto att : table->attached_entries) {
+            for (auto &att : table->attached_entries) {
                 table_attached = "( ";
                 table_attached += att.first;
                 table_attached += ", ";

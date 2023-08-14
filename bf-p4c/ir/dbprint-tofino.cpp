@@ -212,7 +212,7 @@ void IR::BFN::LoweredParserMatch::dbprint(std::ostream &out) const {
             out << endl << *st;
         for (auto *save : saves)
             out << endl << *save;
-        for (auto scratch : scratches)
+        for (auto &scratch : scratches)
             out << endl << scratch;
         for (auto *chk : checksums)
             out << endl << *chk;
