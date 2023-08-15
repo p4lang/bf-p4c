@@ -32,6 +32,8 @@ void MultipleApply::MutuallyExclusiveApplies::postorder(const IR::MAU::Table* tb
 Visitor::profile_t MultipleApply::CheckStaticNextTable::init_apply(const IR::Node *root) {
     auto result = MauInspector::init_apply(root);
     self.duplicate_tables.clear();
+    canon_table.clear();
+    all_gateways.clear();
     return result;
 }
 

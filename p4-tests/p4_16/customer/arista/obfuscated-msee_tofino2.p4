@@ -3281,7 +3281,7 @@ control Bethune(inout Wanamassa Westoak, inout Talco Lefor, in egress_intrinsic_
     @name(".Romeo") action Romeo() {
         Lefor.Ekwok.Fredonia = (bit<1>)1w0x1;
     }
-    @use_hash_action(1) @disable_atomic_modify(1) @name(".Caspian") table Caspian {
+    @use_hash_action(1) @disable_atomic_modify(1) @stage(0) @name(".Caspian") table Caspian {
         actions = {
             PawCreek();
         }

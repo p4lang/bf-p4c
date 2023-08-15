@@ -442,7 +442,6 @@ if (TEST_ALT_PHV_ALLOC)
     # New failures after updating latest version of customer profiles.
     p4c_add_xfail_reason("tofino2"
 	"failed to allocate tables for pipe pipe_a within 20 stages"
-	extensions/p4_tests/p4_16/customer/arista/obfuscated-msee_tofino2.p4
 	extensions/p4_tests/p4_16/customer/arista/obfuscated-p416_baremetal_tofino2.p4
     )
 
