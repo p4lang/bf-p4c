@@ -439,12 +439,6 @@ p4c_add_xfail_reason("tofino2"
 # If you make an ALT-PHV test pass (or get close to it but if fails on later
 # error), please update the xfails accordingly.
 if (TEST_ALT_PHV_ALLOC)
-    # New failures after updating latest version of customer profiles.
-    p4c_add_xfail_reason("tofino2"
-	"failed to allocate tables for pipe pipe_a within 20 stages"
-	extensions/p4_tests/p4_16/customer/arista/obfuscated-p416_baremetal_tofino2.p4
-    )
-
     p4c_add_xfail_reason("tofino2"
         "FAIL: switch_acl.ACLTest"
         smoketest_switch_16_y2

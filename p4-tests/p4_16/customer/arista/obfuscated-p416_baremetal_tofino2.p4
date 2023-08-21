@@ -2918,7 +2918,7 @@ control Berlin(inout Frederika Lefor, inout HighRock Starkey, in ingress_intrins
         Botna.count();
         Starkey.Covert.Volcano = (bit<1>)1w1;
     }
-    @disable_atomic_modify(1) @name(".Estero") table Estero {
+    @disable_atomic_modify(1) @name(".Estero") @stage(0) table Estero {
         actions = {
             Chappell();
             @defaultonly NoAction();
@@ -9408,6 +9408,8 @@ parser Millett(packet_in Thistle, out Frederika Lefor, out HighRock Starkey, out
         }
     }
 }
+
+@pa_no_pack("ingress", "Starkey.Covert.Volcano", "Lefor.Sunbury.Calcasieu")
 
 control Devore(inout Frederika Lefor, inout HighRock Starkey, in ingress_intrinsic_metadata_t Garrison, in ingress_intrinsic_metadata_from_parser_t Volens, inout ingress_intrinsic_metadata_for_deparser_t Ravinia, inout ingress_intrinsic_metadata_for_tm_t Milano) {
     @name("doIngL3AintfMeter") Emigrant() Melvina;
