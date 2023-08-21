@@ -816,6 +816,7 @@ class DecidePlacement::BacktrackPlacement {
     // Optionally increment or not the backtrack count. The backtrack count should not be
     // incremented if the backtracking mechanism is being used to evaluate multiple solutions.
     const Placed *reset_place_table(ordered_set<const GroupPlace *> &w, bool bt_inc = true) {
+        LOG_FEATURE("stage_advance", 2, "backtracking to stage " << pl->stage);
         tried = true;
         if (bt_inc)
             ++self.backtrack_count;
@@ -886,7 +887,7 @@ struct DecidePlacement::save_placement_t {
                                                    // backtrack count
 };
 
-void DecidePlacement::savePlacement(const Placed *pl, ordered_set<const GroupPlace *> &work,
+void DecidePlacement::savePlacement(const Placed *pl, const ordered_set<const GroupPlace *> &work,
                                     bool is_best) {
     if (saved_placements.count(pl->name)) {
         auto &info = saved_placements.at(pl->name);
@@ -2038,7 +2039,7 @@ bool TablePlacement::try_alloc_mem(Placed *next, std::vector<Placed *> whole_sta
                 sep = " and "; } }
         LOG3("    " << error_message);
         LOG3("    " << current_mem->last_failure());
-        next->stage_advance_log = "ran out of memories";
+        next->stage_advance_log = "ran out of memories: " + current_mem->last_failure();
         next->resources.memuse.clear();
         for (auto *p : whole_stage)
             p->resources.memuse.clear();
@@ -2576,8 +2577,8 @@ safe_vector<TablePlacement::Placed *>
     TablePlacement::try_place_table(const IR::MAU::Table *t, const Placed *done,
         const StageUseEstimate &current, GatewayMergeChoices& gmc,
         const TableSummary::PlacedTable *pt) {
-    LOG1("try_place_table(" << t->name << ", stage=" << (done ? done->stage : 0) << ")" <<
-         IndentCtl::indent);
+    Log::TempIndent indent;
+    LOG1("try_place_table(" << t->name << ", stage=" << (done ? done->stage : 0) << ")" << indent);
     safe_vector<Placed *> rv_vec;
     // Place and save a placement, as a lambda
     auto try_place = [&](Placed* rv) {
@@ -2602,7 +2603,6 @@ safe_vector<TablePlacement::Placed *>
             try_place(rv);
         }
     }
-    LOG1_UNINDENT;
     return rv_vec;
 }
 
@@ -4027,7 +4027,7 @@ class DecidePlacement::BacktrackManagement {
 
     // Save future backtrack position and handle resouce based allocation solution buildup. Return
     // true if a backtracking position was found, false otherwise.
-    bool update_bt_point(const Placed *best, safe_vector<const Placed *> &trial) {
+    bool update_bt_point(const Placed *best, const safe_vector<const Placed *> &trial) {
         // Always try to respect the stage and placement pragma even when backtracking.
         bool best_with_pragmas = false;
         if (best->table->get_provided_stage() >= 0 ||

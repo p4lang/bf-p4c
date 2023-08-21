@@ -217,7 +217,7 @@ class DecidePlacement : public MauInspector {
     int MaxBacktracksPerPipe = 32;
     bool resource_mode = false;
     std::map<cstring, std::set<int>> bt_attempts;
-    void savePlacement(const Placed *, ordered_set<const GroupPlace *> &, bool);
+    void savePlacement(const Placed *, const ordered_set<const GroupPlace *> &, bool);
     void recomputePartlyPlaced(const Placed *, ordered_set<const IR::MAU::Table *> &);
     std::optional<BacktrackPlacement*> find_previous_placement(const Placed *best, int offset,
                                                                bool local_bt, int process_stage);
