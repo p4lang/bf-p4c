@@ -23,7 +23,8 @@ struct Def {
 
     bool equiv(const Def* other) const {
         if (this == other) return true;
-        return (state->name == other->state->name) && (rval->equiv(*other->rval));
+        return (state->gress == other->state->gress) && (state->name == other->state->name) &&
+               (rval->equiv(*other->rval));
     }
 
     std::string print() const {
@@ -43,7 +44,8 @@ struct Use {
 
     bool equiv(const Use* other) const {
         if (this == other) return true;
-        return (state->name == other->state->name) && (save->equiv(*other->save));
+        return (state->gress == other->state->gress) && (state->name == other->state->name) &&
+               (save->equiv(*other->save));
     }
 
     std::string print() const {

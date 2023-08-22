@@ -662,6 +662,8 @@ set_tests_properties("tofino2/extensions/p4_tests/p4_16/stf/MODEL-1095.p4" PROPE
 p4c_add_bf_backend_tests("tofino2" "jbay" "t2na" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/jbay/p4c-4072.p4" "-to 1200")
 set_tests_properties("tofino2/extensions/p4_tests/p4_16/jbay/p4c-4072.p4" PROPERTIES TIMEOUT 1200)
 
+p4c_add_ptf_test_with_ptfdir ("tofino2" "t2na_misc2" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16/misc2/misc2.p4" "${testExtraArgs} -target tofino2 -arch t2na -bfrt" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16/misc2")
+
 # P4C-4718
 set(TOFINO2_DETERMINISM_TESTS_14
     ${CMAKE_CURRENT_SOURCE_DIR}/p4_14/pd/decaf_10/decaf_10.p4
