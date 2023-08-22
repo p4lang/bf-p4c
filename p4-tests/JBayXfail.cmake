@@ -443,6 +443,11 @@ if (TEST_ALT_PHV_ALLOC)
         "FAIL: switch_acl.ACLTest"
         smoketest_switch_16_y2
     )
+
+    p4c_add_xfail_reason("tofino2"
+        "failed to allocate tables for pipe .* within 20 stages"
+        npb-folded-pipe
+    )
 endif (TEST_ALT_PHV_ALLOC)
 
 if (NOT TEST_ALT_PHV_ALLOC)

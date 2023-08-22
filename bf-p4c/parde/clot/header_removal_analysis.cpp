@@ -41,7 +41,11 @@ bool HeaderRemovalAnalysis::preorder(const IR::MAU::Instruction* instruction) {
 
     // Make sure we are setting a header's validity bit.
     le_bitrange bitrange;
-    auto dstField = phvInfo.field(dst, &bitrange);
+    const PHV::Field* dstField = nullptr;
+    if (auto alias_slice = dst->to<IR::BFN::AliasSlice>())
+        dstField = phvInfo.field(alias_slice->source, &bitrange);
+    else
+        dstField = phvInfo.field(dst, &bitrange);
     if (!dstField || !dstField->pov) return true;
 
     // Handle case where we are assigning a non-zero constant to the validity bit. Conservatively,
@@ -80,6 +84,8 @@ HeaderRemovalAnalysis& HeaderRemovalAnalysis::flow_clone() {
 void HeaderRemovalAnalysis::flow_merge(Visitor& v) {
     HeaderRemovalAnalysis& other = dynamic_cast<HeaderRemovalAnalysis&>(v);
 
+    povBitsSetInvalidInMau.insert(other.povBitsSetInvalidInMau.begin(),
+                                  other.povBitsSetInvalidInMau.end());
     for (auto& kv : other.resultMap) {
         resultMap.at(kv.first).insert(kv.second.begin(), kv.second.end());
     }
