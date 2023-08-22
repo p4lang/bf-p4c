@@ -70,6 +70,40 @@ template<> void MatchTable::write_regs(Target::JBay::mau_regs &regs, int type, T
     if (!is_branch && result->get_format_field_size("next") > 3)
         is_branch = true;
 
+    // P4C-5274
+    // Check if any table actions have a next table miss set up
+    // if yes, the pred_is_a_brch register must be set on the table to override the next table
+    // configuration with this value.
+    //
+    // E.g.
+    //   switch (mc_filter.apply().action_run) {
+    //     NoAction : { // Has @defaultonly
+    //       ttl_thr_check.apply();
+    //     }
+    //   }
+    //
+    // Generated bfa
+    //   ...
+    //   hit: [  END  ]
+    //   miss:  END
+    //   ...
+    //   NoAction(-1, 1):
+    //     - hit_allowed: { allowed: false, reason: user_indicated_default_only  }
+    //     - default_only_action: { allowed: true, is_constant: true  }
+    //     - handle: 0x20000015
+    //     - next_table_miss:  ttl_thr_check_0
+    //
+    // If merge.pred_is_a_brch is not set in this usecase, the default miss configuration of 'END'
+    // or 'End of Pipe' is executed and next table ttl_thr_check_0 will not be executed.
+    if (!is_branch) {
+        for (auto &act : *result->actions) {
+            if (act.next_table_miss_ref.next_table()) {
+                is_branch = true;
+                break;
+            }
+        }
+    }
+
     if (is_branch)
         merge.pred_is_a_brch |= 1 << logical_id;
 
