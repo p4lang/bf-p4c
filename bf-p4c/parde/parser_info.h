@@ -694,8 +694,10 @@ class ParserGraphImpl : public DirectedGraph {
             return;
 
         for (auto succ : successors().at(src)) {
-            rv.insert(succ);
-            get_all_descendants_impl(succ, rv);
+            if (!rv.count(succ)) {
+                rv.insert(succ);
+                get_all_descendants_impl(succ, rv);
+            }
         }
     }
 
