@@ -77,6 +77,8 @@ foreach(t IN LISTS P4FACTORY_P4_16_PROGRAMS)
   endif()
 endforeach()
 
+p4c_add_test_label("tofino2" "UNSTABLE" "p4_16_programs_tna_ternary_match")  # See P4C-5281
+
 set (P16_JNA_INCLUDE_PATTERNS "include.*(t2?na|tofino2_arch).p4" "main|common_tna_test|common_t2na_test")
 set (P16_JNA_EXCLUDE_PATTERNS
   "tofino\\.h" "TOFINO1_ONLY" "<built-in>"
