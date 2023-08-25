@@ -79,6 +79,9 @@ BFN_Options::BFN_Options() {
 
     compilerVersion = BF_P4C_VERSION;
 
+    // Initialize in case process is never called. This can occur in gtests.
+    outputDir = ".";
+
     registerOption("-o", "dir",
                    [this](const char* arg) { outputDir = arg; return true; },
                    "Write output to outdir.\n");
