@@ -464,3 +464,12 @@ if (NOT TEST_ALT_PHV_ALLOC)
     )
 
 endif()
+
+if (NOT TEST_ALT_PHV_ALLOC)
+    # P4C-5124
+    # model asserts due to conflicting instruction in one stage
+    p4c_add_xfail_reason("tofino2"
+      "ERROR:.*mau-instr-store-common.cpp:.*instr_add_simple_op"
+      extensions/p4_tests/p4_16/stf/p4c-5124.p4
+    )
+endif()

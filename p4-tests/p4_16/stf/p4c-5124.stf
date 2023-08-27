@@ -1,0 +1,17 @@
+add TcpIngress.flow_lookup src:0x0a000002 dst:0x0a000001 src_port:32001 dst_port:8001   \
+        set_flow_meta(f_id:1, ctx_id:1, buf_addr_prefix:0x7fff000001, appctx_f_id:1     \
+                      local_seq_neg:0, remote_seq_neg:0)
+
+add TcpIngress.routing.ipv4_route 10 dst:10.0.0.1/32 forward_ipv4(port:2, dst_mac:0x3dcbfae0)
+add TcpIngress.routing.port_lookup ucast_egress_port:2 set_port_addr(mac:0x3cbdaf0e)
+add TcpIngress.rdma_write.appctx_lookup ctx_id:1                \
+        prepare_rdma_hdrs(src_ip:0x0a0000fe qp:1, remote_key:1)
+
+# packed with eth/ipv4/tcp headers + "Payload"
+packet 1 010101010101 020202020202 0800  \
+         4500 002f 0000 0065 40 06 1a62 0a000002 0a000001  \
+         7d01 1f41 00000100 00000200 50 18 4000 56e4 0000  \
+         5061796c6f6164
+
+# the program munges the input into a UDP packet of weird form, so we only check ethernet
+expect 2 00003dcbfae0 00003cbdaf0e 0800
