@@ -1271,6 +1271,12 @@ foreach(t IN LISTS P4FACTORY_P4_16_PROGRAMS_INTERNAL)
 endforeach()
 bfn_set_p4_build_flag("tofino" "p4_16_programs_internal_misc1"
                       "${P4FACTORY_P4_16_PROGRAMS_INTERNAL_FLAGS} -Xp4c=--disable-power-check")
+bfn_set_ptf_test_spec("tofino" "p4_16_programs_internal_bfrt_tm_queue"
+  "^test.Test_P41__PortBuffer_ModEntry_Positive")
+bfn_set_ptf_test_spec("tofino" "p4_16_programs_internal_misc1"
+  "^test.TableMaskTest")
+bfn_set_ptf_test_spec("tofino" "p4_16_programs_internal_multithread_test"
+  "^test.MultiDiffClientId1WContinue1RTest")
 
 set_tests_properties("tofino/p4_16_programs_internal_misc1" PROPERTIES TIMEOUT ${extended_timeout_150percent})
 set_tests_properties("tofino/p4_16_programs_internal_tna_pvs_multi_states" PROPERTIES TIMEOUT ${extended_timeout_150percent})
@@ -1285,14 +1291,14 @@ foreach(t IN LISTS P4FACTORY_P4_16_PROGRAMS_INTERNAL_COMPILE_ONLY)
 endforeach()
 
 # Disable failing tests
- bfn_set_ptf_test_spec("tofino" "p4_16_programs_tna_pktgen"
-     "all ^test.PortDownPktgenTest")
  bfn_set_ptf_test_spec("tofino" "p4_16_programs_tna_checksum"
      "all ^test.Ipv4UdpTranslateSpecialUpdTest")
  bfn_set_ptf_test_spec("tofino" "p4_16_programs_internal_tna_multi_prsr_programs_multi_pipes"
      "test.Phase0TableOpTest")
  bfn_set_ptf_test_spec("tofino" "p4_16_programs_internal_misc1"
      "all ^test.TestNonDflt ^test.IdleTimeoutNotifications")
+ bfn_set_ptf_test_spec("tofino" "p4_16_programs_tna_pktgen"
+     "all ^test.PortDownAppTF1")
 
 # Add extra flags for p4_16_programs
 # Exclude the MirrorHA tests as they have hard coded install path (specific to p4factory)

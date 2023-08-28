@@ -8,6 +8,7 @@
 declare -A branchOverrides=(
   # Looks like we have a custom branch of google-tor that omits PTF tests.
   ['p4-tests/p4_16/google-tor']=4afb7169
+  ['p4-tests/p4-programs']=3e396e0a
 )
 
 ### End configuration #########################################################

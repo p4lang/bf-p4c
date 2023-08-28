@@ -1626,3 +1626,9 @@ p4c_add_xfail_reason("tofino"
   "mismatch from expected"
   extensions/p4_tests/p4_16/stf/parser_multi_write_checksum_verify_2.p4
 )
+
+# New failures after model/driver update - need to investigate the reason.
+p4c_add_xfail_reason("tofino"
+  "Invalid arguments"
+  p4c_3005
+)
