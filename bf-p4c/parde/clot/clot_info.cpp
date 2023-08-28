@@ -1276,7 +1276,11 @@ bool CollectClotInfo::preorder(const IR::BFN::EmitField* emit) {
     auto irPov = emit->povBit->field;
 
     le_bitrange slice;
-    auto pov = phv.field(irPov, &slice);
+    const PHV::Field* pov;
+    if (auto alias_slice = irPov->to<IR::BFN::AliasSlice>())
+        pov = phv.field(alias_slice->source, &slice);
+    else
+        pov = phv.field(irPov, &slice);
 
     clotInfo.fields_to_pov_bits_[field].insert(new PHV::FieldSlice(pov, slice));
     return true;
@@ -1292,7 +1296,11 @@ bool CollectClotInfo::preorder(const IR::BFN::EmitChecksum* emit) {
     }
 
     le_bitrange slice;
-    auto pov = phv.field(emit->povBit->field, &slice);
+    const PHV::Field* pov;
+    if (auto alias_slice = emit->povBit->field->to<IR::BFN::AliasSlice>())
+        pov = phv.field(alias_slice->source, &slice);
+    else
+        pov = phv.field(emit->povBit->field, &slice);
 
     clotInfo.fields_to_pov_bits_[f].insert(new PHV::FieldSlice(pov, slice));
 

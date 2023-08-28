@@ -1294,7 +1294,8 @@ class GreedyClotAllocator : public Visitor {
             mau->apply(hra);
             auto sequences = find_multiheader_sequences(deparser,
                                                         field_extract_info->fieldMap,
-                                                        hra.povBitsSetInvalidInMau);
+                                                        hra.povBitsSetInvalidInMau,
+                                                        hra.povBitsAlwaysInvalidateTogether);
             for (auto& sequence : sequences)
                 if (!sequence.empty())
                     try_add_clot_candidate(candidates, nullptr, sequence);
@@ -1352,7 +1353,8 @@ class GreedyClotAllocator : public Visitor {
     std::vector<std::vector<const FieldSliceExtractInfo*>> find_multiheader_sequences(
             const IR::BFN::Deparser* deparser,
             ordered_map<const PHV::Field*, FieldSliceExtractInfo*> field_map,
-            std::set<const PHV::Field*> pov_bits_set_invalid_in_mau) {
+            std::set<const PHV::Field*> pov_bits_set_invalid_in_mau,
+            SymBitMatrix pov_bits_always_set_invalid_together) {
         LOG4("Finding multiheader extract sequences based on deparser emits");
 
         const auto* clot_eligible_fields = clotInfo.clot_eligible_fields();
@@ -1376,6 +1378,7 @@ class GreedyClotAllocator : public Visitor {
         std::vector<std::vector<const FieldSliceExtractInfo*>> sequences;
         std::vector<const FieldSliceExtractInfo*> sequence;
         std::map<const IR::BFN::ParserState*, int> state_to_size_in_bits;
+        const PHV::Field* prev_pov_bit = nullptr;
 
         for (auto emit : deparser->emits) {
             const PHV::Field* field = nullptr;
@@ -1389,10 +1392,17 @@ class GreedyClotAllocator : public Visitor {
             }
 
             // Do not consider fields that are ineligible for multiheader CLOTs.
-            if (field == nullptr || !is_clot_eligible(field) ||
-                is_emitted_more_than_once(field) ||
+            auto set_invalid_in_mau_compatible = [&](const PHV::Field *pov_bit,
+                                                     const PHV::Field *prev_pov_bit) {
+                return sequence.empty() || prev_pov_bit == pov_bit ||
+                       (pov_bit && prev_pov_bit &&
+                        (pov_bits_always_set_invalid_together(pov_bit->id, prev_pov_bit->id) ||
+                         (!pov_bits_set_invalid_in_mau.count(pov_bit) &&
+                          !pov_bits_set_invalid_in_mau.count(prev_pov_bit))));
+            };
+            if (field == nullptr || !is_clot_eligible(field) || is_emitted_more_than_once(field) ||
                 clotInfo.is_extracted_in_multiple_non_mutex_states(pov_bit) ||
-                pov_bits_set_invalid_in_mau.count(pov_bit)) {
+                !set_invalid_in_mau_compatible(pov_bit, prev_pov_bit)) {
                 std::string prefix = sequence.empty() ? "" : "Ended sequence: ";
                 if (field == nullptr && LOGGING(4)) {
                     LOG4("  " << prefix << "Emit is not an EmitField");
@@ -1413,13 +1423,17 @@ class GreedyClotAllocator : public Visitor {
                               << "multiheader extract sequences" << reasons.str());
                 }
 
-                if (sequence.empty()) continue;
-
-                sequences.push_back(sequence);
-                sequence.clear();
-                state_to_size_in_bits.clear();
-                checksum_updates.clear();
-                continue;
+                if (!sequence.empty()) {
+                    sequences.push_back(sequence);
+                    sequence.clear();
+                    prev_pov_bit = nullptr;
+                    state_to_size_in_bits.clear();
+                    checksum_updates.clear();
+                }
+                if (field == nullptr || !is_clot_eligible(field) ||
+                    is_emitted_more_than_once(field) ||
+                    clotInfo.is_extracted_in_multiple_non_mutex_states(pov_bit))
+                    continue;
             }
 
             // Additionally, each eligible field in a multiheader CLOT must be used
@@ -1431,6 +1445,7 @@ class GreedyClotAllocator : public Visitor {
                      "updates than previous field in sequence");
                 sequences.push_back(sequence);
                 sequence.clear();
+                prev_pov_bit = nullptr;
                 state_to_size_in_bits.clear();
                 checksum_updates = get_checksum_updates(field);
             } else if (checksum_updates.empty()) {
@@ -1445,6 +1460,7 @@ class GreedyClotAllocator : public Visitor {
                 if (can_start_new_sequence) {
                     LOG4("  Started a sequence with field: " << field->name);
                     sequence.push_back(extract_info);
+                    prev_pov_bit = pov_bit;
                     for (const auto& state : extract_info->states())
                         state_to_size_in_bits[state] = extract_info->slice()->size();
                 } else {
@@ -1480,6 +1496,7 @@ class GreedyClotAllocator : public Visitor {
                     if (extracts_are_adjacent_in_all_states) {
                         LOG4("    Added " << field->name << " to sequence");
                         sequence.push_back(extract_info);
+                        if (pov_bit) prev_pov_bit = pov_bit;
                         for (const auto& state : extract_info->states())
                             state_to_size_in_bits[state] += extract_info->slice()->size();
                     } else {
@@ -1488,6 +1505,7 @@ class GreedyClotAllocator : public Visitor {
                              "states");
                         sequences.push_back(sequence);
                         sequence.clear();
+                        prev_pov_bit = nullptr;
                         try_start_new_sequence(extract_info);
                     }
                 } else {
@@ -1496,6 +1514,7 @@ class GreedyClotAllocator : public Visitor {
                          "the sequence");
                     sequences.push_back(sequence);
                     sequence.clear();
+                    prev_pov_bit = nullptr;
                     try_start_new_sequence(extract_info);
                 }
             }
@@ -1510,6 +1529,7 @@ class GreedyClotAllocator : public Visitor {
                 sequence.pop_back();
                 sequences.push_back(sequence);
                 sequence.clear();
+                prev_pov_bit = nullptr;
                 LOG4("  Ended sequence: sequence is larger than " << MAX_SIZE / 8 << " bytes");
                 if (extract_info->slice()->size() < MAX_SIZE) {
                     try_start_new_sequence(extract_info);
@@ -1519,6 +1539,7 @@ class GreedyClotAllocator : public Visitor {
         if (!sequence.empty()) {
             sequences.push_back(sequence);
             sequence.clear();
+            prev_pov_bit = nullptr;
         }
 
         LOG4("Multiheader extract sequences found: " << sequences.size());

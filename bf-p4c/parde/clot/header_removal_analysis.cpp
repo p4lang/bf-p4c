@@ -50,10 +50,18 @@ bool HeaderRemovalAnalysis::preorder(const IR::MAU::Instruction* instruction) {
 
     // Handle case where we are assigning a non-zero constant to the validity bit. Conservatively,
     // we assume that assigning a non-constant value to the POV bit can clear the bit.
+    bool definitely_invalidated = false;
     if (auto constant = src->to<IR::Constant>()) {
         if (constant->value != 0) return true;
+        definitely_invalidated = true;
     }
     povBitsSetInvalidInMau.insert(dstField);
+
+    // Record the action to allow identifying when multiple headers are invalidated together
+    const auto* action = findContext<IR::MAU::Action>();
+    povBitsUpdateActions[dstField].insert(action);
+    if (definitely_invalidated)
+        povBitsInvalidateActions[dstField].insert(action);
 
     // Ignore if the validity bit is uninteresting to the client.
     const auto* povBit = new PHV::FieldSlice(dstField, bitrange);
@@ -73,6 +81,46 @@ bool HeaderRemovalAnalysis::preorder(const IR::MAU::Instruction* instruction) {
     return true;
 }
 
+void HeaderRemovalAnalysis::end_apply() {
+    bitvec fields_encountered;
+    for (auto it1 = povBitsUpdateActions.begin(); it1 != povBitsUpdateActions.end(); ++it1) {
+        auto* f1 = it1->first;
+        auto& update_actions1 = it1->second;
+        povBitsAlwaysInvalidateTogether(f1->id, f1->id) = true;
+        fields_encountered[f1->id] = true;
+        for (auto it2 = std::next(it1); it2 != povBitsUpdateActions.end(); ++it2) {
+            auto* f2 = it2->first;
+            auto& update_actions2 = it2->second;
+            if (update_actions1 != update_actions2) continue;
+            if (povBitsInvalidateActions.count(f1) && povBitsInvalidateActions.count(f2)) {
+                auto& invalidate_actions1 = povBitsInvalidateActions.at(f1);
+                auto& invalidate_actions2 = povBitsInvalidateActions.at(f2);
+
+                if (update_actions1 != invalidate_actions1 ||
+                    update_actions1 != invalidate_actions2)
+                    continue;
+
+                povBitsAlwaysInvalidateTogether(f1->id, f2->id) = true;
+            }
+        }
+    }
+
+    if (LOGGING(4)) {
+        LOG4("pov bits always invalidated together:");
+        for (auto it1 = fields_encountered.begin(); it1 != fields_encountered.end(); ++it1) {
+            for (auto it2 = std::next(it1); it2 != fields_encountered.end(); ++it2) {
+                if (povBitsAlwaysInvalidateTogether(*it1, *it2)) {
+                    const PHV::Field* f1 = phvInfo.field(*it1);
+                    CHECK_NULL(f1);
+                    const PHV::Field* f2 = phvInfo.field(*it2);
+                    CHECK_NULL(f2);
+                    LOG4("(" << f1->name << ", " << f2->name << ")");
+                }
+            }
+        }
+    }
+}
+
 HeaderRemovalAnalysis* HeaderRemovalAnalysis::clone() const {
     return new HeaderRemovalAnalysis(*this);
 }
@@ -86,7 +134,15 @@ void HeaderRemovalAnalysis::flow_merge(Visitor& v) {
 
     povBitsSetInvalidInMau.insert(other.povBitsSetInvalidInMau.begin(),
                                   other.povBitsSetInvalidInMau.end());
-    for (auto& kv : other.resultMap) {
+    for (const auto* f : Keys(other.povBitsUpdateActions)) {
+        povBitsUpdateActions[f].insert(other.povBitsUpdateActions[f].begin(),
+                                       other.povBitsUpdateActions[f].end());
+    }
+    for (const auto *f : Keys(other.povBitsInvalidateActions)) {
+        povBitsInvalidateActions[f].insert(other.povBitsInvalidateActions[f].begin(),
+                                           other.povBitsInvalidateActions[f].end());
+    }
+    for (auto &kv : other.resultMap) {
         resultMap.at(kv.first).insert(kv.second.begin(), kv.second.end());
     }
 }

@@ -403,8 +403,7 @@ TEST_F(ClotTest, HeaderRemoval2) {
     // -----
     runClotTest(test, {
         {"h1.f"},
-        {"h2.f"},
-        {"h3.f1", "h3.f2"},
+        {"h2.f", "h3.f1", "h3.f2"},
     });
 }
 
