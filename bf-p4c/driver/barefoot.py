@@ -542,6 +542,11 @@ class BarefootBackend(BackendDriver):
                                                                                  parde_logging,
                                                                                  bridge_logging,
                                                                                  ixbar_logging))
+
+        if opts.debug_info:
+            self.add_command_option('compiler', \
+                    '-Tstage_advance:3>{}/stage_adv.log'.format(self._output_directory))
+
         # re-apply user provided options to override default values
         if (os.environ['P4C_BUILD_TYPE'] == "DEVELOPER"):
             for option in opts.log_levels:

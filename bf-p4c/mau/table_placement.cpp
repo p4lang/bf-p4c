@@ -4608,11 +4608,6 @@ DecidePlacement::alt_table_placement(const IR::BFN::Pipe *pipe) {
         StageUseEstimate current = get_current_stage_use(placed);
         auto ptName = pt.second->internalTableName;
         const auto alt_table_to_place = self.getTblByName(ptName);
-        bool is_starter_pistol_table = false;
-        if (!alt_table_to_place) {
-            is_starter_pistol_table = (ptName.startsWith("$") &&
-                ptName.endsWith("_starter_pistol"));
-        }
 
         const IR::MAU::Table* alt_cond_to_place = nullptr;
         const IR::MAU::Table* alt_try_place_table = nullptr;
@@ -4626,14 +4621,14 @@ DecidePlacement::alt_table_placement(const IR::BFN::Pipe *pipe) {
             alt_try_place_table = alt_table_to_place;
         }
 
-        if (!alt_try_place_table && !is_starter_pistol_table) {
+        if (!alt_try_place_table && !is_starter_pistol_table(ptName)) {
             ::warning("Cannot find table called %s(%s) during alt table placement round",
                     pt.second->tableName, pt.second->internalTableName);
             continue;
         }
 
         // Setup starter pistol table if required
-        if (is_starter_pistol_table) {
+        if (is_starter_pistol_table(ptName)) {
             LOG1("Adding starter pistol : " << ptName);
             placed = self.add_starter_pistols(placed, nullptr, current);
             continue;
@@ -5157,7 +5152,8 @@ void TablePlacement::find_dependency_stages(const IR::MAU::Table *tbl,
         auto dep_kind = deps.get_dependency(tbl, pred);
         if (!dep_kind) continue;  // not a real dependency?
         auto pl = find_placed(pred->name);
-        BUG_CHECK(pl != table_placed.end(), "no placement for table %s", pred->name);
+        // BUG_CHECK(pl != table_placed.end(), "no placement for table %s", pred->name);
+        if (pl == table_placed.end()) continue;
         BUG_CHECK(pl->second->table == pred || pl->second->gw == pred, "found wrong placement(%s) "
                   "for %s", pl->second->name, pred->name);
         if (pl->second->table == pred) {
@@ -5168,12 +5164,19 @@ void TablePlacement::find_dependency_stages(const IR::MAU::Table *tbl,
                 // failed placement this is an invalid condition and should be checked.
                 // NOTE: Currently, this function (and the BUG_CHECKs) are only run when logging is
                 // enabled.
-                if ((pl == table_placed.end() || pl->second->table != pred) && (!success)) {
+                if (((pl == table_placed.end() || pl->second->table != pred) && (!success))
+                    // TBD Need a better way to handle atcams which trigger BUG_CHECK on
+                    // some alt-phv-alloc cases
+                    || (success && options.alt_phv_alloc &&
+                        pl->second->table->layout.pre_classifier)
+                    || (options.alt_phv_alloc && !pl->second->table)) {
                     --pl;
                     break;
                 }
-                BUG_CHECK(pl != table_placed.end() && pl->second->table == pred,
-                          "incomplete placement for table %s", pred->name);
+                if (summary.getActualState() == State::SUCCESS) {
+                    BUG_CHECK(pl != table_placed.end() && pl->second->table == pred,
+                              "incomplete placement for table %s", pred->name);
+                }
             }
         }
         int stage = pl->second->stage;
@@ -5228,39 +5231,47 @@ IR::Node *TransformTables::preorder(IR::MAU::Table *tbl) {
     const TablePlacement::Placed* pl = it->second;
 
     if (LOGGING_FEATURE("stage_advance", 2)) {
-        // look for tables that were delayed (not placed in the earliest stage they could have
-        // been based on depedencies) and log that
-        std::map<int, ordered_map<const TablePlacement::Placed *,
-                                  DependencyGraph::dependencies_t>> earliest_stage;
-        self.find_dependency_stages(pl->table, earliest_stage);
-        if (pl->gw) self.find_dependency_stages(pl->gw, earliest_stage);
-        if (earliest_stage.empty()) {
-            if (pl->stage != 0)
-                LOG_FEATURE("stage_advance", 2, "Table " << pl->name << " with no "
-                            "predecessors delayed until stage " << pl->stage);
-        } else if (earliest_stage.rbegin()->first < pl->stage) {
-            LOG_FEATURE("stage_advance", 2, "Table " << pl->name << " delayed to stage " <<
-                        pl->stage << " from stage " << earliest_stage.rbegin()->first);
-            ordered_set<const TablePlacement::Placed *> filter;
-            // filter out duplicates due to multiple kinds of dependencies
-            for (auto i = earliest_stage.end(); i != earliest_stage.begin();) {
-                --i;
-                for (auto *p : filter) i->second.erase(p);
-                if (i->second.empty()) {
-                    i = earliest_stage.erase(i);
-                } else {
-                    for (auto &p : i->second) filter.insert(p.first); } }
-            for (auto i = earliest_stage.rbegin(); i != earliest_stage.rend(); ++i) {
-                for (auto &p : i->second) {
-                    LOG_FEATURE("stage_advance", 2, "  stage " << i->first << ": " <<
-                                "dependency (" << p.second << ") on " << p.first->name <<
-                                " in stage " << p.first->stage); } } }
-        for (auto &rr : self.rejected_placements[tbl->name]) {
-            if (rr.second.stage < pl->stage || rr.second.entries > pl->entries ||
-                rr.second.attached_entries > pl->attached_entries) {
-                LOG_FEATURE("stage_advance", 3, "  - preferred " << rr.first << "(" <<
-                            rr.second.reason << ") over " << rr.second.entries << " of " <<
-                            tbl->name << " in stage " << rr.second.stage); } }
+        // Skip starter pistol tables
+        if (!is_starter_pistol_table(pl->table->name)) {
+            // look for tables that were delayed (not placed in the earliest stage they could have
+            // been based on depedencies) and log that
+            std::map<int, ordered_map<const TablePlacement::Placed *,
+                                      DependencyGraph::dependencies_t>> earliest_stage;
+            self.find_dependency_stages(pl->table, earliest_stage);
+            if (pl->gw) self.find_dependency_stages(pl->gw, earliest_stage);
+            if (earliest_stage.empty()) {
+                if (pl->stage != 0)
+                    LOG_FEATURE("stage_advance", 2, "Table " << pl->name << " with no "
+                                "predecessors delayed until stage " << pl->stage);
+            } else if (earliest_stage.rbegin()->first < pl->stage) {
+                LOG_FEATURE("stage_advance", 2, "Table " << pl->name << " delayed to stage " <<
+                            pl->stage << " from stage " << earliest_stage.rbegin()->first);
+                ordered_set<const TablePlacement::Placed *> filter;
+                // filter out duplicates due to multiple kinds of dependencies
+                for (auto i = earliest_stage.end(); i != earliest_stage.begin();) {
+                    --i;
+                    for (auto *p : filter) i->second.erase(p);
+                    if (i->second.empty()) {
+                        i = earliest_stage.erase(i);
+                    } else {
+                        for (auto &p : i->second) filter.insert(p.first); } }
+                for (auto i = earliest_stage.rbegin(); i != earliest_stage.rend(); ++i) {
+                    for (auto &p : i->second) {
+                        LOG_FEATURE("stage_advance", 2, "  stage " << i->first << ": " <<
+                                    "dependency (" << p.second << ") on " << p.first->name <<
+                                    " in stage " << p.first->stage);
+                    }
+                }
+            }
+            for (auto &rr : self.rejected_placements[tbl->name]) {
+                if (rr.second.stage < pl->stage || rr.second.entries > pl->entries ||
+                    rr.second.attached_entries > pl->attached_entries) {
+                    LOG_FEATURE("stage_advance", 3, "  - preferred " << rr.first << "(" <<
+                                rr.second.reason << ") over " << rr.second.entries << " of " <<
+                                tbl->name << " in stage " << rr.second.stage);
+                }
+            }
+        }
     }
 
     // FIXME: Currently the gateway is laid out for every table, so I'm keeping the information

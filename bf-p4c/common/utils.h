@@ -66,4 +66,5 @@ std::tuple<bool, cstring, int, int> get_key_slice_info(const cstring &input);
 
 const IR::Vector<IR::Expression>* getListExprComponents(const IR::Node& node);
 
+bool is_starter_pistol_table(const cstring &tableName);
 #endif /* EXTENSIONS_BF_P4C_COMMON_UTILS_H_ */

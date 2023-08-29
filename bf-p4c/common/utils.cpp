@@ -76,3 +76,8 @@ void end_fatal_error() {
 #endif  /* BAREFOOT_INTERNAL */
     throw Util::CompilationError("Compilation failed!");
 }
+
+bool is_starter_pistol_table(const cstring &tableName) {
+    return (tableName.startsWith("$") &&
+        tableName.endsWith("_starter_pistol"));
+}
