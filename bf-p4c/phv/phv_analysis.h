@@ -95,8 +95,6 @@ class PHV_AnalysisPass : public Logging::PassManager {
     LiveRangeShrinking meta_init;
     /// Clustering information for fields.
     Clustering clustering;
-    /// Fields that are going to be deparsed to zero.
-    ordered_set<const PHV::Field*> deparser_zero_fields;
     /// Tables To IDs used in PHV analysis.
     MapTablesToIDs table_ids;
     /// Collect header stacks that need strided allocation
@@ -132,7 +130,8 @@ class PHV_AnalysisPass : public Logging::PassManager {
             DependencyGraph &deps,
             const DeparserCopyOpt &decaf,
             MauBacktracker& alloc,
-            CollectPhvLoggingInfo *phvLoggingInfo);
+            CollectPhvLoggingInfo *phvLoggingInfo,
+            std::set<PHV::FieldRange> &mauInitFields);
 
     Visitor* make_incremental_alloc_pass(
         const ordered_set<PHV::Field *> &temp_vars);

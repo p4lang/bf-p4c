@@ -10,7 +10,7 @@ class ParserPackingValidatorInterface {
     /// @returns an error if we allocated slices in the format of @p alloc.
     /// @p c is optional for 32-bit container half-word extract optimization.
     virtual const v2::AllocError* can_pack(const v2::FieldSliceAllocStartMap& alloc,
-                                           const std::optional<Container>& c) const = 0;
+                                           bool add_mau_inits) const = 0;
 };
 
 }  // namespace PHV

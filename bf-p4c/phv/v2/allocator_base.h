@@ -294,7 +294,8 @@ class AllocatorBase {
                              AllocatorMetrics& alloc_metrics) const;
 
  public:
-    explicit AllocatorBase(const PhvKit& kit): kit_i(kit) {};
+    explicit AllocatorBase(const PhvKit& kit): kit_i(kit) {
+        kit_i.parser_packing_validator->set_trivial_pass(kit.settings.trivial_alloc); };
     virtual ~AllocatorBase() {};
 
     /////////////////////////////////////////////////////////////////

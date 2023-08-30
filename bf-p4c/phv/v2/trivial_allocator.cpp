@@ -329,6 +329,7 @@ bool TrivialAllocator::allocate(const std::list<PHV::SuperCluster *> &clusters,
                                 AllocatorMetrics &alloc_metrics) {
     LOG1("Run TrivialAllocator");
     alloc_metrics.start_clock();
+    kit_i.parser_packing_validator->set_trivial_alloc(true);
 
     // XXX(yumin): it seems okay to ignore strided headers in trivial allocator for now.
     // but we should add support for them in the future, to check whether they can be
@@ -403,6 +404,8 @@ bool TrivialAllocator::allocate(const std::list<PHV::SuperCluster *> &clusters,
         phv_i.set_done(true);
     }
     alloc_metrics.stop_clock();
+    kit_i.parser_packing_validator->set_trivial_alloc(false);
+    LOG1("Ended TrivialAllocator");
 
     auto logfile = trivial_allocator_file_log(pipe_id_i, 1, "history");
     LOG1("Trivial Allocation history");

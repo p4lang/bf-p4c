@@ -147,7 +147,7 @@ bool IxbarFriendlyPacking::can_pack(const std::vector<FieldSlice>& slices,
         offset += fs.size();
     }
     fs_starts[fs] = offset;
-    auto* err = parser_packing_validator_i->can_pack(fs_starts, std::nullopt);
+    auto* err = parser_packing_validator_i->can_pack(fs_starts);
     if (err != nullptr) {
         LOG3("Found parser packing conflict: " << err->str());
         return false;

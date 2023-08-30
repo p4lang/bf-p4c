@@ -65,6 +65,8 @@ class Backend : public PassManager {
     // Fields which are zero initialized in the program and have assignments being eliminated. These
     // fields should have the POV bit set and therefore need to be tracked.
     std::set<cstring> zeroInitFields;
+    // Fields that need explicit MAU initialization
+    std::set<PHV::FieldRange> mauInitFields;
 
  protected:
     profile_t init_apply(const IR::Node *root) override {

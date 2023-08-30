@@ -32,6 +32,9 @@ class ParserPackingValidator : public ParserPackingValidatorInterface {
     const CollectParserInfo& parser_info_i;
     const FieldDefUse& defuse_i;
     const PragmaNoInit& pa_no_init_i;
+    mutable bool is_trivial_pass  = false;
+    mutable bool is_trivial_alloc = false;
+    std::set<FieldRange> &mauInitFields;
 
     // The cache does not affect behaviour, only speed. Therefore we make it mutable to make it
     // possible to use it from a (semantically) const method.
@@ -57,37 +60,43 @@ class ParserPackingValidator : public ParserPackingValidatorInterface {
     const AllocError* will_buf_extract_clobber_the_other(
             const FieldSlice& fs, const StateExtract& state_extract, const int cont_idx,
             const FieldSlice& other_fs, const StatePrimitiveMap& other_extracts,
-            const int other_cont_idx, const std::optional<Container>& c) const;
+            const int other_cont_idx, bool add_mau_inits) const;
 
     /// @returns an error if there is an extract from a that will clobber b's bits.
     const AllocError* will_a_extracts_clobber_b(const FieldSliceStart& a,
                                                 const FieldSliceStart& b,
-                                                const std::optional<Container>& c) const;
+                                                bool add_mau_inits) const;
 
  public:
     explicit ParserPackingValidator(const PhvInfo& phv,
                                     const MapFieldToParserStates& parser,
                                     const CollectParserInfo& parser_info,
                                     const FieldDefUse& defuse,
-                                    const PragmaNoInit& pa_no_init)
+                                    const PragmaNoInit& pa_no_init,
+                                    std::set<FieldRange>& mauInitFields)
         : phv_i(phv),
           parser_i(parser),
           parser_info_i(parser_info),
           defuse_i(defuse),
-          pa_no_init_i(pa_no_init) {}
+          pa_no_init_i(pa_no_init),
+          mauInitFields(mauInitFields) {}
 
     /// @returns an error if we cannot allocated @p a and @p b in a container.
     /// @p c is optional for 32-bit container half-word extract optimization.
     const AllocError* can_pack(const FieldSliceStart& a,
                                const FieldSliceStart& b,
-                               const std::optional<Container>& c) const;
+                               bool add_mau_inits = false) const;
 
     /// @returns an error if we allocated slices in the format of @p alloc.
     /// @p c is optional for 32-bit container half-word extract optimization.
     const AllocError* can_pack(const FieldSliceAllocStartMap& alloc,
-                               const std::optional<Container>& c) const override;
-};
+                               bool add_mau_inits = false) const override;
 
+    // Marks current iteration as trivial allocation iteration
+    void set_trivial_pass(bool trivial) const;
+    // Marks the allocation part of a trivial allocation
+    void set_trivial_alloc(bool trivial) const;
+};
 }  // namespace v2
 }  // namespace PHV
 

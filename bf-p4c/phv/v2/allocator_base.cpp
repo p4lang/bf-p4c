@@ -604,7 +604,7 @@ const AllocError* AllocatorBase::check_container_scope_constraints(
         if (slice.getEarliestLiveness().first != -1) continue;  // filter out non-parsed slice
         fs_starts[FieldSlice(slice.field(), slice.field_slice())] = slice.container_slice().lo;
     }
-    if (auto* parser_packing_err = kit_i.parser_packing_validator->can_pack(fs_starts, c)) {
+    if (auto* parser_packing_err = kit_i.parser_packing_validator->can_pack(fs_starts)) {
         LOG6("Parser packing error");
         return parser_packing_err;
     }

@@ -48,7 +48,11 @@ bool PhvKit::has_pack_conflict(const PHV::FieldSlice& fs1, const PHV::FieldSlice
     if (fs1.field() != fs2.field()) {
         if (mutex()(fs1.field()->id, fs2.field()->id)) return false;
     }
-    return clustering.no_pack(fs1.field(), fs2.field()) || actions.hasPackConflict(fs1, fs2);
+    bool clustering_no_pack = clustering.no_pack(fs1.field(), fs2.field());
+    bool action_no_pack = actions.hasPackConflict(fs1, fs2);
+    LOG6("has_pack_conflicts: cluster-driven: " << clustering_no_pack <<
+         "  action-driven: " << action_no_pack);
+    return clustering_no_pack || action_no_pack;
 }
 
 PHV::Slicing::IteratorInterface* PhvKit::make_slicing_ctx(const PHV::SuperCluster* sc) const {

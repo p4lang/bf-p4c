@@ -48,6 +48,10 @@ struct PhvKit {
     // in terms of action phv constraints.
     const ActionPackingValidator* packing_validator;
 
+    // Set of fieldSlice's that require explicit initialization in MAU
+    // (selected during trivial allocation in alt-phv-alloc flow)
+    std::set<PHV::FieldRange> &mauInitFields;
+
     /// parser packing validator checks whether a packing would break parser constraints.
     const ParserPackingValidator* parser_packing_validator;
 
@@ -80,6 +84,7 @@ struct PhvKit {
            const CollectTableKeys& tb_keys,
            const TablesMutuallyExclusive& table_mutex,
            const DependencyGraph &deps,
+           std::set<PHV::FieldRange> &mauInitFields,
            const Pragmas& pragmas,
            const AllocSetting& settings,
            const MauBacktracker& mau)
@@ -94,8 +99,10 @@ struct PhvKit {
           table_mutex(table_mutex),
           deps(deps),
           packing_validator(new ActionPackingValidator(source_tracker, uses)),
+          mauInitFields(mauInitFields),
           parser_packing_validator(new ParserPackingValidator(
-              phv, field_to_parser_states, parser_info, defuse, pragmas.pa_no_init())),
+              phv, field_to_parser_states, parser_info, defuse, pragmas.pa_no_init(),
+              mauInitFields)),
           field_to_parser_states(field_to_parser_states),
           parser_critical_path(parser_critical_path),
           parser_info(parser_info),

@@ -600,7 +600,7 @@ class DummyParserPackingValidator : public PHV::ParserPackingValidatorInterface 
  public:
     const PHV::v2::AllocError* can_pack(
         const PHV::v2::FieldSliceAllocStartMap&,
-        const std::optional<PHV::Container>&) const override {
+        bool) const override {
         return nullptr;
     }
 };

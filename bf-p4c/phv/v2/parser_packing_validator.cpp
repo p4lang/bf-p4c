@@ -72,7 +72,7 @@ bool ParserPackingValidator::allow_clobber(const Field* f) const {
 const AllocError* ParserPackingValidator::will_buf_extract_clobber_the_other(
     const FieldSlice& fs, const StateExtract& state_extract, const int cont_idx,
     const FieldSlice& other_fs, const StatePrimitiveMap& other_prims,
-    const int other_cont_idx, const std::optional<Container>&) const {
+    const int other_cont_idx, bool add_mau_inits) const {
     auto* err = new AllocError(ErrorCode::CONTAINER_PARSER_PACKING_INVALID);
     const auto [state, extract] = state_extract;
     const auto* parser = parser_i.state_to_parser.at(state);
@@ -89,7 +89,7 @@ const AllocError* ParserPackingValidator::will_buf_extract_clobber_the_other(
     }
     if (!write_overlap) {
         LOG5("destination bytes do not overlap, skip parser checks: "
-             << fs << "@" << cont_idx << " v.s. " << other_fs << "2" << other_cont_idx);
+             << fs << " @" << cont_idx << " v.s. " << other_fs << " @" << other_cont_idx);
         return nullptr;
     }
 
@@ -153,10 +153,38 @@ const AllocError* ParserPackingValidator::will_buf_extract_clobber_the_other(
     //    b. all other extracts are mutex.
     if (!other_prims.count(state) &&
         (!is_clear_on_write && parser_zero_init(other_fs.field()))) {
-        *err << "cannot pack " << fs << " with " << other_fs << " because the former "
-             << "slice is extracted in " << state->name << ": " << extract << ", but "
-             << "the latter field requires parser zero initialization.";
-        return err;
+        // Make an exception for non extracted fields packed with extracted
+        // fields in same slicelist for trivial allocation. Track these
+        // fields in mauInitFields for initialization in MAU
+        if (is_trivial_alloc && !defuse_i.hasDefInParser(other_fs)) {
+            mauInitFields.insert({other_fs.field()->name, other_fs.range(),
+                                  {{fs.field()->name, fs.range(), {}}}});
+            LOG5(Log::indent << "Adding mau-init-field " << other_fs.field()->name <<
+                 " " << other_fs.range() << " add_mau_inits:" << add_mau_inits);
+            LOG5(Log::indent << "... due to: " << fs.field()->name << " " << fs.range() <<
+                 Log::unindent << Log::unindent);
+        } else {
+            bool flag_error = true;
+            // Do not flag error for non-trivial allocation when
+            // initialization has been selected by trivial allocation
+            if (!is_trivial_pass && !add_mau_inits) {
+                auto mau_init = mauInitFields.find(
+                    {other_fs.field()->name, other_fs.range(), {}});
+                if (mau_init != mauInitFields.end()) {
+                    if (mau_init->has_conflict({fs.field()->name, fs.range(), {}})) {
+                        LOG5(other_fs << " has been marked as mau-init-field wrt " <<
+                             fs);
+                        flag_error = false;
+                    }
+                }
+                if (flag_error) {
+                    *err << "cannot pack " << fs << " with " << other_fs << " because the former "
+                     << "slice is extracted in " << state->name << ": " << extract << ", but "
+                     << "the latter field requires parser zero initialization.";
+                    return err;
+                }
+            }
+        }
     }
     for (const auto& other_state_prim : other_prims) {
         const auto* other_state = other_state_prim.first;
@@ -178,7 +206,7 @@ const AllocError* ParserPackingValidator::will_buf_extract_clobber_the_other(
 }
 
 const AllocError* ParserPackingValidator::will_a_extracts_clobber_b(
-    const FieldSliceStart& a, const FieldSliceStart& b, const std::optional<Container>& c) const {
+    const FieldSliceStart& a, const FieldSliceStart& b, bool add_mau_inits) const {
     const auto& [a_fs, a_idx] = a;
     const auto& [b_fs, b_idx] = b;
     const auto a_extracts = get_primitives(a_fs);
@@ -205,7 +233,7 @@ const AllocError* ParserPackingValidator::will_a_extracts_clobber_b(
                 }
                 auto* err =
                     will_buf_extract_clobber_the_other(
-                            a_fs, state_extract, a_idx, b_fs, b_extracts, b_idx, c);
+                        a_fs, state_extract, a_idx, b_fs, b_extracts, b_idx, add_mau_inits);
                 if (err) {
                     return err;
                 }
@@ -227,7 +255,7 @@ bool ParserPackingValidator::is_parser_error(const Field* f) const {
 
 const AllocError* ParserPackingValidator::can_pack(const FieldSliceStart& a,
                                                    const FieldSliceStart& b,
-                                                   const std::optional<Container>& c) const {
+                                                   bool add_mau_inits) const {
     const auto* f_a = a.first.field();
     const auto* f_b = b.first.field();
     if (f_a != f_b && (is_parser_error(f_a) || is_parser_error(f_b))) {
@@ -239,9 +267,9 @@ const AllocError* ParserPackingValidator::can_pack(const FieldSliceStart& a,
         LOG5("field_mutex is true: " << a.first << " and " << b.first);
         return nullptr;
     }
-    if (auto* err = will_a_extracts_clobber_b(a, b, c)) {
+    if (auto* err = will_a_extracts_clobber_b(a, b, add_mau_inits)) {
         return err;
-    } else if (auto* err = will_a_extracts_clobber_b(b, a, c)) {
+    } else if (auto* err = will_a_extracts_clobber_b(b, a, add_mau_inits)) {
         return err;
     } else {
         return nullptr;
@@ -249,11 +277,11 @@ const AllocError* ParserPackingValidator::can_pack(const FieldSliceStart& a,
 }
 
 const AllocError* ParserPackingValidator::can_pack(const FieldSliceAllocStartMap& alloc,
-                                                   const std::optional<Container>& c) const {
+                                                   bool add_mau_inits) const {
     /// make sure that every pair of field slices can be packed.
     for (auto i = alloc.begin(); i != alloc.end(); ++i) {
         for (auto j = std::next(i); j != alloc.end(); ++j) {
-            if (auto* err = can_pack(*i, *j, c)) {
+            if (auto* err = can_pack(*i, *j, add_mau_inits)) {
                 return err;
             }
         }
@@ -261,5 +289,12 @@ const AllocError* ParserPackingValidator::can_pack(const FieldSliceAllocStartMap
     return nullptr;
 }
 
+void ParserPackingValidator::set_trivial_pass(bool triv) const {
+    is_trivial_pass = triv;
+}
+
+void ParserPackingValidator::set_trivial_alloc(bool triv) const {
+    is_trivial_alloc = triv;
+}
 }  // namespace v2
 }  // namespace PHV

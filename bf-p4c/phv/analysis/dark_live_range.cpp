@@ -455,8 +455,8 @@ std::optional<DarkLiveRange::OrderedFieldSummary> DarkLiveRange::produceFieldsIn
 
 
 // Ignore reach conflicts if they are due to PARSER/DEPARSER units or if
-// they are on the same table with lastField doing a WRITE and
-// currentField doing a READ (Each stage has a READ->WRITE ordering)
+// they are on the same table with lastField doing a READ and
+// currentField doing a WRITE (Each stage has a READ->WRITE ordering)
 // ---
 bool DarkLiveRange::ignoreReachCondition(
         const OrderedFieldInfo& currentField,

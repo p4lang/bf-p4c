@@ -110,6 +110,7 @@
 #include "bf-p4c/phv/phv_analysis.h"
 #include "bf-p4c/phv/split_padding.h"
 #include "bf-p4c/phv/v2/metadata_initialization.h"
+#include "bf-p4c/phv/init_in_mau.h"
 
 namespace BFN {
 
@@ -166,7 +167,9 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
     phvLoggingDefUseInfo = options.debugInfo ? new PhvLogging::CollectDefUseInfo(defuse) : nullptr;
     auto *PHV_Analysis = new PHV_AnalysisPass(options, phv, uses, clot,
                                               defuse, deps, decaf, mau_backtracker,
-                                              phvLoggingInfo /*, &jsonGraph */);
+                                              phvLoggingInfo /*, &jsonGraph */,
+                                              mauInitFields);
+
     // Collect next table info if we're using LBs
     if (Device::numLongBranchTags() > 0 && !options.disable_long_branch) {
         nextTblProp.setVisitor(new JbayNextTable);
@@ -331,6 +334,7 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
         // (2) Table placement first allocation:
         //                                        with table info
         //     Trivial PHV alloc => table alloc ==================> PHV alloc ===> redo table.
+        new AddInitsInMAU(phv, mauInitFields, false),
         new DumpPipe("Before phv_analysis"),
         new DumpTableFlowGraph(phv),
         options.alt_phv_alloc ? new PassManager({
@@ -410,6 +414,7 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
         // they are overlayed. Hence the older pass was modified to add the overlay check and only
         // report those reads.
         new CheckUninitializedAndOverlayedReads(defuse, phv, PHV_Analysis->get_pragmas(), options),
+        new AddInitsInMAU(phv, mauInitFields, true),
 
         new SplitPadding(phv),
         allocateClot == nullptr ? nullptr : new ClotAdjuster(clot, phv),

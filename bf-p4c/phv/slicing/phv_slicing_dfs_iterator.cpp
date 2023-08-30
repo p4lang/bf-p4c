@@ -1181,7 +1181,7 @@ void DfsItrContext::iterate(const IterateCb& cb) {
 
     LOG3("Making Itr for " << sc_i);
     LOG7("Homogeneous slicing enabled: " << config_i.homogeneous_slicing <<
-         " Rejected slice options: " << Log::indent);
+         " Rejected slice options: ");
     for (auto sz :  reject_sizes) LOG7(int(sz));
 
     // no slice list supercluster, a simpler case.
@@ -1278,8 +1278,7 @@ void DfsItrContext::iterate(const IterateCb& cb) {
     auto res = dfs(cb, to_be_split_i);
     LOG1("DFS Result: " << res
          << ", n_steps_since_last_solution: " << n_steps_since_last_solution
-         << ", max_search_steps_per_solution: " << config_i.max_search_steps_per_solution <<
-         Log::unindent);
+         << ", max_search_steps_per_solution: " << config_i.max_search_steps_per_solution);
 
     // true indicates that we had troubles in finding a solution. Try aggressively presplit
     // large fieldslice to 32-bit chunks first and then rerun dfs.
@@ -1468,7 +1467,7 @@ bool DfsItrContext::dfs_prune_invalid_parser_packing(const SuperCluster* sc) con
             fs_starts[fs] = offset;
             offset += fs.size();
         }
-        if (auto err = parser_packing_validator_i.can_pack(fs_starts, std::nullopt)) {
+        if (auto err = parser_packing_validator_i.can_pack(fs_starts, true)) {
             LOG5("DFS pruned: invalid parser packing found in " << *sl << ", because "
                  << err->str());
             return true;

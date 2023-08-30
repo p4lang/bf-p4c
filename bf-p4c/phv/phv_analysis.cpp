@@ -63,7 +63,8 @@ PHV_AnalysisPass::PHV_AnalysisPass(
         DependencyGraph &deps,
         const DeparserCopyOpt &decaf,
         MauBacktracker& alloc,
-        CollectPhvLoggingInfo *phvLoggingInfo)
+        CollectPhvLoggingInfo *phvLoggingInfo,
+        std::set<PHV::FieldRange> &mauInitFields)
     : Logging::PassManager("phv_allocation_"),
       phv_i(phv),
       uses_i(uses),
@@ -108,7 +109,7 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             physical_liverange_db, source_tracker, pragmas, settings, tablePackOpt),
       kit(phv, clot, clustering, uses, defuse, action_constraints,
           field_to_parser_states, parser_critical_path, parser_info, strided_headers,
-          physical_liverange_db, source_tracker, tb_keys, table_mutex, deps,
+          physical_liverange_db, source_tracker, tb_keys, table_mutex, deps, mauInitFields,
           pragmas, settings, alloc),
       allocate_phv(utils, alloc, phv, unallocated) {
         auto* validate_allocation = new PHV::ValidateAllocation(phv, clot, physical_liverange_db,

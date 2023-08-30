@@ -122,7 +122,7 @@ void PackConflicts::generateNoPackConstraintsForBridgedFields(
             if (!fs1.field()->bridged && !fs1.field()->is_digest()) continue;
             if (!fs2.field()->bridged && !fs1.field()->is_digest()) continue;
             addPackConflict(fs1, fs2);
-            LOG6("\t" << " Setting no pack for " << fs1 << " and " << fs2);
+            LOG6("\t" << " Setting no pack for bridge/digest " << fs1 << " and " << fs2);
         }
     }
 }
@@ -151,7 +151,10 @@ void PackConflicts::end_apply() {
             // from table dependency graph, we can estimate if two tables will be placed
             // in the same stage. If they happen to write to bridge fields, do not pack
             // the bridge fields together due to container conflicts.
-            if (dg.min_stage(t1) == dg.min_stage(t2)) {
+            // * Except if one of the tables has been injected for field initialization
+            if (!t1->name.startsWith("__mau_inits_table") &&
+                !t2->name.startsWith("__mau_inits_table") &&
+                (dg.min_stage(t1) == dg.min_stage(t2))) {
                 LOG4("\tGenerate no pack conditions for table " << t1->name << " and table "
                       << t2->name << " for bridge fields");
                 generateNoPackConstraintsForBridgedFields(t1, t2);

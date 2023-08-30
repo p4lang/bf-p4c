@@ -710,6 +710,7 @@ set (BF_P4C_BACKEND_PHV_HDRS
   phv/action_phv_constraints.h
   phv/add_initialization.h
   phv/add_special_constraints.h
+  phv/init_in_mau.h
   phv/allocate_phv.h
   phv/allocate_temps_and_finalize_liverange.h
   phv/error.h

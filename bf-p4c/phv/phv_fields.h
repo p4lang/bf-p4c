@@ -1005,6 +1005,28 @@ class FieldSlice : public AbstractField, public LiftCompare<FieldSlice> {
     }
 };
 
+struct FieldRange {
+    cstring field_name;
+    le_bitrange range;
+    ordered_set<FieldRange> conflicts;
+
+    bool operator==(const FieldRange& other) const {
+        return (field_name == other.field_name) && range == other.range;
+    }
+
+    bool operator<(const FieldRange& other) const {
+        if (field_name != other.field_name)
+            return (field_name < other.field_name);
+        if (range.lo != other.range.lo)
+            return range.lo < other.range.lo;
+        return range.hi < other.range.hi;
+    }
+
+    bool has_conflict(const FieldRange fld_range) const {
+        return (conflicts.count(fld_range) > 0);
+    }
+};
+
 /// PackingLayout represents a packing constraint that specifies slices of fields must be
 /// allocated in the specified layout, similar to header layout constraints.
 struct PackingLayout {
