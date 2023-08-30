@@ -928,7 +928,7 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   #"header fields cannot be used in wide arithmetic ops"
-  "error: Expression cast is too complex to handle, consider simplifying the nested casts"
+  "error: Expression [(]bit<32>[)][(]bit<9>[)]ig_intr_md.ingress_port is too complex to handle"
   testdata/p4_16_samples/psa-recirculate-no-meta-bmv2.p4
 )
 
@@ -1478,7 +1478,7 @@ p4c_add_xfail_reason("tofino"
 
 # p4c update 04/26/2022 (new tests)
 p4c_add_xfail_reason("tofino"
-  "error: cast"
+  "error: [(]bit<.*>[)]"
   testdata/p4_16_samples/m_psa-dpdk-non-zero-arg-default-action-08.p4
   testdata/p4_16_samples/psa-dpdk-non-zero-arg-default-action-01.p4
   testdata/p4_16_samples/psa-dpdk-non-zero-arg-default-action-02.p4
@@ -1631,4 +1631,11 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Invalid arguments"
   p4c_3005
+)
+
+# Failure due to old version of p4runtime installed in jarvis docker images -- fixed by
+# updating p4runtime.  Can use PYTHONPATH=/mnt/build/_deps/p4runtime-src/py:$PYTHONPATH
+p4c_add_xfail_reason("tofino"
+  "google.protobuf.text_format.ParseError: 28:3 : Message type \"p4.config.v1.Table\" has no field named \"has_initial_entries\""
+  extensions/p4_tests/p4_16/ptf/static_entries.p4
 )

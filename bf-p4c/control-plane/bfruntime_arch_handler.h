@@ -800,6 +800,11 @@ class BFRuntimeArchHandlerCommon : public P4::ControlPlaneAPI::P4RuntimeArchHand
         }
     }
 
+    void collectAssignmentStatement(P4RuntimeSymbolTableIface *,
+                                    const IR::AssignmentStatement *) override {}
+
+    void collectExternMethod(P4RuntimeSymbolTableIface *, const P4::ExternMethod *) override {}
+
     void collectExternFunction(P4RuntimeSymbolTableIface *, const P4::ExternFunction *) override {}
 
     void collectParserSymbols(P4RuntimeSymbolTableIface *symbols,
@@ -1014,6 +1019,11 @@ class BFRuntimeArchHandlerCommon : public P4::ControlPlaneAPI::P4RuntimeArchHand
             analyzeParser(symbols, p4info, block->to<IR::ParserBlock>());
         });
     }
+
+    void addExternEntries(const p4::v1::WriteRequest *, const P4RuntimeSymbolTableIface &,
+                          const IR::ExternBlock *) override {}
+
+    bool filterAnnotations(cstring) override { return false; }
 
     std::optional<Digest> getDigest(const IR::Declaration_Instance *decl,
                                       p4configv1::P4TypeInfo *p4RtTypeInfo) {

@@ -161,7 +161,7 @@ TestCode(44): [--Wwarn=uninitialized_use] warning: val_undefined may be uninitia
 }
 
 TEST_F(ErrorReporterTest, WarningWithSuffixConformToExpectedFormat) {
-    const std::string EXPECTED_WARN_1 = R"(TestCode(44): [--Werror=type-error] error: return +
+    const std::string EXPECTED_WARN_1 = R"(TestCode(44): [--Werror=type-error] error: return ix + 1
                 return (ix + 1);
                 ^^^^^^
   ---- Actual error:
@@ -169,7 +169,7 @@ TEST_F(ErrorReporterTest, WarningWithSuffixConformToExpectedFormat) {
               bool f(in bit<16> ix) {
               ^^^^
   ---- Originating from:
-  TestCode(44): Source expression '+' produces a result of type 'bit<16>' which cannot be assigned to a left-value with type 'bool'
+  TestCode(44): Source expression 'ix + 1' produces a result of type 'bit<16>' which cannot be assigned to a left-value with type 'bool'
                   return (ix + 1);
                           ^^^^^^
   TestCode(43)
