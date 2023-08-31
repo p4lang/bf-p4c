@@ -1240,8 +1240,6 @@ foreach(t IN LISTS P4FACTORY_P4_16_PROGRAMS)
   endif()
 endforeach()
 
-p4c_add_test_label("tofino" "UNSTABLE" "p4_16_programs_tna_ternary_match")  # See P4C-5281
-
 # 500s timeout is too little for compiling and testing the entire switch, bumping it up
 set_tests_properties("tofino/p4_16_programs_tna_exact_match" PROPERTIES TIMEOUT ${extended_timeout_2times})
 set_tests_properties("tofino/p4_16_programs_tna_ternary_match" PROPERTIES TIMEOUT ${extended_timeout_4times})

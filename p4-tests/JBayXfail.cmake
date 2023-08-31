@@ -457,7 +457,6 @@ if (NOT TEST_ALT_PHV_ALLOC)
       "tofino2 supports up to 20 stages, using|error: table allocation .* 20 stages. Allocation state: ALT_FINALIZE_TABLE"
       extensions/p4_tests/p4_16/compile_only/p4c-3175.p4
     )
-
 endif()
 
 if (NOT TEST_ALT_PHV_ALLOC)

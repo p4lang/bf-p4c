@@ -164,8 +164,8 @@ class TableSummary: public MauInspector {
 
         ordered_map<cstring, int> attached_entries;
 
-        PlacedTable(const IR::MAU::Table *t, State::state_t &state, const DependencyGraph &dg);
-        void add(const IR::MAU::Table *t);
+        PlacedTable(const IR::MAU::Table *t, State::state_t state, const DependencyGraph &dg);
+        void add(const IR::MAU::Table *t, State::state_t state);
     };
     friend std::ostream &operator<<(std::ostream &out, const PlacedTable &pl);
     typedef enum {

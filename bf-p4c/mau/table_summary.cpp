@@ -235,7 +235,7 @@ bool TableSummary::preorder(const IR::MAU::Table *t) {
     // Create / Update a PlacedTable Object
     bool pTMerge = false;
     for (auto &pt : Values(placedTables)) {
-        // For ALPM's / DLEFT tables which can be split within the same stage
+        // For ALPM/ATCAM/DLEFT tables which can be split within the same stage
         // consolidate the entries into a single placed table object TP in the
         // next round will do the split during TransformTables (break_up_atcam /
         // dleft)
@@ -245,7 +245,7 @@ bool TableSummary::preorder(const IR::MAU::Table *t) {
         if ((pt->internalTableName == getTableIName(t))
             && (pt->stage == t->stage())
             && (!t->is_a_gateway_table_only())) {
-            pt->add(t);
+            pt->add(t, state);
             pTMerge = true;
             LOG5("\tMerging with PlacedTable : " << pt->internalTableName);
             break;
@@ -310,8 +310,10 @@ bool TableSummary::find_problematic_table() {
         return true;
     }
     LOG1("table replay failed because of " << table_replay_result);
+    // This finds the first unplaced table.
+    auto it = trivial_table_info.upper_bound(order.rbegin()->first);
     // This finds the last placed table.
-    auto it = trivial_table_info.find(order.rbegin()->first);
+    it--;
     // make it a reverse iterator, reverse_it is pointing to the table before the last placed
     // table instead of the last placed table.
     auto reverse_it = std::make_reverse_iterator(it);
@@ -967,10 +969,19 @@ std::ostream &operator<<(std::ostream &out, const TableSummary &ts) {
     return out;
 }
 
-void TableSummary::PlacedTable::add(const IR::MAU::Table *t) {
+void TableSummary::PlacedTable::add(const IR::MAU::Table *t, state_t state) {
     if (!t) return;
     if (!t->resources) return;
     if (t->resources->memuse.count(t->unique_id()) == 0) return;  // BUG_CHECK?
+
+    if (t->layout.atcam &&
+        (state == ALT_INITIAL || state == ALT_RETRY_ENHANCED_TP)) {
+        // In Table replay, atcam table entries size is the total atcam size on the same stage.
+        // During table replay, table placement will only look at the first atcam partition.
+        entries += t->atcam_entries_in_stage;
+        LOG3("Adding " << t->atcam_entries_in_stage << " atcam entries to table");
+    }
+
     for (auto &ba : t->attached) {
         auto memName = ba->attached->name;
         auto attEntries = ba->entries;
@@ -979,7 +990,7 @@ void TableSummary::PlacedTable::add(const IR::MAU::Table *t) {
     }
 }
 
-TableSummary::PlacedTable::PlacedTable(const IR::MAU::Table *t, state_t &state,
+TableSummary::PlacedTable::PlacedTable(const IR::MAU::Table *t, state_t state,
                                        const DependencyGraph &dg) {
     BUG_CHECK(t, "PlacedTable called with no valid table");
     Log::TempIndent indent;

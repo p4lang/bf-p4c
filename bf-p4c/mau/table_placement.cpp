@@ -4634,16 +4634,6 @@ DecidePlacement::alt_table_placement(const IR::BFN::Pipe *pipe) {
             continue;
         }
 
-        // Skip repeated ATCAM tables within same stage as they are already
-        // placed during first ATCAM try_place_table() call.
-        // NOTE: This can possibly be skipped being added to the PlacedTable
-        // array in Table Summary however that would not give a complete
-        // picture of how the previous round allocation occurred, instead we
-        // skip it here. The reasoning is Table Summary should not have any
-        // filtering logic since the info can be useful elsewhere.
-        if (placed && placed->placed[self.uid(alt_try_place_table)]
-                && alt_try_place_table->layout.atcam) continue;
-
         auto pl_vec = self.try_place_table(alt_try_place_table,
                                             placed, current, gmc, pt.second);
         LOG1("    Pl vector: " << pl_vec);
