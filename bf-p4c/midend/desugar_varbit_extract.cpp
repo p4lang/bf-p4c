@@ -524,25 +524,6 @@ static cstring create_instance_name(cstring name) {
     str = str.substr(0, str.length() - 2);
     return str.c_str();
 }
-typedef ordered_map<cstring,
-             ordered_map<unsigned, IR::Type_Header*>> VarbitHeaderMap;
-
-static void
-create_varbit_header_type(const IR::Type_Header* orig_hdr, cstring orig_hdr_inst,
-                          const IR::StructField* varbit_field, unsigned current_hdr_size,
-                          unsigned varbit_field_size,
-                          VarbitHeaderMap& varbit_hdr_instance_to_header_types) {
-    if (!varbit_hdr_instance_to_header_types.count(orig_hdr_inst) ||
-        !varbit_hdr_instance_to_header_types.at(orig_hdr_inst).count(varbit_field_size)) {
-        cstring name = orig_hdr->name + "_" + orig_hdr_inst + "_" + varbit_field->name + "_"
-                       + cstring::to_cstring(varbit_field_size) + "b_t";
-        auto hdr = new IR::Type_Header(name);
-        auto field_type = IR::Type::Bits::get(current_hdr_size);
-        auto field = new IR::StructField("field", field_type);
-        hdr->fields.push_back(field);
-        varbit_hdr_instance_to_header_types[orig_hdr_inst][varbit_field_size] = hdr;
-    }
-}
 
 /**
  * \ingroup DesugarVarbitExtract
@@ -559,8 +540,11 @@ class RewriteVarbitUses : public Modifier {
  public:
     // To get all the headers associated with length L, find all the header types with
     // length <= L
-    ordered_map<cstring,
-             ordered_map<unsigned, IR::Type_Header*>> varbit_hdr_instance_to_header_types;
+    ordered_map<cstring, ordered_map<unsigned, IR::Type_Header *>>
+        varbit_hdr_instance_to_header_types;
+
+    ordered_map<std::pair<cstring, unsigned>, ordered_map<unsigned, IR::Type_Header*>>
+        varbit_hdr_instance_to_header_types_by_base;
 
     std::map<const IR::StructField*, IR::Type_Header*> varbit_field_to_post_header_type;
 
@@ -573,7 +557,12 @@ class RewriteVarbitUses : public Modifier {
     create_branch_state(const IR::BFN::TnaParser* parser,
                         const IR::ParserState* state,
                         const IR::Expression* select,
-                        const IR::StructField* varbit_field, unsigned length, cstring name);
+                        const IR::StructField* varbit_field, unsigned length, unsigned base_length,
+                        cstring name);
+
+    void create_varbit_header_type(const IR::Type_Header* orig_hdr, cstring orig_hdr_inst,
+                                   const IR::StructField* varbit_field, unsigned current_hdr_size,
+                                   unsigned varbit_field_size, unsigned base_size);
 
     void create_branches(const IR::ParserState* state, const IR::StructField* varbit_field,
                          unsigned prev_length);
@@ -658,7 +647,8 @@ create_add_statement(const IR::Member* method,
 const IR::ParserState*
 RewriteVarbitUses::create_branch_state(const IR::BFN::TnaParser* parser,
         const IR::ParserState* state, const IR::Expression* select,
-        const IR::StructField* varbit_field, unsigned length, cstring name) {
+        const IR::StructField* varbit_field, unsigned length, unsigned base_length,
+        cstring name) {
     for (const auto &kv : state_to_branch_states) {
         auto p = cve.state_to_parser.at(kv.first);
         if (p == parser) {
@@ -672,12 +662,14 @@ RewriteVarbitUses::create_branch_state(const IR::BFN::TnaParser* parser,
     IR::IndexedVector<IR::StatOrDecl> statements;
     auto hdr_instance = cve.state_to_header_instance.at(state);
     auto path = cve.varbit_field_to_extract_call_path.at(varbit_field);
-    // Extract all the headers in map varbit_hdr_instance_to_header_types until
+    // Extract all the headers in map varbit_hdr_instance_to_header_types_by_base until
     // key is greater than length
-    for (auto &header_to_length : varbit_hdr_instance_to_header_types[hdr_instance]) {
+    for (auto &header_to_length :
+         varbit_hdr_instance_to_header_types_by_base[std::make_pair(hdr_instance, base_length)]) {
         auto header_length = header_to_length.first;
         if (header_length > length)
             break;
+
         auto header = header_to_length.second;
         auto varbit_hdr_inst = create_instance_name(header->name);
         auto extract = create_extract_statement(parser, path, header, varbit_hdr_inst);
@@ -771,6 +763,37 @@ RewriteVarbitUses::create_end_state(const IR::BFN::TnaParser* parser,
     return new IR::ParserState(name, statements, state->selectExpression);
 }
 
+void RewriteVarbitUses::create_varbit_header_type(const IR::Type_Header* orig_hdr,
+                                                  cstring orig_hdr_inst,
+                                                  const IR::StructField* varbit_field,
+                                                  unsigned current_hdr_size,
+                                                  unsigned varbit_field_size, unsigned base_size) {
+    auto hdr_base = std::make_pair(orig_hdr_inst, base_size);
+    // Verify that if the header already exists, it's already been inserted in this base size
+    if (varbit_hdr_instance_to_header_types.count(orig_hdr_inst) &&
+        varbit_hdr_instance_to_header_types.at(orig_hdr_inst).count(varbit_field_size)) {
+        BUG_CHECK(
+            varbit_hdr_instance_to_header_types_by_base.count(hdr_base) &&
+                varbit_hdr_instance_to_header_types_by_base.at(hdr_base).count(varbit_field_size),
+            "Already created %1%b slice of %2% but it is missing from the %3%b base",
+            current_hdr_size, orig_hdr->name, base_size);
+    }
+
+    if (!varbit_hdr_instance_to_header_types_by_base.count(hdr_base) ||
+        !varbit_hdr_instance_to_header_types_by_base.at(hdr_base)
+             .count(varbit_field_size)) {
+        cstring name = orig_hdr->name + "_" + orig_hdr_inst + "_" + varbit_field->name + "_" +
+                       cstring::to_cstring(varbit_field_size) + "b_t";
+        auto hdr = new IR::Type_Header(name);
+        auto field_type = IR::Type::Bits::get(current_hdr_size);
+        auto field = new IR::StructField("field", field_type);
+        hdr->fields.push_back(field);
+        varbit_hdr_instance_to_header_types[orig_hdr_inst][varbit_field_size] = hdr;
+        varbit_hdr_instance_to_header_types_by_base[hdr_base][varbit_field_size] =
+            hdr;
+    }
+}
+
 void RewriteVarbitUses::create_branches(const IR::ParserState* state,
                                         const IR::StructField* varbit_field,
                                         unsigned prev_length) {
@@ -785,6 +808,7 @@ void RewriteVarbitUses::create_branches(const IR::ParserState* state,
 
     cstring no_option_state_name = "parse_" + orig_hdr_inst + "_" + varbit_field->name + "_end";
     const IR::ParserState* no_option_state = nullptr;
+    unsigned base_length = value_map.begin()->first;
     for (auto& kv : value_map) {
         auto length = kv.first;
 
@@ -792,8 +816,7 @@ void RewriteVarbitUses::create_branches(const IR::ParserState* state,
             if (length-prev_length != 0) {
                 create_varbit_header_type(orig_hdr, orig_hdr_inst,
                                       varbit_field, length-prev_length,
-                                      length,
-                                      varbit_hdr_instance_to_header_types);
+                                      length, base_length);
                 prev_length = length;
             }
 
@@ -808,7 +831,7 @@ void RewriteVarbitUses::create_branches(const IR::ParserState* state,
                     cstring::to_cstring(length) + "b";
 
             auto branch_state = create_branch_state(parser, state, select,
-                                                    varbit_field, length, name);
+                                                    varbit_field, length, base_length, name);
 
             length_to_branch_state[length] = branch_state;
         } else {
