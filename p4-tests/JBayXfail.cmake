@@ -440,8 +440,9 @@ p4c_add_xfail_reason("tofino2"
 # error), please update the xfails accordingly.
 if (TEST_ALT_PHV_ALLOC)
     p4c_add_xfail_reason("tofino2"
-        "FAIL: switch_acl.ACLTest"
+        "failed to allocate tables"
         smoketest_switch_16_y2
+	switch_16_y2
     )
 endif (TEST_ALT_PHV_ALLOC)
 
