@@ -3,6 +3,7 @@
 
 #include "bf-p4c/common/utils.h"
 #include "bf-p4c/ir/gress.h"
+#include "bf-p4c/mau/table_summary.h"
 #include "bf-p4c/phv/finalize_physical_liverange.h"
 #include "bf-p4c/mau/table_placement.h"
 #include "bf-p4c/phv/phv.h"
@@ -107,9 +108,19 @@ TempVarAllocResult allocate_temp_vars(PhvInfo& phv,
     return rst;
 }
 
+void UpdateDeparserStage::end_apply() {
+    for (auto& f : phv_i) {
+        for (auto& slice : f.get_alloc()) {
+            if (slice.getLatestLiveness().first > PhvInfo::getDeparserStage()) {
+                slice.setPhysicalDeparserStageExceeded(true);
+            }
+        }
+    }
+}
+
 AllocateTempsAndFinalizeLiverange::AllocateTempsAndFinalizeLiverange(
-    PhvInfo& phv, const ClotInfo& clot, const FieldDefUse& defuse)
-    : phv_i(phv), clot_i(clot), defuse_i(defuse) {
+        PhvInfo& phv, const ClotInfo& clot, const FieldDefUse& defuse, const ::TableSummary &ts) :
+    phv_i(phv), clot_i(clot), defuse_i(defuse), ts_i(ts) {
     auto* tb_mutex = new TablesMutuallyExclusive();
     auto pragma_no_init = new PragmaNoInit(phv);
     auto* finalize_lr = new PHV::FinalizePhysicalLiverange(
@@ -119,6 +130,13 @@ AllocateTempsAndFinalizeLiverange::AllocateTempsAndFinalizeLiverange(
     addPasses({
         pragma_no_init,
         tb_mutex,
+        new PassIf(
+            [this] {
+                return ts_i.getActualState() == State::FAILURE;
+            },
+            {
+                new UpdateDeparserStage(phv_i)
+            }),
         finalize_lr,
         new PassIf([get_temp_vars]() { return !get_temp_vars().empty(); }, {
             new VisitFunctor([get_temp_vars, &phv]() {

@@ -628,10 +628,16 @@ void TableSummary::postorder(const IR::BFN::Pipe *pipe) {
         }
         if (state == FAILURE) {
             print_table_placement_errors();
-            if (maxStage > deviceStages || criticalPlacementFailure) {
+            if (criticalPlacementFailure || (prev_state == ALT_RETRY_ENHANCED_TP)) {
                 ::fatal_error(
                     "table allocation (alt-phv-alloc enabled) failed to allocate tables "
-                    "for pipe %1% within %2% stages. Allocation state: %3%, "
+                    "for pipe '%1%', table placement warnings and errors seen: %2%",
+                    pipe->canon_name(), tablePlacementErrors.size());
+            } else if (maxStage > deviceStages) {
+                // Warning to not error out and allow bfa / logs generation
+                ::warning(
+                    "table allocation (alt-phv-alloc enabled) failed to allocate tables "
+                    "for pipe '%1%' within %2% stages. Allocation state: %3%, "
                     "stage used: %4%, table placement warnings and errors seen: %5%",
                     pipe->canon_name(), deviceStages, state_name[prev_state], maxStage,
                     tablePlacementErrors.size());

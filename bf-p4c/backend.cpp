@@ -431,8 +431,8 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
         // Rerun defuse analysis here so that table placements are used to correctly calculate live
         // ranges output in the assembly.
         &defuse,
-        options.alt_phv_alloc
-            ? new PHV::AllocateTempsAndFinalizeLiverange(phv, clot, defuse) : nullptr,
+        options.alt_phv_alloc ?
+            new PHV::AllocateTempsAndFinalizeLiverange(phv, clot, defuse, table_summary) : nullptr,
         liveRangeReport,
         new IXBarVerify(phv),
         new CollectIXBarInfo(phv),

@@ -236,6 +236,7 @@ void AllocSlice::get_ref_lr(StageAndAccess &lr_min, StageAndAccess &lr_max) cons
 }
 
 bool AllocSlice::isLiveAt(int stage, const FieldUse& use) const {
+    int after_start = false, before_end = false;
     if (is_physical_stage_based_i) {
         // physical live range, all AllocSlice live range starts with read or write
         // and must end with read. Also, no AllocSlice will have overlapped live range.
@@ -248,16 +249,17 @@ bool AllocSlice::isLiveAt(int stage, const FieldUse& use) const {
         // but only the first half-word is ever read in `ig_md.hash[15:0] : selector;`.
         // Then, live range of ig_md.hash[15:0] will be [6w, 6w].
         const int end = max_stage_i.second.isWrite() ? max_stage_i.first + 1 : max_stage_i.first;
-        return start <= actual_stage && actual_stage <= end;
+        after_start  = start <= actual_stage;
+        before_end   = (actual_stage <= end) || isPhysicalDeparserStageExceeded();
     } else {
         // after starting write
-        const bool after_start = (min_stage_i.first < stage) ||
+        after_start = (min_stage_i.first < stage) ||
                                  (min_stage_i.first == stage && use >= min_stage_i.second);
         // before ending read
-        const bool before_end = (stage < max_stage_i.first) ||
+        before_end = (stage < max_stage_i.first) ||
                                 (stage == max_stage_i.first && use <= max_stage_i.second);
-        return after_start && before_end;
     }
+    return after_start && before_end;
 }
 
 bool AllocSlice::isLiveRangeDisjoint(const AllocSlice& other, int gap) const {
@@ -313,12 +315,13 @@ bool AllocSlice::isReferenced(const AllocContext* ctxt, const FieldUse* use,
         // deparser can only read, so @p use does not matter here.
         case AllocContext::Type::DEPARSER:
             LOG5("\t\t Deparser");
+            if (physical_deparser_stage_exceeded_i && max_stage_i.first > Device::numStages())
+                return true;
             return max_stage_i.first == deparser_stage_idx();
 
         case AllocContext::Type::TABLE: {
             LOG5("\t\t Table " << ctxt->table->name);
             std::set<int> stages;
-            LOG5("\t\t is_physical_stage_based_i: " << is_physical_stage_based_i);
             LOG5("\t\t useTblRefs: " << (int)useTblRefs);
             if (is_physical_stage_based_i) {
                 stages = PhvInfo::physicalStages(ctxt->table);
@@ -402,8 +405,8 @@ int AllocSlice::parser_stage_idx() const {
 }
 
 int AllocSlice::deparser_stage_idx() const {
-    return (is_physical_stage_based_i || physical_deparser_stage_i) ? Device::numStages()
-        : PhvInfo::getDeparserStage();
+    return (is_physical_stage_based_i || physical_deparser_stage_i)
+            ? Device::numStages() : PhvInfo::getDeparserStage();
 }
 
 // Add table access if it hasn't been already added

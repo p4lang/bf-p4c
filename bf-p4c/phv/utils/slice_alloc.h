@@ -139,6 +139,9 @@ class AllocSlice {
     // After FinalizeStageAllocation set to true for assembly generation
     bool physical_deparser_stage_i = false;
 
+    // Set to true to enable assembly generation for profile exceeding allowed stages
+    bool physical_deparser_stage_exceeded_i = false;
+
  public:
     AllocSlice(const Field* f, Container c, int f_bit_lo, int container_bit_lo,
                int width);
@@ -254,6 +257,9 @@ class AllocSlice {
 
     bool isPhysicalDeparserStage() const { return physical_deparser_stage_i; }
     void setPhysicalDeparserStage(bool v) { physical_deparser_stage_i = v; }
+
+    bool isPhysicalDeparserStageExceeded() const { return physical_deparser_stage_exceeded_i; }
+    void setPhysicalDeparserStageExceeded(bool v) { physical_deparser_stage_exceeded_i = v; }
 
     bool isUninitializedRead() const {
         return (getEarliestLiveness().second.isRead() &&

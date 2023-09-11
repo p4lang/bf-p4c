@@ -242,9 +242,8 @@ void FinalizePhysicalLiverange::end_apply() {
         std::set<AllocSlice> uninit_read_allocs;
         std::multiset<AllocSlice> all_slices;
         for (auto& slice : f.get_alloc()) {
-            BUG_CHECK(
-                slice.isPhysicalStageBased(),
-                "FinalizePhysicalLiverange can only be applied on physical-stage AllocSlices");
+            BUG_CHECK(slice.isPhysicalStageBased(), "FinalizePhysicalLiverange can only be applied"
+                    " on physical-stage AllocSlices (%1%)", slice.toString());
             // Although it should be safe to drop allocated but unreferenced slices,
             // but because most analysis pass were built on field-level, dropping them
             // will make some later passes fail. For example,
