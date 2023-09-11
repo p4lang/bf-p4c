@@ -194,6 +194,8 @@ const bit<32> SNAT_TABLE_SIZE = 4 * 1024;
 @pa_no_pack("egress" , "local_md.flags.port_isolation_packet_drop" , "local_md.checks.stp")
 @pa_no_pack("ingress" , "local_md.flags.fib_lpm_miss" , "local_md.flags.acl_deny")
 @pa_no_pack("ingress" , "local_md.flags.meter_packet_action" , "local_md.flags.glean")
+@pa_no_pack("egress" , "local_md.checks.stp" , "hdr.inner_udp.$valid")
+@pa_container_size("ingress", "acl_meter_color_0", 8)
 
 
 typedef bit<48> mac_addr_t;
