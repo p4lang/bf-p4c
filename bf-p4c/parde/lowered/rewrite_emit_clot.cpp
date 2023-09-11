@@ -56,6 +56,13 @@ bool RewriteEmitClot::preorder(IR::BFN::Deparser* deparser) {
         auto field = phv.field(source);
         auto sliceClots = clotInfo.slice_clots(field);
 
+        LOG5("  " << field->name << " is emitted"
+                  << (sliceClots->empty() ? " from PHV" : "from CLOT"));
+        if (sliceClots->empty()) {
+            newEmits.pushBackOrAppend(emit);
+            continue;
+        }
+
         // If we are emitting a checksum that overwrites a CLOT, register this fact with
         // ClotInfo.
         if (auto emitCsum = emit->to<IR::BFN::EmitChecksum>()) {
