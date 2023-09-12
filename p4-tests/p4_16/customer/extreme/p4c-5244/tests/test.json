@@ -13,19 +13,19 @@
             "p4_programs": [
                 {
                     "program-name": "pgm_sp_npb_vcpFw_top",
-                    "bfrt-config": "/mnt/build/p4c/tofino2/extensions/p4_tests/p4_16/customer/extreme/p4c-5244/src/pgm_sp_npb_vcpFw_top.out/pgm_sp_npb_vcpFw_top/bf-rt.json",
+                    "bfrt-config": "/bfn/bf-p4c-compilers/build/p4c/tofino2/extensions/p4_tests/p4_16/customer/extreme/p4c-5244/src/pgm_sp_npb_vcpFw_top.out/pgm_sp_npb_vcpFw_top/bf-rt.json",
                     "p4_pipelines": [
                         {
                             "p4_pipeline_name": "pipeline_npb_vcpFw",
-                            "context": "/mnt/build/p4c/tofino2/extensions/p4_tests/p4_16/customer/extreme/p4c-5244/src/pgm_sp_npb_vcpFw_top.out/pgm_sp_npb_vcpFw_top/pipeline_npb_vcpFw/context.json",
-                            "config": "/mnt/build/p4c/tofino2/extensions/p4_tests/p4_16/customer/extreme/p4c-5244/src/pgm_sp_npb_vcpFw_top.out/pgm_sp_npb_vcpFw_top/pipeline_npb_vcpFw/tofino2.bin",
+                            "context": "/bfn/bf-p4c-compilers/build/p4c/tofino2/extensions/p4_tests/p4_16/customer/extreme/p4c-5244/src/pgm_sp_npb_vcpFw_top.out/pgm_sp_npb_vcpFw_top/pipeline_npb_vcpFw/context.json",
+                            "config": "/bfn/bf-p4c-compilers/build/p4c/tofino2/extensions/p4_tests/p4_16/customer/extreme/p4c-5244/src/pgm_sp_npb_vcpFw_top.out/pgm_sp_npb_vcpFw_top/pipeline_npb_vcpFw/tofino2.bin",
                             "pipe_scope": [
                                 0,
                                 1,
                                 2,
                                 3
                             ],
-                            "path": "/mnt/build/p4c/tofino2/extensions/p4_tests/p4_16/customer/extreme/p4c-5244/src/pgm_sp_npb_vcpFw_top.out/pgm_sp_npb_vcpFw_top",
+                            "path": "/bfn/bf-p4c-compilers/build/p4c/tofino2/extensions/p4_tests/p4_16/customer/extreme/p4c-5244/src/pgm_sp_npb_vcpFw_top.out/pgm_sp_npb_vcpFw_top",
                             "name": "pipeline_npb",
                             "inst_idx": 0,
                             "folded_flag": false,
