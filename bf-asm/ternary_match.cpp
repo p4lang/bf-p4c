@@ -595,7 +595,7 @@ void TernaryMatchTable::gen_entry_cfg(json::vector &out, std::string name, \
             // For range match we need bytes to decide which nibble is being used, hence
             // split the field in bytes. For normal match entire slice can be used
             // directly.
-            auto *p = find_p4_param(name, "range");
+            auto *p = find_p4_param(name, "range", param_start_bit, field_width);
             if (p) {
                 int lsb_lo = lsb_offset - TCAM_MATCH_BITS_START;
                 int lsb_hi = lsb_lo + field_width - 1;
@@ -649,6 +649,8 @@ void TernaryMatchTable::gen_entry_cfg(json::vector &out, std::string name, \
                         range_start_bit += bit + std::max(4, lsb_lo_bit_in_byte) - lsb_lo;
                         range_width = std::min(static_cast<int>(field_width),
                                 lsb_hi_bit_in_byte - 3);
+                        range_width = std::min(static_cast<int>(range_width),
+                                lsb_hi_bit_in_byte - lsb_lo_bit_in_byte + 1);
                         nibble_offset = std::max(4, lsb_lo_bit_in_byte) % 4;
                     }
 
