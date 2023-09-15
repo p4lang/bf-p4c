@@ -127,20 +127,6 @@ bool RewriteEmitClot::preorder(IR::BFN::Deparser* deparser) {
                   "Emitted slice %1% does not match any expected next slice in %2%",
                   PHV::FieldSlice(field, StartLen(0, nextFieldBit + 1)).shortString(), *lastClot);
 
-        if (sliceClots->empty()) {
-            // None of this field should have come from CLOTs.
-            BUG_CHECK(nextFieldBit == field->size - 1,
-                      "Field %1% has no slices allocated to CLOTs, but %2% somehow came from "
-                      "%3%",
-                      field->name,
-                      PHV::FieldSlice(field, StartLen(nextFieldBit + 1, field->size - nextFieldBit))
-                          .shortString(),
-                      *lastClot);
-
-            newEmits.pushBackOrAppend(emit);
-            continue;
-        }
-
         for (const auto &entry : *sliceClots) {
             auto slice = entry.first;
             auto clot = entry.second;
