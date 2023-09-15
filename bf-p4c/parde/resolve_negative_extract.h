@@ -18,9 +18,307 @@
 /**
  * @ingroup parde
  * @brief For extracts with negative source, i.e. source is in an earlier state, adjust
- *        the state's shift amount so that the source is within current state's input buffer.
+ *        the state's shift amount, and possibly move extracts, so that the source is
+ *        within current state's input buffer.
  */
 struct ResolveNegativeExtract : public PassManager {
+    /// Colect all negative extract states that can't be satisfied by delaying shifts alone (i.e.,
+    /// the negative offsets exceed the parser window size). These negative extracts require
+    /// delaying shift _and_ redistributing the extracts. For these states, calculate the amount to
+    /// delay shifts by.
+    ///
+    /// The shift delay/extract restribution occurs between directly-connected nodes (parent +
+    /// child). Shifts/extracts will not be distributed across more than one level of hierarchy.
+    struct CollectNegativeExtractOutOfBufferStates : public ParserInspector {
+        const CollectParserInfo& parserInfo;
+
+        /**
+         * @brief In-buffer offsets of states
+         */
+        std::map<cstring, unsigned> state_to_shift;
+
+        explicit CollectNegativeExtractOutOfBufferStates(const CollectParserInfo& pi)
+            : parserInfo(pi) {}
+
+        unsigned max_buff_size = 0;
+
+        bool preorder(const IR::BFN::PacketRVal* rval) override {
+            auto extract = findContext<IR::BFN::Extract>();
+            if (extract && rval->range.lo < 0) {
+                auto state = findContext<IR::BFN::ParserState>();
+                unsigned shift = (-rval->range.lo + 7) / 8;
+                if (shift > max_buff_size) {
+                    LOG1("State " << state->name << " requires " << shift << " B shift");
+                    historic_states[state] = std::max(historic_states[state], shift);
+                    parsers[state] = findContext<IR::BFN::Parser>();
+                }
+            }
+
+            return false;
+        }
+
+        profile_t init_apply(const IR::Node *node) override {
+            auto rv = ParserInspector::init_apply(node);
+            // Initialize all structures
+            max_buff_size = Device::pardeSpec().byteInputBufferSize();
+            state_to_shift.clear();
+            historic_states.clear();
+            parsers.clear();
+            return rv;
+        }
+
+        void end_apply() override {
+            // Required data capture update all node states
+            for (auto kv : historic_states) {
+                // 1] Distribute the required history value and adjust transitions
+                auto state = kv.first;
+                auto max_idx_value = kv.second;
+
+                unsigned delay_shift =
+                    delay_shift_from_predecessor(state, parsers[state], max_idx_value);
+                BUG_CHECK(delay_shift,
+                          "In parse state %s: a value that is %d B backwards from the current "
+                          "parsing position is being accessed/used. Unable to identify an "
+                          "amount to delay the previuos shift by to allow access to this data. "
+                          "As a possible workaround try moving around the extracts (possibly by "
+                          "using methods advance and lookahead or splitting some headers).",
+                          state->name, max_idx_value);
+
+                LOG3("State " << state->name << " needs a value " << max_idx_value
+                              << "B back and generates a delay shift of " << delay_shift << "B");
+            }
+
+            LOG3("CollectNegativeExtractOutOfBufferStates has finished.");
+        }
+
+     private:
+        /**
+         * @brief Set of nodes which were identified as nodes where historic
+         * data need to be accessed. The value stored together with the state
+         * is the maximal historic data index
+         *
+         */
+        std::map<const IR::BFN::ParserState*, unsigned> historic_states;
+
+        /**
+         * @brief Mapping of Parser state to given Parser instance
+         *
+         */
+        std::map<const IR::BFN::ParserState*, const IR::BFN::Parser*> parsers;
+
+        /**
+         * @brief Delay the shift from the predecessor to provide additional backwards history
+         *
+         * @param state Analyzed parser state
+         * @param succ Successors of the state from which we are calling (can be null)
+         * @param parser Analyzed parser state
+         * @param required_history Required backward history in bytes
+         */
+        unsigned delay_shift_from_predecessor(const IR::BFN::ParserState *state,
+            const IR::BFN::Parser *parser,
+            int required_history) {
+            BUG_CHECK(state, "Parser state cannot be null!");
+
+            auto graph = parserInfo.graph(parser);
+            auto preds = graph.predecessors().at(state);
+            if (preds.size() > 1) {
+                error("Cannot resolve negative extract because of multiple paths to "
+                    "the node %1%", state->name);
+            }
+            const auto* pred = *preds.begin();
+
+            unsigned curr_shift = 0;
+            std::for_each(pred->transitions.begin(), pred->transitions.end(),
+                          [&curr_shift](const auto *tr) {
+                              curr_shift = curr_shift > tr->shift ? curr_shift : tr->shift;
+                          });
+            unsigned min_shift = required_history;
+            unsigned max_keep = curr_shift - min_shift;
+
+            // For extracts, identify the earliest start byte for each end byte
+            std::map<int, int> end_to_earliest_start;
+            for (const auto* stmt : pred->statements) {
+                if (const auto* extract = stmt->to<IR::BFN::Extract>()) {
+                    if (const auto* rval = extract->source->to<IR::BFN::InputBufferRVal>()) {
+                        auto range = rval->range;
+                        auto hi_byte = range.hiByte();
+                        auto lo_byte = range.loByte();
+                        if (end_to_earliest_start.count(hi_byte))
+                            end_to_earliest_start[hi_byte] =
+                                std::min(lo_byte, end_to_earliest_start[hi_byte]);
+                        else
+                            end_to_earliest_start[hi_byte] = lo_byte;
+                    }
+                }
+            }
+
+            // If we don't do any extracts, or if the extracts end before the max_keep value,
+            // then just return the requested min_shift value.
+            if (end_to_earliest_start.size() == 0 ||
+                end_to_earliest_start.rbegin()->first < static_cast<int>(max_keep)) {
+                state_to_shift[pred->name] = min_shift;
+                return min_shift;
+            }
+
+            // Create a vector of end position -> earliest start position where overlapping ranges
+            // are merged. Unused byte positions map to themselves.
+            //
+            // For example, if the map created above is:
+            //   [ (2, 1), (3, 2) ]
+            // then the resulting vector is:
+            //
+            // [ 0, 1, 1, 1 ]
+            int max_end = end_to_earliest_start.rbegin()->first;
+            std::vector<int> end_to_earliest_start_merged(max_end + 1);
+            for (int i = 0; i <= max_end; i++) {
+                end_to_earliest_start_merged[i] = i;
+                int min_idx = i;
+                if (end_to_earliest_start.count(i))
+                    min_idx = std::min(end_to_earliest_start[i],
+                                       end_to_earliest_start_merged[min_idx]);
+                for (int j = std::max(0, min_idx); j <= i; j++)
+                    end_to_earliest_start_merged[j] = min_idx;
+            }
+
+            // Identify the byte location at/before the max_keep position where we can split the
+            // state
+            if (end_to_earliest_start_merged[max_keep] > 0) {
+                unsigned keep = static_cast<unsigned>(end_to_earliest_start_merged[max_keep]);
+                unsigned delay_shift = curr_shift - keep;
+                if (state_to_shift.count(pred->name))
+                    state_to_shift[pred->name] =
+                        std::min(delay_shift, state_to_shift[pred->name]);
+                else
+                    state_to_shift[pred->name] = delay_shift;
+                return delay_shift;
+            }
+
+            return 0;
+        }
+    };
+
+    /// Adjustments for out of buffer negative extracts only.
+    /// Shift amounts are adjusted and extrct statements are delayed until the child states.
+    struct AdjustShiftOutOfBuffer : public ParserModifier {
+        const CollectNegativeExtractOutOfBufferStates& collectNegative;
+
+        explicit AdjustShiftOutOfBuffer(const CollectNegativeExtractOutOfBufferStates &cg)
+            : collectNegative(cg) {}
+
+        std::map<cstring, std::vector<const IR::BFN::Extract*>> delayed_statements;
+        std::map<cstring, unsigned> state_delay;
+        std::map<cstring, cstring> state_pred;
+
+        unsigned max_buff_size = 0;
+
+        profile_t init_apply(const IR::Node *node) override {
+            auto rv = ParserModifier::init_apply(node);
+            max_buff_size = Device::pardeSpec().byteInputBufferSize();
+            delayed_statements.clear();
+            state_delay.clear();
+            state_pred.clear();
+            return rv;
+        }
+
+        bool preorder(IR::BFN::ParserState* state) override {
+            // Handle shift to be delayed from current state
+            if (collectNegative.state_to_shift.count(state->name)) {
+                // Shift from the current state to delay until child states
+                unsigned delay_shift = collectNegative.state_to_shift.at(state->name);
+
+                // Current shift amount for the state
+                unsigned curr_shift = 0;
+                std::for_each(state->transitions.begin(), state->transitions.end(),
+                              [this, state, &curr_shift, delay_shift](const auto *tr) {
+                                  curr_shift = curr_shift > tr->shift ? curr_shift : tr->shift;
+                                  if (tr->next) {
+                                      this->state_delay[tr->next->name] = delay_shift;
+                                      this->state_pred[tr->next->name] = state->name;
+                                  }
+                              });
+
+                // Shift to be added to the current state
+                unsigned pending_shift =
+                    state_delay.count(state->name) ? state_delay.at(state->name) : 0;
+
+                // Split the statements into statements to delay to child states and statements to
+                // keep in current state
+                IR::Vector<IR::BFN::ParserPrimitive> new_statements;
+                for (const auto* stmt : state->statements) {
+                    bool keep = true;
+                    if (const auto* extract = stmt->to<IR::BFN::Extract>()) {
+                        if (const auto* rval = extract->source->to<IR::BFN::InputBufferRVal>()) {
+                            if (rval->range.hiByte() >= static_cast<int>(max_buff_size)) {
+                                auto* rval_clone = rval->clone();
+                                rval_clone->range.hi -= (curr_shift - pending_shift) * 8;
+                                rval_clone->range.lo -= (curr_shift - pending_shift) * 8;
+                                auto* extract_clone = extract->clone();
+                                extract_clone->source = rval_clone;
+                                delayed_statements[state->name].push_back(extract_clone);
+                                keep = false;
+                            }
+                        }
+                    }
+                    if (keep) new_statements.push_back(stmt);
+                }
+                state->statements = new_statements;
+            }
+
+            // Add statements delayed from parent state
+            if (state_delay.count(state->name)) {
+                cstring pred = state_pred[state->name];
+                IR::Vector<IR::BFN::ParserPrimitive> new_statements;
+                // Clone the delayed statements -- need a unique copy for each state
+                // in case the statements are adjusted (e.g., made into CLOTs).
+                for (const auto* stmt : delayed_statements[pred])
+                    new_statements.push_back(stmt->clone());
+                new_statements.insert(new_statements.end(),
+                                      state->statements.begin(),
+                                      state->statements.end());
+                state->statements = new_statements;
+            }
+
+            return true;
+        }
+
+        bool preorder(IR::BFN::Transition* transition) override {
+            auto state = findContext<IR::BFN::ParserState>();
+            BUG_CHECK(state, "State cannot be null!");
+
+
+            if (collectNegative.state_to_shift.count(state->name)) {
+                transition->shift -= collectNegative.state_to_shift.at(state->name);
+                LOG3("Adjusting transition from " << state->name << ", match { " <<
+                    transition->value << " } to shift value = " << transition->shift);
+            }
+            if (state_delay.count(state->name)) {
+                transition->shift += state_delay.at(state->name);
+                LOG3("Adjusting transition from " << state->name << ", match { " <<
+                    transition->value << " } to shift value = " << transition->shift);
+            }
+
+            return true;
+        }
+
+        bool preorder(IR::BFN::PacketRVal* rval) override {
+            auto state   = findContext<IR::BFN::ParserState>();
+            auto extract = findContext<IR::BFN::Extract>();
+
+            if (state_delay.count(state->name)) {
+                unsigned shift = state_delay.at(state->name) * 8;
+                rval->range.lo += shift;
+                rval->range.hi += shift;
+                if (extract) {
+                    LOG3("Adjusting field " << extract->dest->field->toString() << " to " <<
+                        shift/8 << " byte offset (lo = " << rval->range.lo << ", hi  = " <<
+                        rval->range.hi << ")");
+                }
+            }
+
+            return false;
+        }
+    };
+
     /// Colect all negative extract states and compute corresponding shift values
     /// for transitions and states
     struct CollectNegativeExtractStates : public ParserInspector {
@@ -328,9 +626,10 @@ struct ResolveNegativeExtract : public PassManager {
                 // (we can shift them out)
                 new_tr_shift = -deficit;
             }
+            Log::TempIndent indent;
             LOG4("Adjusting shift for state "
                  << state->name << " and transition to state " << succ->name
-                 << " (new transition shift = " << new_tr_shift << " B)" << IndentCtl::indent);
+                 << " (new transition shift = " << new_tr_shift << " B)" << indent);
             adjust_shift_buffer(state, succ, parser, new_tr_shift, new_state_shift);
         }
     };
@@ -414,9 +713,17 @@ struct ResolveNegativeExtract : public PassManager {
     ResolveNegativeExtract() {
         auto* parserInfo = new CollectParserInfo;
         auto* collectNegative = new CollectNegativeExtractStates(*parserInfo);
+        auto* collectNegativeOutOfBuffer = new CollectNegativeExtractOutOfBufferStates(*parserInfo);
 
         addPasses({
             LOGGING(4) ? new DumpParser("before_resolve_negative_extract") : nullptr,
+            // Step 1: Handle negative extracts that exceed the parser buffer size.
+            // Need to adjust shift and delay extracts until subsequent states.
+            parserInfo,
+            collectNegativeOutOfBuffer,
+            new AdjustShiftOutOfBuffer(*collectNegativeOutOfBuffer),
+            // Step 2: Handle all other negative extracts
+            // Adjusting shift amounts but not delaying extracts.
             parserInfo,
             collectNegative,
             new AdjustShift(*collectNegative),
