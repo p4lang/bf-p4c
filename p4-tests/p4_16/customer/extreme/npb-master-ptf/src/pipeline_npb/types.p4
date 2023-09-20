@@ -943,28 +943,31 @@ header switch_bridged_metadata_folded_h {
 // Ingress Port Metadata
 // --------------------------------------------------------------------------------
 
+// struct switch_port_metadata_t {
+// #ifdef CPU_HDR_CONTAINS_EG_PORT
+// #else
+//     switch_port_lag_index_t         port_lag_index;
+// //  switch_ifindex_t                ifindex;
+// 	bit<1>                          l2_fwd_en;
+// #endif
+// 
+// #if __TARGET_TOFINO__ == 2
+// /*
+//     switch_yid_t exclusion_id;
+// 
+// 	// for packets w/o nsh header:
+//     bit<SSAP_ID_WIDTH>              sap;
+//     bit<VPN_ID_WIDTH>               vpn;
+//     bit<SPI_WIDTH>                  spi;
+//     bit<8>                          si;
+//     bit<8>                          si_predec;
+// */
+// #endif
+// }
+
 struct switch_port_metadata_t {
-#ifdef CPU_HDR_CONTAINS_EG_PORT
-#else
-    switch_port_lag_index_t         port_lag_index;
-//  switch_ifindex_t                ifindex;
-	bit<1>                          l2_fwd_en;
-#endif
-
-#if __TARGET_TOFINO__ == 2
-/*
-    switch_yid_t exclusion_id;
-
-	// for packets w/o nsh header:
-    bit<SSAP_ID_WIDTH>              sap;
-    bit<VPN_ID_WIDTH>               vpn;
-    bit<SPI_WIDTH>                  spi;
-    bit<8>                          si;
-    bit<8>                          si_predec;
-*/
-#endif
+    bit<1>  transport_eompls_enable;  // 0=IPoMPLS, 1=EoMPLS
 }
-
 @pa_auto_init_metadata
 
 // --------------------------------------------------------------------------------

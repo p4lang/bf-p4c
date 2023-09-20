@@ -308,7 +308,8 @@ def npb_tunnel_rmac_del(self, target, ig_pipe, dst_addr):
 
 def npb_ing_port_metadata_add(self, target, ig_pipe, port, mpls_mode):
 	# for our all-to-one program, need to edit the path to this table
-	if((p4_name == 'pgm_mp_npb_igOnly_npb_igOnly_npb_igOnly_npb_egOnly_top') or (p4_name == 'pgm_fp_npb_dedup_dtel_vcpFw_top')):
+#	if((p4_name == 'pgm_mp_npb_igOnly_npb_igOnly_npb_igOnly_npb_egOnly_top') or (p4_name == 'pgm_fp_npb_dedup_dtel_vcpFw_top')):
+	if(                                                                         (p4_name == 'pgm_fp_npb_dedup_dtel_vcpFw_top')):
 		ig_pipes2 = ig_pipes.copy()
 		ig_pipes2.insert(0, 0)
 	else:
@@ -319,7 +320,10 @@ def npb_ing_port_metadata_add(self, target, ig_pipe, port, mpls_mode):
 		try:
 			for ig_pipe2 in ig_pipes2:
 
-				table = self.bfrt_info.table_get('%s.$PORT_METADATA' % iprsr_s[ig_pipe2])
+#				table = self.bfrt_info.table_get('%s.$PORT_METADATA' % iprsr_s[ig_pipe2])
+				derek_debug = iprsr_s[ig_pipe2] # remove the ".ip" for this table now?
+				derek_debug = derek_debug.replace('.ip','') # remove the ".ip" for this table now?
+				table = self.bfrt_info.table_get('%s.$PORT_METADATA' % derek_debug)
 				table.entry_add(
 					target,
 					[table.make_key(
@@ -350,6 +354,7 @@ def npb_ing_port_add(self, target, ig_pipe, port, port_lag_ptr, bridging_enable,
 			for ig_pipe2 in ig_pipes2:
 
 				if(PipelineParams.CPU_HDR_CONTAINS_EG_PORT == False):
+					'''
 					table = self.bfrt_info.table_get('%s.$PORT_METADATA' % iprsr_s[ig_pipe2])
 					table.entry_add(
 						target,
@@ -362,7 +367,7 @@ def npb_ing_port_add(self, target, ig_pipe, port, port_lag_ptr, bridging_enable,
 							None
 						)]
 					)
-
+					'''
 					########################################
 
 					# insert both versions (cpu and non-cpu):

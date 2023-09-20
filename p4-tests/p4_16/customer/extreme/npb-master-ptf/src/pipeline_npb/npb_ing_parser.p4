@@ -27,7 +27,7 @@ parser IngressParser(
     //bit<16> ether_type_inner;
     bit<8>  protocol_outer;
     bit<8>  protocol_inner;
-    //bit<1>  transport_eompls_enable;
+    bit<1>  transport_eompls_enable;
 
     state start {
         pkt.extract(ig_intr_md);
@@ -64,15 +64,15 @@ parser IngressParser(
     
     state parse_port_metadata {
         // Parse port metadata produced by ibuf
-#ifdef CPU_HDR_CONTAINS_EG_PORT
-        pkt.advance(PORT_METADATA_SIZE);
-#else
-       switch_port_metadata_t port_md = port_metadata_unpack<switch_port_metadata_t>(pkt);
-       ig_md.ingress_port_lag_index = port_md.port_lag_index;
-       ig_md.nsh_md.l2_fwd_en = (bool)port_md.l2_fwd_en;
-#endif
-        // switch_port_metadata_t port_md = port_metadata_unpack<switch_port_metadata_t>(pkt);
-	// transport_eompls_enable = port_md.transport_eompls_enable;     
+// #ifdef CPU_HDR_CONTAINS_EG_PORT
+//         pkt.advance(PORT_METADATA_SIZE);
+// #else
+//        switch_port_metadata_t port_md = port_metadata_unpack<switch_port_metadata_t>(pkt);
+//        ig_md.ingress_port_lag_index = port_md.port_lag_index;
+//        ig_md.nsh_md.l2_fwd_en = (bool)port_md.l2_fwd_en;
+// #endif
+        switch_port_metadata_t port_md = port_metadata_unpack<switch_port_metadata_t>(pkt);
+	transport_eompls_enable = port_md.transport_eompls_enable;     
         
         transition select(FOLDED_ENABLE) {
             true: parse_bridged_pkt;
@@ -214,42 +214,42 @@ parser IngressParser(
     // will start down this path and be subjected to additional parsing states.
     //--------------------------------------------------------------------------
 
-    state construct_transport_special_case_a {
-        transition select(
-            TRANSPORT_INGRESS_ENABLE,
-            TRANSPORT_IPV4_VXLAN_INGRESS_ENABLE,
-            TRANSPORT_IPV4_GENEVE_INGRESS_ENABLE,
-            TRANSPORT_EoMPLS_INGRESS_ENABLE,
-            TRANSPORT_IPoMPLS_INGRESS_ENABLE,
-            TRANSPORT_SPBM_INGRESS_ENABLE) {
-            (false,    _,    _,    _,    _,    _): parse_outer_ethernet;
-            ( true,    _,    _, true,    _, true): check_special_case_enet_ipv4_mpls_spbm;
-            ( true,    _,    _,    _, true, true): check_special_case_enet_ipv4_mpls_spbm;
-            ( true,    _,    _, true,    _,    _): check_special_case_enet_ipv4_mpls_nospbm;
-            ( true,    _,    _,    _, true,    _): check_special_case_enet_ipv4_mpls_nospbm;
-            ( true,    _,    _,    _,    _, true): check_special_case_enet_ipv4_nompls_spbm;
-            ( true,    _, true,    _,    _,    _): check_special_case_enet_ipv4_nompls_nospbm;
-            ( true, true,    _,    _,    _,    _): check_special_case_enet_ipv4_nompls_nospbm;
-            default: parse_outer_ethernet;
-        }
-    }
-
     // state construct_transport_special_case_a {
     //     transition select(
     //         TRANSPORT_INGRESS_ENABLE,
     //         TRANSPORT_IPV4_VXLAN_INGRESS_ENABLE,
     //         TRANSPORT_IPV4_GENEVE_INGRESS_ENABLE,
-    //         TRANSPORT_MPLS_INGRESS_ENABLE,
+    //         TRANSPORT_EoMPLS_INGRESS_ENABLE,
+    //         TRANSPORT_IPoMPLS_INGRESS_ENABLE,
     //         TRANSPORT_SPBM_INGRESS_ENABLE) {
-    //         (false,    _,    _,    _,    _): parse_outer_ethernet;
-    //         ( true,    _,    _, true, true): check_special_case_enet_ipv4_mpls_spbm;
-    //         ( true,    _,    _, true,    _): check_special_case_enet_ipv4_mpls_nospbm;
-    //         ( true,    _,    _,    _, true): check_special_case_enet_ipv4_nompls_spbm;
-    //         ( true,    _, true,    _,    _): check_special_case_enet_ipv4_nompls_nospbm;
-    //         ( true, true,    _,    _,    _): check_special_case_enet_ipv4_nompls_nospbm;
+    //         (false,    _,    _,    _,    _,    _): parse_outer_ethernet;
+    //         ( true,    _,    _, true,    _, true): check_special_case_enet_ipv4_mpls_spbm;
+    //         ( true,    _,    _,    _, true, true): check_special_case_enet_ipv4_mpls_spbm;
+    //         ( true,    _,    _, true,    _,    _): check_special_case_enet_ipv4_mpls_nospbm;
+    //         ( true,    _,    _,    _, true,    _): check_special_case_enet_ipv4_mpls_nospbm;
+    //         ( true,    _,    _,    _,    _, true): check_special_case_enet_ipv4_nompls_spbm;
+    //         ( true,    _, true,    _,    _,    _): check_special_case_enet_ipv4_nompls_nospbm;
+    //         ( true, true,    _,    _,    _,    _): check_special_case_enet_ipv4_nompls_nospbm;
     //         default: parse_outer_ethernet;
     //     }
     // }
+
+    state construct_transport_special_case_a {
+        transition select(
+            TRANSPORT_INGRESS_ENABLE,
+            TRANSPORT_IPV4_VXLAN_INGRESS_ENABLE,
+            TRANSPORT_IPV4_GENEVE_INGRESS_ENABLE,
+            TRANSPORT_MPLS_INGRESS_ENABLE,
+            TRANSPORT_SPBM_INGRESS_ENABLE) {
+            (false,    _,    _,    _,    _): parse_outer_ethernet;
+            ( true,    _,    _, true, true): check_special_case_enet_ipv4_mpls_spbm;
+            ( true,    _,    _, true,    _): check_special_case_enet_ipv4_mpls_nospbm;
+            ( true,    _,    _,    _, true): check_special_case_enet_ipv4_nompls_spbm;
+            ( true,    _, true,    _,    _): check_special_case_enet_ipv4_nompls_nospbm;
+            ( true, true,    _,    _,    _): check_special_case_enet_ipv4_nompls_nospbm;
+            default: parse_outer_ethernet;
+        }
+    }
 
 
     
@@ -831,21 +831,21 @@ parser IngressParser(
     // Multi-Protocol Label Switching Segment Routing (MPLS-SR) - Transport
     //--------------------------------------------------------------------------
 
-    // state construct_transport_mpls {
-    //     transition select(TRANSPORT_MPLS_INGRESS_ENABLE) {
-    //         true: parse_transport_mpls_0;
-    //         default: reject;
-    //     }
-    // }
     state construct_transport_mpls {
-        transition select(
-            TRANSPORT_EoMPLS_INGRESS_ENABLE,
-            TRANSPORT_IPoMPLS_INGRESS_ENABLE) {
-            (true,   _): parse_transport_mpls_0;
-            (   _,true): parse_transport_mpls_0;
+        transition select(TRANSPORT_MPLS_INGRESS_ENABLE) {
+            true: parse_transport_mpls_0;
             default: reject;
         }
     }
+    // state construct_transport_mpls {
+    //     transition select(
+    //         TRANSPORT_EoMPLS_INGRESS_ENABLE,
+    //         TRANSPORT_IPoMPLS_INGRESS_ENABLE) {
+    //         (true,   _): parse_transport_mpls_0;
+    //         (   _,true): parse_transport_mpls_0;
+    //         default: reject;
+    //     }
+    // }
     state parse_transport_mpls_0 {
         ig_md.lkp_0.tunnel_type = SWITCH_TUNNEL_TYPE_MPLS;
         ig_md.lkp_0.tunnel_id = pkt.lookahead<bit<32>>();
@@ -914,37 +914,37 @@ parser IngressParser(
         ig_md.lkp_0.tunnel_id = 0;
         transition reject;
     }
-    // // fanout state that uses port metadata table for branch decision
+    // fanout state that uses port metadata table for branch decision
+    state parse_transport_mpls_fanout {
+        transition select(
+            transport_eompls_enable,
+            pkt.lookahead<bit<4>>()) {
+            (0, 0x4): qualify_outer_ipv4;
+            (0, 0x6): construct_outer_ipv6;
+            (1,   _): parse_outer_ethernet;
+            default: reject;
+        }
+    }
+    // // fanout state that uses feature defines for branch decision
     // state parse_transport_mpls_fanout {
     //     transition select(
-    //         transport_eompls_enable,
-    //         pkt.lookahead<bit<4>>()) {
-    //         (0, 0x4): qualify_outer_ipv4;
-    //         (0, 0x6): construct_outer_ipv6;
-    //         (1,   _): parse_outer_ethernet;
+    //         TRANSPORT_EoMPLS_INGRESS_ENABLE,
+    //         TRANSPORT_IPoMPLS_INGRESS_ENABLE) {
+    //         (true, false): parse_transport_mpls_fanout_eompls;
+    //         (false, true): parse_transport_mpls_fanout_ipompls;
     //         default: reject;
     //     }
     // }
-    // fanout state that uses feature defines for branch decision
-    state parse_transport_mpls_fanout {
-        transition select(
-            TRANSPORT_EoMPLS_INGRESS_ENABLE,
-            TRANSPORT_IPoMPLS_INGRESS_ENABLE) {
-            (true, false): parse_transport_mpls_fanout_eompls;
-            (false, true): parse_transport_mpls_fanout_ipompls;
-            default: reject;
-        }
-    }
-    state parse_transport_mpls_fanout_eompls {
-        transition parse_outer_ethernet;
-    }
-    state parse_transport_mpls_fanout_ipompls {
-        transition select(pkt.lookahead<bit<4>>()) {
-            4: qualify_outer_ipv4;
-            6: construct_outer_ipv6;
-            default: reject;
-        }
-    }
+    // state parse_transport_mpls_fanout_eompls {
+    //     transition parse_outer_ethernet;
+    // }
+    // state parse_transport_mpls_fanout_ipompls {
+    //     transition select(pkt.lookahead<bit<4>>()) {
+    //         4: qualify_outer_ipv4;
+    //         6: construct_outer_ipv6;
+    //         default: reject;
+    //     }
+    // }
 
     
     ////////////////////////////////////////////////////////////////////////////

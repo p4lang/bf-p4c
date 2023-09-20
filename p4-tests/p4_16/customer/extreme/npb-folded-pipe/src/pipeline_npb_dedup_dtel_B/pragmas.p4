@@ -20,6 +20,8 @@
 #endif // PA_NO_INIT
 @pa_no_init("ingress", "ig_intr_md_for_tm.ucast_egress_port") // added per case 00779712 patch
 
+@pa_solitary("ingress", "ig_intr_md_for_tm.ucast_egress_port.$valid")
+
 
 // These pragmas are needed to fit design
 // -----------------------------------------------------------------------------
@@ -63,8 +65,5 @@
 //@pa_no_overlay("ingress", "hdr.bridged_md.base_qid", "ig_md.qos.qid")
 //@pa_no_overlay("ingress", "ig_intr_md_for_tm.qid", "ig_md.qos.qid")
 //@pa_no_overlay("ingress", "ig_md.lkp_1.ip_type", "hdr.transport.ethernet.ether_type") // added per case 00776085 patch
-
-@pa_container_size("ingress", "hdr.outer.ethernet.ether_type", 16)
-@pa_container_size("ingress", "hdr.transport.ethernet.ether_type", 16)
 
 #endif // _P4_PRAGMAS_
