@@ -429,12 +429,6 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_16/compile_only/p4c-3220_1.p4
 )
 
-# P4C-4498
-p4c_add_xfail_reason("tofino2"
-  "error: table .* should not have empty const entries list."
-  extensions/p4_tests/p4_16/compile_only/p4c-4498.p4
-)
-
 # ALT-PHV: tests that do not work yet with the alternative allocator.
 # If you make an ALT-PHV test pass (or get close to it but if fails on later
 # error), please update the xfails accordingly.

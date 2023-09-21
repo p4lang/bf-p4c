@@ -1651,7 +1651,8 @@ class GetBackendTables : public MauInspector {
     // Convert from IR::P4Action to IR::MAU::Action
     void setup_actions(IR::MAU::Table *tt, const IR::P4Table *table) {
         auto actionList = table->getActionList();
-        tt->entries_list = tt->match_table->getEntries();
+        if (tt->match_table->getEntries() && tt->match_table->getEntries()->size())
+            tt->entries_list = tt->match_table->getEntries();
         for (auto act : actionList->actionList) {
             auto decl = refMap->getDeclaration(act->getPath())->to<IR::P4Action>();
             BUG_CHECK(decl != nullptr,

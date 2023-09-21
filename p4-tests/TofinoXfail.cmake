@@ -1497,13 +1497,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/compile_only/p4c-3220_1.p4
 )
 
-# P4C-4498
-p4c_add_xfail_reason("tofino"
-  "error: table .* should not have empty const entries list."
-  extensions/p4_tests/p4_16/compile_only/p4c-4498.p4
-  testdata/p4_16_samples/issue2905-bmv2.p4
-)
-
 # p4c update 2022-06-02
 p4c_add_xfail_reason("tofino"
   "does not have method matching this call"

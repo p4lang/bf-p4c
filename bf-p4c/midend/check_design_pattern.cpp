@@ -156,11 +156,3 @@ bool BFN::CheckDirectExternsOnTables::preorder(IR::P4Table* table) {
     }
     return false;
 }
-
-bool BFN::CheckTableConstEntries::preorder(const IR::P4Table *tbl) {
-    if (tbl->getEntries() && tbl->getEntries()->size() == 0) {
-        ::error(ErrorType::ERR_UNEXPECTED,
-            "table %1% should not have empty const entries list.", tbl->name);
-    }
-    return false;
-}

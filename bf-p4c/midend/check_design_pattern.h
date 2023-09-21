@@ -141,7 +141,6 @@ class CheckDesignPattern : public PassManager {
         passes.push_back(new CheckExternValidity(refMap, typeMap));
         if (BackendOptions().arch != "v1model")
         passes.push_back(new CheckDirectResourceInvocation(refMap, typeMap));
-        passes.push_back(new CheckTableConstEntries);
     }
 };
 
