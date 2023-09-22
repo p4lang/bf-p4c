@@ -196,6 +196,8 @@ class CreateSaluInstruction : public Inspector {
     int                                         return_enum_word = -1;
     bool                                        split_ifs = false;
     std::map<int, const IR::Expression*>        output_param_operands;
+    std::map<int, const IR::Expression*>        output_predicates;
+    std::set<const IR::Expression*>             or_targets;
 
     // Map for detection of WAW data hazards
     // * Key is the lvalue
@@ -237,6 +239,7 @@ class CreateSaluInstruction : public Inspector {
     bool outputEnumAsPredicate(const IR::Member *);
     bool canBeIXBarExpr(const IR::Expression *);
     bool outputAluHi();
+    void checkActions(const Util::SourceInfo &srcInfo);
 
     bool preorder(const IR::Declaration_Instance *di) override;
     bool preorder(const IR::Declaration_Variable *v) override;

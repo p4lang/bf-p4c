@@ -1,5 +1,5 @@
 #include <core.p4>
-#include <tna.p4>
+#include <t2na.p4>
 
 header test_h {
     bit<32>      flag;
@@ -45,32 +45,12 @@ control ingress(
     };
 
     RegisterAction<bit<32>,bit<32>,bit<32>>(vals0) vals0_test = {
-        void apply(inout bit<32> value, out bit<32> read_value){
-            if(hdr.test.val > 2){
-                read_value = value;
-            } else {
-                read_value = 32w2;
-            }
-        }
-    };
-
-    RegisterAction<bit<32>,bit<32>,bit<32>>(vals0) vals0_test2 = {
-        void apply(inout bit<32> value, out bit<32> read_value){
-            if(hdr.test.val > 2){
-                read_value = -value;
-            } else {
-                read_value = 32w2;
-            }
-        }
-    };
-
-    RegisterAction<bit<32>,bit<32>,bit<32>>(vals0) vals0_test3 = {
-        void apply(inout bit<32> value, out bit<32> read_value){
-            if(hdr.test.val > 2){
-                read_value = 32w2;
-            } else {
-                read_value = value;
-            }
+        void apply(inout bit<32> value, out bit<32> rv, out bit<32> rv1){ /* expect error: \
+"In Stateful ALU, only two values can be generated per apply" */
+            // This should fail to compile as it needs 3 ALUs
+            rv = value + 1;
+            rv1 = value + 2;
+            value = value + 3;
         }
     };
 
@@ -80,26 +60,16 @@ control ingress(
     action read() {
         hdr.test.val = vals0_test.execute(0);
     }
-    action read2() {
-        hdr.test.val = vals0_test2.execute(0);
-    }
-    action read3() {
-        hdr.test.val = vals0_test3.execute(0);
-    }
 
     table t {
         key = { hdr.test.flag : exact; }
         actions = {
             write;
             read;
-            read2;
-            read3;
         }
         const entries = {
             0 : write();
             1 : read();
-            2 : read2();
-            3 : read3();
         }
         size = 5;
     }

@@ -180,7 +180,8 @@ control Ingress(/* User */
     // expect error@NO SOURCE: "Two or more assignments of .* inside the register action .* are not mutually exclusive"
     RegisterAction<bit<16>, bit<15>, bit<16>>(layer_16bit) insert_16bit=
     {
-        void apply(inout bit<16> register_data, out bit<16> result)
+        void apply(inout bit<16> register_data, out bit<16> result) /* expect error: \
+"In Stateful ALU, only two values can be generated per apply" */
         {
             result = 80;
             if (register_data<3)

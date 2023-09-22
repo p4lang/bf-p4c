@@ -485,6 +485,8 @@ void CreateSaluInstruction::clearFuncState() {
     assig_pred = nullptr;
     written_dest.clear();
     output_param_operands.clear();
+    output_predicates.clear();
+    or_targets.clear();
 }
 
 bool CreateSaluInstruction::preorder(const IR::Function *func) {
@@ -602,8 +604,50 @@ void CreateSaluInstruction::postorder(const IR::Function *func) {
                 "assigned. Please verify the action is valid.",
                 salu, action->name);
     }
+    if (func->name == "apply")
+        checkActions(func->srcInfo);
     LOG3_UNINDENT;
     clearFuncState();
+}
+
+/// @brief Check whether ALUs are being reused
+///
+/// Check whether an ALU (hi/lo) is being used mutliple times when it shouldn't be. An ALU half can
+/// be used multiple times if a) the condidtions differ, or b) it's part of a bitwise-OR
+/// computation.
+void CreateSaluInstruction::checkActions(const Util::SourceInfo &srcInfo) {
+    std::map<std::pair<cstring, const IR::Expression *>, const IR::MAU::SaluInstruction *>
+        actions_by_dest_pred;
+    for (const auto *act : action->action) {
+        auto* dest = act->getOutput();
+        if (!dest) continue;
+
+        auto* dest_reg = dest->to<IR::MAU::SaluReg>();
+        if (!dest_reg || dest_reg->is<IR::MAU::SaluCmpReg>() ||
+            !(dest_reg->name == "lo" || dest_reg->name == "hi"))
+            continue;
+
+        auto dest_name = dest_reg->name;
+        auto* pred = act->output_operand > 0 ? act->operands[0] : nullptr;
+        std::set<const IR::Expression*> preds = {pred, nullptr};
+        for (const auto *pred : preds) {
+            auto dest_and_pred = std::make_pair(dest_name, pred);
+            if (actions_by_dest_pred.count(dest_and_pred)) {
+                const auto *dest = act->to<IR::MAU::SaluInstruction>()->getOutput();
+                if (!or_targets.count(dest))
+                    error(ErrorType::ERR_UNSUPPORTED,
+                          "%sIn Stateful ALU, only two values can be computed per apply. "
+                          "Value(s) written back to the register, including unchanged values "
+                          "(even if not explicitly included in the P4 code), count as computed "
+                          "values.",
+                          srcInfo);
+            }
+        }
+        auto dest_and_pred = std::make_pair(dest_name, pred);
+        if (!actions_by_dest_pred.count(dest_and_pred)) {
+            actions_by_dest_pred[dest_and_pred] = act;
+        }
+    }
 }
 
 void CreateSaluInstruction::doAssignment(const Util::SourceInfo &srcInfo) {
@@ -1309,10 +1353,11 @@ bool CreateSaluInstruction::preorder(const IR::Operation::Relation *rel, cstring
         BUG_CHECK(etype == IF, "etype changed?");
         setupCmp(opcode);
     } else {
-        error(ErrorType::ERR_UNSUPPORTED,
-              "%sIn Stateful ALU, a comparison can only be used in a condition or in an assignment "
-              "to an output parameter.",
-              rel->srcInfo);
+        error(
+            ErrorType::ERR_UNSUPPORTED,
+            "%sIn Stateful ALU, a comparison can only be used in a condition or in an assignment "
+            "to an output parameter.",
+            rel->srcInfo);
     }
     return false;
 }
@@ -1349,10 +1394,20 @@ inline void condition_error(const IR::Node *node, const char *operation) {
     error(ErrorType::ERR_UNSUPPORTED, "%sIn Stateful ALU, %s can only be used in a condition.",
           node->srcInfo, operation);
 }
-inline void only_operation_error(const IR::Node *node, const char *operation) {
-    error(ErrorType::ERR_UNSUPPORTED,
-          "%sIn Stateful ALU, %s can only be used if it is the only operation in a control flow.",
-          node->srcInfo, operation);
+inline void only_operation_error(const IR::Node *node, const char *operation,
+                                 const IR::MAU::StatefulAlu *salu) {
+    CHECK_NULL(salu);
+    if (!salu->dual)
+        error(ErrorType::ERR_UNSUPPORTED,
+              "%sIn Stateful ALU, %s can only be used if it is the only operation in a control "
+              "flow.",
+              node->srcInfo, operation);
+    else
+        error(
+            ErrorType::ERR_UNSUPPORTED,
+            "%s: In Stateful ALU for registers with two fields or a single %d bit field, %s can "
+            "only be used when the result is written to the register.",
+            node->srcInfo, Device::statefulAluSpec().MaxDualSize, operation);
 }
 
 void CreateSaluInstruction::postorder(const IR::LNot *e) {
@@ -1404,7 +1459,7 @@ bool CreateSaluInstruction::preorder(const IR::Add *e) {
         opcode = "add";
         if (etype == OUTPUT) etype = OUTPUT_ALUHI;
         return true; }
-    only_operation_error(e, "addition");
+    only_operation_error(e, "addition", salu);
     return false;
 }
 bool CreateSaluInstruction::preorder(const IR::AddSat *e) {
@@ -1414,7 +1469,7 @@ bool CreateSaluInstruction::preorder(const IR::AddSat *e) {
         if (etype == OUTPUT) etype = OUTPUT_ALUHI;
         return true;
     } else {
-        only_operation_error(e, "saturating addition");
+        only_operation_error(e, "saturating addition", salu);
         return false; }
 }
 
@@ -1430,7 +1485,7 @@ bool CreateSaluInstruction::preorder(const IR::Sub *e) {
         opcode = "sub";
         if (etype == OUTPUT) etype = OUTPUT_ALUHI;
         return true; }
-    only_operation_error(e, "subtraction");
+    only_operation_error(e, "subtraction", salu);
     return false;
 }
 bool CreateSaluInstruction::preorder(const IR::SubSat *e) {
@@ -1440,7 +1495,7 @@ bool CreateSaluInstruction::preorder(const IR::SubSat *e) {
         if (etype == OUTPUT) etype = OUTPUT_ALUHI;
         return true;
     } else {
-        only_operation_error(e, "saturating subtraction");
+        only_operation_error(e, "saturating subtraction", salu);
         return false; }
 }
 
@@ -1465,7 +1520,7 @@ void CreateSaluInstruction::postorder(const IR::BAnd *e) {
         operands.back() = new IR::BAnd(e->srcInfo, operands.back(), r);
         LOG4("BAnd rewrite opeands: " << operands.back());
     } else {
-        only_operation_error(e, "conjunction"); }
+        only_operation_error(e, "conjunction", salu); }
 }
 
 void CreateSaluInstruction::checkAndReportComplexInstruction(const IR::Operation_Binary* op) const {
@@ -1532,12 +1587,16 @@ bool CreateSaluInstruction::preorder(const IR::BOr *e) {
             auto old_operands = operands;
             visit(e->left);
             doAssignment(e->left->srcInfo);
+            auto* dest = action->action.back()->to<IR::MAU::SaluInstruction>()->getOutput();
+            or_targets.emplace(dest);
             // Collect & dump data for the right subtree
             etype = VALUE;
             opcode = old_opcode;
             operands = old_operands;
             visit(e->right);
             doAssignment(e->right->srcInfo);
+            dest = action->action.back()->to<IR::MAU::SaluInstruction>()->getOutput();
+            or_targets.emplace(dest);
         } else if (etype == IF) {
             error(ErrorType::ERR_UNSUPPORTED, "%stoo complex bitwise operation used in a condition",
                   e->srcInfo);
@@ -1563,7 +1622,7 @@ void CreateSaluInstruction::postorder(const IR::BOr *e) {
         else
             opcode = "or";
     } else {
-        only_operation_error(e, "disjunction"); }
+        only_operation_error(e, "disjunction", salu); }
 }
 bool CreateSaluInstruction::preorder(const IR::Concat *e) {
     if (Pattern(0).match(e->left)) {
@@ -1587,7 +1646,7 @@ void CreateSaluInstruction::postorder(const IR::BXor *e) {
         else
             opcode = "xor";
     } else {
-        only_operation_error(e, "xor"); }
+        only_operation_error(e, "xor", salu); }
 }
 void CreateSaluInstruction::postorder(const IR::Neg *e) {
     // There is no opcode for unary negation, so we use subtraction instead. SUBR performs B - A
@@ -1598,7 +1657,7 @@ void CreateSaluInstruction::postorder(const IR::Neg *e) {
         const auto *negated = operands.back();
         operands.push_back(new IR::Constant(negated->srcInfo, negated->type, 0));
     } else {
-        only_operation_error(e, "negation");
+        only_operation_error(e, "negation", salu);
     }
 }
 void CreateSaluInstruction::postorder(const IR::Cmpl *e) {
@@ -1621,7 +1680,7 @@ void CreateSaluInstruction::postorder(const IR::Cmpl *e) {
         // postorder method for the binary operation.
         opcode = "nota";
     } else if (etype != VALUE)
-        only_operation_error(e, "bit complement");
+        only_operation_error(e, "bit complement", salu);
 }
 void CreateSaluInstruction::postorder(const IR::Concat *e) {
     if (operands.size() < 2) return;  // can only happen if there has been an error
@@ -1638,7 +1697,7 @@ void CreateSaluInstruction::postorder(const IR::Concat *e) {
             LOG4("concant dropping high bit constant " << operands.back());
             operands.back() = r;
             return; } }
-    only_operation_error(e, "bit concatenation");
+    only_operation_error(e, "bit concatenation", salu);
 }
 
 bool CreateSaluInstruction::divmod(const IR::Operation::Binary *e, cstring op) {
@@ -1660,7 +1719,7 @@ bool CreateSaluInstruction::divmod(const IR::Operation::Binary *e, cstring op) {
         etype = OUTPUT;
         operands.push_back(new IR::MAU::SaluReg(e->type, op, false));
     } else {
-        only_operation_error(e, "div/mod operation"); }
+        only_operation_error(e, "div/mod operation", salu); }
     return false;
 }
 
@@ -1889,6 +1948,7 @@ const IR::MAU::SaluInstruction *CreateSaluInstruction::setup_output() {
 const IR::MAU::SaluInstruction *CreateSaluInstruction::createInstruction() {
     const IR::MAU::SaluInstruction *rv = nullptr;
     auto k = operands.back()->to<IR::Constant>();
+    bool skip_direct = false;
     const auto predicate_error =
         [&](const char *type) {
             error(ErrorType::ERR_UNSUPPORTED,
@@ -1896,6 +1956,29 @@ const IR::MAU::SaluInstruction *CreateSaluInstruction::createInstruction() {
                   "flow",
                   salu, type);
         };
+    auto generate_alu_a = [this](const IR::Expression *val, const IR::Expression *predicate,
+                                 const IR::MAU::SaluReg *reg, bool is_mem) {
+        const cstring MEM_PREFIX = "mem_";
+
+        // mem_lo/mem_hi can be used in output ALU instructions but not in state update ALU
+        // instructions such as ALU_A. In state update ALU instructions, lo/hi should be
+        // used instead, so we remove the prefix.
+        if (is_mem) {
+            const auto trimmed_name = reg->name.substr(MEM_PREFIX.size());
+            val = new IR::MAU::SaluReg(reg->srcInfo, reg->type, trimmed_name, reg->hi);
+        }
+
+        const auto *dest_op = new IR::MAU::SaluReg(val->srcInfo, val->type, "hi", true);
+        if (predicate) {
+            insert_instruction(
+                new IR::MAU::SaluInstruction("alu_a", 1, predicate, dest_op, val));
+        } else {
+            insert_instruction(new IR::MAU::SaluInstruction("alu_a", 0, dest_op, val));
+        }
+        LOG3("  add " << *action->action.back());
+        return new IR::MAU::SaluReg(val->srcInfo, val->type, "alu_hi", true);
+    };
+
     switch (etype) {
     case IF:
         insert_instruction(rv = new IR::MAU::SaluInstruction(opcode, 0, &operands));
@@ -1937,6 +2020,47 @@ const IR::MAU::SaluInstruction *CreateSaluInstruction::createInstruction() {
         break;
     case OUTPUT:
         checkWriteAfterWrite();
+        // Identify if we need to use the ALU_HI instead of direct output. Do this when either:
+        //  - We have an existing output, and the output is already ALU_HI and we have something
+        //    directly outputable.
+        //  - We have a direct output, and we have something else that has to use the ALU. In this
+        //    case, we need to convert the direct output to an ALU_HI.
+        if (outputs.size() > size_t(output_index) && outputs[output_index] &&
+            regtype->width_bits() != 1 && !(k && k->value == 0)) {
+            if (canOutputDirectly(operands.at(0))) {
+                auto &output = outputs[output_index];
+                skip_direct = !equiv(operands.back(), output->operands.back());
+            } else if (outputAluHi()) {
+                const cstring MEM_PREFIX = "mem_";
+                const auto *reg = operands.at(0)->to<IR::MAU::SaluReg>();
+                const bool is_mem = reg && reg->name.startsWith(MEM_PREFIX);
+
+                auto *val = operands.at(0);
+
+                // mem_lo/mem_hi can be used in output ALU instructions but not in state update ALU
+                // instructions such as ALU_A. In state update ALU instructions, lo/hi should be
+                // used instead, so we remove the prefix.
+                if (is_mem) {
+                    const auto trimmed_name = reg->name.substr(MEM_PREFIX.size());
+                    val = new IR::MAU::SaluReg(reg->srcInfo, reg->type, trimmed_name, reg->hi);
+                }
+                auto *new_operand = new IR::MAU::SaluReg(val->srcInfo, val->type, "alu_hi", true);
+
+                auto &output = outputs[output_index];
+                if (!equiv(new_operand, output->operands.back())) {
+                    LOG3("  converting previous direct output to alu_a");
+
+                    // use ALU_HI to drive the output as it is otherwise unused
+                    auto *val = output->operands.back();
+                    const auto *reg = val->to<IR::MAU::SaluReg>();
+                    const bool is_mem = reg && reg->name.startsWith(MEM_PREFIX);
+
+                    output->operands.back() =
+                        generate_alu_a(val, output_predicates[output_index], reg, is_mem);
+                }
+            }
+        }
+
         if (regtype->width_bits() == 1) {
             BUG_CHECK(operands.size() == 1, "one-bit register OUTPUT instruction should have one"
                                             " operand only (the output)");
@@ -1953,6 +2077,14 @@ const IR::MAU::SaluInstruction *CreateSaluInstruction::createInstruction() {
             // 0 will be output if we don't drive it at all
             output_param_operands.insert({output_index, nullptr});
             break;
+        } else if (canOutputDirectly(operands.at(0)) && !skip_direct) {
+            if (auto *reg = operands.at(0)->to<IR::MAU::SaluReg>()) {
+                // explicit output of the predicate comes out shifted, so we need to
+                // let the rest of the compiler know when to unshift it.
+                if (reg->name == "predicate")
+                    action->return_predicate_words |= 1 << output_index; }
+            output_predicates[output_index] = predicate;
+            // output it
         } else if (const bool directly = canOutputDirectly(operands.at(0)), alu_hi = outputAluHi();
                    directly || alu_hi) {
             const cstring MEM_PREFIX = "mem_";
@@ -1970,24 +2102,7 @@ const IR::MAU::SaluInstruction *CreateSaluInstruction::createInstruction() {
                 // output it
             } else if (alu_hi) {
                 // use ALU_HI to drive the output as it is otherwise unused
-                auto *val = operands.at(0);
-                // mem_lo/mem_hi can be used in output ALU instructions but not in state update ALU
-                // instructions such as ALU_A. In state update ALU instructions, lo/hi should be
-                // used instead, so we remove the prefix.
-                if (is_mem) {
-                    const auto trimmed_name = reg->name.substr(MEM_PREFIX.size());
-                    val = new IR::MAU::SaluReg(reg->srcInfo, reg->type, trimmed_name, reg->hi);
-                }
-
-                const auto *dest_op = new IR::MAU::SaluReg(val->srcInfo, val->type, "hi", true);
-                if (predicate) {
-                    insert_instruction(
-                        new IR::MAU::SaluInstruction("alu_a", 1, predicate, dest_op, val));
-                } else {
-                    insert_instruction(new IR::MAU::SaluInstruction("alu_a", 0, dest_op, val));
-                }
-                LOG3("  add " << *action->action.back());
-                operands.at(0) = new IR::MAU::SaluReg(val->srcInfo, val->type, "alu_hi", true);
+                operands.at(0) = generate_alu_a(operands.at(0), predicate, reg, is_mem);
             }
         } else if (k && (k->value & (k->value-1)) == 0) {
             // use the predicate output shifted to the appropriate spot for a power of 2 constant
@@ -2052,7 +2167,7 @@ static bool check_instructions(const IR::MAU::SaluInstruction *si1,
 
 void CreateSaluInstruction::insert_instruction(const IR::MAU::SaluInstruction *si_insert) {
     // We need to iterate over instructions inside the body and check if we can merge
-    // instructions together. Two instructions is possible to merge if:
+    // instructions together. Two instructions are possible to merge if:
     // 1] Opcode and params are same
     // 2] The only difference is the predicate
     //
@@ -2066,7 +2181,8 @@ void CreateSaluInstruction::insert_instruction(const IR::MAU::SaluInstruction *s
             "SALU instruction is the only type which can be inserted into SALU assembler!");
         // We don't want to insert same instruction which is already ther
         if (si_orig->equiv(*si_insert)) {
-            LOG3("Same instruction " << si_insert << " has been detected. I will not be included.");
+            LOG3("Same instruction " << si_insert
+                                     << " has been detected. It will not be inserted again.");
             insert = false;
             break;
         }

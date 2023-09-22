@@ -9,3 +9,12 @@
 set_negative_tests("jbay"
   ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/stf/parser_multi_write_checksum_verify_2.p4
 )
+
+set_negative_tests("jbay"
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/stf/parser_multi_write_checksum_verify_2.p4
+)
+
+# P4C-5286
+set_negative_tests("jbay"
+  ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/errors/p4c-5286.p4
+)
