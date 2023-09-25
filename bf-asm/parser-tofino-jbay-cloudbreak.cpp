@@ -715,8 +715,9 @@ bool Parser::Checksum::equiv(const Checksum &a) const {
     if (dest && a.dest) {
         if (dest != a.dest) return false;
     } else if (dest || a.dest) { return false; }
-    return add == a.add && mask == a.mask && swap == a.swap && start == a.start &&
-           end == a.end && shift == a.shift && type == a.type;
+    return add == a.add && mask == a.mask && swap == a.swap && mul_2 == a.mul_2 &&
+           dst_bit_hdr_end_pos == a.dst_bit_hdr_end_pos && start == a.start && end == a.end &&
+           shift == a.shift && type == a.type;
 }
 
 void Parser::Checksum::pass1(Parser *parser) {
