@@ -1611,6 +1611,10 @@ if (TEST_ALT_PHV_ALLOC)
       "table allocation.*failed to allocate tables.*within 12 stages"
       extensions/p4_tests/p4_16/customer/arista/obfuscated-nat_vxlan.p4
     )
+    p4c_add_xfail_reason("tofino"
+      "error: Cannot allocated SUPERCLUSTER"
+      extensions/p4_tests/p4_16/stf/p4c-5288.p4
+    )
 endif (TEST_ALT_PHV_ALLOC)
 
 # P4C-4689: On Tofino1, this test compiles incorrectly but we only report a warning
