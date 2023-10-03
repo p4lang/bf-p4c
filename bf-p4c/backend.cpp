@@ -168,7 +168,7 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
     auto *PHV_Analysis = new PHV_AnalysisPass(options, phv, uses, clot,
                                               defuse, deps, decaf, mau_backtracker,
                                               phvLoggingInfo /*, &jsonGraph */,
-                                              mauInitFields);
+                                              mauInitFields, table_summary);
 
     // Collect next table info if we're using LBs
     if (Device::numLongBranchTags() > 0 && !options.disable_long_branch) {

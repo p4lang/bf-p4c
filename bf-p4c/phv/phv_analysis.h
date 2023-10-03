@@ -131,7 +131,8 @@ class PHV_AnalysisPass : public Logging::PassManager {
             const DeparserCopyOpt &decaf,
             MauBacktracker& alloc,
             CollectPhvLoggingInfo *phvLoggingInfo,
-            std::set<PHV::FieldRange> &mauInitFields);
+            std::set<PHV::FieldRange> &mauInitFields,
+            const TableSummary &table_summary);
 
     Visitor* make_incremental_alloc_pass(
         const ordered_set<PHV::Field *> &temp_vars);

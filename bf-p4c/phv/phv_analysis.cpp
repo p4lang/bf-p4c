@@ -64,7 +64,8 @@ PHV_AnalysisPass::PHV_AnalysisPass(
         const DeparserCopyOpt &decaf,
         MauBacktracker& alloc,
         CollectPhvLoggingInfo *phvLoggingInfo,
-        std::set<PHV::FieldRange> &mauInitFields)
+        std::set<PHV::FieldRange> &mauInitFields,
+        const TableSummary &table_summary)
     : Logging::PassManager("phv_allocation_"),
       phv_i(phv),
       uses_i(uses),
@@ -88,7 +89,8 @@ PHV_AnalysisPass::PHV_AnalysisPass(
       field_to_parser_states(phv),
       parser_critical_path(phv),
       critical_path_clusters(parser_critical_path),
-      pack_conflicts(phv, deps, table_mutex, alloc, action_mutex, pragmas.pa_no_pack()),
+      pack_conflicts(
+          phv, deps, table_mutex, alloc, action_mutex, pragmas.pa_no_pack(), &table_summary),
       action_constraints(phv, uses, pack_conflicts, tableActionsMap, deps),
       domTree(flowGraph),
       meta_live_range(phv, deps, defuse, pragmas, uses, alloc),

@@ -134,7 +134,25 @@ void PackConflicts::end_apply() {
             auto* t2 = row2.first;
             if (t1 == t2) continue;
             ordered_set<int> stage = bt.inSameStage(t1, t2);
-            if (!stage.empty()) {
+            bool on_same_stage = false;
+            if (table_summary) {
+                // In most cases, stage information is the same in table summary and backtracker.
+                // However, backtracker's stage information is updated during backtracking and
+                // table summary's stage information is updated after table placement. If
+                // CheckForUnallocatedTemps is triggered and IncrementalPHVAllocation tries to
+                // allocate temp vars, table summary and backtracker will have different stage
+                // information, since table placement is successful and backtracking is not
+                // performed. Therefore, table summary is needed to provide updated stage info.
+                auto t1_stages = table_summary->stages(t1);
+                auto t2_stages = table_summary->stages(t2);
+                for (auto stage : t1_stages) {
+                    if (t2_stages.count(stage)) {
+                        on_same_stage = true;
+                        break;
+                    }
+                }
+            }
+            if (!stage.empty() || on_same_stage) {
                 LOG4("\tGenerate no pack conditions for table " << t1->name << " and table " <<
                         t2->name);
                 generateNoPackConstraints(t1, t2);
