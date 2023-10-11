@@ -854,6 +854,33 @@ class FindDataDependencyGraph::AddDependencies : public MauInspector, TofinoWrit
             }
             return rst;
         };
+
+        if (LOGGING(7)) {
+            LOG7("-------------------------------------------------------------");
+            LOG7("\tCurrent Table Writes");
+            for (auto f : writes)
+                LOG7("\t\t" << f.first << " , " << f.second);
+            LOG7("\tAll Table Writes: ");
+            for (auto t : tables) {
+                LOG7("\t\tTable: " << t.first->name);
+                for (auto f : t.second)
+                    LOG7("\t\t\t" << f.first << " , " << f.second);
+            }
+            LOG7("\tChecking Mutex Fields");
+            for (auto f1 : writes) {
+                auto f1F = f1.first.field();
+                for (auto t : tables) {
+                    for (auto f2 : t.second) {
+                        auto f2F = f2.first.field();
+                        LOG7("\t\t( " << f1F << " , " << f2F << " ) = FeldMutex "
+                                << self.phv.isFieldMutex(f1F, f2F)
+                                << ", MetdataMutex " << self.phv.isMetadataMutex(f1F, f2F));
+                    }
+                }
+            }
+            LOG7("-------------------------------------------------------------");
+        }
+
         for (auto upstream_t : tables) {
             auto upstream_range = merge_range(upstream_t.second);
             auto range = merge_range(writes);
@@ -865,16 +892,36 @@ class FindDataDependencyGraph::AddDependencies : public MauInspector, TofinoWrit
                             upstream_t.first->name, container.toString());
                 continue;
             }
-            // TBD: Container conflict edges if added to the dependency graph
-            // should account for cases when table placement runs without
-            // container conflicts.
-            // auto edge_pair = self.dg.add_edge(upstream_t.first, table,
-            //                                   DependencyGraph::CONT_CONFLICT);
-            // self.dg.data_annotations_conflicts.emplace(edge_pair.first, container);
-            LOG5("\tAdd container conflict between table " << upstream_t.first->name
-                 << " and table " << table->name << " because of container " << container);
-            self.dg.container_conflicts[upstream_t.first].insert(table);
-            self.dg.container_conflicts[table].insert(upstream_t.first);
+
+            // Skip adding container conflict between tables if all fields between them are mutually
+            // exclusive.
+            for (auto uw : upstream_t.second) {
+                auto uf = uw.first.field();
+                for (auto w : writes) {
+                    auto f = w.first.field();
+                    // TBD: Checking for metadata mutex along with field muted fails
+                    // if (self.phv.isFieldMutex(uf, f) || self.phv.isMetadataMutex(uf, f)) {
+                    if (self.phv.isFieldMutex(uf, f)) {
+                        LOG1("\t Skipping container conflict (container "
+                                << container << ") between tables as ( "
+                                << table->name << " and " << upstream_t.first->name
+                                << " ) as fields ( " << f << " and " << uf
+                                << " are mutually exclusive");
+                    } else {
+                        // TBD: Container conflict edges if added to the dependency graph
+                        // should account for cases when table placement runs without
+                        // container conflicts.
+                        // auto edge_pair = self.dg.add_edge(upstream_t.first, table,
+                        //                                   DependencyGraph::CONT_CONFLICT);
+                        // self.dg.data_annotations_conflicts.emplace(edge_pair.first, container);
+                        LOG1("\tAdd container conflict between table " << upstream_t.first->name <<
+                                " and table " << table->name << " because of container " <<
+                                container);
+                        self.dg.container_conflicts[upstream_t.first].insert(table);
+                        self.dg.container_conflicts[table].insert(upstream_t.first);
+                    }
+                }
+            }
 
             // any_unavoidable returns true only if there exist two writes to two
             // fieldslices that must be allocated to the same container because of PARDE
@@ -891,6 +938,8 @@ class FindDataDependencyGraph::AddDependencies : public MauInspector, TofinoWrit
                 return false;
             };
             if (any_unavoidable()) {
+                LOG1("\tAdd unavoidable container conflict between table " << upstream_t.first->name
+                     << " and table " << table->name << " because of container " << container);
                 self.dg.unavoidable_container_conflicts[upstream_t.first].insert(table);
                 self.dg.unavoidable_container_conflicts[table].insert(upstream_t.first);
             }
@@ -990,6 +1039,9 @@ class FindDataDependencyGraph::AddDependencies : public MauInspector, TofinoWrit
                 static PHV::FieldUse WRITE(PHV::FieldUse::WRITE);
                 field->foreach_alloc(range, table, &WRITE, [&](const PHV::AllocSlice &sl) {
                     bitvec cont_range(sl.container_slice().lo, sl.width());
+                    LOG5("Adding container write: " << sl.container() << " = Field: " <<
+                            sl.field()->name << ", slice: " << sl.field_slice() << ", range: " <<
+                            cont_range);
                     cont_writes[sl.container()].insert(
                         {PHV::FieldSlice(sl.field(), sl.field_slice()), cont_range});
                 });
@@ -1009,7 +1061,10 @@ class FindDataDependencyGraph::AddDependencies : public MauInspector, TofinoWrit
     }
 
     void end_apply() override {
+        // cont_writes: Container -> Field1, FIeld2, Field3
+        // cont_write: Container -> { Table , FieldSlice }
         for (auto entry : cont_writes) {
+            LOG5("Add container dependencies for entry " << entry.first);
             addContDeps(self.cont_write[entry.first], entry.second, entry.first);
         }
         for (auto& edge_map_pair : self.dg.data_annotations) {
@@ -2395,7 +2450,8 @@ FindDependencyGraph::FindDependencyGraph(const PhvInfo &phv,
 Visitor::profile_t FindDependencyGraph::init_apply(const IR::Node *node) {
     auto rv = Logging::PassManager::init_apply(node);
     if (!passContext.isNullOrEmpty())
-        LOG1("FindDependencyGraph : " << passContext);
+        LOG1("FindDependencyGraph : " << passContext << " : "
+                << (summary ? summary->getActualStateStr() : " NA "));
     dg.clear();
     return rv;
 }

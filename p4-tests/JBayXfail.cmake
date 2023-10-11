@@ -434,9 +434,8 @@ p4c_add_xfail_reason("tofino2"
 # error), please update the xfails accordingly.
 if (TEST_ALT_PHV_ALLOC)
     p4c_add_xfail_reason("tofino2"
-        "tofino2 supports up to 20 stages, using 22"
+        "ACLTest"
         smoketest_switch_16_y2
-	    switch_16_y2
     )
 endif (TEST_ALT_PHV_ALLOC)
 

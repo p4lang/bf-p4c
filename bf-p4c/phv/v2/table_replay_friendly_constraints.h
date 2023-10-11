@@ -14,6 +14,8 @@ struct AllocInfo {
     bool perfectly_aligned;
 };
 
+std::ostream& operator<<(std::ostream &out, const AllocInfo &ai);
+
 namespace PHV {
 namespace v2 {
 

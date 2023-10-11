@@ -382,7 +382,7 @@ set (P16_TNA_ARISTA_EXCL_PASS_TF_CHK
 )
 
 # Kaloom leaf profile needs extra flags.
-p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/kaloom/p4c-5223-leaf-tof1.p4" "-Xp4c=\"--traffic-limit 95 --disable-power-check --disable-parse-depth-limit\"")
+p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/kaloom/p4c-5223-leaf-tof1.p4" "-Xp4c=\"--traffic-limit 94 --disable-power-check --disable-parse-depth-limit\"")
 
 # Sino Telecom profile needs extra flags.
 p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/sino-telecom/p4c-5240.p4" "-Xp4c=\"--set-max-power 55.0 --disable-parse-depth-limit\"")

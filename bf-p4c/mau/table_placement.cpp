@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <list>
 #include <sstream>
+#include <unordered_map>
 
 #include <boost/range/adaptor/reversed.hpp>
 
@@ -608,7 +609,13 @@ struct TablePlacement::Placed {
             for (auto *ba : table->attached) {
                 if (!ba->attached->direct && attached_entries.at(ba->attached).need_more) {
                     need_more = true;
-                    break; } } } }
+                    break;
+                }
+            }
+        }
+        LOG3("Entries : " << entries << ", needed_entries: " << needed_entries
+                          << ", need_more: " << need_more);
+    }
 
 #if 0
     // now unused -- maybe rotted
@@ -1795,8 +1802,7 @@ bool TablePlacement::shrink_estimate(Placed *next, int &srams_left, int &tcams_l
     // mostly because the phv allocation does not allow fitting the same no. of
     // entries as previous round. For now, we exit and continue with the default
     // placement round.
-    if (summary.getActualState() == State::ALT_FINALIZE_TABLE_SAME_ORDER ||
-        summary.getActualState() == State::ALT_FINALIZE_TABLE_SAME_ORDER_TABLE_FIXED)
+    if (summary.is_table_replay())
         return false;
 
     LOG2("Shrinking estimate on table " << next->name << " for min entries: " << min_entries);
@@ -2438,12 +2444,14 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, int &furthest_stage) 
     auto init_attached = rv->attached_entries;
     std::set<const IR::MAU::AttachedMemory *> need_defer;
     for (auto *p = rv->prev; p; p = p->prev) {
+        LOG5("For previous table : " << p->name);
         if (p->name == rv->name) {
             LOG1("To place table : " << rv->name << ", entries: " << rv->entries
                     << ", to place entries: " << p->entries);
             if (p->need_more == false) {
-                BUG(" - can't place %s it's already done", rv->name);
-                return false; }
+                BUG(" - can't place %s in stage %d it's already done", rv->name, rv->stage);
+                return false;
+            }
             rv->entries -= p->entries;
             for (auto &ate : p->attached_entries) {
                 if (!ate.first->direct && can_duplicate(ate.first) &&
@@ -2618,11 +2626,31 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
     attached_entries_t initial_attached_entries = rv->attached_entries;
 
     // Setup stage and entries for Alt Table Placement Round
-    if ((summary.getActualState() == State::ALT_FINALIZE_TABLE_SAME_ORDER ||
-        summary.getActualState() == State::ALT_FINALIZE_TABLE_SAME_ORDER_TABLE_FIXED) && pt) {
+    if (summary.is_table_replay() && pt) {
         furthest_stage = pt->stage;
-        rv->entries = pt->entries;
         rv->stage = pt->stage;
+
+        // Within a table replay round, table placement is replayed to allocate smaller of these 2
+        // values:
+        // 1. Same entries as last round
+        // 2. Minimum requested entries (via p4 table size / split scenarios etc)
+        //
+        // Sometimes the compiler overallocates entries based on packing. The
+        // replay should only try to allocate minimum required entries on the table and avoid any
+        // unnecessary overallocation as this may limit resources for other tables in stage or cause
+        // the current table to not find an allocation.
+        //
+        // E.g. ipv4_acl has a table size of 4096 (4K) entries in P4
+        // Table Placement Initial Round -> 4 pack x 4 ways = 16K entries
+        // Table Placement Replay Round  -> 1 pack x 4 ways =  4K entries
+        //
+        // Replay round should __not__ try to allocate 16K entries but the requested 4K as that is
+        // the minimum requested on the table. Previous round caused overallocation due to its
+        // unique scenario and packing decisiongs which may not hold true for this round. There is a
+        // possibility it wont be able to pack 4 entries in the word and end up requiring more SRAMs
+        // than necessary.
+        rv->entries = std::min(pt->entries, rv->entries);
+
         // If container conflicts skip being accounted for in first TP round
         // exit this round. This round follows placement in round 1 with the
         // assumption that all dependencies are considered. Ideally this should
@@ -2650,7 +2678,6 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
             }
         }
     }
-
     const Placed *done = rv->prev;
     std::vector<Placed *> whole_stage;
     error_message = "";
@@ -2672,10 +2699,8 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
         rv->placed |= rv->prev->placed;
         BUG_CHECK(rv->match_placed == rv->prev->match_placed, "match_placed out of date?"); }
 
-    // int needed_entries = rv->entries;
     int initial_entries = rv->requested_stage_entries > 0 ? rv->requested_stage_entries :
         rv->entries;
-    // attached_entries_t initial_attached_entries = rv->attached_entries;
     int initial_stage_split = rv->stage_split;
 
     LOG3("  Initial # of stages is " << rv->stage << ", initial # of entries is " << rv->entries);
@@ -2713,7 +2738,8 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
 
     if (!rv->table->created_during_tp) {
         BUG_CHECK(!rv->placed[uid(rv->table)],
-                  "try_place_table(%s) when it is already placed?", rv->name);
+                  "try_place_table(%s, stage = %d) when it is already placed?", rv->name,
+                  rv->stage);
     }
 
     int initial_min_placed_entries = min_placed->entries;
@@ -2883,9 +2909,11 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
             if (!rv->need_more)
                 rv->placed[uid(rv->table)] = true;
         }
+        LOG3("Table is " << (rv->placed[uid(rv->table)] ? "" : "not") << " placed");
         if (rv->gw) {
             rv->match_placed[uid(rv->gw)] = true;
             rv->placed[uid(rv->gw)] = true;
+            LOG3("Gateway is " << (rv->placed[uid(rv->gw)] ? "" : "not") << " placed");
         }
     }
 
@@ -4543,13 +4571,10 @@ bool DecidePlacement::preorder(const IR::BFN::Pipe *pipe) {
     LOG_FEATURE("stage_advance", 2, "Stage advance for pipe " << pipe->canon_name() << " " <<
                 self.summary.getActualStateStr() <<
                 (self.ignoreContainerConflicts ? " " : " not ") << "ignoring container conflicts");
-    bool alt_finalize_table_same_order =
-        (self.summary.getActualState() == State::ALT_FINALIZE_TABLE_SAME_ORDER ||
-        self.summary.getActualState() == State::ALT_FINALIZE_TABLE_SAME_ORDER_TABLE_FIXED);
 
     const Placed *placed = nullptr;
     self.success = true;
-    if (alt_finalize_table_same_order) {
+    if (self.summary.is_table_replay()) {
         std::tie(self.success, placed) = alt_table_placement(pipe);
     } else {
         placed = default_table_placement(pipe);
@@ -4601,6 +4626,9 @@ DecidePlacement::alt_table_placement(const IR::BFN::Pipe *pipe) {
         LOG3("Global ID : " << pts.first << " " << *pts.second);
     }
 
+    // Store all tables and their need_more (entries) status for quick access
+    // Avoids looping over all tables in each iteration
+    std::unordered_map<cstring, bool> need_more_tables;
     for (auto &pt : self.summary.getPlacedTables()) {
         auto alt_stage_to_place = pt.second->stage;
 
@@ -4631,6 +4659,46 @@ DecidePlacement::alt_table_placement(const IR::BFN::Pipe *pipe) {
         if (is_starter_pistol_table(ptName)) {
             LOG1("Adding starter pistol : " << ptName);
             placed = self.add_starter_pistols(placed, nullptr, current);
+            continue;
+        }
+
+        // Check if table previously placed and done
+        // E.g.
+        // Table Franktown - 4096 entries
+        // Placement Round 2 - Post Real PHV Allocation
+        // --------------------------- ------------
+        // |    Stage    |   Entries  |   Total    |
+        // --------------------------- ------------
+        // |     4       |    1024    |    1024    |
+        // --------------------------- ------------
+        // |     5       |    1024    |    2048    |
+        // --------------------------- ------------
+        // |     6       |    2048    |    4096    |
+        // --------------------------- ------------
+        //
+        // Placement Replay Round 1 - Post Placement Round 2
+        // --------------------------- ------------
+        // |    Stage    |   Entries  |   Total    |
+        // --------------------------- ------------
+        // |     4       |    2048    |    2048    |
+        // --------------------------- ------------
+        // |     5       |    2048    |    4096    |
+        // --------------------------- ------------
+        // |     6       |     -      |     -      |
+        // --------------------------- ------------
+        // Table takes only 2 stages in replay round to place all entries.
+        // Skip for stage 6.
+        // NOTE: Skip unless there is an explicit stage pragma as it implies the table must have
+        // specified entries on that stage.
+        int stage_pragma = alt_try_place_table->get_provided_stage(alt_stage_to_place);
+        // Table placed before
+        if (need_more_tables.count(alt_try_place_table->name)
+            // Table does not have need_more set
+            && (!need_more_tables[alt_try_place_table->name])
+            // Table does not have a stage pragma for current stage
+            && (stage_pragma != alt_stage_to_place)) {
+            LOG3("Skipping table " << alt_try_place_table->name
+                                   << " as it has been entirely placed already");
             continue;
         }
 
@@ -4680,6 +4748,8 @@ DecidePlacement::alt_table_placement(const IR::BFN::Pipe *pipe) {
                             << " in stage " << placed->stage << "(" << hex(placed->logical_id)
                             << ") " << placed->use.format_type << need_more_match_str);
         }
+
+        need_more_tables[alt_table_to_place->name] = placed->need_more;
     }
     LOG1("Alt placement finished all table placement decisions on pipe " << pipe->canon_name());
     return std::make_pair(true, placed);
@@ -5211,6 +5281,8 @@ class SplitEntriesList {
 }  // namespace
 
 IR::Node *TransformTables::preorder(IR::MAU::Table *tbl) {
+    Log::TempIndent indent;
+    LOG5("TransformTables preorder on " << tbl->name << indent);
     auto it = self.table_placed.find(tbl->name);
     if (it == self.table_placed.end()) {
         BUG_CHECK(errorCount() > 0, "Trying to place a table %s that was never placed", tbl->name);

@@ -936,6 +936,7 @@ cstring TableSummary::getActualStateStr() const {
 }
 
 std::ostream &operator<<(std::ostream &out, const TableSummary &ts) {
+    LOG5("Generating TableSummary Info: ");
     TablePrinter tp(out, {"Stage", "Logical ID", "Gress", "Name", "Ixbar Bytes", "Match Bits",
                           "Gateway", "Action Data Bytes"},
                     TablePrinter::Align::CENTER);
@@ -963,6 +964,7 @@ std::ostream &operator<<(std::ostream &out, const TableSummary &ts) {
     tp.print();
 
     if (LOGGING(3)) {
+        LOG3("Generating Memory Allocation Info");
         for (auto gress : { INGRESS, EGRESS }) {
             for (auto &i : ts.ixbar[gress]) {
                 if (!Device::threadsSharePipe(INGRESS, EGRESS)) out << gress << " ";
@@ -985,7 +987,7 @@ void TableSummary::PlacedTable::add(const IR::MAU::Table *t, state_t state) {
         // In Table replay, atcam table entries size is the total atcam size on the same stage.
         // During table replay, table placement will only look at the first atcam partition.
         entries += t->atcam_entries_in_stage;
-        LOG3("Adding " << t->atcam_entries_in_stage << " atcam entries to table");
+        LOG5("Adding " << t->atcam_entries_in_stage << " atcam entries to table");
     }
 
     for (auto &ba : t->attached) {
@@ -1019,14 +1021,17 @@ TableSummary::PlacedTable::PlacedTable(const IR::MAU::Table *t, state_t state,
         max_stage = stage_info.max_stage;
     }
     logicalId   = *t->logical_id;
-    entries     = t->layout.entries;
+    layout      = t->resources->layout_option;
+    entries     = layout.entries ? layout.entries : t->layout.entries;
     ways        = t->ways.size();
     key_size    = t->get_match_key_width();
+    entries_req = entries;  // To be overwritten by table size if available
     if (t->match_table) {
         if (auto size = t->match_table->getConstantProperty("size"))
             entries_req = size->asInt();
     }
-    LOG3("Adding " << entries << " entries to table");
+    // Choose lesser value as this could be a split table or overallocation
+    LOG3("Adding " << entries << "(req=" << entries_req << ") entries to table");
 
     if (t->layout.atcam &&
         (state == ALT_INITIAL || state == ALT_RETRY_ENHANCED_TP)) {
@@ -1044,8 +1049,6 @@ TableSummary::PlacedTable::PlacedTable(const IR::MAU::Table *t, state_t state,
         LOG3("Adding " << attEntries << " attached entries to table for attached memory "
                 << memName);
     }
-
-    layout = t->resources->layout_option;
 }
 
 std::ostream &operator<<(std::ostream &out, const TableSummary::PlacedTable &pl) {
@@ -1070,6 +1073,8 @@ std::ostream &operator<<(std::ostream &out, const TableSummary::PlacedTable &pl)
 // This function collect sram blocks allocated per table per stage.
 ordered_map<int, ordered_map<cstring, int>> TableSummary::collect_table_sram_alloc_info() {
     ordered_map<int, ordered_map<cstring, int>> sram_block_alloced;
+    Log::TempIndent indent;
+    LOG5("Collect Table SRAM Block Info : " << state << indent);
     for (auto gress : { INGRESS, EGRESS }) {
         for (auto &i : ixbar[gress]) {
             auto sram_info = memory[gress].at(i.first)->collect_sram_block_alloc_info();
@@ -1095,6 +1100,9 @@ ordered_map<int, ordered_map<cstring, int>> TableSummary::collect_table_sram_all
             }
             sram_block_alloced[i.first].insert(
                 table_sram_blocks_info.begin(), table_sram_blocks_info.end());
+            LOG5("Adding for stage " << i.first);
+            for (auto &t : table_sram_blocks_info)
+                LOG5("\tTable: " << t.first << ", blocks: " << t.second);
         }
         if (Device::threadsSharePipe(INGRESS, EGRESS)) break;
     }

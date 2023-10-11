@@ -877,7 +877,6 @@ class FindDataDependencyGraph : public MauInspector, BFN::ControlFlowVisitor {
         ordered_set<std::pair<const IR::MAU::Table*, const IR::MAU::Action*>> reduction_or_read;
     } access_t;
 
-
  private:
     const PhvInfo&                                        phv;
     DependencyGraph&                                      dg;

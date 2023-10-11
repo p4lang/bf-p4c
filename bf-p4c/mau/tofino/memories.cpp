@@ -80,20 +80,26 @@ UniqueId Memories::table_alloc::build_unique_id(const IR::MAU::AttachedMemory *a
 safe_vector<UniqueId> Memories::table_alloc::allocation_units(const IR::MAU::AttachedMemory *at,
         bool is_gw, UniqueAttachedId::pre_placed_type_t ppt) const {
     safe_vector<UniqueId> rv;
+    Log::TempIndent indent;
+    LOG5("Allocation unit for memory : gateway: " << is_gw << ", uid: " << ppt);
     if (table->layout.atcam) {
         if (((at && at->direct) || at == nullptr) && is_gw == false) {
             for (int lt = 0; lt < layout_option->logical_tables(); lt++) {
                 rv.push_back(build_unique_id(at, is_gw, lt, ppt));
+                LOG5("Building unique id for allocation unit: " << rv.back());
             }
         } else {
             rv.push_back(build_unique_id(at, is_gw, 0, ppt));
+            LOG5("Building unique id for allocation unit: " << rv.back());
         }
     } else if (table->for_dleft()) {
         for (int lt = 0; lt < layout_option->logical_tables(); lt++) {
             rv.push_back(build_unique_id(at, is_gw, lt, ppt));
+            LOG5("Building unique id for allocation unit: " << rv.back());
         }
     } else {
         rv.push_back(build_unique_id(at, is_gw, -1, ppt));
+        LOG5("Building unique id for allocation unit: " << rv.back());
     }
     return rv;
 }
@@ -385,6 +391,7 @@ class SetupAttachedTables : public MauInspector {
             }
         }
 
+        LOG5("Table: " << *ta << ", layout: " << ta->layout_option);
         if (ta->layout_option->layout.direct_ad_required()) {
             for (auto u_id : ta->allocation_units(nullptr, false, UniqueAttachedId::ADATA_PP)) {
                 auto &alloc = (*ta->memuse)[u_id];
@@ -396,6 +403,7 @@ class SetupAttachedTables : public MauInspector {
 
                 mi.action_tables++;
             }
+            LOG5("Adding " << mi.action_tables << " action tables");
             mem.action_tables.push_back(ta);
             int width = 1;
             int per_row = ActionDataPerWord(&ta->layout_option->layout, &width);
@@ -2038,7 +2046,9 @@ void Memories::swbox_bus_selectors_indirects() {
     }
 
     for (auto *ta : indirect_action_tables) {
+        LOG5("For indirect action table: " << ta);
         for (auto back_at : ta->table->attached) {
+            LOG5("For backend attached table : " << back_at);
             auto at = back_at->attached;
             const IR::MAU::ActionData *ad = nullptr;
             if ((ad = at->to<IR::MAU::ActionData>()) == nullptr)
@@ -2046,6 +2056,7 @@ void Memories::swbox_bus_selectors_indirects() {
             BUG_CHECK(ta->allocation_units(ad).size() == 1, "Cannot have multiple action profile "
                       "objects");
             for (auto u_id : ta->allocation_units(ad)) {
+                LOG5("For allocation unit: " << u_id);
                 int width = 1;
                 int per_row = ActionDataPerWord(&ta->layout_option->layout, &width);
                 int depth = mems_needed(ad->size, SRAM_DEPTH, per_row, false);
@@ -2069,6 +2080,7 @@ void Memories::swbox_bus_selectors_indirects() {
                         action_group->sel.sel_group = selector;
                         selector->sel.action_groups.insert(action_group);
                     }
+                    LOG5("Adding action bus user: " << action_group << " for width " << width);
                     action_bus_users.insert(action_group);
                 }
             }
@@ -2239,20 +2251,25 @@ void Memories::swbox_bus_meters_counters() {
 /* Breaks up all tables requiring an action to be parsed into SRAM_group, a structure
    designed for adding to SRAM array  */
 void Memories::find_swbox_bus_users() {
+    Log::TempIndent indent;
+    LOG5("Find swbox bus users" << indent);
     action_bus_users.clear();
     synth_bus_users.clear();
     must_place_in_half.clear();
 
     for (auto *ta : action_tables) {
+        LOG5("For action table: " << *ta);
         int width = 1;
         int per_row = ActionDataPerWord(&ta->layout_option->layout, &width);
         int vpn_increment = ActionDataVPNIncrement(&ta->layout_option->layout);
         int vpn_offset = ActionDataVPNStartPosition(&ta->layout_option->layout);
         int lt_entry = 0;
         for (auto u_id : ta->allocation_units(nullptr, false, UniqueAttachedId::ADATA_PP)) {
+            LOG5("For action data allocation unit: " << u_id);
             int entries = ta->calc_entries_per_uid[lt_entry];
             int depth = mems_needed(entries, SRAM_DEPTH, per_row, false);
             for (int i = 0; i < width; i++) {
+                LOG5("For width: " << i);
                 auto *act_group = new SRAM_group(ta, depth, i, SRAM_group::ACTION);
                 act_group->logical_table = u_id.logical_table;
                 act_group->direct = true;
@@ -2260,6 +2277,7 @@ void Memories::find_swbox_bus_users() {
                 act_group->vpn_offset = vpn_offset;
                 act_group->ppt = UniqueAttachedId::ADATA_PP;
                 action_bus_users.insert(act_group);
+                LOG5("Adding action bus user : " << act_group);
             }
         }
     }
@@ -3249,6 +3267,8 @@ void Memories::fill_color_map_RAM_use(LogicalRowUser &lru, int row) {
 }
 
 void Memories::remove_placed_group(SRAM_group *candidate, RAM_side_t side) {
+    Log::TempIndent indent;
+    LOG5("Remove placed groups for candidate " << *candidate << ", side: " << side);
     if (candidate->all_placed() && candidate->cm.all_placed()) {
         if (candidate->is_synth_type()) {
             BUG_CHECK(side == RIGHT, "Allocating Synth2Port table on left side of RAM array");
@@ -3260,6 +3280,7 @@ void Memories::remove_placed_group(SRAM_group *candidate, RAM_side_t side) {
             auto action_table_loc = action_bus_users.find(candidate);
             BUG_CHECK(action_table_loc != action_bus_users.end(),
                       "Removing an action table that isn't in the list of potential tables");
+            LOG5("Removing placed group: " << *action_table_loc);
             action_bus_users.erase(action_table_loc);
         }
     }

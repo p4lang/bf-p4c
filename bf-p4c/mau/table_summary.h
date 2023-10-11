@@ -410,6 +410,11 @@ class TableSummary: public MauInspector {
         internalTableAlloc.clear();
         placedTables.clear();
     }
+
+    bool is_table_replay() {
+        return state == State::ALT_FINALIZE_TABLE_SAME_ORDER ||
+               state == State::ALT_FINALIZE_TABLE_SAME_ORDER_TABLE_FIXED;
+    }
 };
 
 #endif /* BF_P4C_MAU_TABLE_SUMMARY_H_ */

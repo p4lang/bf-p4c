@@ -1,5 +1,17 @@
 #include "table_replay_friendly_constraints.h"
 
+std::ostream& operator<<(std::ostream &out, const AllocInfo &ai ) {
+    Log::TempIndent indent;
+    out << "AllocInfo [ " << ai.length << " " << ai.container_size << " " << ai.perfectly_aligned <<
+        " ]" << std::endl << indent;
+    out << "\tpack_with: [ ";
+    for (auto pw : ai.pack_with) {
+        out << pw << " ";
+    }
+    out << "]";
+    return out;
+}
+
 namespace PHV {
 namespace v2 {
 const IR::Node *TableReplayFriendlyPhvConstraints::preorder(IR::BFN::Pipe * pipe) {
@@ -107,6 +119,12 @@ void TableReplayFriendlyPhvConstraints::end_apply(const IR::Node *) {
             BUG("trivial allocation not found for %1%", field_candidate->name);
         }
         auto alloc_info = trivial_allocation_info.at(field_candidate->name);
+        LOG5("\tTrivial alloc info for field: ");
+        for (auto &ai : alloc_info) {
+            LOG5("\t\t[ " << ai.first);
+            LOG5(ai.second << " ]");
+        }
+
         // add pa_container_size pragma for this field_candidate
         std::vector<PHV::Size> size_vec;
         for (int index = 0; index < field_candidate->size;) {
@@ -132,6 +150,7 @@ void TableReplayFriendlyPhvConstraints::end_apply(const IR::Node *) {
         // pa_no_pack pragmas only for FAIL_ON_ADB and FAIL_ON_MEM
         if (table_replay_result == TableSummary::FAIL_ON_ADB ||
             table_replay_result == TableSummary::FAIL_ON_MEM) {
+            LOG1("Fails on : " << table_replay_result);
             // For this field candidate, fields_pack_with_trivial_alloc records all fields that are
             // packed with this field in trivial allocation.
             ordered_set<cstring> fields_pack_with_real_alloc;
@@ -144,6 +163,7 @@ void TableReplayFriendlyPhvConstraints::end_apply(const IR::Node *) {
                     it.second.pack_with.begin(), it.second.pack_with.end());
             }
             for (auto field : fields_pack_with_real_alloc) {
+                LOG5("\tFields pack with real alloc : " << field);
                 // if a field is packed with field_candidate in real phv allocation and is not
                 // packed with field_candidate in trivial allocation and they are in the same action
                 // apply a pa_no_pack pragma.
