@@ -243,9 +243,11 @@ bool check_chunk(int lineno, unsigned& chunk) {
     tof2lab44_workaround(lineno, chunk);
 
     const unsigned TOTAL_CHUNKS = Target::JBay::DEPARSER_TOTAL_CHUNKS;
+    static bool suppress_repeated = false;
     if (chunk >= TOTAL_CHUNKS) {
-        error(lineno, "Ran out of chunks in field dictionary (%d)", TOTAL_CHUNKS);
-        // FIXME -- if this error hits, we'll tend to print it many times.  Supress duplicates?
+        if (!suppress_repeated)
+            error(lineno, "Ran out of chunks in field dictionary (%d)", TOTAL_CHUNKS);
+        suppress_repeated = true;
         return false;
     }
     return true;
@@ -289,7 +291,7 @@ void output_jbay_field_dictionary_helper(int lineno,
     const unsigned CHUNK_GROUPS = Target::JBay::DEPARSER_CHUNK_GROUPS;
     const unsigned CHUNKS_PER_GROUP = Target::JBay::DEPARSER_CHUNKS_PER_GROUP;
     const unsigned CLOTS_PER_GROUP = Target::JBay::DEPARSER_CLOTS_PER_GROUP;
-    unsigned ch = 0, entry_n = 0, byte = 0, clots_in_group[CHUNK_GROUPS + 1] = { 0 };
+    unsigned ch = 0, entry_n = 0, byte = 0, group = 0, clots_in_group = 0;
     Phv::Slice prev_pov;
     int prev = -1;
 
@@ -306,34 +308,38 @@ void output_jbay_field_dictionary_helper(int lineno,
         // Finish the current chunk if needed.
         if (byte && (clot || byte + size > CHUNK_SIZE ||
                      (prev_pov && *ent.pov.front() != prev_pov))) {
-            if (!check_chunk(ent.lineno, ch)) break;
             finish_chunk(ch++, entry_n++, prev_pov, byte);
             byte = 0;
         }
-
+        if (ch/CHUNKS_PER_GROUP != group) {
+            // into a new group
+            group = ch/CHUNKS_PER_GROUP;
+            clots_in_group = 0;
+        }
         if (clot) {
             // Start a new group if needed. Each group has a maximum number of CLOTs that can be
             // deparsed, and CLOTs cannot span multiple groups.
-            bool out_of_clots_in_group = clots_in_group[ch/CHUNKS_PER_GROUP] >= CLOTS_PER_GROUP;
+            bool out_of_clots_in_group = clots_in_group >= CLOTS_PER_GROUP;
             auto chunks_in_clot = (size + CHUNK_SIZE - 1) / CHUNK_SIZE;
             bool out_of_chunks_in_group =
                 ch % CHUNKS_PER_GROUP + chunks_in_clot > CHUNKS_PER_GROUP;
             if (out_of_clots_in_group || out_of_chunks_in_group) {
+                // go on to the next group
                 ch = (ch | (CHUNKS_PER_GROUP - 1)) + 1;
+                group = ch/CHUNKS_PER_GROUP;
+                clots_in_group = 0;
             }
 
             // Write the CLOT to the next segment in the current group.
-            if (!check_chunk(ent.lineno, ch)) break;
             if (chunks_in_clot == CHUNKS_PER_GROUP && (ch % CHUNKS_PER_GROUP))
                 error(clot->lineno, "--tof2lab44-workaround incompatible with clot >56 bytes");
             int clot_tag = Parser::clot_tag(clot->gress, clot->tag);
-            int seg_tag = clots_in_group[ch/CHUNKS_PER_GROUP]++;
+            int seg_tag = clots_in_group++;
             write_clot(ch, entry_n, seg_tag, clot_tag, ent.pov.front(), clot);
 
             prev = -1;
         } else {
             // Phv, Constant, or Checksum
-            if (!check_chunk(ent.lineno, ch)) break;
             write_chunk(ch, prev_pov, prev, ent.lineno, ent.pov.front(), ent.what.get(),
                         byte, size);
             byte += size;
@@ -343,8 +349,7 @@ void output_jbay_field_dictionary_helper(int lineno,
     }
 
     if (byte > 0) {
-        if (check_chunk(lineno, ch))
-            finish_chunk(ch, entry_n, prev_pov, byte);
+        finish_chunk(ch, entry_n, prev_pov, byte);
     }
 }
 
@@ -373,7 +378,7 @@ void output_jbay_field_dictionary(int lineno, REGS &regs, POV_FMT &pov_layout,
                           unsigned byte,
                           unsigned size) {
         // Just do an error check here. Defer actual writing to finish_chunk.
-        LOG5("  chunk " << ch << ": " << *ent_what);
+        LOG5("  chunk " << ch << ": " << *ent_what << " (pov " << ent_pov << ")");
         if (dynamic_cast<Deparser::FDEntry::Phv *>(ent_what) && prev_pov == *ent_pov &&
             int(ent_what->encode()) == prev && (size & 6))
             error(ent_lineno, "16 and 32-bit container cannot be repeatedly deparsed");
@@ -381,11 +386,13 @@ void output_jbay_field_dictionary(int lineno, REGS &regs, POV_FMT &pov_layout,
 
     auto finish_chunk = [&](unsigned ch, unsigned entry_n, const Phv::Slice &pov_bit,
                                                            unsigned byte) {
-        regs.chunk_info[ch].chunk_vld = 1;
-        regs.chunk_info[ch].pov = pov.at(&pov_bit.reg) + pov_bit.lo;
-        regs.chunk_info[ch].seg_vld = 0;
-        regs.chunk_info[ch].seg_slice = byte & 7;
-        regs.chunk_info[ch].seg_sel = byte >> 3;
+        if (check_chunk(lineno, ch)) {
+            regs.chunk_info[ch].chunk_vld = 1;
+            regs.chunk_info[ch].pov = pov.at(&pov_bit.reg) + pov_bit.lo;
+            regs.chunk_info[ch].seg_vld = 0;
+            regs.chunk_info[ch].seg_slice = byte & 7;
+            regs.chunk_info[ch].seg_sel = byte >> 3;
+        }
     };
 
     auto write_clot = [&](unsigned &ch,
@@ -396,19 +403,19 @@ void output_jbay_field_dictionary(int lineno, REGS &regs, POV_FMT &pov_layout,
                           Deparser::FDEntry::Clot *clot) {
         const unsigned CHUNKS_PER_GROUP = Target::JBay::DEPARSER_CHUNKS_PER_GROUP;
         const int group = ch/CHUNKS_PER_GROUP;
-        regs.fd_tags[group].segment_tag[seg_tag] = clot_tag;
-        LOG5("  chunk " << ch << ": " << *clot);
+        if (group < regs.fd_tags.size())
+            regs.fd_tags[group].segment_tag[seg_tag] = clot_tag;
+        LOG5("  chunk " << ch << ": " << *clot << " (pov " << pov_bit << ")");
         for (int i = 0; i < clot->length; i += 8, ++ch) {
-            if (!check_chunk(lineno, ch)) break;
-
             // CLOTs cannot span multiple groups.
             BUG_CHECK(ch/CHUNKS_PER_GROUP == group || error_count > 0, "CLOT spanning groups");
-
-            regs.chunk_info[ch].chunk_vld = 1;
-            regs.chunk_info[ch].pov = pov.at(&pov_bit->reg) + pov_bit->lo;
-            regs.chunk_info[ch].seg_vld = 1;
-            regs.chunk_info[ch].seg_sel = seg_tag;
-            regs.chunk_info[ch].seg_slice = i/8U;
+            if (check_chunk(lineno, ch))  {
+                regs.chunk_info[ch].chunk_vld = 1;
+                regs.chunk_info[ch].pov = pov.at(&pov_bit->reg) + pov_bit->lo;
+                regs.chunk_info[ch].seg_vld = 1;
+                regs.chunk_info[ch].seg_sel = seg_tag;
+                regs.chunk_info[ch].seg_slice = i/8U;
+            }
         }
     };
 
@@ -451,20 +458,26 @@ void output_jbay_field_dictionary_slice(int lineno, CHUNKS &chunk, CLOTS &clots,
             fd_entry_chunk_byte["chunk"] = std::move(fd_entry_chunk);
             chunk_bytes.push_back(std::move(chunk_byte));
             fd_entry_chunk_bytes.push_back(std::move(fd_entry_chunk_byte));
-            chunk[ch].is_phv |= 1 << byte;
-            chunk[ch].byte_off.phv_offset[byte++] = ent_what->encode();
+            if (check_chunk(lineno, ch)) {
+                chunk[ch].is_phv |= 1 << byte;
+                chunk[ch].byte_off.phv_offset[byte++] = ent_what->encode();
+            }
         }
     };
 
     auto finish_chunk = [&](unsigned ch, unsigned entry_n,
                             const Phv::Slice &pov_bit, unsigned byte) {
         fd["Field Dictionary Number"] = entry_n;
+        fd["Field Dictionary Chunk"] = ch;
         fd_entry["entry"] = entry_n;
+        // fd_entry["fde_chunk"] = ch;  -- requires compiler_interfaces change
         Deparser::write_pov_in_json(fd, fd_entry, &pov_bit.reg,
                                     pov.at(&pov_bit.reg) + pov_bit.lo, pov_bit.lo);
-        chunk[ch].cfg.seg_vld = 0;  // no CLOTs yet
-        chunk[ch].cfg.seg_slice = byte & 7;
-        chunk[ch].cfg.seg_sel = byte >> 3;
+        if (check_chunk(lineno, ch)) {
+            chunk[ch].cfg.seg_vld = 0;  // no CLOTs yet
+            chunk[ch].cfg.seg_slice = byte & 7;
+            chunk[ch].cfg.seg_sel = byte >> 3;
+        }
 
         fd["Content"] = std::move(chunk_bytes);
         fd_entry["chunks"] = std::move(fd_entry_chunk_bytes);
@@ -480,23 +493,26 @@ void output_jbay_field_dictionary_slice(int lineno, CHUNKS &chunk, CLOTS &clots,
                           Deparser::FDEntry::Clot *clot) {
         const unsigned CHUNKS_PER_GROUP = Target::JBay::DEPARSER_CHUNKS_PER_GROUP;
         const int group = ch/CHUNKS_PER_GROUP;
-        clots[group].segment_tag[seg_tag] = clot_tag;
+        if (group < clots.size())
+            clots[group].segment_tag[seg_tag] = clot_tag;
         auto phv_repl = clot->phv_replace.begin();
         auto csum_repl = clot->csum_replace.begin();
         for (int i = 0; i < clot->length; i += 8, ++ch, ++entry_n) {
-            if (!check_chunk(lineno, ch)) break;
-
             // CLOTs cannot span multiple groups.
             BUG_CHECK(ch/CHUNKS_PER_GROUP == group || error_count > 0, "CLOT spanning groups");
 
             fd["Field Dictionary Number"] = entry_n;
+            fd["Field Dictionary Chunk"] = ch;
             fd_entry["entry"] = entry_n;
+            // fd_entry["fde_chunk"] = ch;  -- requires compiler_interfaces change
             Deparser::write_pov_in_json(fd, fd_entry, &pov_bit->reg,
                                         pov.at(&pov_bit->reg) + pov_bit->lo, pov_bit->lo);
 
-            chunk[ch].cfg.seg_vld = 1;
-            chunk[ch].cfg.seg_sel = seg_tag;
-            chunk[ch].cfg.seg_slice = i/8U;
+            if (check_chunk(lineno, ch)) {
+                chunk[ch].cfg.seg_vld = 1;
+                chunk[ch].cfg.seg_sel = seg_tag;
+                chunk[ch].cfg.seg_slice = i/8U;
+            }
 
             for (int j = 0; j < 8 && i + j < clot->length; ++j) {
                 json::map chunk_byte;
@@ -516,16 +532,21 @@ void output_jbay_field_dictionary_slice(int lineno, CHUNKS &chunk, CLOTS &clots,
                         ++phv_repl;
                 } else if (csum_repl != clot->csum_replace.end()
                         && int(csum_repl->first) <= i + j) {
-                    chunk[ch].is_phv |= 1 << j;
-                    chunk[ch].byte_off.phv_offset[j] = csum_repl->second.encode();
+                    if (check_chunk(lineno, ch)) {
+                        chunk[ch].is_phv |= 1 << j;
+                        chunk[ch].byte_off.phv_offset[j] = csum_repl->second.encode();
+                    }
                     write_csum_const_in_json(csum_repl->second.encode(), chunk_byte,
                                              fd_entry_chunk, gress);
                     if (int(csum_repl->first + 2) <= i + j + 1)
                         ++csum_repl;
                 } else {
-                    chunk[ch].byte_off.phv_offset[j] = i + j;
+                    if (check_chunk(lineno, ch))
+                        chunk[ch].byte_off.phv_offset[j] = i + j;
                     chunk_byte["CLOT"] = clot_tag;
+                    chunk_byte["CLOT_OFFSET"] = i + j;
                     fd_entry_chunk["clot_tag"] = clot_tag;
+                    // fd_entry_chunk["clot_offset"] = i + j;   requires compiler_interfaces change
                 }
                 fd_entry_chunk_byte["chunk"] = std::move(fd_entry_chunk);
                 chunk_bytes.push_back(std::move(chunk_byte));

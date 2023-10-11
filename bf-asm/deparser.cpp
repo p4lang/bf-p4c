@@ -143,7 +143,9 @@ struct Deparser::FDEntry {
         unsigned size() override { return length; }
         unsigned encode() override { BUG(); return -1; }
         void dbprint(std::ostream &out) const override {
-            out << "clot " << tag; }
+            out << "clot " << tag;
+            if (length > 0) out << " [len " << length << "]";
+        }
     };
 
     int                         lineno;
