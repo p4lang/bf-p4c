@@ -433,10 +433,7 @@ p4c_add_xfail_reason("tofino2"
 # If you make an ALT-PHV test pass (or get close to it but if fails on later
 # error), please update the xfails accordingly.
 if (TEST_ALT_PHV_ALLOC)
-    p4c_add_xfail_reason("tofino2"
-        "ACLTest"
-        smoketest_switch_16_y2
-    )
+# add fails here
 endif (TEST_ALT_PHV_ALLOC)
 
 if (NOT TEST_ALT_PHV_ALLOC)
