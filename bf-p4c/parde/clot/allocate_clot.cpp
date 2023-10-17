@@ -1,5 +1,6 @@
 #include "allocate_clot.h"
 #include <optional>
+#include "check_clot_groups.h"
 #include "clot_candidate.h"
 #include "field_slice_extract_info.h"
 #include "field_pov_analysis.h"
@@ -7,6 +8,7 @@
 #include "bf-p4c/common/utils.h"
 #include "bf-p4c/parde/count_strided_header_refs.h"
 #include "bf-p4c/parde/parser_info.h"
+#include "lib/log_fixup.h"
 
 /**
  * \ingroup parde
@@ -1143,9 +1145,9 @@ class GreedyClotAllocator : public Visitor {
                 if (candidates->empty()) {
                     LOG3("CLOT allocation complete: no remaining CLOT candidates.");
                 } else {
-                    LOG3("Remaining CLOT candidates:");
+                    LOG3(candidates->size() << " remaining CLOT candidates:");
                     for (auto candidate : *candidates)
-                        LOG3(candidate->print());
+                        LOG3(logfix(candidate->print()));
                 }
             }
         }
@@ -1304,9 +1306,9 @@ class GreedyClotAllocator : public Visitor {
                 if (candidates->empty()) {
                     LOG3("No CLOT candidates found.");
                 } else {
-                    LOG3("CLOT candidates:");
+                    LOG3(candidates->size() << " CLOT candidates:");
                     for (auto candidate : *candidates)
-                        LOG3(candidate->print());
+                        LOG3(logfix(candidate->print()));
                 }
             }
 
@@ -1571,6 +1573,7 @@ AllocateClot::AllocateClot(ClotInfo &clotInfo, const PhvInfo &phv, PhvUse &uses,
         new FieldPovAnalysis(clotInfo, phv),
         new CollectClotInfo(phv, clotInfo, pragmaDoNotUseClot),
         new GreedyClotAllocator(phv, clotInfo, log),
+        new CheckClotGroups(phv, clotInfo),
         LOGGING(3) ? new DumpParser("after_clot_allocation") : nullptr
     });
 }

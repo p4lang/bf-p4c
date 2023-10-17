@@ -333,6 +333,7 @@ set (BF_P4C_BACKEND_LIB_HDRS
   lib/dyn_vector.h
   lib/error_macros.h
   lib/error_type.h
+  lib/log_fixup.h
   lib/pad_alignment.h
   lib/pointer_wrapper.h
   lib/union_find.hpp
@@ -523,6 +524,7 @@ set (BF_P4C_BACKEND_PARDE_SRCS
   parde/rewrite_parser_locals.cpp
   parde/split_parser_state.cpp
   parde/clot/allocate_clot.cpp
+  parde/clot/check_clot_groups.cpp
   parde/clot/clot_candidate.cpp
   parde/clot/clot_info.cpp
   parde/clot/deparse_graph.cpp
@@ -585,6 +587,7 @@ set (BF_P4C_BACKEND_PARDE_HDRS
   parde/split_parser_state.h
   parde/update_parser_write_mode.h
   parde/clot/allocate_clot.h
+  parde/clot/check_clot_groups.h
   parde/clot/clot_candidate.h
   parde/clot/clot_info.h
   parde/clot/deparse_graph.h

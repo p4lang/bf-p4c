@@ -473,6 +473,18 @@ class PardeSpec {
     // Number of deparser checksum units that can invert its output
     virtual unsigned numDeparserInvertChecksumUnits() const = 0;
 
+    // Deparser chunk size in bytes
+    virtual unsigned deparserChunkSize() const = 0;
+
+    // Deparser group size in chunks
+    virtual unsigned deparserChunkGroupSize() const = 0;
+
+    // Number of chunk groups in deparser
+    virtual unsigned numDeparserChunkGroups() const = 0;
+
+    // Number of clots in a single chunk group in deparser
+    virtual unsigned numClotsPerDeparserGroup() const = 0;
+
     /// Clock frequency
     virtual double clkFreq() const = 0;
 
@@ -551,6 +563,10 @@ class TofinoPardeSpec : public PardeSpec {
     unsigned numDeparserConstantBytes() const override { return 0; }
     unsigned numDeparserChecksumUnits() const override { return 6; }
     unsigned numDeparserInvertChecksumUnits() const override { return 0; }
+    unsigned deparserChunkSize() const { return 0; }
+    unsigned deparserChunkGroupSize() const { return 0; }
+    unsigned numDeparserChunkGroups() const { return 0; }
+    unsigned numClotsPerDeparserGroup() const { return 0; }
 
     double clkFreq() const override { return 1.22; }
     unsigned lineRate() const override { return 100; }
@@ -646,6 +662,10 @@ class JBayPardeSpec : public PardeSpec {
     unsigned numDeparserConstantBytes() const override { return 8; }
     unsigned numDeparserChecksumUnits() const override { return 8; }
     unsigned numDeparserInvertChecksumUnits() const override { return 4; }
+    unsigned deparserChunkSize() const { return 8; }
+    unsigned deparserChunkGroupSize() const { return 8; }
+    unsigned numDeparserChunkGroups() const { return 16; }
+    unsigned numClotsPerDeparserGroup() const { return 4; }
 
     // FIXME: adjust to true clock rate
     double clkFreq() const override { return 1.35; }
