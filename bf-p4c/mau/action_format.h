@@ -177,7 +177,8 @@ class Argument : public Parameter {
         return _name == arg->_name && _param_field == arg->_param_field;
     }
     int size() const override { return _param_field.size(); }
-    void dbprint(std::ostream &out) const override { out << _name << " " << _param_field; }
+    void dbprint(std::ostream &out) const override { out << "Arg:" << _name << " " <<
+            _param_field; }
 };
 
 /**
@@ -218,7 +219,7 @@ class Constant : public Parameter {
     cstring alias() const { return _alias; }
     void set_alias(cstring a) { _alias = a; }
     void dbprint(std::ostream &out) const override {
-        out << "0x" << _value << " : " << _size << " bits";
+        out << "Const: 0x" << _value << " : " << _size << " bits";
     }
 };
 
@@ -239,7 +240,7 @@ class Hash : public Parameter {
     const Parameter *overlap(const Parameter *ad, bool only_one_overlap_solution,
         le_bitrange *my_overlap, le_bitrange *ad_overlap) const override;
     bool equiv_value(const Parameter *ad, bool check_cond = true) const override;
-    void dbprint(std::ostream &out) const override { out << _func; }
+    void dbprint(std::ostream &out) const override { out << "Hash: "<< _func; }
     P4HashFunction func() const { return _func; }
 };
 
@@ -311,7 +312,7 @@ class RandomNumber : public Parameter {
     bool can_merge(const Parameter *ad) const override;
     const Parameter *merge(const Parameter *ad) const override;
     void dbprint(std::ostream &out) const override {
-        out << "random " << rand_num_names();
+        out << "Random: " << rand_num_names();
     }
 
     RandomNumber(cstring rand, cstring act, le_bitrange range) {
@@ -337,8 +338,8 @@ class RandomPadding : public Parameter {
     bool is_subset_of(const Parameter *ad) const override;
     bool can_merge(const Parameter *ad) const override;
     const Parameter *merge(const Parameter *ad) const override;
-    void dbprint(std::ostream &out) const override { out << name() << " : " << size(); }
-
+    void dbprint(std::ostream &out) const override { out << "RndPad: " << name() << " : "
+                                                         << size(); }
     explicit RandomPadding(int s) : _size(s) {}
 };
 
@@ -367,7 +368,8 @@ class MeterColor : public Parameter {
     const Parameter *get_extended_param(uint32_t extension, const Parameter *) const override;
     const Parameter *overlap(const Parameter *ad, bool only_one_overlap_solution,
         le_bitrange *my_overlap, le_bitrange *ad_overlap) const override;
-    void dbprint(std::ostream &out) const override { out << _meter_name << _range; }
+    void dbprint(std::ostream &out) const override { out << "MeterColor: " << _meter_name <<
+            _range; }
     bool equiv_value(const Parameter *, bool check_cond = true) const override;
     bool is_padding() const { return _meter_name == "$padding"; }
 
@@ -404,7 +406,7 @@ class MeterALU : public Parameter {
     const Parameter *get_extended_param(uint32_t extension, const Parameter *) const override;
     const Parameter *overlap(const Parameter *ad, bool only_one_overlap_solution,
         le_bitrange *my_overlap, le_bitrange *ad_overlap) const override;
-    void dbprint(std::ostream &out) const override { out << _alu_user << _range; }
+    void dbprint(std::ostream &out) const override { out << "MeterALU: " << _alu_user << _range; }
     bool equiv_value(const Parameter *, bool check_cond = true) const override;
     MeterALU(cstring au, le_bitrange r) : _alu_user(au), _range(r) {}
 };

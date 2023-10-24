@@ -392,6 +392,7 @@ bool ActionAnalysis::preorder(const IR::MAU::ActionDataConstant *adc) {
 }
 
 bool ActionAnalysis::preorder(const IR::MAU::HashDist *hd) {
+    LOG4("ActionAnalysis preorder on HashDist : " << *hd);
     field_action.reads.emplace_back(ActionParam::ACTIONDATA, hd, ActionParam::HASH_DIST);
     return false;
 }
@@ -505,7 +506,8 @@ void ActionAnalysis::postorder(const IR::MAU::Instruction *instr) {
             if (container_actions_map->find(container) == container_actions_map->end()) {
                 ContainerAction cont_action(instr->name, tbl);
                 container_actions_map->emplace(container, cont_action);
-                LOG5("Adding container " << container << " to container_action_map");
+                LOG5("Adding container " << container << " for table " << tbl->name <<
+                     " to container_action_map");
             }
             if (!split) {
                 (*container_actions_map)[container].field_actions.push_back(field_action);
@@ -1081,6 +1083,8 @@ bool ActionAnalysis::init_hash_constant_alignment(const ActionParam &read,
 bool ActionAnalysis::init_constant_alignment(const ActionParam &read,
         ContainerAction &cont_action, le_bitrange write_bits, cstring action_name,
         PHV::Container container) {
+    LOG5("init_constant_alignment: read:" << read << " write_bits:" << write_bits <<
+         " action:" << action_name << " cont:" << container);
     auto &action_format = tbl->resources->action_format;
     auto constant = read.expr->to<IR::Constant>();
 
@@ -1308,6 +1312,8 @@ void ActionAnalysis::verify_P4_action_with_phv(cstring action_name) {
             }
             op_type_t read_src = SRC1;
             for (auto &read : field_action.reads) {
+                LOG5("Initialize_alignment for field action: " << field_action << " total_init: " <<
+                    total_init);
                 cstring init_error_message;
                 bool init = initialize_alignment(write, read, read_src, cont_action,
                         init_error_message, container, action_name);

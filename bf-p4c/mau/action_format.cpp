@@ -2182,14 +2182,13 @@ const ALUParameter *Format::Use::find_param_alloc(UniqueLocationKey &key,
     bool container_match = false;
     for (auto alu_position : action_alu_positions) {
         LOG3(alu_position);
-        if (rv && alu_position.alu_op->container() != key.container)
+        if (alu_position.alu_op->container() != key.container)
             continue;
         if (alu_position.alu_op->container().size() != key.container.size())
             continue;
         auto *loc = alu_position.alu_op->find_param_alloc(key);
         if (!loc) continue;
-        BUG_CHECK(loc != nullptr, "A container operation cannot find the associated key");
-        BUG_CHECK(rv == nullptr || !container_match, "A parameter has multiple allocations "
+        BUG_CHECK(rv == nullptr, "A parameter has multiple allocations "
                   "in container %s in action %s", key.container, key.action_name);
         rv = loc;
         container_match |= alu_position.alu_op->container() == key.container;
