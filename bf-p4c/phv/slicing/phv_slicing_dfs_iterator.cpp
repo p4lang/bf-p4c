@@ -1182,6 +1182,7 @@ void DfsItrContext::iterate(const IterateCb& cb) {
     LOG3("Making Itr for " << sc_i);
     LOG7("Homogeneous slicing enabled: " << config_i.homogeneous_slicing <<
          " Rejected slice options: ");
+    need_to_check_duplicate();
     for (auto sz :  reject_sizes) LOG7(int(sz));
 
     // no slice list supercluster, a simpler case.
@@ -1971,6 +1972,59 @@ std::vector<SuperCluster*> DfsItrContext::get_well_formed_no_more_split() const 
     return rst;
 }
 
+void DfsItrContext::need_to_check_duplicate() {
+    if (check_duplicate != -1) return;
+    check_duplicate = 0;
+    ordered_set<FieldSlice> fs_in_sl;
+    ordered_set<FieldSlice> fs_in_sc;
+    // We only want to check slicing plan duplications for superclusters that have many slice lists
+    // which will result in prolonged the slicing plan search time.
+    if (sc_i->slices().size() < 5) return;
+    for (auto fs : sc_i->slices()) {
+        if (fs.size() != 32) return;
+        fs_in_sc.insert(fs);
+    }
+
+    for (auto sl : sc_i->slice_lists()) {
+        if (sl->size() > 1) return;
+        fs_in_sl.insert(sl->front());
+    }
+
+    if (sc_i->clusters().size() > 1) return;
+    for (auto fs : sc_i->clusters().front()->slices()) {
+        if (fs_in_sl.count(fs)) fs_in_sl.erase(fs);
+        fs_in_sc.erase(fs);
+    }
+    if (fs_in_sl.size() > 0) return;
+    if (fs_in_sc.size() > 0) return;
+    check_duplicate = 1;
+}
+
+bool DfsItrContext::check_duplicate_slicing_plan(const ordered_set<SuperCluster *> done) {
+    if (done.size() > 1) return false;
+    BUG_CHECK(check_duplicate != -1, "check_duplicate has not been set");
+    if (!check_duplicate) return false;
+
+    bool all_32b_container = false;
+
+    for (auto sl : done.front()->slice_lists()) {
+        if (SuperCluster::slice_list_total_bits(*sl) == 32) {
+            all_32b_container = true;
+            break;
+        }
+    }
+    if (all_32b_container) {
+        if (check_duplicate == 1) {
+            check_duplicate = 2;
+            return false;
+        } else if (check_duplicate == 2){
+            return true;
+        }
+    }
+
+    return false;
+}
+
 // return false if iteration should be terminated.
 bool DfsItrContext::dfs(const IterateCb& yield, const ordered_set<SuperCluster*>& unchecked) {
     // prune when we reached the limit of steps.
@@ -2016,6 +2070,9 @@ bool DfsItrContext::dfs(const IterateCb& yield, const ordered_set<SuperCluster*>
 
     // found one solution.
     if (to_be_split_i.empty()) {
+        if (check_duplicate_slicing_plan(done_i)) {
+            return true;
+        }
         LOG4("found a solution after " << n_steps_i << " steps");
         n_steps_since_last_solution = 0;
         return yield(std::list<SuperCluster*>(done_i.begin(), done_i.end()));

@@ -324,6 +324,55 @@ class DfsItrContext : public IteratorInterface {
     /// get_well_formed_no_more_split returns super clusters that all the slice lists
     /// does not need_further_split, and the cluster is well_formed.
     std::vector<SuperCluster*> get_well_formed_no_more_split() const;
+
+    // For some superclusters, slicing iterator is prone to generating duplicate slicing plans.
+    // Duplicate slicing plans mean that although the slice lists have been sliced into a different
+    // way, the slicing plan does not effectively change the result of PHV allocation. For example,
+    // a supercluster may look like this:
+    // slice lists:
+    // [a[0-31]]
+    // [b[0-31]]
+    // rotational clusters:
+    // [[a[0-31]], [b[0-31]]]
+    //
+    // one slicing plan can be:
+    // slice lists:
+    // [a[0-31]]
+    // [b[0-31]]
+    // rotational clusters:
+    // [[a[0-31]], [b[0-31]]]
+    // This slicing plan changes nothing.
+    //
+    // Another slicing plan can be:
+    // slice lists:
+    // [a[0-15], a[16-31]]
+    // [b[0-15]]
+    // [b[16-31]]
+    // rotational clusters:
+    // [[a[0-15]], [b[0-15]]]
+    // [[a[16-31]], [b[16-31]]]
+    // For the first slicing plan, a and b will be allocated to 32-bit container, since they are
+    // in two slice lists that both are size of 32 bits.
+    // For the second slicing plan, a will be allocated to a 32-bit container, since it is in a
+    // 32-bit slice list. And b[0-15] shares the same rotational cluster with a[0-15], so b has to
+    // be allocate to a 32-bit container. Therefore, this slicing does not effectively change the
+    // PHV allocation result and should be pruned during DFS.
+    // This function collects supercluster that has the aformentioned pattern. To minimize the
+    // impact on PHV allocation, this function is very conservative. If a supercluster only have
+    // 32-bit fieldslices that are all in individual slice lists, and all fieldslices are in the
+    // same rotational cluster, this supercluster will be checked for the duplicate slicing plans.
+    void need_to_check_duplicate();
+    // check duplicate is -1: duplication check has not been performed.
+    // check duplicate is 0: no need to check duplication.
+    // check duplicate is 1: need to check duplication and the first slicing plan(first slicing plan
+    // is always slice nothing and output the original supercluster) has not been yielded.
+    // check duplicate is 2: need to check duplication and the first slicing plan has been yielded.
+    int check_duplicate = -1;
+    // We only want to
+    const int duplicate_check_supercluster_size = 5;
+    // If a supercluster with check_duplicate flag on still has at least one 32-bit slice list,
+    // all fieldslices will be allocated to 32-bit containers and this is a duplicate slicing plan.
+    bool check_duplicate_slicing_plan(const ordered_set<SuperCluster *>);
 };
 
 }  // namespace Slicing
