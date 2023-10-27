@@ -1623,6 +1623,7 @@ p4c_add_xfail_reason("tofino"
 # Failure due to old version of p4runtime installed in jarvis docker images -- fixed by
 # updating p4runtime.  Can use PYTHONPATH=/mnt/build/_deps/p4runtime-src/py:$PYTHONPATH
 p4c_add_xfail_reason("tofino"
-  "google.protobuf.text_format.ParseError: 28:3 : Message type \"p4.config.v1.Table\" has no field named \"has_initial_entries\""
+  "google.protobuf.text_format.ParseError: .*:3 : Message type \"p4.config.v1.Table\" has no field named \"has_initial_entries\""
   extensions/p4_tests/p4_16/ptf/static_entries.p4
+  extensions/p4_tests/p4_16/ptf/p4c-5298.p4
 )

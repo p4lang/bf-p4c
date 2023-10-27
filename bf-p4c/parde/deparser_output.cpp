@@ -342,6 +342,11 @@ struct OutputDigests : public Inspector {
         out << indent << "context_json" << ":" << std::endl;
         AutoIndent contextJsonIndent(indent);
 
+        // Digest type is 1 byte value but can be allocated to a container of any size.
+        // E.g.
+        //  select: H5(0..2)  # bit[2..0]: ingress::ig_intr_md_for_dprsr.digest_type
+        // The offset must be calculated accordingly to encode the learn quant fields
+        int digestOffset = digest->selector->container.size() / 8;
         for (auto* digestEntry : digest->entries) {
             out << indent << digestEntry->idx << ":";
 
@@ -359,17 +364,17 @@ struct OutputDigests : public Inspector {
             // The start bit indicates the location of the MSB of each field in
             // little endian order, mod 8. In other words, it specifies the
             // left-most bit in the field, counting from the right - that means
-            // it's the highest numbered bit. The start byte is specified in
-            // network order; we need to add 1 to compensate for the fact that
-            // we don't put the digest ID in the IR representation of the table
-            // entry.
+            // it's the highest numbered bit.The start byte is specified in
+            // network order; we need to add 'digestOffset' to compensate for
+            // the fact that we don't put the digest ID in the IR representation
+            // of the table entry.
             AutoIndent formatIndent(indent);
             for (auto &f : *entry->controlPlaneFormat) {
                 out << indent << "- [ " << canon_name(f.fieldName)
-                              << ", " << f.startByte + 1            // Start byte.
-                              << ", " << f.fieldWidth               // Field width.
-                              << ", " << f.startBit                 // Start bit.
-                              << ", " << f.fieldOffset              // Field offset.
+                              << ", " << f.startByte + digestOffset  // Start byte.
+                              << ", " << f.fieldWidth                // Field width.
+                              << ", " << f.startBit                  // Start bit.
+                              << ", " << f.fieldOffset               // Field offset.
                               << "]" << std::endl;
             }
         }
