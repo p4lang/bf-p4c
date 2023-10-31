@@ -52,12 +52,6 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
     testdata/p4_16_samples/subparser-with-header-stack-bmv2.p4
     )
 
-  p4c_add_xfail_reason("tofino"
-    "mismatch from expected(.*) at byte .*"
-    # Needs some fixes to ternary static entries/gateway payload for TCAM
-    extensions/p4_tests/p4_16/stf/p4c-2772-c.p4
-    )
-
   # P4C-2985 - tests added to p4c compile but do not pass in simple test harness
   p4c_add_xfail_reason("tofino"
     "mismatch from expected(.*) at byte .*"
@@ -796,15 +790,19 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   ".* expected packet on port .* not seen"
   testdata/p4_16_samples/table-entries-range-bmv2.p4
-  testdata/p4_16_samples/table-entries-ternary-bmv2.p4
 )
 
 # P4C-1753
 p4c_add_xfail_reason("tofino"
   "unexpected packet output on port .*"
-  testdata/p4_16_samples/table-entries-exact-ternary-bmv2.p4
   testdata/p4_16_samples/table-entries-priority-bmv2.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "longer than expected"
+  testdata/p4_16_samples/table-entries-exact-ternary-bmv2.p4
   testdata/p4_16_samples/table-entries-optional-bmv2.p4
+  testdata/p4_16_samples/table-entries-ternary-bmv2.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1413,7 +1411,7 @@ p4c_add_xfail_reason("tofino"
 
 # p4factory update
 p4c_add_xfail_reason("tofino"
-  "expected packet[s]* on port .* not seen"
+  "longer than expected"
   testdata/p4_16_samples/table-entries-ser-enum-bmv2.p4
 )
 
