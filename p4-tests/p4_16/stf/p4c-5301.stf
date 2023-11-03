@@ -1,0 +1,24 @@
+add SwitchIngress.fib 0 ig_md.lkp.ip_dst_addr:0x0B0B0B0B0000000000000000 fib_hit(port:9)
+add SwitchIngress.fib 1 ig_md.lkp.ip_dst_addr:0x020202020000000000000000 fib_hit(port:8)
+add SwitchIngress.fib 2 ig_md.lkp.ip_dst_addr:0x0A0A0A0A0000000000000000 fib_hit(port:8)
+add SwitchIngress.ktm_snat_table hdr.inner_ipv4.src_addr:0x01010101 ktm_snat_hit(eip:0x0D0D0D0D)
+add SwitchIngress.ktm_dnat_table  hdr.ipv4.dst_addr:0x0D0D0D0D ktm_dnat_hit(server_vtep_ip:0x02020202, server_ip:0x01010101, server_vtep_mac:0x000000000001, customize_vxlan_dst_port:6666, customize_vni:6)
+add SwitchEgress.vtep_mac_table eg_md.ktm_meta.KTM_LOOPBACK_IP:0X0A0A0A0A vtep_mac_get(ktm_vtep_mac:0x101010101010, ec_vtep_mac:0x0000000000EC)
+
+
+
+packet 0   FF FF FF FF FF FF 02 42  AC 11 00 02 08 00 45 00 \
+           00 5D 00 01 00 00 40 11  62 78 02 02 02 02 0A 0A \
+           0A 0A 12 B5 12 B5 00 49  2E F8 0C 00 00 03 00 00 \
+           00 00 FF FF FF FF FF FF  00 00 00 00 00 00 08 00 \
+           45 00 00 2B 00 01 00 00  40 06 F9 C9 01 01 01 01 \
+           7F 00 00 01 00 14 00 50  00 00 00 00 00 00 00 00 \
+           50 02 20 00 76 24 00 00  4B 54 4D
+
+expect 9   FF FF FF FF FF FF 02 42  AC 11 00 02 08 00 45 00 \
+           00 5D 00 01 00 00 40 11  50 66 0A 0A 0A 0A 0B 0B \
+           0B 0B 12 B5 12 B5 00 49  00 00 0C 00 00 03 00 00 \
+           00 00 00 00 00 00 00 EC  10 10 10 10 10 10 08 00 \
+           45 00 00 2B 00 01 00 00  40 06 E1 B1 0D 0D 0D 0D \
+           7F 00 00 01 00 14 00 50  00 00 00 00 00 00 00 00 \
+           50 02 20 00 5E 0C 00 00  4B 54 4D

@@ -87,10 +87,12 @@ const IR::Node* DoSimplifyNestedIf::preorder(IR::IfStatement *stmt) {
     if (stmt->ifTrue) {
         stack_.push_back(stmt->condition);
         visit(stmt->ifTrue);
-        if (auto typeVec = checkTypeAndGetVec(stmt->ifTrue)) {
-            addInArray(typeVec, stmt->condition, stmt);
+        if (stmt->ifTrue) {
+            if (auto typeVec = checkTypeAndGetVec(stmt->ifTrue)) {
+                addInArray(typeVec, stmt->condition, stmt);
+            }
+            predicates[stmt->ifTrue] = stack_;
         }
-        predicates[stmt->ifTrue] = stack_;
         stack_.pop_back(); }
 
     if (stmt->ifFalse) {
@@ -100,13 +102,13 @@ const IR::Node* DoSimplifyNestedIf::preorder(IR::IfStatement *stmt) {
             stack_.push_back(new IR::LNot(stmt->condition));
         }
         visit(stmt->ifFalse);
-        if (!stmt->ifFalse->is<IR::IfStatement>()) {
+        if (stmt->ifFalse && !stmt->ifFalse->is<IR::IfStatement>()) {
             // This is for a bare 'else'
-           if (auto typeVec = checkTypeAndGetVec(stmt->ifFalse)) {
-               setExtraStmts(typeVec, stmt->ifFalse, stmt->condition);
-           } else {
-               predicates[stmt->ifFalse] = stack_;
-           }
+            if (auto typeVec = checkTypeAndGetVec(stmt->ifFalse)) {
+                setExtraStmts(typeVec, stmt->ifFalse, stmt->condition);
+            } else {
+                predicates[stmt->ifFalse] = stack_;
+            }
         }
         stack_.pop_back(); }
 
@@ -127,7 +129,7 @@ const IR::Node* DoSimplifyNestedIf::preorder(IR::IfStatement *stmt) {
         predicates.clear();
         extraStmts.clear();
         return new IR::BlockStatement(stmt->srcInfo, vec); }
-    return stmt;
+    return nullptr;
 }
 
 void DoSimplifyComplexCondition::do_equ(bitvec& val, const IR::Equ* eq) {
