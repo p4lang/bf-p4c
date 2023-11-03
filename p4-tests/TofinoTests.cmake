@@ -70,7 +70,7 @@ set (P16_TNA_EXCLUDE_FILES "digest_tna\\.p4" "p4c-1323-b\\.p4" "p4c-2143\\.p4"
     "p4c-2602\\.p4"
     "hash_extern_xor\\.p4" "hash_field_expression\\.p4" "hash_field_expression_sym\\.p4"
     "p4c-4770\\.p4" "p4c-2269\\.p4" "p4c-3582\\.p4" "p4c-5164\\.p4" "p4c-5223-leaf-tof1\\.p4"
-    "p4c-5240\\.p4")
+    "p4c-5240\\.p4" "p4c-3417\\.p4")
 set (P16_TNA_EXCLUDE_FILES "${P16_TNA_EXCLUDE_FILES}" 
                            "${P16_TNA_ARISTA_FILES}" 
                            "${DIAGNOSTIC_TESTS_TOFINO}")
@@ -330,6 +330,11 @@ bfn_set_ptf_ports_json_file("tofino" "p4c-4878"
 p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base"
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/compile_only/forensics.p4")
 set_tests_properties("tofino/extensions/p4_tests/p4_16/compile_only/forensics.p4" PROPERTIES TIMEOUT ${extended_timeout_150percent})
+
+# 900s is too little for p4c-3417.p4
+p4c_add_bf_backend_tests("tofino" "tofino" "tna" "base"
+    "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/compile_only/p4c-3417.p4")
+set_tests_properties("tofino/extensions/p4_tests/p4_16/compile_only/p4c-3417.p4" PROPERTIES TIMEOUT ${extended_timeout_150percent})
 
 
 # P4C-2985
