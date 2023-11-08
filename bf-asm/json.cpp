@@ -12,6 +12,15 @@ static int digit_value(char ch) {
     return 999;
 }
 
+// true iff the string ends in an odd number of '\' characters
+static bool odd_backslash(const std::string &s) {
+    int cnt = 0;
+    for (int i = s.size()-1; i >= 0; --i) {
+        if (s[i] != '\\') break;
+        cnt++; }
+    return (cnt & 1) == 1;
+}
+
 std::istream &operator>>(std::istream &in, std::unique_ptr<obj> &json) {
     while (in) {
         bool neg = false;
@@ -49,6 +58,11 @@ std::istream &operator>>(std::istream &in, std::unique_ptr<obj> &json) {
         case '"': {
             std::string s;
             getline(in, s, '"');
+            while (odd_backslash(s)) {
+                std::string tmp;
+                getline(in, tmp, '"');
+                s += '\"';
+                s += tmp; }
             json.reset(new string(std::move(s)));
             return in; }
         case '[': {

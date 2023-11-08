@@ -276,6 +276,11 @@ parser [<thread>] [<port_use>, ...]:
                 # special bits, or the specific matchers 'byte0', 'byte1' or 'half'
                 # to match against values explicitly loaded by a 'save' in a previous
                 # state.  May additionally specify specific matchers to use.
+            option: <name>
+                # enable an optional feature for this state.  Currently the only option
+                # is "ignore_max_depth" which means the state (and subsequent states) are
+                # ignore for calculating the max parser bytes.  Used for min parser padding
+                # states
             <match-constant>:
                 # actions to perform when the match matches this match constant
                 # this is a tcam priority match, so only the first match triggers

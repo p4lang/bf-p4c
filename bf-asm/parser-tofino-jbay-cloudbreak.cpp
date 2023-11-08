@@ -170,6 +170,7 @@ static void collect_phv_vector(value_t value, gress_t gress, bitvec& bv) {
 }
 
 void Parser::input(VECTOR(value_t) args, value_t data) {
+    lineno = data.lineno;
     if (!CHECKTYPE(data, tMAP)) return;
     for (gress_t gress : Range(INGRESS, EGRESS)) {
         if (args.size > 0) {
@@ -453,7 +454,10 @@ int Parser::state_prsr_dph_max(const State *s,
                                std::map<const State*, std::pair<int, int>> &visited,
                                int curr_dph_bits) {
     int parser_depth_max_bits = parser_depth_max_bytes*8;
+    int parser_depth_min_bits = parser_depth_min_bytes*8;
     if (!s) return 0;
+    if (s->ignore_max_depth && curr_dph_bits >= parser_depth_min_bits)
+        return curr_dph_bits;
     // Keep track of states visited along with the parser depth at time of visit
     // and the number of times the state was called recursively.  Return 0 if current
     // curr_dph_bits value is smaller or equal to the largest value seen so far,
@@ -535,11 +539,15 @@ int Parser::get_prsr_max_dph() {
     //       Parser::process.
     //
     int prsr_dph_max = 0;
+    std::set<std::string> visited;
     for (auto &state : start_state) {
         if (state) {
             BUG_CHECK(states[state.name],
                       "Start state %s not found in states table.", state.name.c_str());
+            if (visited.count(state.name)) continue;
+            visited.insert(state.name);
             int prsr_dph = state_prsr_dph_max(states[state.name]);
+            LOG4("state " << state.name << " dph=" << prsr_dph);
             prsr_dph_max = std::max(prsr_dph_max, prsr_dph);
         }
     }
@@ -1567,6 +1575,11 @@ Parser::State::State(int l, const char *n, gress_t gr, match_t sno, const VECTOR
             } else {
                 key.setup(kv.value);
             }
+        } else if (kv.key == "option") {
+            if (kv.value == "ignore_max_depth")
+                ignore_max_depth = true;
+            else
+                error(kv.value.lineno, "Unknown state option %s", value_desc(kv.value));
         } else if (kv.key == "default") {
             if (!CHECKTYPE(kv.value, tMAP)) continue;
             if (def) {

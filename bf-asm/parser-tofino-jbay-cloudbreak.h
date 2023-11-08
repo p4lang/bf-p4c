@@ -233,6 +233,7 @@ class Parser : public BaseParser, public Contextable {
         std::vector<Match*>     match;
         Match                   *def;
         std::set<Match*>        pred;
+        bool                    ignore_max_depth = false;
         int                     lineno = -1;
         int                     all_idx = -1;
 
@@ -307,10 +308,13 @@ class Parser : public BaseParser, public Contextable {
 
     Parser(bitvec (&phv_use)[2], gress_t gr, int idx)
     : gress(gr), parser_no(idx), phv_use(phv_use) {
-        if (gress == INGRESS)
+        if (gress == INGRESS) {
             parser_depth_max_bytes = Target::PARSER_DEPTH_MAX_BYTES_INGRESS();
-        else
+            parser_depth_min_bytes = Target::PARSER_DEPTH_MIN_BYTES_INGRESS();
+        } else {
             parser_depth_max_bytes = Target::PARSER_DEPTH_MAX_BYTES_EGRESS();
+            parser_depth_min_bytes = Target::PARSER_DEPTH_MIN_BYTES_EGRESS();
+        }
     }
 
     template<class REGS> void gen_configuration_cache(REGS &, json::vector &cfg_cache);
@@ -381,7 +385,7 @@ class Parser : public BaseParser, public Contextable {
     int state_prsr_dph_max(const State *s);
     int state_prsr_dph_max(const State *s, std::map<const State*, std::pair<int, int>> &visited,
                            int curr_dph_bits);
-    int parser_depth_max_bytes;
+    int parser_depth_max_bytes, parser_depth_min_bytes;
 };
 
 class AsmParser : public BaseAsmParser {

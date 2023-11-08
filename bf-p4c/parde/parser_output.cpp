@@ -13,6 +13,7 @@
 #include "bf-p4c/parde/parde_visitor.h"
 #include "bf-p4c/parde/clot/clot_info.h"
 #include "bf-p4c/phv/phv_fields.h"
+#include "midend/parser_enforce_depth_req.h"
 
 namespace {
 
@@ -529,6 +530,12 @@ struct ParserAsmSerializer : public ParserInspector {
             // mean in terms of the original P4 program.
             for (auto& info : state->select->debug.info)
                 out << "      # - " << info << std::endl;
+        }
+
+        if (state->name.startsWith(BFN::ParserEnforceDepthReq::pad_state_name)) {
+            // FIXME -- what if the user uses this name for their own state?  Should have
+            // flag in the state that identifies it as one that is used for min padding
+            out << indent << "  option: ignore_max_depth" << std::endl;
         }
 
         for (auto* match : state->transitions)
