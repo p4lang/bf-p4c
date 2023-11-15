@@ -699,10 +699,10 @@ void set_jbay_pov_cfg(POV &pov_cfg, std::map<unsigned, unsigned> &pov_map,
 }
 
 template<class CSUM, class ENTRIES>
-void write_jbay_full_checksum_config(CSUM &csum, ENTRIES &phv_entries, int unit,
-                                     std::set<int> &visited, std::map<unsigned, unsigned> &pov_map,
-                                     Deparser::FullChecksumUnit &full_csum,
-                                     ordered_map<const Phv::Register *, unsigned> &pov) {
+void write_jbay_full_checksum_config(
+    CSUM &csum, ENTRIES &phv_entries, int unit, std::set<int> &visited,
+    std::array<std::map<unsigned, unsigned>, MAX_DEPARSER_CHECKSUM_UNITS> &pov_map,
+    Deparser::FullChecksumUnit &full_csum, ordered_map<const Phv::Register *, unsigned> &pov) {
     for (auto &unit_entry : full_csum.entries) {
         // Same partial checksum unit can be used in multiple full checksum unit.
         // No need to rewrite the checksum entries multiple times for the same unit
@@ -710,7 +710,8 @@ void write_jbay_full_checksum_config(CSUM &csum, ENTRIES &phv_entries, int unit,
         visited.insert(unit_entry.first);
         for (auto val : unit_entry.second) {
             if (val.pov.size() != 1) continue;
-            int povbit = pov_map.at(pov.at(&val.pov.front()->reg) + val.pov.front()->lo);
+            int povbit =
+                pov_map[unit_entry.first].at(pov.at(&val.pov.front()->reg) + val.pov.front()->lo);
             int mask = val.mask;
             int swap = val.swap;
             auto &remap = jbay_phv2cksum[val->reg.deparser_id()];
@@ -728,7 +729,7 @@ void write_jbay_full_checksum_config(CSUM &csum, ENTRIES &phv_entries, int unit,
     int tag_idx = 0;
     for (auto &val : full_csum.clot_entries) {
         if (val.pov.size() != 1) continue;
-        int povbit = pov_map.at(pov.at(&val.pov.front()->reg) + val.pov.front()->lo);
+        int povbit = pov_map[unit].at(pov.at(&val.pov.front()->reg) + val.pov.front()->lo);
         if (tag_idx == 16)
                 error(-1, "Ran out of clot entries in deparser checksum unit %d", unit);
         csum.clot_entry[tag_idx].pov = povbit;
@@ -737,7 +738,7 @@ void write_jbay_full_checksum_config(CSUM &csum, ENTRIES &phv_entries, int unit,
         tag_idx++;
     }
     for (auto &checksum_pov : full_csum.pov) {
-        csum.phv_entry[checksum_pov.first].pov = pov_map.at(
+        csum.phv_entry[checksum_pov.first].pov = pov_map[unit].at(
                        pov.at(&checksum_pov.second->reg) + checksum_pov.second->lo);
         csum.phv_entry[checksum_pov.first].vld = 1;
     }
@@ -826,48 +827,60 @@ template<> void Deparser::write_config(Target::JBay::deparser_regs &regs) {
     for (auto &r : regs.dprsrreg.ho_e)
         write_jbay_constant_config(r.her.h.hdr_xbar_const.value, constants[EGRESS]);
     std::set<int> visited_i;
+    std::array<std::map<unsigned, unsigned>, MAX_DEPARSER_CHECKSUM_UNITS> pov_map_i;
     for (int csum_unit = 0; csum_unit < Target::JBay::DEPARSER_CHECKSUM_UNITS; csum_unit++) {
         unsigned prev_byte = 0;
-        std::map<unsigned, unsigned> pov_map;
         if (full_checksum_unit[INGRESS][csum_unit].clot_entries.empty() &&
             full_checksum_unit[INGRESS][csum_unit].entries.empty())
             continue;
         set_jbay_pov_cfg(regs.dprsrreg.inp.ipp.phv_csum_pov_cfg.csum_pov_cfg[csum_unit],
-                         pov_map, full_checksum_unit[INGRESS][csum_unit], pov[INGRESS],
+                         pov_map_i[csum_unit], full_checksum_unit[INGRESS][csum_unit], pov[INGRESS],
                          csum_unit, &prev_byte);
         if (error_count > 0) break;
+    }
+    for (int csum_unit = 0; csum_unit < Target::JBay::DEPARSER_CHECKSUM_UNITS && error_count == 0;
+         csum_unit++) {
+        if (full_checksum_unit[INGRESS][csum_unit].clot_entries.empty() &&
+            full_checksum_unit[INGRESS][csum_unit].entries.empty())
+            continue;
         regs.dprsrreg.inp.ipp.phv_csum_pov_cfg.thread.thread[csum_unit] = INGRESS;
         write_jbay_full_checksum_config(regs.dprsrreg.inp.icr.csum_engine[csum_unit],
                                         regs.dprsrreg.inp.ipp_m.i_csum.engine,
-                                        csum_unit, visited_i, pov_map,
+                                        csum_unit, visited_i, pov_map_i,
                                         full_checksum_unit[INGRESS][csum_unit],
                                         pov[INGRESS]);
-         write_jbay_full_checksum_invert_config(regs.dprsrreg.inp.icr.scratch,
-                                                regs.dprsrreg.inp.icr.scratch2,
-                                                regs.dprsrreg.inp.ipp.scratch, csum_unit,
-                                                full_checksum_unit[INGRESS][csum_unit]);
+        write_jbay_full_checksum_invert_config(regs.dprsrreg.inp.icr.scratch,
+                                               regs.dprsrreg.inp.icr.scratch2,
+                                               regs.dprsrreg.inp.ipp.scratch, csum_unit,
+                                               full_checksum_unit[INGRESS][csum_unit]);
     }
     std::set<int> visited_e;
+    std::array<std::map<unsigned, unsigned>, MAX_DEPARSER_CHECKSUM_UNITS> pov_map_e;
     for (int csum_unit = 0; csum_unit < Target::JBay::DEPARSER_CHECKSUM_UNITS; csum_unit++) {
-         std::map<unsigned, unsigned> pov_map;
-         unsigned prev_byte = 0;
-         if (full_checksum_unit[EGRESS][csum_unit].clot_entries.empty() &&
-             full_checksum_unit[EGRESS][csum_unit].entries.empty())
+        unsigned prev_byte = 0;
+        if (full_checksum_unit[EGRESS][csum_unit].clot_entries.empty() &&
+            full_checksum_unit[EGRESS][csum_unit].entries.empty())
             continue;
-         set_jbay_pov_cfg(regs.dprsrreg.inp.ipp.phv_csum_pov_cfg.csum_pov_cfg[csum_unit],
-                          pov_map, full_checksum_unit[EGRESS][csum_unit], pov[EGRESS],
-                          csum_unit, &prev_byte);
-          if (error_count > 0) break;
-          regs.dprsrreg.inp.ipp.phv_csum_pov_cfg.thread.thread[csum_unit] = EGRESS;
-          write_jbay_full_checksum_config(regs.dprsrreg.inp.icr.csum_engine[csum_unit],
+        set_jbay_pov_cfg(regs.dprsrreg.inp.ipp.phv_csum_pov_cfg.csum_pov_cfg[csum_unit],
+                         pov_map_e[csum_unit], full_checksum_unit[EGRESS][csum_unit], pov[EGRESS],
+                         csum_unit, &prev_byte);
+        if (error_count > 0) break;
+    }
+    for (int csum_unit = 0; csum_unit < Target::JBay::DEPARSER_CHECKSUM_UNITS && error_count == 0;
+         csum_unit++) {
+        if (full_checksum_unit[EGRESS][csum_unit].clot_entries.empty() &&
+            full_checksum_unit[EGRESS][csum_unit].entries.empty())
+            continue;
+        regs.dprsrreg.inp.ipp.phv_csum_pov_cfg.thread.thread[csum_unit] = EGRESS;
+        write_jbay_full_checksum_config(regs.dprsrreg.inp.icr.csum_engine[csum_unit],
                                         regs.dprsrreg.inp.ipp_m.i_csum.engine,
-                                        csum_unit, visited_e, pov_map,
+                                        csum_unit, visited_e, pov_map_e,
                                         full_checksum_unit[EGRESS][csum_unit],
                                         pov[EGRESS]);
-          write_jbay_full_checksum_invert_config(regs.dprsrreg.inp.icr.scratch,
-                                                 regs.dprsrreg.inp.icr.scratch2,
-                                                 regs.dprsrreg.inp.ipp.scratch, csum_unit,
-                                                 full_checksum_unit[EGRESS][csum_unit]);
+        write_jbay_full_checksum_invert_config(regs.dprsrreg.inp.icr.scratch,
+                                               regs.dprsrreg.inp.icr.scratch2,
+                                               regs.dprsrreg.inp.ipp.scratch, csum_unit,
+                                               full_checksum_unit[EGRESS][csum_unit]);
     }
 
     output_jbay_field_dictionary(lineno[INGRESS], regs.dprsrreg.inp.icr.ingr,

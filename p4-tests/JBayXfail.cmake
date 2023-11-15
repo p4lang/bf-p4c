@@ -415,14 +415,6 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_16/ptf/ONLab_packetio.p4  # WORKS WITH TOFINO1 !!!
 )
 
-if (NOT TEST_ALT_PHV_ALLOC)
-    # P4C-3876 / P4C-3999
-    p4c_add_xfail_reason("tofino2"
-      "AssertionError: Expected packet was not received"
-      extensions/p4_tests/p4_14/ptf/inner_checksum_l4.p4
-    )
-endif()
-
 # Tracked in P4C-3328
 p4c_add_xfail_reason("tofino2"
   "AssertionError: Expected packet was not received on device .*, port .*."
