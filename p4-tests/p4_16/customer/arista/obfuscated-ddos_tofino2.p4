@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_DDOS_TOFINO2=1 -Ibf_arista_switch_ddos_tofino2/includes -I/usr/share/p4c-bleeding/p4include -DTOFINO2=1 -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino2-t2na --o bf_arista_switch_ddos_tofino2 --bf-rt-schema bf_arista_switch_ddos_tofino2/context/bf-rt.json
-// p4c 9.13.0 (SHA: 11c23cb)
+// p4c 9.13.1 (SHA: e558d01)
 
 #include <core.p4>
 #include <tofino2_specs.p4>
@@ -686,6 +686,8 @@ struct Gasport {
 struct Westhoff {
     bit<1> Havana;
     bit<1> Nenana;
+    bit<1> Abbyville;
+    bit<1> Cantwell;
 }
 
 struct Morstein {
@@ -833,6 +835,7 @@ struct Goulds {
     bit<1>   Stilwell;
     bit<1>   LaUnion;
     bit<6>   Cuprum;
+    bit<1>   Rossburg;
     bit<1>   Traverse;
     bit<8>   Hematite;
     bit<1>   Belview;
@@ -1559,6 +1562,17 @@ control Vanoss(inout Almota Virgilina, inout Wyndmoor Dwight, in ingress_intrins
         Luning();
         Potosi();
     }
+    @name(".Rippon") action Rippon() {
+        Dwight.Lookeba.Vergennes = (bit<3>)3w6;
+        Dwight.Circle.Palmhurst = Virgilina.Rienzi.Palmhurst;
+        Dwight.Circle.Comfrey = Virgilina.Rienzi.Comfrey;
+        Dwight.Circle.Clyde = Virgilina.Rienzi.Clyde;
+        Dwight.Circle.Clarion = Virgilina.Rienzi.Clarion;
+        Virgilina.Olmitz.Cisco = Dwight.Circle.Cisco;
+        Mulvane();
+        Luning();
+        Potosi();
+    }
     @name(".Boring") action Boring() {
         Dwight.Lookeba.Vergennes = (bit<3>)3w0;
         Dwight.Basco.Westboro = Virgilina.Ambler[0].Westboro;
@@ -1668,6 +1682,7 @@ control Vanoss(inout Almota Virgilina, inout Wyndmoor Dwight, in ingress_intrins
         actions = {
             Flippen();
             Cadwell();
+            Rippon();
             Micro();
             @defaultonly Lattimore();
         }
@@ -5161,6 +5176,11 @@ control Elliston(inout Almota Virgilina, inout Wyndmoor Dwight, in ingress_intri
     }
 }
 
+control Bruce(inout Almota Virgilina, inout Wyndmoor Dwight, in egress_intrinsic_metadata_t Swifton, in egress_intrinsic_metadata_from_parser_t Neosho, inout egress_intrinsic_metadata_for_deparser_t Islen, inout egress_intrinsic_metadata_for_output_port_t BarNunn) {
+    apply {
+    }
+}
+
 control Neuse(inout Almota Virgilina, inout Wyndmoor Dwight, in ingress_intrinsic_metadata_t Nooksack, in ingress_intrinsic_metadata_from_parser_t RockHill, inout ingress_intrinsic_metadata_for_deparser_t Robstown, inout ingress_intrinsic_metadata_for_tm_t Courtdale) {
     @name(".Fairchild") action Fairchild() {
         {
@@ -5263,6 +5283,7 @@ control Supai(inout Almota Virgilina, inout Wyndmoor Dwight, in ingress_intrinsi
         key = {
             Dwight.Humeston.Darien   : ternary @name("Humeston.Darien") ;
             Dwight.Humeston.SourLake : ternary @name("Humeston.SourLake") ;
+            Dwight.Nooksack.Avondale : ternary @name("Nooksack.Avondale") ;
             Dwight.Longwood.Brookneal: selector @name("Longwood.Brookneal") ;
         }
         actions = {
@@ -5730,6 +5751,7 @@ parser Poteet(packet_in Blakeslee, out Almota Virgilina, out Wyndmoor Dwight, ou
         transition Netarts;
     }
     state Netarts {
+        Dwight.Lookeba.Rossburg = (bit<1>)1w1;
         Blakeslee.extract<Noyes>(Virgilina.Mayflower);
         transition Hartwick;
     }
@@ -5851,9 +5873,17 @@ parser Poteet(packet_in Blakeslee, out Almota Virgilina, out Wyndmoor Dwight, ou
         Dwight.Circle.Bennet = (bit<3>)3w4;
         transition Colburn;
     }
+    state Sawpit {
+        Dwight.Circle.Cisco = 16w0x800;
+        Dwight.Circle.Bennet = (bit<3>)3w5;
+        transition select((Blakeslee.lookahead<bit<8>>())[7:0]) {
+            8w0x45 &&& 8w0xff: Motley;
+            default: Roseville;
+        }
+    }
     state Seaford {
         Dwight.Circle.Cisco = 16w0x86dd;
-        Dwight.Circle.Bennet = (bit<3>)3w4;
+        Dwight.Circle.Bennet = (bit<3>)3w5;
         transition Colburn;
     }
     state Blanchard {
@@ -5915,7 +5945,7 @@ parser Poteet(packet_in Blakeslee, out Almota Virgilina, out Wyndmoor Dwight, ou
             8w58: Kirkwood;
             8w17: Munich;
             8w6: Wegdahl;
-            8w4: Gonzalez;
+            8w4: Sawpit;
             8w41: Seaford;
             default: accept;
         }
@@ -6392,7 +6422,7 @@ control Weslaco(inout Almota Virgilina, inout Wyndmoor Dwight, in ingress_intrin
 
                         (3w5, true, false) : Keenes();
 
-                        (3w5, false, true) : Colson();
+                        (3w6, false, true) : Colson();
 
                         (3w1, true, false) : FordCity();
 
@@ -6794,6 +6824,8 @@ control Coalton(inout Almota Virgilina, inout Wyndmoor Dwight, in egress_intrins
         requires_versioning = false;
         const default_action = Herald();
         const entries = {
+                        (false, default, default, default, default, default, default, default, default, 3w2, default) : Herald();
+
                         (false, default, default, default, default, default, true, default, default, default, default) : Herald();
 
                         (false, default, default, default, true, default, default, default, default, default, default) : Herald();
@@ -6875,6 +6907,7 @@ control Coalton(inout Almota Virgilina, inout Wyndmoor Dwight, in egress_intrins
         }
 
     }
+    @name(".Hercules") Bruce() Hercules;
     @name(".Elsinore") Cruso() Elsinore;
     @name(".Caguas") Kelliher() Caguas;
     @name(".Duncombe") Portales() Duncombe;
@@ -6960,6 +6993,7 @@ control Coalton(inout Almota Virgilina, inout Wyndmoor Dwight, in egress_intrins
                 China.apply(Virgilina, Dwight, Swifton, Neosho, Islen, BarNunn);
             }
             Alamance.apply(Virgilina, Dwight, Swifton, Neosho, Islen, BarNunn);
+            Hercules.apply(Virgilina, Dwight, Swifton, Neosho, Islen, BarNunn);
         } else {
             if (Virgilina.Lemont.isValid() == false) {
                 Mellott.apply(Virgilina, Dwight, Swifton, Neosho, Islen, BarNunn);

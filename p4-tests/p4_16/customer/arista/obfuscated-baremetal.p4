@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_BAREMETAL=1 -Ibf_arista_switch_baremetal/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino-tna --o bf_arista_switch_baremetal --bf-rt-schema bf_arista_switch_baremetal/context/bf-rt.json
-// p4c 9.13.0 (SHA: 11c23cb)
+// p4c 9.13.1 (SHA: e558d01)
 
 #include <core.p4>
 #include <tofino1_specs.p4>
@@ -605,6 +605,8 @@ struct Soledad {
 struct Dyess {
     bit<1> Westhoff;
     bit<1> Havana;
+    bit<1> Caliente;
+    bit<1> Padroni;
 }
 
 struct Nenana {
@@ -663,7 +665,7 @@ struct Nenana {
     bit<12> McCammon;
     bit<16> Lapoint;
     bit<16> Wamego;
-    bit<1>  Caliente;
+    bit<1>  Ashley;
     bit<16> Cisco;
     bit<8>  Higginson;
     bit<8>  Brainard;
@@ -754,6 +756,7 @@ struct RedElm {
     bit<1>  Arvada;
     bit<1>  Kalkaska;
     bit<6>  Newfolden;
+    bit<1>  Grottoes;
     bit<1>  Foster;
     bit<8>  Fristoe;
     bit<1>  Candle;
@@ -1175,10 +1178,12 @@ parser Dwight(packet_in RockHill, out Frederika Westoak, out WebbCity Lefor, out
         transition Ackerly;
     }
     state Ackerly {
+        Lefor.Picabo.Grottoes = (bit<1>)1w1;
         RockHill.extract<Eldred>(Westoak.Flaherty);
         transition Noyack;
     }
     state Campo {
+        Lefor.Picabo.Grottoes = (bit<1>)1w1;
         RockHill.extract<Montross>(Westoak.Sunbury);
         transition select(Westoak.Sunbury.Glenmora) {
             8w0x4: Noyack;
@@ -1337,9 +1342,17 @@ parser Dwight(packet_in RockHill, out Frederika Westoak, out WebbCity Lefor, out
         Lefor.Ekwok.Bennet = (bit<3>)3w4;
         transition Hester;
     }
+    state Dresser {
+        Lefor.Ekwok.Connell = 16w0x800;
+        Lefor.Ekwok.Bennet = (bit<3>)3w5;
+        transition select((RockHill.lookahead<bit<8>>())[7:0]) {
+            8w0x45 &&& 8w0xff: Nason;
+            default: Hemlock;
+        }
+    }
     state Cheyenne {
         Lefor.Ekwok.Connell = 16w0x86dd;
-        Lefor.Ekwok.Bennet = (bit<3>)3w4;
+        Lefor.Ekwok.Bennet = (bit<3>)3w5;
         transition Hester;
     }
     state Moosic {
@@ -1401,7 +1414,7 @@ parser Dwight(packet_in RockHill, out Frederika Westoak, out WebbCity Lefor, out
             8w58: Goodlett;
             8w17: BigPoint;
             8w6: Vanoss;
-            8w4: Ossining;
+            8w4: Dresser;
             8w41: Cheyenne;
             default: accept;
         }
@@ -2877,6 +2890,17 @@ control Wakefield(inout Frederika Westoak, inout WebbCity Lefor, in ingress_intr
         Chilson();
         Miltona();
     }
+    @name(".Dalton") action Dalton() {
+        Lefor.Picabo.Townville = (bit<3>)3w6;
+        Lefor.Ekwok.Glendevey = Westoak.Arapahoe.Glendevey;
+        Lefor.Ekwok.Littleton = Westoak.Arapahoe.Littleton;
+        Lefor.Ekwok.Lathrop = Westoak.Arapahoe.Lathrop;
+        Lefor.Ekwok.Clyde = Westoak.Arapahoe.Clyde;
+        Westoak.Callao.Connell = Lefor.Ekwok.Connell;
+        Wakeman();
+        Chilson();
+        Miltona();
+    }
     @name(".BigFork") action BigFork() {
         Lefor.Picabo.Townville = (bit<3>)3w7;
         Lefor.Millstone.Edwards = (bit<1>)1w1;
@@ -2996,6 +3020,7 @@ control Wakefield(inout Frederika Westoak, inout WebbCity Lefor, in ingress_intr
         actions = {
             Reynolds();
             Ironia();
+            Dalton();
             BigFork();
             Bammel();
             @defaultonly Mendoza();
@@ -6075,6 +6100,11 @@ control Munich(inout Frederika Westoak, inout WebbCity Lefor, in egress_intrinsi
     }
 }
 
+control Hatteras(inout Frederika Westoak, inout WebbCity Lefor, in egress_intrinsic_metadata_t Biggers, in egress_intrinsic_metadata_from_parser_t Waumandee, inout egress_intrinsic_metadata_for_deparser_t Nowlin, inout egress_intrinsic_metadata_for_output_port_t Sully) {
+    apply {
+    }
+}
+
 control Nuevo(inout Frederika Westoak, inout WebbCity Lefor, in ingress_intrinsic_metadata_t Milano, in ingress_intrinsic_metadata_from_parser_t Starkey, inout ingress_intrinsic_metadata_for_deparser_t Volens, inout ingress_intrinsic_metadata_for_tm_t Dacono) {
     @name(".Warsaw") action Warsaw() {
         {
@@ -6236,7 +6266,7 @@ control Fentress(inout Frederika Westoak, inout WebbCity Lefor, in egress_intrin
 
                         (3w5, true, false) : Schofield();
 
-                        (3w5, false, true) : Woodville();
+                        (3w6, false, true) : Woodville();
 
                         (3w1, true, false) : Stanwood();
 
@@ -6579,6 +6609,7 @@ control Whitetail(inout Frederika Westoak, inout WebbCity Lefor, in egress_intri
         size = 512;
         default_action = NoAction();
     }
+    @name(".LaCueva") Hatteras() LaCueva;
     @name(".Ludell") Kirkwood() Ludell;
     @name(".Petroleum") Tillicum() Petroleum;
     @name(".Frederic") RedBay() Frederic;
@@ -6652,6 +6683,7 @@ control Whitetail(inout Frederika Westoak, inout WebbCity Lefor, in egress_intri
                 Camden.apply(Westoak, Lefor, Biggers, Waumandee, Nowlin, Sully);
             }
             Qulin.apply(Westoak, Lefor, Biggers, Waumandee, Nowlin, Sully);
+            LaCueva.apply(Westoak, Lefor, Biggers, Waumandee, Nowlin, Sully);
         } else {
             if (Westoak.Saugatuck.isValid() == false) {
                 Spindale.apply(Westoak, Lefor, Biggers, Waumandee, Nowlin, Sully);

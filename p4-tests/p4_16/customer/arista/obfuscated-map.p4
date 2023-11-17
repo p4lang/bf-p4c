@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_MAP=1 -Ibf_arista_switch_map/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino-tna --o bf_arista_switch_map --bf-rt-schema bf_arista_switch_map/context/bf-rt.json
-// p4c 9.13.0 (SHA: 11c23cb)
+// p4c 9.13.1 (SHA: e558d01)
 
 #include <core.p4>
 #include <tofino1_specs.p4>
@@ -553,6 +553,8 @@ struct Chatmoss {
 struct Havana {
     bit<1> Nenana;
     bit<1> Morstein;
+    bit<1> Columbus;
+    bit<1> Elmsford;
 }
 
 struct Waubun {
@@ -683,6 +685,7 @@ struct Pathfork {
     bit<1>  Corydon;
     bit<1>  Heuvelton;
     bit<6>  Chavies;
+    bit<1>  Baidland;
     bit<1>  Lapoint;
     bit<8>  Hiland;
     bit<1>  Miranda;
@@ -1118,10 +1121,12 @@ parser Lefor(packet_in Starkey, out Lemont Lindy, out Wyndmoor Brady, out ingres
         transition Levasy;
     }
     state Levasy {
+        Brady.Lookeba.Baidland = (bit<1>)1w1;
         Starkey.extract<Weinert>(Lindy.Funston);
         transition Indios;
     }
     state Crown {
+        Brady.Lookeba.Baidland = (bit<1>)1w1;
         Starkey.extract<Altus>(Lindy.Mayflower);
         transition select(Lindy.Mayflower.Merrill) {
             8w0x3: Indios;
@@ -4537,17 +4542,7 @@ control Perryton(inout Lemont Lindy, inout Wyndmoor Brady, in ingress_intrinsic_
         Lindy.Callao.Connell = 16w0x800;
         Lindy.Wagener.Garcia = (bit<1>)1w0;
     }
-    @name(".Duster") action Duster() {
-        Canalou();
-        Lindy.Callao.Connell = 16w0x800;
-        Lindy.Wagener.Garcia = (bit<1>)1w0;
-    }
     @name(".BigBow") action BigBow() {
-        Canalou();
-        Lindy.Callao.Connell = 16w0x800;
-        Lindy.Wagener.Garcia = (bit<1>)1w1;
-    }
-    @name(".Hooks") action Hooks() {
         Canalou();
         Lindy.Callao.Connell = 16w0x800;
         Lindy.Wagener.Garcia = (bit<1>)1w1;
@@ -4565,27 +4560,19 @@ control Perryton(inout Lemont Lindy, inout Wyndmoor Brady, in ingress_intrinsic_
         Hughson();
         Lindy.Callao.Connell = 16w0x86dd;
     }
-    @name(".DeKalb") action DeKalb() {
-        Hughson();
-        Lindy.Callao.Connell = 16w0x86dd;
-    }
     @disable_atomic_modify(1) @name(".Anthony") table Anthony {
         actions = {
             Engle();
-            Duster();
             BigBow();
-            Hooks();
             Sultana();
-            DeKalb();
             @defaultonly NoAction();
         }
         key = {
             Brady.Neponset.Belmore  : exact @name("Neponset.Belmore") ;
             Brady.Neponset.Yerington: exact @name("Neponset.Yerington") ;
-            Lindy.Sespe[0].isValid(): exact @name("Sespe[0]") ;
             Lindy.Monrovia.Vinemont : ternary @name("Monrovia.Vinemont") ;
         }
-        size = 22;
+        size = 11;
         requires_versioning = false;
         const default_action = NoAction();
     }
@@ -4604,46 +4591,46 @@ control Waiehu(inout Lemont Lindy, inout Wyndmoor Brady, in ingress_intrinsic_me
         Brady.Neponset.Belmore = (bit<1>)1w0;
         Brady.Neponset.Millhaven = (bit<1>)1w1;
     }
-    @name(".Columbus") action Columbus(bit<14> Lamona) {
+    @name(".LoneJack") action LoneJack(bit<14> Lamona) {
         Brady.Knights.Lamona = Lamona;
     }
-    @name(".Elmsford") action Elmsford(bit<14> Andrade) {
+    @name(".LaMonte") action LaMonte(bit<14> Andrade) {
         Brady.Knights.Lamona = Andrade;
         Brady.Knights.Lewiston = (bit<2>)2w1;
     }
-    @name(".Baidland") action Baidland(bit<14> Lamona, bit<8> Baytown) {
+    @name(".Roxobel") action Roxobel(bit<14> Lamona, bit<8> Baytown) {
         Stamford(Baytown);
-        Columbus(Lamona);
+        LoneJack(Lamona);
         Lindy.Monrovia.setInvalid();
     }
-    @name(".LoneJack") action LoneJack(bit<14> Lamona, bit<8> Baytown) {
-        Baidland(Lamona, Baytown);
+    @name(".Ardara") action Ardara(bit<14> Lamona, bit<8> Baytown) {
+        Roxobel(Lamona, Baytown);
     }
     @name(".Tampa") action Tampa(bit<14> Lamona, bit<8> Baytown) {
-        Baidland(Lamona, Baytown);
+        Roxobel(Lamona, Baytown);
         Lindy.Wagener.Armona = Lindy.Wagener.Armona + 8w1;
     }
     @name(".Pierson") action Pierson(bit<14> Andrade, bit<8> Baytown) {
         Stamford(Baytown);
-        Elmsford(Andrade);
+        LaMonte(Andrade);
         Lindy.Monrovia.setInvalid();
         Lindy.Wagener.Armona = Lindy.Wagener.Armona + 8w1;
     }
-    @name(".LaMonte") action LaMonte(bit<14> Lamona, bit<8> Baytown) {
+    @name(".Herod") action Herod(bit<14> Lamona, bit<8> Baytown) {
         Stamford(Baytown);
-        Columbus(Lamona);
+        LoneJack(Lamona);
         Lindy.Wagener.setInvalid();
     }
-    @name(".Roxobel") action Roxobel(bit<14> Lamona, bit<8> Baytown) {
-        LaMonte(Lamona, Baytown);
+    @name(".Rixford") action Rixford(bit<14> Lamona, bit<8> Baytown) {
+        Herod(Lamona, Baytown);
     }
     @name(".Piedmont") action Piedmont(bit<14> Lamona, bit<8> Baytown) {
-        LaMonte(Lamona, Baytown);
+        Herod(Lamona, Baytown);
         Lindy.Monrovia.Parkville = Lindy.Monrovia.Parkville + 8w1;
     }
     @name(".Camino") action Camino(bit<14> Andrade, bit<8> Baytown) {
         Stamford(Baytown);
-        Elmsford(Andrade);
+        LaMonte(Andrade);
         Lindy.Wagener.setInvalid();
         Lindy.Monrovia.Parkville = Lindy.Monrovia.Parkville + 8w1;
     }
@@ -4658,10 +4645,10 @@ control Waiehu(inout Lemont Lindy, inout Wyndmoor Brady, in ingress_intrinsic_me
     }
     @disable_atomic_modify(1) @name(".Marvin") table Marvin {
         actions = {
-            LoneJack();
+            Ardara();
             Tampa();
             Pierson();
-            Roxobel();
+            Rixford();
             Piedmont();
             Camino();
             Dollar();
@@ -4794,6 +4781,11 @@ control Finlayson(inout Lemont Lindy, inout Wyndmoor Brady, in egress_intrinsic_
 }
 
 control Burnett(inout Lemont Lindy, inout Wyndmoor Brady, in egress_intrinsic_metadata_t PeaRidge, in egress_intrinsic_metadata_from_parser_t Centre, inout egress_intrinsic_metadata_for_deparser_t Pocopson, inout egress_intrinsic_metadata_for_output_port_t Barnwell) {
+    apply {
+    }
+}
+
+control Crumstown(inout Lemont Lindy, inout Wyndmoor Brady, in egress_intrinsic_metadata_t PeaRidge, in egress_intrinsic_metadata_from_parser_t Centre, inout egress_intrinsic_metadata_for_deparser_t Pocopson, inout egress_intrinsic_metadata_for_output_port_t Barnwell) {
     apply {
     }
 }
@@ -5248,6 +5240,7 @@ control Anniston(inout Lemont Lindy, inout Wyndmoor Brady, in egress_intrinsic_m
         size = 512;
         default_action = NoAction();
     }
+    @name(".LaPointe") Crumstown() LaPointe;
     @name(".Rawson") Finlayson() Rawson;
     @name(".Oakford") Clermont() Oakford;
     @name(".Alberta") Clinchco() Alberta;
@@ -5333,6 +5326,7 @@ control Anniston(inout Lemont Lindy, inout Wyndmoor Brady, in egress_intrinsic_m
             if (Brady.Lookeba.McGrady != 3w2) {
                 Alvwood.apply(Lindy, Brady, PeaRidge, Centre, Pocopson, Barnwell);
             }
+            LaPointe.apply(Lindy, Brady, PeaRidge, Centre, Pocopson, Barnwell);
         } else {
             if (Lindy.Hookdale.isValid() == false) {
                 Blakeslee.apply(Lindy, Brady, PeaRidge, Centre, Pocopson, Barnwell);

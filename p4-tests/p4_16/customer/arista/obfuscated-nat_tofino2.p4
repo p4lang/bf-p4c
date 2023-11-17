@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_NAT_TOFINO2=1 -Ibf_arista_switch_nat_tofino2/includes -I/usr/share/p4c-bleeding/p4include -DTOFINO2=1 -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino2-t2na --o bf_arista_switch_nat_tofino2 --bf-rt-schema bf_arista_switch_nat_tofino2/context/bf-rt.json
-// p4c 9.13.0 (SHA: 11c23cb)
+// p4c 9.13.1 (SHA: e558d01)
 
 #include <core.p4>
 #include <tofino2_specs.p4>
@@ -694,6 +694,8 @@ struct Lovewell {
 struct Wetonka {
     bit<1> Lecompte;
     bit<1> Lenexa;
+    bit<1> Dalton;
+    bit<1> Hatteras;
 }
 
 struct Rudolph {
@@ -750,7 +752,7 @@ struct Rudolph {
     bit<12>   Oilmont;
     bit<16>   Tornillo;
     bit<16>   Satolah;
-    bit<1>    Dalton;
+    bit<1>    LaCueva;
     bit<16>   RedElm;
     bit<16>   Renick;
     bit<16>   Pajaros;
@@ -865,6 +867,7 @@ struct Lewiston {
     bit<1>   Gotham;
     bit<1>   Osyka;
     bit<6>   Brookneal;
+    bit<1>   Bonner;
     bit<1>   Cuprum;
     bit<8>   Wellton;
     bit<1>   Hoven;
@@ -1824,6 +1827,17 @@ control Kalaloch(inout Tenstrike Cairo, inout Rochert Exeter, in ingress_intrins
         Maxwelton();
         Papeton();
     }
+    @name(".Belfast") action Belfast() {
+        Exeter.Emden.Salix = (bit<3>)3w6;
+        Exeter.Geistown.Commack = Cairo.Potosi.Commack;
+        Exeter.Geistown.Bonney = Cairo.Potosi.Bonney;
+        Exeter.Geistown.Higginson = Cairo.Potosi.Higginson;
+        Exeter.Geistown.Oriskany = Cairo.Potosi.Oriskany;
+        Cairo.Flippen.Exton = Exeter.Geistown.Exton;
+        Yatesboro();
+        Maxwelton();
+        Papeton();
+    }
     @name(".Faulkton") action Faulkton() {
         Exeter.Emden.Salix = (bit<3>)3w0;
         Exeter.Ravinia.Mystic = Cairo.Mulvane[0].Mystic;
@@ -1913,6 +1927,7 @@ control Kalaloch(inout Tenstrike Cairo, inout Rochert Exeter, in ingress_intrins
     @disable_atomic_modify(1) @name(".Heaton") table Heaton {
         actions = {
             Ihlen();
+            Belfast();
             Twinsburg();
             @defaultonly Redvale();
         }
@@ -2698,7 +2713,7 @@ control Lignite(inout Tenstrike Cairo, inout Rochert Exeter, in egress_intrinsic
         Cairo.Potosi.Commack = Exeter.Emden.Commack;
         Cairo.Potosi.Bonney = Exeter.Emden.Bonney;
     }
-    @name(".Hatteras") action Hatteras(bit<2> Armona, bit<16> Norcatur, bit<4> Burrel, bit<12> Talbert, bit<12> Madawaska) {
+    @name(".SwissAlp") action SwissAlp(bit<2> Armona, bit<16> Norcatur, bit<4> Burrel, bit<12> Talbert, bit<12> Madawaska) {
         Clarkdale(Armona, Norcatur, Burrel, Talbert);
         Cairo.Mattapex.Exton[11:0] = Madawaska;
         Cairo.Potosi.Commack = Exeter.Emden.Commack;
@@ -2710,7 +2725,7 @@ control Lignite(inout Tenstrike Cairo, inout Rochert Exeter, in egress_intrinsic
         Cairo.Potosi.Commack = Exeter.Emden.Commack;
         Cairo.Potosi.Bonney = Exeter.Emden.Bonney;
     }
-    @name(".LaCueva") action LaCueva(bit<2> Armona, bit<16> Norcatur, bit<4> Burrel, bit<12> Talbert) {
+    @name(".Woodland") action Woodland(bit<2> Armona, bit<16> Norcatur, bit<4> Burrel, bit<12> Talbert) {
         Clarkdale(Armona, Norcatur, Burrel, Talbert);
         Cairo.Mattapex.Exton[11:0] = Exeter.Emden.Edwards;
         Cairo.Potosi.Commack = Exeter.Emden.Commack;
@@ -2723,9 +2738,9 @@ control Lignite(inout Tenstrike Cairo, inout Rochert Exeter, in egress_intrinsic
     @disable_atomic_modify(1) @name(".Romeo") table Romeo {
         actions = {
             Brunson();
-            Hatteras();
+            SwissAlp();
             Catlin();
-            LaCueva();
+            Woodland();
             Antoine();
         }
         key = {
@@ -4550,6 +4565,11 @@ control Varna(inout Tenstrike Cairo, inout Rochert Exeter, in egress_intrinsic_m
     }
 }
 
+control Roxboro(inout Tenstrike Cairo, inout Rochert Exeter, in egress_intrinsic_metadata_t Tularosa, in egress_intrinsic_metadata_from_parser_t Leoma, inout egress_intrinsic_metadata_for_deparser_t Aiken, inout egress_intrinsic_metadata_for_output_port_t Anawalt) {
+    apply {
+    }
+}
+
 control Albin(inout Tenstrike Cairo, inout Rochert Exeter, in ingress_intrinsic_metadata_t Coryville, in ingress_intrinsic_metadata_from_parser_t Yulee, inout ingress_intrinsic_metadata_for_deparser_t Oconee, inout ingress_intrinsic_metadata_for_tm_t Bellamy) {
     @name(".Folcroft") action Folcroft() {
         {
@@ -4651,6 +4671,7 @@ control Moapa(inout Tenstrike Cairo, inout Rochert Exeter, in ingress_intrinsic_
         key = {
             Exeter.Starkey.Dateland: ternary @name("Starkey.Dateland") ;
             Exeter.Starkey.Emida   : ternary @name("Starkey.Emida") ;
+            Exeter.Coryville.Vichy : ternary @name("Coryville.Vichy") ;
             Exeter.Olcott.Lindsborg: selector @name("Olcott.Lindsborg") ;
         }
         actions = {
@@ -4709,7 +4730,7 @@ control Hookstown(inout Tenstrike Cairo, inout Rochert Exeter, in ingress_intrin
     @name(".Munday") action Munday(bit<32> Chugwater, bit<16> Norcatur, bit<32> LaFayette) {
         Carrizozo(Chugwater, LaFayette);
         Exeter.Geistown.Satolah = Norcatur;
-        Exeter.Geistown.Dalton = (bit<1>)1w1;
+        Exeter.Geistown.LaCueva = (bit<1>)1w1;
     }
     @idletime_precision(1) @disable_atomic_modify(1) @name(".Hecker") table Hecker {
         actions = {
@@ -4751,7 +4772,7 @@ control Holcut(inout Tenstrike Cairo, inout Rochert Exeter, in ingress_intrinsic
     @name(".Munday") action Munday(bit<32> Chugwater, bit<16> Norcatur, bit<32> LaFayette) {
         Carrizozo(Chugwater, LaFayette);
         Exeter.Geistown.Satolah = Norcatur;
-        Exeter.Geistown.Dalton = (bit<1>)1w1;
+        Exeter.Geistown.LaCueva = (bit<1>)1w1;
     }
     @idletime_precision(1) @disable_atomic_modify(1) @name(".FarrWest") table FarrWest {
         actions = {
@@ -4980,7 +5001,7 @@ control McCartys(inout Tenstrike Cairo, inout Rochert Exeter, in ingress_intrins
         idle_timeout = true;
     }
     apply {
-        if (Exeter.Starkey.Emida == 1w1 && Exeter.Starkey.Doddridge & 4w0x1 == 4w0x1 && Exeter.Geistown.Rockham == 3w0x1 && Bellamy.copy_to_cpu == 1w0) {
+        if (Exeter.Starkey.Emida == 1w1 && Exeter.Starkey.Doddridge & 4w0x1 == 4w0x1 && Exeter.Geistown.Rockham == 3w0x1 && Bellamy.copy_to_cpu == 1w0 && Exeter.Coryville.Vichy != 9w3) {
             if (Exeter.Geistown.Staunton == 1w0 || Exeter.Geistown.Lugert == 1w0) {
                 switch (NewRoads.apply().action_run) {
                     Andrade: {
@@ -5034,6 +5055,7 @@ parser Benitez(packet_in Tusculum, out Tenstrike Cairo, out Rochert Exeter, out 
         transition Nashua;
     }
     state Nashua {
+        Exeter.Emden.Bonner = (bit<1>)1w1;
         Tusculum.extract<Westboro>(Cairo.Mattapex);
         transition Skokomish;
     }
@@ -5155,9 +5177,17 @@ parser Benitez(packet_in Tusculum, out Tenstrike Cairo, out Rochert Exeter, out 
         Exeter.Geistown.McCammon = (bit<3>)3w4;
         transition BigBay;
     }
+    state Timken {
+        Exeter.Geistown.Exton = 16w0x800;
+        Exeter.Geistown.McCammon = (bit<3>)3w5;
+        transition select((Tusculum.lookahead<bit<8>>())[7:0]) {
+            8w0x45 &&& 8w0xff: Rawson;
+            default: Switzer;
+        }
+    }
     state Roseville {
         Exeter.Geistown.Exton = 16w0x86dd;
-        Exeter.Geistown.McCammon = (bit<3>)3w4;
+        Exeter.Geistown.McCammon = (bit<3>)3w5;
         transition BigBay;
     }
     state Parmele {
@@ -5219,7 +5249,7 @@ parser Benitez(packet_in Tusculum, out Tenstrike Cairo, out Rochert Exeter, out 
             8w58: Flats;
             8w17: Kenyon;
             8w6: Blakeslee;
-            8w4: Easley;
+            8w4: Timken;
             8w41: Roseville;
             default: accept;
         }
@@ -5584,7 +5614,7 @@ control Belcher(inout Tenstrike Cairo, inout Rochert Exeter, in ingress_intrinsi
     @name(".Munday") action Munday(bit<32> Chugwater, bit<16> Norcatur, bit<32> LaFayette) {
         Carrizozo(Chugwater, LaFayette);
         Exeter.Geistown.Satolah = Norcatur;
-        Exeter.Geistown.Dalton = (bit<1>)1w1;
+        Exeter.Geistown.LaCueva = (bit<1>)1w1;
     }
     @name(".Bridgton") action Bridgton(bit<32> Chugwater, bit<32> LaFayette, bit<32> Barnhill) {
         Carrizozo(Chugwater, LaFayette);
@@ -5823,7 +5853,7 @@ control Belcher(inout Tenstrike Cairo, inout Rochert Exeter, in ingress_intrinsi
 
                         (3w5, true, false) : Panola();
 
-                        (3w5, false, true) : Compton();
+                        (3w6, false, true) : Compton();
 
         }
 
@@ -6375,6 +6405,8 @@ control Armstrong(inout Tenstrike Cairo, inout Rochert Exeter, in egress_intrins
         requires_versioning = false;
         const default_action = Waimalu();
         const entries = {
+                        (false, default, default, default, default, default, default, 3w2, default) : Waimalu();
+
                         (false, default, default, default, true, default, default, default, default) : Waimalu();
 
                         (true, default, default, default, false, default, default, 3w1, 16w0 .. 16w108) : Quamba();
@@ -6452,6 +6484,7 @@ control Armstrong(inout Tenstrike Cairo, inout Rochert Exeter, in egress_intrins
         }
 
     }
+    @name(".Lamboglia") Roxboro() Lamboglia;
     @name(".Hartford") LaHoma() Hartford;
     @name(".Halstead") Capitola() Halstead;
     @name(".Draketown") Wright() Draketown;
@@ -6533,6 +6566,7 @@ control Armstrong(inout Tenstrike Cairo, inout Rochert Exeter, in egress_intrins
             if (Exeter.Emden.Salix != 3w2) {
                 Oketo.apply(Cairo, Exeter, Tularosa, Leoma, Aiken, Anawalt);
             }
+            Lamboglia.apply(Cairo, Exeter, Tularosa, Leoma, Aiken, Anawalt);
         } else {
             if (Cairo.Castle.isValid() == false) {
                 Maybee.apply(Cairo, Exeter, Tularosa, Leoma, Aiken, Anawalt);
@@ -6803,6 +6837,8 @@ control Kulpmont(inout Tenstrike Cairo, inout Rochert Exeter, in ingress_intrins
         Exeter.Emden.Edwards = Edwards;
         Exeter.Emden.Sonoma = (bit<1>)1w1;
         Exeter.Geistown.Lugert = (bit<1>)1w0;
+        Exeter.Geistown.Staunton = (bit<1>)1w0;
+        Exeter.Emden.Komatke = (bit<10>)10w0;
     }
     @disable_atomic_modify(1) @name(".Cistern") table Cistern {
         actions = {
@@ -7049,7 +7085,7 @@ control Kulpmont(inout Tenstrike Cairo, inout Rochert Exeter, in ingress_intrins
         Vinita.apply();
         Laramie.apply(Cairo, Exeter, Coryville, Yulee, Oconee, Bellamy);
         Fentress.apply(Cairo, Exeter, Coryville, Yulee, Oconee, Bellamy);
-        if (Exeter.Starkey.Emida == 1w1 && Exeter.Starkey.Doddridge & 4w0x1 == 4w0x1 && Exeter.Geistown.Rockham == 3w0x1 && Bellamy.copy_to_cpu == 1w0 && Cairo.Mattapex.isValid() == false) {
+        if (Exeter.Starkey.Emida == 1w1 && Exeter.Starkey.Doddridge & 4w0x1 == 4w0x1 && Exeter.Geistown.Rockham == 3w0x1 && Bellamy.copy_to_cpu == 1w0 && Exeter.Coryville.Vichy != 9w3) {
             if (Exeter.Geistown.Staunton == 1w0 || Exeter.Geistown.Lugert == 1w0) {
                 if ((Exeter.Geistown.Staunton == 1w1 || Exeter.Geistown.Lugert == 1w1) && Cairo.Lattimore.isValid() == true && Exeter.Geistown.LaConner == 1w1 || Exeter.Geistown.Staunton == 1w0 && Exeter.Geistown.Lugert == 1w0) {
                     switch (Newkirk.apply().action_run) {

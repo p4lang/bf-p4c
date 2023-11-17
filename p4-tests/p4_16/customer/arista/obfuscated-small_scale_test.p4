@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_SMALL_SCALE_TEST=1 -Ibf_arista_switch_small_scale_test/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino-tna --o bf_arista_switch_small_scale_test --bf-rt-schema bf_arista_switch_small_scale_test/context/bf-rt.json
-// p4c 9.13.0 (SHA: 11c23cb)
+// p4c 9.13.1 (SHA: e558d01)
 
 #include <core.p4>
 #include <tofino1_specs.p4>
@@ -547,6 +547,8 @@ struct Guadalupe {
 struct NewMelle {
     bit<1> Heppner;
     bit<1> Wartburg;
+    bit<1> Coalton;
+    bit<1> Cavalier;
 }
 
 struct Lakehills {
@@ -685,6 +687,7 @@ struct Sardinia {
     bit<1>  Heuvelton;
     bit<1>  Chavies;
     bit<6>  Miranda;
+    bit<1>  Shawville;
     bit<1>  Manilla;
     bit<8>  Tilton;
     bit<1>  Peebles;
@@ -1096,6 +1099,7 @@ parser Harding(packet_in Nephi, out Milano Olmitz, out Sequim Baker, out ingress
         transition Brady;
     }
     state Brady {
+        Baker.Earling.Shawville = (bit<1>)1w1;
         Nephi.extract<Algodones>(Olmitz.Biggers);
         transition Emden;
     }
@@ -5220,6 +5224,11 @@ control LaHoma(inout Milano Olmitz, inout Sequim Baker, in egress_intrinsic_meta
     }
 }
 
+control Kinsley(inout Milano Olmitz, inout Sequim Baker, in egress_intrinsic_metadata_t Humeston, in egress_intrinsic_metadata_from_parser_t Basye, inout egress_intrinsic_metadata_for_deparser_t Woolwine, inout egress_intrinsic_metadata_for_output_port_t Agawam) {
+    apply {
+    }
+}
+
 control Varna(inout Milano Olmitz, inout Sequim Baker, in ingress_intrinsic_metadata_t Yorkshire, in ingress_intrinsic_metadata_from_parser_t Glenoma, inout ingress_intrinsic_metadata_for_deparser_t Thurmond, inout ingress_intrinsic_metadata_for_tm_t Knights) {
     apply {
     }
@@ -5674,6 +5683,7 @@ control Powhatan(inout Milano Olmitz, inout Sequim Baker, in egress_intrinsic_me
         size = 512;
         default_action = NoAction();
     }
+    @name(".Ludell") Kinsley() Ludell;
     @name(".Motley") Corder() Motley;
     @name(".Monteview") Caspian() Monteview;
     @name(".Wildell") Kerby() Wildell;
@@ -5745,6 +5755,7 @@ control Powhatan(inout Milano Olmitz, inout Sequim Baker, in egress_intrinsic_me
                 Panola.apply(Olmitz, Baker, Humeston, Basye, Woolwine, Agawam);
             }
             Murdock.apply(Olmitz, Baker, Humeston, Basye, Woolwine, Agawam);
+            Ludell.apply(Olmitz, Baker, Humeston, Basye, Woolwine, Agawam);
         } else {
             if (Olmitz.Dacono.isValid() == false) {
                 Stratton.apply(Olmitz, Baker, Humeston, Basye, Woolwine, Agawam);

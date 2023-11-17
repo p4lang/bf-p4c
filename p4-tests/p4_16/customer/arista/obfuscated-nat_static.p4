@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_NAT_STATIC=1 -Ibf_arista_switch_nat_static/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'   -Xp4c='--traffic-limit 95 --excludeBackendPasses=ResetInvalidatedChecksumHeaders' --target tofino-tna --o bf_arista_switch_nat_static --bf-rt-schema bf_arista_switch_nat_static/context/bf-rt.json
-// p4c 9.13.0 (SHA: 11c23cb)
+// p4c 9.13.1 (SHA: e558d01)
 
 #include <core.p4>
 #include <tofino1_specs.p4>
@@ -587,6 +587,8 @@ struct Gasport {
 struct Westhoff {
     bit<1> Havana;
     bit<1> Nenana;
+    bit<1> Hercules;
+    bit<1> Hanamaulu;
 }
 
 struct Morstein {
@@ -643,7 +645,7 @@ struct Morstein {
     bit<12> Ipava;
     bit<16> McCammon;
     bit<16> Lapoint;
-    bit<1>  Hercules;
+    bit<1>  Donna;
     bit<16> Wamego;
     bit<16> Brainard;
     bit<16> Fristoe;
@@ -759,6 +761,7 @@ struct Peebles {
     bit<1>  Lamona;
     bit<16> Weyauwega;
     bit<6>  Naubinway;
+    bit<1>  Westland;
     bit<1>  Oilmont;
     bit<8>  Tombstone;
     bit<1>  Ovett;
@@ -1169,10 +1172,12 @@ parser Moosic(packet_in Ossining, out Baker Noyack, out Harriet Hettinger, out i
         transition Tenstrike;
     }
     state Tenstrike {
+        Hettinger.Moultrie.Westland = (bit<1>)1w1;
         Ossining.extract<Chloride>(Noyack.Thurmond);
         transition Castle;
     }
     state Exeter {
+        Hettinger.Moultrie.Westland = (bit<1>)1w1;
         Ossining.extract<Glenmora>(Noyack.Lauada);
         transition select(Noyack.Lauada.DonaAna) {
             8w0x3: Castle;
@@ -1300,9 +1305,17 @@ parser Moosic(packet_in Ossining, out Baker Noyack, out Harriet Hettinger, out i
         Hettinger.Bratt.Jenners = (bit<3>)3w4;
         transition Micro;
     }
+    state Lenwood {
+        Hettinger.Bratt.Connell = 16w0x800;
+        Hettinger.Bratt.Jenners = (bit<3>)3w5;
+        transition select((Ossining.lookahead<bit<8>>())[7:0]) {
+            8w0x45 &&& 8w0xff: Potosi;
+            default: Nucla;
+        }
+    }
     state Owanka {
         Hettinger.Bratt.Connell = 16w0x86dd;
-        Hettinger.Bratt.Jenners = (bit<3>)3w4;
+        Hettinger.Bratt.Jenners = (bit<3>)3w5;
         transition Micro;
     }
     state Crown {
@@ -1370,7 +1383,7 @@ parser Moosic(packet_in Ossining, out Baker Noyack, out Harriet Hettinger, out i
             8w58: Lattimore;
             8w17: Cheyenne;
             8w6: Forepaugh;
-            8w4: Vanoss;
+            8w4: Lenwood;
             8w41: Owanka;
             default: accept;
         }
@@ -2308,6 +2321,8 @@ control Danbury(inout Baker Noyack, inout Harriet Hettinger, in ingress_intrinsi
         Hettinger.Moultrie.Pettry = Pettry;
         Hettinger.Moultrie.Basalt = (bit<1>)1w1;
         Hettinger.Bratt.Manilla = (bit<1>)1w0;
+        Hettinger.Bratt.Hiland = (bit<1>)1w0;
+        Hettinger.Moultrie.LaUnion = (bit<10>)10w0;
     }
     @name(".Kalaloch") action Kalaloch(bit<8> Rains) {
         Hettinger.Moultrie.Crestone = (bit<1>)1w1;
@@ -2430,7 +2445,7 @@ control Danbury(inout Baker Noyack, inout Harriet Hettinger, in ingress_intrinsi
         const default_action = Papeton();
     }
     apply {
-        if (Hettinger.Bratt.RockPort == 1w0 && Hettinger.Biggers.Sherack == 1w1 && Noyack.Thurmond.isValid() == false && Hettinger.Biggers.McGonigle & 4w0x1 == 4w0x1 && Hettinger.Bratt.Minto == 3w0x1 && Lemont.copy_to_cpu == 1w0) {
+        if (Hettinger.Bratt.RockPort == 1w0 && Hettinger.Biggers.Sherack == 1w1 && Hettinger.Almota.Blitchton != 9w67 && Hettinger.Biggers.McGonigle & 4w0x1 == 4w0x1 && Hettinger.Bratt.Minto == 3w0x1 && Lemont.copy_to_cpu == 1w0) {
             switch (Ihlen.apply().action_run) {
                 Millikin: {
                     switch (ElCentro.apply().action_run) {
@@ -3690,6 +3705,17 @@ control Bethune(inout Baker Noyack, inout Harriet Hettinger, in ingress_intrinsi
         Langhorne();
         PawCreek();
     }
+    @name(".Nathalie") action Nathalie() {
+        Hettinger.Moultrie.Cuprum = (bit<3>)3w6;
+        Hettinger.Bratt.Littleton = Noyack.Wabbaseka.Littleton;
+        Hettinger.Bratt.Killen = Noyack.Wabbaseka.Killen;
+        Hettinger.Bratt.Lathrop = Noyack.Wabbaseka.Lathrop;
+        Hettinger.Bratt.Clyde = Noyack.Wabbaseka.Clyde;
+        Noyack.Ruffin.Connell = Hettinger.Bratt.Connell;
+        Cornwall();
+        Langhorne();
+        PawCreek();
+    }
     @name(".Bovina") action Bovina() {
         Hettinger.Moultrie.Cuprum = (bit<3>)3w0;
         Hettinger.Nooksack.Fairhaven = Noyack.Clearmont[0].Fairhaven;
@@ -3779,6 +3805,7 @@ control Bethune(inout Baker Noyack, inout Harriet Hettinger, in ingress_intrinsi
     @disable_atomic_modify(1) @name(".Langford") table Langford {
         actions = {
             Comobabi();
+            Nathalie();
             Clarkdale();
             @defaultonly Talbert();
         }
@@ -4527,7 +4554,7 @@ control Dresden(inout Baker Noyack, inout Harriet Hettinger, in egress_intrinsic
         Noyack.Wabbaseka.Littleton = Hettinger.Moultrie.Littleton;
         Noyack.Wabbaseka.Killen = Hettinger.Moultrie.Killen;
     }
-    @name(".Hanamaulu") action Hanamaulu(bit<2> Helton, bit<16> Weinert, bit<4> Cornell, bit<12> Dundalk, bit<12> StarLake) {
+    @name(".Shongaloo") action Shongaloo(bit<2> Helton, bit<16> Weinert, bit<4> Cornell, bit<12> Dundalk, bit<12> StarLake) {
         Lorane(Helton, Weinert, Cornell, Dundalk);
         Noyack.Thurmond.Connell[11:0] = StarLake;
         Noyack.Wabbaseka.Littleton = Hettinger.Moultrie.Littleton;
@@ -4539,7 +4566,7 @@ control Dresden(inout Baker Noyack, inout Harriet Hettinger, in egress_intrinsic
         Noyack.Wabbaseka.Littleton = Hettinger.Moultrie.Littleton;
         Noyack.Wabbaseka.Killen = Hettinger.Moultrie.Killen;
     }
-    @name(".Donna") action Donna(bit<2> Helton, bit<16> Weinert, bit<4> Cornell, bit<12> Dundalk) {
+    @name(".Bronaugh") action Bronaugh(bit<2> Helton, bit<16> Weinert, bit<4> Cornell, bit<12> Dundalk) {
         Lorane(Helton, Weinert, Cornell, Dundalk);
         Noyack.Thurmond.Connell[11:0] = Hettinger.Moultrie.Pettry;
         Noyack.Wabbaseka.Littleton = Hettinger.Moultrie.Littleton;
@@ -4552,9 +4579,9 @@ control Dresden(inout Baker Noyack, inout Harriet Hettinger, in egress_intrinsic
     @disable_atomic_modify(1) @name(".Renfroe") table Renfroe {
         actions = {
             Bellville();
-            Hanamaulu();
+            Shongaloo();
             DeerPark();
-            Donna();
+            Bronaugh();
             Boyes();
         }
         key = {
@@ -6440,6 +6467,11 @@ control Campbell(inout Baker Noyack, inout Harriet Hettinger, in egress_intrinsi
     }
 }
 
+control Moreland(inout Baker Noyack, inout Harriet Hettinger, in egress_intrinsic_metadata_t Hookdale, in egress_intrinsic_metadata_from_parser_t Duchesne, inout egress_intrinsic_metadata_for_deparser_t Centre, inout egress_intrinsic_metadata_for_output_port_t Pocopson) {
+    apply {
+    }
+}
+
 control Navarro(inout Baker Noyack, inout Harriet Hettinger, in ingress_intrinsic_metadata_t Almota, in ingress_intrinsic_metadata_from_parser_t Coryville, inout ingress_intrinsic_metadata_for_deparser_t Bellamy, inout ingress_intrinsic_metadata_for_tm_t Lemont) {
     @name(".McIntyre") action McIntyre() {
         ;
@@ -6703,7 +6735,7 @@ control Needles(inout Baker Noyack, inout Harriet Hettinger, in egress_intrinsic
 
                         (3w5, true, false) : Arredondo();
 
-                        (3w5, false, true) : Trotwood();
+                        (3w6, false, true) : Trotwood();
 
         }
 
@@ -7007,6 +7039,7 @@ control Devore(inout Baker Noyack, inout Harriet Hettinger, in egress_intrinsic_
         size = 512;
         default_action = NoAction();
     }
+    @name(".Bergoo") Moreland() Bergoo;
     @name(".Oskawalik") Perma() Oskawalik;
     @name(".Pelland") Addicks() Pelland;
     @name(".Gomez") Holyoke() Gomez;
@@ -7107,6 +7140,7 @@ control Devore(inout Baker Noyack, inout Harriet Hettinger, in egress_intrinsic_
             if (Hettinger.Moultrie.Cuprum != 3w2) {
                 Norco.apply(Noyack, Hettinger, Hookdale, Duchesne, Centre, Pocopson);
             }
+            Bergoo.apply(Noyack, Hettinger, Hookdale, Duchesne, Centre, Pocopson);
         } else {
             if (Noyack.Glenoma.isValid() == false) {
                 Milnor.apply(Noyack, Hettinger, Hookdale, Duchesne, Centre, Pocopson);

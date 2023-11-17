@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_ROUTESCALE=1 -Ibf_arista_switch_routescale/includes -I/usr/share/p4c-bleeding/p4include  -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino-tna --o bf_arista_switch_routescale --bf-rt-schema bf_arista_switch_routescale/context/bf-rt.json
-// p4c 9.13.0 (SHA: 11c23cb)
+// p4c 9.13.1 (SHA: e558d01)
 
 #include <core.p4>
 #include <tofino1_specs.p4>
@@ -595,6 +595,8 @@ struct Lakehills {
 struct Minto {
     bit<1> Eastwood;
     bit<1> Placedo;
+    bit<1> LaCenter;
+    bit<1> Maryville;
 }
 
 struct Onycha {
@@ -734,6 +736,7 @@ struct Oilmont {
     bit<1>  LaUnion;
     bit<1>  Cuprum;
     bit<6>  Belview;
+    bit<1>  Sidnaw;
     bit<1>  Blairsden;
     bit<8>  Wamego;
     bit<1>  Broussard;
@@ -1155,10 +1158,12 @@ parser GunnCity(packet_in Oneonta, out Baker Uniopolis, out Bratt Moosic, out in
         transition Mattapex;
     }
     state Mattapex {
+        Moosic.Garrison.Sidnaw = (bit<1>)1w1;
         Oneonta.extract<Cornell>(Uniopolis.Thurmond);
         transition Midas;
     }
     state Scottdale {
+        Moosic.Garrison.Sidnaw = (bit<1>)1w1;
         Oneonta.extract<DonaAna>(Uniopolis.Lauada);
         transition select(Uniopolis.Lauada.Altus) {
             8w0x4: Midas;
@@ -1317,9 +1322,17 @@ parser GunnCity(packet_in Oneonta, out Baker Uniopolis, out Bratt Moosic, out in
         Moosic.Hearne.RioPecos = (bit<3>)3w4;
         transition Judson;
     }
+    state Toano {
+        Moosic.Hearne.Freeman = 16w0x800;
+        Moosic.Hearne.RioPecos = (bit<3>)3w5;
+        transition select((Oneonta.lookahead<bit<8>>())[7:0]) {
+            8w0x45 &&& 8w0xff: Cadwell;
+            default: Cheyenne;
+        }
+    }
     state Lewellen {
         Moosic.Hearne.Freeman = 16w0x86dd;
-        Moosic.Hearne.RioPecos = (bit<3>)3w4;
+        Moosic.Hearne.RioPecos = (bit<3>)3w5;
         transition Judson;
     }
     state Luning {
@@ -1381,7 +1394,7 @@ parser GunnCity(packet_in Oneonta, out Baker Uniopolis, out Bratt Moosic, out in
             8w58: Mogadore;
             8w17: Westview;
             8w6: McKenney;
-            8w4: Flippen;
+            8w4: Toano;
             8w41: Lewellen;
             default: accept;
         }
@@ -2550,6 +2563,17 @@ control Miltona(inout Baker Uniopolis, inout Bratt Moosic, in ingress_intrinsic_
         Reynolds();
         Wakeman();
     }
+    @name(".Kekoskee") action Kekoskee() {
+        Moosic.Garrison.FortHunt = (bit<3>)3w6;
+        Moosic.Hearne.Turkey = Uniopolis.Swanlake.Turkey;
+        Moosic.Hearne.Riner = Uniopolis.Swanlake.Riner;
+        Moosic.Hearne.Cisco = Uniopolis.Swanlake.Cisco;
+        Moosic.Hearne.Higginson = Uniopolis.Swanlake.Higginson;
+        Uniopolis.Emden.Freeman = Moosic.Hearne.Freeman;
+        Chilson();
+        Reynolds();
+        Wakeman();
+    }
     @name(".Kenvil") action Kenvil() {
         Moosic.Garrison.FortHunt = (bit<3>)3w7;
         Moosic.Biggers.Lamona = (bit<1>)1w1;
@@ -2669,6 +2693,7 @@ control Miltona(inout Baker Uniopolis, inout Bratt Moosic, in ingress_intrinsic_
         actions = {
             Kosmos();
             BigFork();
+            Kekoskee();
             Kenvil();
             Mendoza();
             @defaultonly Paragonah();
@@ -5732,6 +5757,11 @@ control Nuevo(inout Baker Uniopolis, inout Bratt Moosic, in egress_intrinsic_met
     }
 }
 
+control Grovetown(inout Baker Uniopolis, inout Bratt Moosic, in egress_intrinsic_metadata_t Funston, in egress_intrinsic_metadata_from_parser_t Nowlin, inout egress_intrinsic_metadata_for_deparser_t Sully, inout egress_intrinsic_metadata_for_output_port_t Ragley) {
+    apply {
+    }
+}
+
 control Warsaw(inout Baker Uniopolis, inout Bratt Moosic, in ingress_intrinsic_metadata_t Lemont, in ingress_intrinsic_metadata_from_parser_t Ossining, inout ingress_intrinsic_metadata_for_deparser_t Nason, inout ingress_intrinsic_metadata_for_tm_t Hookdale) {
     @name(".Belcher") action Belcher() {
         {
@@ -5898,7 +5928,7 @@ control Vincent(inout Baker Uniopolis, inout Bratt Moosic, in egress_intrinsic_m
 
                         (3w5, true, false) : Weslaco();
 
-                        (3w5, false, true) : Cassadaga();
+                        (3w6, false, true) : Cassadaga();
 
                         (3w1, true, false) : Chispa();
 
@@ -6245,6 +6275,7 @@ control Oxnard(inout Baker Uniopolis, inout Bratt Moosic, in egress_intrinsic_me
         size = 512;
         default_action = NoAction();
     }
+    @name(".Suwanee") Grovetown() Suwanee;
     @name(".Anaconda") Munich() Anaconda;
     @name(".Zeeland") Nerstrand() Zeeland;
     @name(".Herald") Dundee() Herald;
@@ -6318,6 +6349,7 @@ control Oxnard(inout Baker Uniopolis, inout Bratt Moosic, in egress_intrinsic_me
                 Melvina.apply(Uniopolis, Moosic, Funston, Nowlin, Sully, Ragley);
             }
             Simla.apply(Uniopolis, Moosic, Funston, Nowlin, Sully, Ragley);
+            Suwanee.apply(Uniopolis, Moosic, Funston, Nowlin, Sully, Ragley);
         } else {
             if (Uniopolis.Glenoma.isValid() == false) {
                 Hartford.apply(Uniopolis, Moosic, Funston, Nowlin, Sully, Ragley);

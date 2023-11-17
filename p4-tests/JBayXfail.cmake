@@ -432,6 +432,10 @@ p4c_add_xfail_reason("tofino2"
 # error), please update the xfails accordingly.
 if (TEST_ALT_PHV_ALLOC)
 # add fails here
+    p4c_add_xfail_reason("tofino2"
+        "tofino2 supports up to 20 stages, using 29"
+	extensions/p4_tests/p4_16/customer/arista/obfuscated-p416_baremetal_tofino2.p4
+    )
 endif (TEST_ALT_PHV_ALLOC)
 
 if (NOT TEST_ALT_PHV_ALLOC)
