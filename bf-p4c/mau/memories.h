@@ -217,8 +217,9 @@ struct Memories {
     virtual const ordered_map<cstring, int> collect_sram_block_alloc_info() = 0;
 
  protected:
-    enum update_type_t { UPDATE_RAM, UPDATE_MAPRAM, UPDATE_GATEWAY,
-                         UPDATE_PAYLOAD, UPDATE_RESULT_BUS };
+    enum update_type_t { NONE, UPDATE_RAM, UPDATE_MAPRAM, UPDATE_GATEWAY,
+                         UPDATE_PAYLOAD, UPDATE_SEARCH_BUS, UPDATE_RESULT_BUS,
+                         UPDATE_ACTION_BUS, UPDATE_TIND_BUS, UPDATE_STATEFUL_BUS };
     virtual void visitUse(const Use &, std::function<void(cstring &, update_type_t)> fn) = 0;
     cstring failure_reason;
 

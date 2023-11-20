@@ -2046,6 +2046,8 @@ bool TablePlacement::try_alloc_mem(Placed *next, std::vector<Placed *> whole_sta
         LOG3("    " << error_message);
         LOG3("    " << current_mem->last_failure());
         next->stage_advance_log = "ran out of memories: " + current_mem->last_failure();
+        LOG3("Memuse for failed memory placement: ");
+        LOG3(*current_mem);
         next->resources.memuse.clear();
         for (auto *p : whole_stage)
             p->resources.memuse.clear();
@@ -2059,7 +2061,7 @@ bool TablePlacement::try_alloc_mem(Placed *next, std::vector<Placed *> whole_sta
         verify_mem->update(p->resources.memuse);
     verify_mem->update(next->resources.memuse);
     LOG7(IndentCtl::indent << IndentCtl::indent);
-    LOG7(*verify_mem << IndentCtl::unindent << IndentCtl::unindent);
+    LOG7(*current_mem << IndentCtl::unindent << IndentCtl::unindent);
     LOG5("\t Allocating mem successful");
     return true;
 }

@@ -679,9 +679,9 @@ def bfp4c_pp(val):
         return IXBarUsePrinter(val)
     if str(val.type.tag).endswith('IXBar::Use::Byte'):
         return IXBarUseBytePrinter(val)
-    if val.type.tag == 'Memories':
+    if str(val.type.tag).endswith('Memories'):
         return MemoriesPrinter(val)
-    if val.type.tag == 'Memories::Use':
+    if str(val.type.tag).endswith('Memories::Use'):
         return MemoriesUsePrinter(val)
     if val.type.tag == 'Util::SourceInfo':
         return SourceInfoPrinter(val)

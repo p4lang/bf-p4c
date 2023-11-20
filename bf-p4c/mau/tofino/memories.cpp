@@ -214,6 +214,7 @@ void Memories::clear_uses() {
     memset(gw_bytes_reserved, false, sizeof(gw_bytes_reserved));
     stats_alus.clear();
     meter_alus.clear();
+    payload_use.clear();
 }
 
 void Memories::clear() {
@@ -3670,8 +3671,10 @@ bool Memories::find_unit_gw(Memories::Use &alloc, cstring name, bool requires_se
                 alloc.row.emplace_back(i, k);
                 alloc.gateway.unit = j;
                 gateway_use[i][j] = name;
-                if (requires_search_bus)
+                if (requires_search_bus) {
                     sram_search_bus[i][k] = search_bus_info(name, 0, 0);
+                    LOG7("Setting search bus for unit gw [" << i << "][" << k << "] to " << name);
+                }
                 return true;
             }
         }
@@ -3724,6 +3727,7 @@ bool Memories::find_search_bus_gw(table_alloc *ta, Memories::Use &alloc, cstring
         }
     }
 
+    LOG7("No search bus found for reuse for gateway");
     return find_unit_gw(alloc, name, true);
 }
 
@@ -4331,26 +4335,32 @@ bool Memories::allocate_all_idletime() {
 }
 
 void Memories::visitUse(const Use &alloc, std::function<void(cstring &, update_type_t)> fn) {
-    BFN::Alloc2Dbase<cstring> *use = 0, *mapuse = 0, *bus = 0, *gw_use = 0;
+    BFN::Alloc2Dbase<cstring> *use = 0, *mapuse = 0, *bus = 0, *result_bus = 0, *gw_use = 0;
     unsigned *inuse = 0, *map_inuse = 0;
+    update_type_t bus_type = NONE;
     switch (alloc.type) {
     case Use::EXACT:
     case Use::ATCAM:
         use = &sram_use;
         inuse = sram_inuse;
         bus = &sram_print_search_bus;
+        bus_type = UPDATE_SEARCH_BUS;
+        result_bus = &sram_print_result_bus;
         break;
     case Use::TERNARY:
         use = &tcam_use;
         break;
     case Use::GATEWAY:
         gw_use = &gateway_use;
-        //  bus = &sram_print_result_bus;
+        bus = &sram_print_search_bus;
+        bus_type = UPDATE_SEARCH_BUS;
+        BUG_CHECK(alloc.row.size() == 1, "multiple rows for gateway");
         break;
     case Use::TIND:
         use = &sram_use;
         inuse = sram_inuse;
         bus = &tind_bus;
+        bus_type = UPDATE_TIND_BUS;
         break;
     case Use::COUNTER:
     case Use::METER:
@@ -4364,7 +4374,6 @@ void Memories::visitUse(const Use &alloc, std::function<void(cstring &, update_t
     case Use::ACTIONDATA:
         use = &sram_use;
         inuse = sram_inuse;
-        bus = &action_data_bus;
         break;
     case Use::IDLETIME:
         use = &mapram_use;
@@ -4373,10 +4382,20 @@ void Memories::visitUse(const Use &alloc, std::function<void(cstring &, update_t
     default:
         BUG("Unhandled memory use type %d in visit", alloc.type); }
     for (auto &r : alloc.row) {
-        if (bus && r.result_bus != -1) {
-            fn((*bus)[r.row][r.result_bus], UPDATE_RESULT_BUS); }
-        /*if (alloc.type == TWOPORT)
-            fn(stateful_bus[r.row]);*/
+        if (bus && r.bus != -1) {
+            fn((*bus)[r.row][r.bus], bus_type); }
+        if (result_bus && r.result_bus != -1) {
+            fn((*result_bus)[r.row][r.result_bus], UPDATE_RESULT_BUS); }
+        if (alloc.is_twoport())
+            fn(twoport_bus[r.row], UPDATE_STATEFUL_BUS);
+        if (alloc.type == Use::ACTIONDATA) {
+            BUG_CHECK(r.bus == ACTION || r.bus == OFLOW, "invalid bus %d for actiondata", r.bus);
+            int side = r.col.front() >= 6;
+            if (r.bus == ACTION)
+                fn(action_data_bus[r.row][side], UPDATE_ACTION_BUS);
+            else
+                fn(overflow_bus[r.row][side], UPDATE_ACTION_BUS);
+        }
         if (use) {
             for (auto col : r.col) {
                 fn((*use)[r.row][col], UPDATE_RAM);
@@ -4397,6 +4416,15 @@ void Memories::visitUse(const Use &alloc, std::function<void(cstring &, update_t
             if (alloc.gateway.payload_row >= 0)
                 fn(payload_use[alloc.gateway.payload_row][alloc.gateway.payload_unit],
                    UPDATE_PAYLOAD);
+            if (r.result_bus >= 0) {
+                if (alloc.gateway.bus_type == Use::EXACT)
+                    fn(sram_print_result_bus[alloc.gateway.payload_row][r.result_bus],
+                            UPDATE_RESULT_BUS);
+                else if (alloc.gateway.bus_type == Use::TERNARY)
+                    fn(tind_bus[alloc.gateway.payload_row][r.result_bus], UPDATE_RESULT_BUS);
+                else
+                    BUG("invalid bud type %d for payload", alloc.gateway.bus_type);
+            }
         }
     }
     if (mapuse) {
