@@ -47,7 +47,7 @@ bool FindExpressionsForFields::preorder(const IR::HeaderOrMetadata* h) {
     }
     if (auto hs = h->type->to<IR::HeaderStack>()) {
         for (int i = 0; i < hs->size; i++) {
-            cstring name = h->name + "[" + cstring::to_cstring(i)  + "]." + ".$valid";
+            cstring name = h->name + "[" + cstring::to_cstring(i)  + "].$valid";
             IR::Member* mem = new IR::Member(
                 IR::Type_Bits::get(1),
                 new IR::HeaderStackItemRef(new IR::ConcreteHeaderRef(h), new IR::Constant(i)),
