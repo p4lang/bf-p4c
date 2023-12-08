@@ -8,6 +8,7 @@
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/device.h"
 #include "bf-p4c/midend/parser_graph.h"
+#include "bf-p4c/parde/parser_loops_info.h"
 
 namespace BFN {
 
@@ -141,6 +142,14 @@ class IdentifyPadRequirements : public Inspector {
         P4ParserGraphs pg(refMap, false);
         prsr->apply(pg);
 
+        // Apply ParserLoopsInfo to get info about loops
+        ParserPragmas parserPragmas;
+        ParserLoopsInfo *parserLoopsInfo = nullptr;
+        if (const auto* tnaParser = prsr->to<IR::BFN::TnaParser>()) {
+            tnaParser->apply(parserPragmas);
+            parserLoopsInfo = new ParserLoopsInfo(refMap, tnaParser, parserPragmas);
+        }
+
         // Calculate minimum depth to each state
         std::map<cstring, int> minDepthToState;
         minDepthToState[IR::ParserState::start] = stateSize[prsr][IR::ParserState::start];
@@ -177,7 +186,12 @@ class IdentifyPadRequirements : public Inspector {
             std::set<cstring> newStatesToProcess;
             for (auto &state : statesToProcess) {
                 for (auto &nextState : pg.succs[state]) {
-                    int nextSize = maxDepthToState[state] + stateSize[prsr][nextState];
+                    int loop_depth = 1;
+                    if (parserLoopsInfo && parserLoopsInfo->max_loop_depth.count(nextState)) {
+                        int max_loop_depth = parserLoopsInfo->max_loop_depth.at(nextState);
+                        if (max_loop_depth > 0) loop_depth = max_loop_depth;
+                    }
+                    int nextSize = maxDepthToState[state] + loop_depth * stateSize[prsr][nextState];
                     if (!maxDepthToState.count(nextState) ||
                         (nextSize > maxDepthToState.at(nextState) &&
                          !pathToState[state].count(nextState))) {

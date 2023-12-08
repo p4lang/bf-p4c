@@ -520,6 +520,7 @@ set (BF_P4C_BACKEND_PARDE_SRCS
   parde/merge_parser_state.cpp
   parde/parser_dominator_builder.cpp
   parde/parser_header_sequences.cpp
+  parde/parser_loops_info.cpp
   parde/parser_output.cpp
   parde/parser_query.cpp
   parde/phase0.cpp
@@ -579,6 +580,7 @@ set (BF_P4C_BACKEND_PARDE_HDRS
   parde/parde_spec.h
   parde/parser_dominator_builder.h
   parde/parser_header_sequences.h
+  parde/parser_loops_info.h
   parde/phase0.h
   parde/parde_utils.h
   parde/parser_info.h

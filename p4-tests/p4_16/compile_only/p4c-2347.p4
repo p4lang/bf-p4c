@@ -235,6 +235,8 @@ error {
     IbufUnderflow // Inbut buffer underflow.
 }
 
+@command_line("--disable-parse-max-depth-limit")
+
 // -----------------------------------------------------------------------------
 // INGRESS INTRINSIC METADATA
 // -----------------------------------------------------------------------------

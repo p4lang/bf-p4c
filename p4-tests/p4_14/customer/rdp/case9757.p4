@@ -76,6 +76,8 @@ agreement with Barefoot Networks, Inc.
 
 
 
+@pragma command_line --disable-parse-max-depth-limit
+
 /* Control signals for the Ingress Parser during parsing (not used in or
    passed to the MAU) */
 header_type ingress_parser_control_signals {
