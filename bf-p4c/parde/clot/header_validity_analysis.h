@@ -1,10 +1,13 @@
-#ifndef EXTENSIONS_BF_P4C_PARDE_CLOT_HEADER_REMOVAL_ANALYSIS_H_
-#define EXTENSIONS_BF_P4C_PARDE_CLOT_HEADER_REMOVAL_ANALYSIS_H_
+#ifndef EXTENSIONS_BF_P4C_PARDE_CLOT_HEADER_VALIDITY_ANALYSIS_H_
+#define EXTENSIONS_BF_P4C_PARDE_CLOT_HEADER_VALIDITY_ANALYSIS_H_
 
 #include "field_slice_set.h"
 #include "bf-p4c/mau/mau_visitor.h"
 #include "bf-p4c/phv/phv_fields.h"
 
+/// @brief Identify headers marked as valid/invalid in MAU pipeline and find correlations between
+/// removal of headers of interest.
+///
 /// Finds correlations between the removal of headers in the MAU pipeline. In the back end, header
 /// removal is represented by the clearing of POV bits, so this analysis really looks at the
 /// correlation between when POV bits are cleared.
@@ -57,7 +60,7 @@
 ///
 /// For clients only interested in pairwise correlations, we can expect the result to be quadratic
 /// in the number of headers.
-class HeaderRemovalAnalysis : public MauInspector {
+class HeaderValidityAnalysis : public MauInspector {
  public:
     using ResultMap = std::map<FieldSliceSet, std::set<FieldSliceSet>>;
 
@@ -69,29 +72,34 @@ class HeaderRemovalAnalysis : public MauInspector {
              PHV::FieldSlice::Less>* interestedCorrelations;
 
     std::set<const PHV::Field*> povBitsSetInvalidInMau;
+    std::set<const PHV::Field*> povBitsSetValidInMau;
 
     std::map<const PHV::Field*, std::set<const IR::MAU::Action*>> povBitsUpdateActions;
+    std::map<const PHV::Field*, std::set<const IR::MAU::Action*>> povBitsUpdateOrInvalidateActions;
+    std::map<const PHV::Field*, std::set<const IR::MAU::Action*>> povBitsUpdateOrValidateActions;
     std::map<const PHV::Field*, std::set<const IR::MAU::Action*>> povBitsInvalidateActions;
+    std::map<const PHV::Field*, std::set<const IR::MAU::Action*>> povBitsValidateActions;
 
     SymBitMatrix povBitsAlwaysInvalidateTogether;
+    SymBitMatrix povBitsAlwaysValidateTogether;
 
     /// The output of this analysis.
     ResultMap resultMap;
 
-    HeaderRemovalAnalysis(const PhvInfo& phvInfo, const std::set<FieldSliceSet>& correlations);
-    HeaderRemovalAnalysis(const HeaderRemovalAnalysis&) = default;
-    HeaderRemovalAnalysis(HeaderRemovalAnalysis&&) = default;
+    HeaderValidityAnalysis(const PhvInfo& phvInfo, const std::set<FieldSliceSet>& correlations);
+    HeaderValidityAnalysis(const HeaderValidityAnalysis&) = default;
+    HeaderValidityAnalysis(HeaderValidityAnalysis&&) = default;
 
     Visitor::profile_t init_apply(const IR::Node* root) override;
     bool preorder(const IR::MAU::Instruction* instruction) override;
     bool preorder(const IR::MAU::Action *act) override;
     void end_apply() override;
 
-    HeaderRemovalAnalysis* clone() const override;
-    HeaderRemovalAnalysis& flow_clone() override;
+    HeaderValidityAnalysis* clone() const override;
+    HeaderValidityAnalysis& flow_clone() override;
     void flow_merge(Visitor& v) override;
     // FIXME -- not a ControlFlowVisitor, so there will never be any clones to merge...
     // void flow_copy(::ControlFlowVisitor& v) override;
 };
 
-#endif /* EXTENSIONS_BF_P4C_PARDE_CLOT_HEADER_REMOVAL_ANALYSIS_H_ */
+#endif /* EXTENSIONS_BF_P4C_PARDE_CLOT_HEADER_VALIDITY_ANALYSIS_H_ */

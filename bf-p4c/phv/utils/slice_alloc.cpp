@@ -75,7 +75,7 @@ AllocSlice& AllocSlice::operator=(const AllocSlice& other) {
     return *this;
 }
 
-void AllocSlice::setInitPrimitive(DarkInitPrimitive* prim) {
+void AllocSlice::setInitPrimitive(const DarkInitPrimitive* prim) {
     init_i = *prim;
 }
 

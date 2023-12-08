@@ -1,0 +1,29 @@
+# Configure table
+#Eta                                                            (cage#/lane#)
+add Ingress.ipv4_host hdr.ipv4.dst_addr:0x0a0a0a64 send(port:132)
+#add_with_send(dst_addr=ip_address('10.10.10.100'), port=132) #1/0
+#Rho
+add Ingress.ipv4_host hdr.ipv4.dst_addr:0x0a0a0a01 send(port:140)
+#ipv4_host.add_with_send(dst_addr=ip_address('10.10.10.1'), port=140) #2/0
+
+packet 0 \
+   00 07 43 3e e5 38 3c fd  fe aa d9 a9 08 00 45 00 \
+   00 78 85 10 40 00 40 11  8c ec 0a 0a 0a 01 0a 0a \
+   0a 64 e8 0c 11 cc 00 64  28 ee 9f 89 07 18 40 01 \
+   82 02 82 02 01 82 02 82  01 01 82 02 82 01 01 82 \
+   1b 00 00 00 ad 47 73 35  db 00 1a 05 26 5c 00 42 \
+   90 ba 85 06 02 10 00 45  82 02 82 01 00 85 18 c1 \
+   03 01 00 45 84 00 01 00  00 85 07 04 01 00 41 05 \
+   85 01 01 01 00 4f 63 6f  6e 74 72 6f 6c 2d 62 75 \
+   6e 64 6c 65 0a ff
+
+expect 132 \
+   00 07 43 3e e5 38 3c fd  fe aa d9 a9 08 00 45 00 \
+   00 78 85 10 40 00 02 11  ca ec 0a 0a 0a 01 0a 0a \
+   0a 64 e8 0c 11 cc 00 64  28 ee 9f 89 07 18 40 01 \
+   82 02 82 02 01 82 02 82  01 01 82 02 82 01 01 82 \
+   1b 00 00 00 ad 47 73 35  db 00 1a 05 26 5c 00 42 \
+   90 ba 85 06 02 10 00 45  82 02 82 01 00 85 18 c1 \
+   03 01 00 45 84 00 01 00  00 85 07 04 01 00 41 05 \
+   85 01 01 01 00 4f 63 6f  6e 74 72 6f 6c 2d 62 75 \
+   6e 64 6c 65 0a ff

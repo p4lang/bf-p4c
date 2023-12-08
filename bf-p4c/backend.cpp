@@ -60,6 +60,7 @@
 #include "bf-p4c/common/bridged_packing.h"
 #include "bf-p4c/common/header_stack.h"
 #include "bf-p4c/common/ir_utils.h"
+#include "bf-p4c/common/merge_pov_bits.h"
 #include "bf-p4c/common/multiple_apply.h"
 #include "bf-p4c/common/size_of.h"
 #include "bf-p4c/common/utils.h"
@@ -326,6 +327,7 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
         // ParserHeaderSequences must be run before the IR is lowered
         Device::currentDevice() == Device::FLATROCK ? &parserHeaderSeqs : nullptr,
 #endif  /* HAVE_FLATROCK */
+        new MergePovBits(phv),  // Ideally run earlier, see comment in class for explanation.
 
         // Two different allocation flow:
         // (1) Normal allocation:

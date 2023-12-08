@@ -125,6 +125,7 @@ void ActionPhvConstraints::ConstraintTracker::clear() {
     field_writes_to_actions.clear();
     action_to_writes.clear();
     action_to_reads.clear();
+    action_to_table.clear();
     write_to_reads_per_action.clear();
     read_to_writes_per_action.clear();
     statefulWrites.clear();
@@ -135,6 +136,7 @@ void ActionPhvConstraints::ConstraintTracker::add_action(
         const ActionAnalysis::FieldActionsMap field_actions_map,
         const IR::MAU::Table *tbl) {
     LOG5("Action PHV Constraints: Analyzing " << act << " in table " << tbl->name);
+    action_to_table[act] = tbl;
     for (auto &field_action : Values(field_actions_map)) {
         le_bitrange write_range;
         auto *write_field = phv.field(field_action.write.expr, &write_range);
@@ -502,6 +504,12 @@ void ActionPhvConstraints::ConstraintTracker::print_field_ordering(
     for (auto sl : slices) {
         LOG6("\t\t\t\t\t\t\t" << sl << "\t" << field_slices_to_writes[sl] << "\t" <<
                 field_slices_to_reads[sl]); }
+}
+
+const IR::MAU::Table *ActionPhvConstraints::ConstraintTracker::action_table(
+        const IR::MAU::Action *act) const {
+    if (action_to_table.count(act)) return action_to_table.at(act);
+    return nullptr;
 }
 
 void ActionPhvConstraints::sort(std::list<const PHV::SuperCluster::SliceList*>& slice_lists) const {
@@ -4358,10 +4366,19 @@ CanPackErrorV2 ActionPhvConstraints::check_move_constraints(
     };
 
     bool clear_align = false;
+    bool enable_bitmasked_set = true;
+    const auto* tbl = constraint_tracker.action_table(action);
+    if (tbl->match_key.empty()) {
+        GetActionRequirements ghdr;
+        action->apply(ghdr);
+        if (ghdr.is_hash_dist_needed() || ghdr.is_rng_needed())
+            enable_bitmasked_set = false;  // Keyless table with hash cannot have action data
+    }
     const auto action_stages = stages(action, slices.front().isPhysicalStageBased());
     for (const auto& stage : action_stages) {
         solver->clear();
         LOG5("check action " << action->name << " for " << c << " @ stage " << stage);
+        solver->enable_bitmasked_set(enable_bitmasked_set);
         const auto dest_live =
             compute_dest_live_bv(uses, alloc, initActions, container_state, stage, action);
         LOG5("dest after action live bitvec: " << dest_live);

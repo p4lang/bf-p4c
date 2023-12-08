@@ -1325,6 +1325,15 @@ void CollectClotInfo::postorder(const IR::BFN::Deparser* deparser) {
     // The deparse graph for the current gress.
     auto& deparse_graph = clotInfo.deparse_graph_[deparser->gress];
 
+    // Checksum updates (emits) for the current block of fields if any
+    std::vector<const IR::BFN::EmitChecksum*> cur_checksum_updates;
+
+    auto get_checksum_updates = [&](const PHV::Field* field) {
+        return clotInfo.field_to_checksum_updates().count(field) ?
+            clotInfo.field_to_checksum_updates().at(field) :
+            std::vector<const IR::BFN::EmitChecksum*>();
+    };
+
     for (auto emit : deparser->emits) {
         const PHV::Field* cur_field = nullptr;
         DeparseGraph::Node cur_node;
@@ -1349,18 +1358,24 @@ void CollectClotInfo::postorder(const IR::BFN::Deparser* deparser) {
             add_pseudoheader(cur_pov_bits, cur_fields, allocated);
             cur_pov_bits.clear();
             cur_fields.clear();
+            cur_checksum_updates.clear();
         } else {
             // Current emit is a field. Create a pseudoheader if its pov set is different from
-            // previous field.
+            // previous field or checksum updates is different from previous (if they have updates)
             auto pov_bits = clotInfo.fields_to_pov_bits_.at(cur_field);
+            auto checksum_updates = get_checksum_updates(cur_field);
 
-            if (cur_pov_bits != pov_bits) {
+            if (cur_pov_bits != pov_bits ||
+                (!cur_checksum_updates.empty() && !checksum_updates.empty() &&
+                 cur_checksum_updates != checksum_updates)) {
                 add_pseudoheader(cur_pov_bits, cur_fields, allocated);
                 cur_pov_bits = pov_bits;
                 cur_fields.clear();
+                cur_checksum_updates.clear();
             }
 
             cur_fields.push_back(cur_field);
+            if (!checksum_updates.empty()) cur_checksum_updates = checksum_updates;
         }
 
         // Update the deparse graph with the current field and set things up for the next

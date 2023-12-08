@@ -4,7 +4,7 @@
 #include "clot_candidate.h"
 #include "field_slice_extract_info.h"
 #include "field_pov_analysis.h"
-#include "header_removal_analysis.h"
+#include "header_validity_analysis.h"
 #include "bf-p4c/common/utils.h"
 #include "bf-p4c/parde/count_strided_header_refs.h"
 #include "bf-p4c/parde/parser_info.h"
@@ -344,7 +344,7 @@ class GreedyClotAllocator : public Visitor {
     /// then this conservatively returns true.
     bool needInterClotGap(const ClotCandidate* c1,
                           const ClotCandidate* c2,
-                          const HeaderRemovalAnalysis::ResultMap header_removals) const {
+                          const HeaderValidityAnalysis::ResultMap header_removals) const {
         BUG_CHECK(c1->thread() == c2->thread(),
                   "Candidate %1% comes from %2%, but candidate %3% comes from %4%",
                   c1->id, c1->thread(), c2->id, c2->thread());
@@ -514,7 +514,7 @@ class GreedyClotAllocator : public Visitor {
     /// candidate.
     ClotCandidateSet* adjust_for_allocation(const ClotCandidate* to_adjust,
             const ClotCandidate* allocated,
-            const HeaderRemovalAnalysis::ResultMap header_removals) const {
+            const HeaderValidityAnalysis::ResultMap header_removals) const {
         const auto GAP_BYTES = Device::pardeSpec().byteInterClotGap();
         const auto GAP_BITS = 8 * GAP_BYTES;
 
@@ -929,7 +929,7 @@ class GreedyClotAllocator : public Visitor {
 
     /// Uses a greedy algorithm to allocate the given candidates.
     void allocate(ClotCandidateSet* candidates,
-                  const HeaderRemovalAnalysis::ResultMap header_removals) {
+                  const HeaderValidityAnalysis::ResultMap header_removals) {
         const auto MAX_CLOTS_PER_GRESS = Device::pardeSpec().numClotsPerGress();
 
         std::map<const ClotCandidate*, const IR::HeaderStack*> stack_candidates;
@@ -1153,7 +1153,7 @@ class GreedyClotAllocator : public Visitor {
         }
     }
 
-    HeaderRemovalAnalysis::ResultMap analyze_header_removals(const ClotCandidateSet* candidates,
+    HeaderValidityAnalysis::ResultMap analyze_header_removals(const ClotCandidateSet* candidates,
                                                              const IR::MAU::TableSeq* mau) {
         // Build the set of correlations that we're interested in.
         std::set<FieldSliceSet> correlations = {};
@@ -1175,9 +1175,9 @@ class GreedyClotAllocator : public Visitor {
             }
         }
 
-        HeaderRemovalAnalysis hra(phvInfo, correlations);
-        mau->apply(hra);
-        return hra.resultMap;
+        HeaderValidityAnalysis hva(phvInfo, correlations);
+        mau->apply(hva);
+        return hva.resultMap;
     }
 
     void filter_stack_extracts(FieldExtractInfo* field_extract_info) {
@@ -1292,12 +1292,12 @@ class GreedyClotAllocator : public Visitor {
             // Identify additional CLOT candidates (using deparser analysis)
             const auto* deparser = pipe->thread[parser->gress].deparser->to<IR::BFN::Deparser>();
             const auto* mau = pipe->thread[parser->gress].mau;
-            HeaderRemovalAnalysis hra(phvInfo, {});
-            mau->apply(hra);
+            HeaderValidityAnalysis hva(phvInfo, {});
+            mau->apply(hva);
             auto sequences = find_multiheader_sequences(deparser,
                                                         field_extract_info->fieldMap,
-                                                        hra.povBitsSetInvalidInMau,
-                                                        hra.povBitsAlwaysInvalidateTogether);
+                                                        hva.povBitsSetInvalidInMau,
+                                                        hva.povBitsAlwaysInvalidateTogether);
             for (auto& sequence : sequences)
                 if (!sequence.empty())
                     try_add_clot_candidate(candidates, nullptr, sequence);

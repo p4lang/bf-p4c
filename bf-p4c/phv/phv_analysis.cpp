@@ -250,6 +250,10 @@ class IncrementalPHVAllocPass : public Logging::PassManager {
 Visitor* PHV_AnalysisPass::make_incremental_alloc_pass(
     const ordered_set<PHV::Field *> &temp_vars) {
     return new IncrementalPHVAllocPass({
+         // Warning: phv_i is out of data at this point, but CollectPhvInfo should not be rerun
+         // as it will lose uncommitted placement information. (CollectPhvInfo will also change
+         // the field objects, causing the fields in temp_vars to no longer point to the intended
+         // fields.)
          &tableActionsMap,
          &uses_i,
          // Refresh dependency graph for live range analysis

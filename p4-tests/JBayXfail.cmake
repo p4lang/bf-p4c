@@ -37,9 +37,6 @@ if (HARLYN_STF_jbay AND NOT ENABLE_STF2PTF)
     # Needs stateful init regs support in simple test harness, this test passes
     # on stf2ptf
     extensions/p4_tests/p4_14/stf/stateful_init_regs.p4
-    # Need some work with CLOT allocation
-    extensions/p4_tests/p4_14/stf/update_checksum_8.p4
-
     )
 
   p4c_add_xfail_reason("tofino2"

@@ -5803,6 +5803,23 @@ int FieldPackingOpportunity::nOpportunitiesAfter(
 }
 
 const IR::Node* IncrementalPHVAllocation::apply_visitor(const IR::Node* root, const char *) {
+    // phv_i contains out-of-date information at this point, but CollectPhvInfo cannot
+    // yet be rerun because of uncommited allocation information.
+    //
+    // Stale init points/init primitives can cause problems in ActionPhvConstraints::can_pack due to
+    // out-of-date Action references. (The actions are updated by AddSliceInitialization and its
+    // subpasses when the initializations are inserted. These initializations will be reflected in
+    // actions identified by the contstraint tracker, so we no longer need the init info in the
+    // slices.) Remove the initializations from the slices.
+    static const PHV::ActionSet emptySet;
+    static const PHV::DarkInitPrimitive emptyPrim;
+    for (auto& f : phv_i) {
+        for (auto& slice : f.get_alloc()) {
+            slice.setInitPoints(emptySet);
+            slice.setInitPrimitive(&emptyPrim);
+        }
+    }
+
     PHV::ConcreteAllocation alloc = make_concrete_allocation(phv_i, utils_i.uses);
     auto container_groups = PHV::AllocUtils::make_device_container_groups();
     std::list<PHV::SuperCluster*> cluster_groups;

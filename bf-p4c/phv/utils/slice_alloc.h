@@ -228,7 +228,7 @@ class AllocSlice {
         min_stage_i = std::make_pair(min.first, min.second);
     }
 
-    void setInitPrimitive(DarkInitPrimitive* prim);
+    void setInitPrimitive(const DarkInitPrimitive* prim);
 
     bool hasMetaInit() const { return has_meta_init_i; }
     void setMetaInit() { has_meta_init_i = true; }

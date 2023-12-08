@@ -264,6 +264,7 @@ set (BF_P4C_BACKEND_COMMON_SRCS
   common/header_stack.cpp
   common/ir_utils.cpp
   common/map_tables_to_actions.cpp
+  common/merge_pov_bits.cpp
   common/multiple_apply.cpp
   common/pragma/pragmas.cpp
   common/run_id.cpp
@@ -292,6 +293,7 @@ set (BF_P4C_BACKEND_COMMON_HDRS
   common/header_stack.h
   common/ir_utils.h
   common/map_tables_to_actions.h
+  common/merge_pov_bits.h
   common/multiple_apply.h
   common/parse_annotations.h
   common/pragma/all_pragmas.h
@@ -530,7 +532,7 @@ set (BF_P4C_BACKEND_PARDE_SRCS
   parde/clot/deparse_graph.cpp
   parde/clot/field_slice_extract_info.cpp
   parde/clot/field_pov_analysis.cpp
-  parde/clot/header_removal_analysis.cpp
+  parde/clot/header_validity_analysis.cpp
   parde/clot/pseudoheader.cpp
   parde/clot/pragma/do_not_use_clot.cpp
   parde/lowered/compute_buffer_requirements.cpp
@@ -594,7 +596,7 @@ set (BF_P4C_BACKEND_PARDE_HDRS
   parde/clot/field_slice_extract_info.h
   parde/clot/field_slice_set.h
   parde/clot/field_pov_analysis.h
-  parde/clot/header_removal_analysis.h
+  parde/clot/header_validity_analysis.h
   parde/clot/pseudoheader.h
   parde/clot/pragma/do_not_use_clot.h
   parde/common/allocators.h

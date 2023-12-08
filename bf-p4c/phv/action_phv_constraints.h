@@ -225,6 +225,9 @@ class ActionPhvConstraints : public Inspector {
         /// key action.
         ordered_map<const IR::MAU::Action *, ordered_set<PHV::FieldSlice>> action_to_reads;
 
+        /// Map from action to table
+        ordered_map<const IR::MAU::Action *, const IR::MAU::Table *> action_to_table;
+
         /// Any OperandInfo in the std::vector will use the following as an operand in
         /// action where the key is the field written in that action.
         ordered_map<const PHV::Field*,
@@ -382,6 +385,9 @@ class ActionPhvConstraints : public Inspector {
                   getStatefulWrites() const {
             return statefulWrites;
         }
+
+        /** Get the action for a table */
+        const IR::MAU::Table *action_table(const IR::MAU::Action *) const;
     };
 
     ConstraintTracker constraint_tracker;
