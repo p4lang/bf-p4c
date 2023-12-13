@@ -13,6 +13,7 @@ struct myHeaders {
     sample_h sample;
     sample_h sample2;
     variable_h var;
+    sample_h sample3;
 }
 
 
@@ -102,6 +103,8 @@ control Ingress(
     apply {
         if (hdr.sample.isValid()) {
             ig_tm_md.ucast_egress_port = 0;
+            hdr.sample3.setValid();
+            hdr.sample3.counterIndex = 0;
         }
     }
 }

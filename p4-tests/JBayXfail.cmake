@@ -424,6 +424,12 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_16/compile_only/p4c-3220_1.p4
 )
 
+# P4C-5307 - varbit extraction -> fixed-length extraction incorrect for constant lenghts
+p4c_add_xfail_reason("tofino2"
+  "mismatch from expected(.*) at byte .*"
+  extensions/p4_tests/p4_16/stf/varbit_constant.p4
+)
+
 # ALT-PHV: tests that do not work yet with the alternative allocator.
 # If you make an ALT-PHV test pass (or get close to it but if fails on later
 # error), please update the xfails accordingly.

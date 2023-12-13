@@ -1625,3 +1625,9 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_16/ptf/static_entries.p4
   extensions/p4_tests/p4_16/ptf/p4c-5298.p4
 )
+
+# P4C-5307 - varbit extraction -> fixed-length extraction incorrect for constant lenghts
+p4c_add_xfail_reason("tofino"
+  "mismatch from expected(.*) at byte .*"
+  extensions/p4_tests/p4_16/stf/varbit_constant.p4
+)
