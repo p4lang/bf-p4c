@@ -356,6 +356,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue2190.p4
   # p4c update 2022-04-25
   testdata/p4_16_samples/psa-dpdk-binary-operations.p4
+  testdata/p4_16_samples/psa-dpdk-binary-operations-1.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -601,8 +602,9 @@ p4c_add_xfail_reason("tofino"
 
 # BRIG-934
 p4c_add_xfail_reason("tofino"
-  "Found extract ingress::meta.parser_error"
+  "Found extract ingress::"
   testdata/p4_16_samples/issue510-bmv2.p4
+  testdata/p4_16_samples/parser-unroll-test10.p4
 )
 
 # P4C-1011
@@ -1487,6 +1489,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/psa-dpdk-non-zero-arg-default-action-07.p4
   testdata/p4_16_samples/psa-dpdk-non-zero-arg-default-action-08.p4
   testdata/p4_16_samples/psa-dpdk-non-zero-arg-default-action-09.p4
+  testdata/p4_16_samples/psa-dpdk-128bitCast.p4
 )
 
 # P4C-3220
