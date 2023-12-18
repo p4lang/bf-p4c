@@ -477,6 +477,13 @@ BFN_Options::BFN_Options() {
         "Silence output from the compiler proper after N errors have been emitted.  "
         "The default value of N is effectively equivalent to positive infinity.  "
         "Inclusive minimum value: 1 [one].");
+
+    // FIXME: P4C-5308/P4C-5309 - Temporarily allow manual aliasing of POV bits to address POV bit
+    // growth caused by varbit headers. Only a single bit is needed on Tofino 2 if the varbit is
+    // allocated to a CLOT.
+    registerOption("--allow-pov-aliasing", nullptr,
+        [this](const char *) { allow_pov_aliasing = true; return true; },
+        "Allow manual aliasing of POV bits");
 }  //  end of "BFN_Options::BFN_Options()"
 
 

@@ -67,6 +67,11 @@ class BFN_Options : public CompilerOptions {
 #endif
     bool verbose = false;
 
+    // FIXME: P4C-5308/P4C-5309 - Temporarily allow manual aliasing of POV bits to address POV bit
+    // growth caused by varbit headers. Only a single bit is needed on Tofino 2 if the varbit is
+    // allocated to a CLOT.
+    bool allow_pov_aliasing = false;
+
     cstring bfRtSchema = "";
     bool p4RuntimeForceStdExterns = false;
     cstring programName;

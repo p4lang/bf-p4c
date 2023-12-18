@@ -111,7 +111,8 @@ std::optional<std::pair<const PHV::Field*, const PHV::Field*>> PragmaAlias::mayA
     } else if (field1->metadata && !field2->metadata) {
         aliasSrc = field1;
         aliasDest = field2;
-    } else if (field1->metadata && field2->metadata) {
+    } else if ((field1->metadata && field2->metadata) ||
+               (BFNContext::get().options().allow_pov_aliasing && field1->pov && field2->pov)) {
         // When the aliasing relationship is between a metadata and a header field, the header field
         // is chosen as the alias destination. When the aliasing relationship is between two
         // metadata fields and one of those metadata fields is not used in an IR::Expression object,

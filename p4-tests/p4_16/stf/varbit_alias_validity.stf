@@ -1,0 +1,15 @@
+packet 0 01 11 ff
+expect 0 01 11 ff f8
+
+packet 0 03 11 22 33 ff
+expect 0 03 11 22 33 ff f8
+
+packet 0 05 11 22 33 44 55 ff
+expect 0 05 f8 11 22 33 44 55 ff
+
+packet 0 81 11 ff
+expect 0 81 ff
+
+packet 0 83 11 22 33 ff
+expect 0 83 ff
+
