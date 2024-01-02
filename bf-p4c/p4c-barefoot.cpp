@@ -307,8 +307,8 @@ void execute_backend(const IR::BFN::Pipe* maupipe, BFN_Options& options) {
     maupipe = maupipe->apply(backend);
     bool mau_success = maupipe != nullptr;
     bool comp_success = (::errorCount() > 0) ? false : true;
-    for (int pipe_id : maupipe->ids) {
-        if (maupipe) {
+    if (maupipe) {
+        for (int pipe_id : maupipe->ids) {
             GenerateOutputs as(backend, backend.get_options(), pipe_id,
                 backend.get_prim_json(), backend.get_json_graph(),
                 mau_success && comp_success);

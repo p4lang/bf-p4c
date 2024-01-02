@@ -234,6 +234,7 @@ IR::PathExpression* TemporaryVariableInserter::createTemporaryVariable(
             action_initializations.insert(
                 ActionInitializations::value_type(action_->name, assignment_));
         } else {
+            BUG_CHECK(stmt_, "stmt_ should not be nullptr");
             stmt_initializations.insert(
                 StmtInitializations::value_type(stmt_->clone_id, assignment_));
         }
