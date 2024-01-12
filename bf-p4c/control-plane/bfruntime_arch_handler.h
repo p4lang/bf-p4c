@@ -1356,7 +1356,8 @@ class BFRuntimeArchHandlerCommon : public P4::ControlPlaneAPI::P4RuntimeArchHand
                           const ActionProfile &actionProfile, cstring pipeName = "") {
         ::barefoot::ActionProfile profile;
         profile.set_size(actionProfile.size);
-        auto tablesIt = actionProfilesRefs.find(actionProfile.name);
+        auto actionProfileName = prefix(pipeName, actionProfile.name);
+        auto tablesIt = actionProfilesRefs.find(actionProfileName);
         if (tablesIt != actionProfilesRefs.end()) {
             for (const auto &table : tablesIt->second) {
                 cstring tableName = table;
@@ -1365,7 +1366,6 @@ class BFRuntimeArchHandlerCommon : public P4::ControlPlaneAPI::P4RuntimeArchHand
                     P4::ControlPlaneAPI::P4RuntimeSymbolType::P4RT_TABLE(), tableName));
             }
         }
-        auto actionProfileName = prefix(pipeName, actionProfile.name);
         addP4InfoExternInstance(symbols, SymbolType::P4RT_ACTION_PROFILE(), "ActionProfile",
                                 actionProfileName, actionProfile.annotations, profile, p4Info);
         LOG2("Added Extern Instance - Action Profile " << actionProfileName);
@@ -1382,7 +1382,7 @@ class BFRuntimeArchHandlerCommon : public P4::ControlPlaneAPI::P4RuntimeArchHand
             selector.set_action_profile_id(
                 symbols.getId(SymbolType::P4RT_ACTION_PROFILE(),
                               prefix(blockPrefix, *actionSelector.actionProfileName)));
-            auto tablesIt = actionProfilesRefs.find(actionSelector.name);
+            auto tablesIt = actionProfilesRefs.find(actionSelectorName);
             if (tablesIt != actionProfilesRefs.end()) {
                 for (const auto &table : tablesIt->second) {
                     cstring tableName = prefix(blockPrefix, table);
@@ -1397,7 +1397,7 @@ class BFRuntimeArchHandlerCommon : public P4::ControlPlaneAPI::P4RuntimeArchHand
         } else {
             ::barefoot::ActionProfile profile;
             profile.set_size(actionSelector.size);
-            auto tablesIt = actionProfilesRefs.find(actionSelector.name);
+            auto tablesIt = actionProfilesRefs.find(actionSelectorName);
             if (tablesIt != actionProfilesRefs.end()) {
                 for (const auto &table : tablesIt->second) {
                     cstring tableName = prefix(blockPrefix, table);
@@ -1905,8 +1905,13 @@ class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<
             if (!block->is<IR::TableBlock>()) return;
             auto table = block->to<IR::TableBlock>()->container;
             auto implementation = getTableImplementationName(table, refMap);
-            if (implementation)
-                actionProfilesRefs[*implementation].insert(table->controlPlaneName());
+            if (implementation) {
+                auto pipeName = blockNamePrefixMap[block];
+                auto implName = prefix(pipeName, *implementation);
+                actionProfilesRefs[implName].insert(table->controlPlaneName());
+                LOG5("Adding action profile : " << implName << " for table "
+                                                << table->controlPlaneName());
+            }
         });
 
         // analyze action profile used by action selector and adds the set of
@@ -1922,9 +1927,14 @@ class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<
                 auto profileExternBlock = profile->to<IR::ExternBlock>();
                 auto profileDecl = profileExternBlock->node->to<IR::Declaration_Instance>();
                 CHECK_NULL(profileDecl);
-                actionProfilesRefs[profileDecl->controlPlaneName()].insert(
-                    actionProfilesRefs[selectorDecl->controlPlaneName()].begin(),
-                    actionProfilesRefs[selectorDecl->controlPlaneName()].end());
+                auto pipeName = blockNamePrefixMap[selectorExternBlock];
+                auto profileDeclName = prefix(pipeName, profileDecl->controlPlaneName());
+                auto selectorDeclName = prefix(pipeName, selectorDecl->controlPlaneName());
+                actionProfilesRefs[profileDeclName].insert(
+                    actionProfilesRefs[selectorDeclName].begin(),
+                    actionProfilesRefs[selectorDeclName].end());
+                LOG5("Adding action profile : " << profileDeclName << " for tables "
+                        << actionProfilesRefs[profileDeclName]);
             }
         });
 
