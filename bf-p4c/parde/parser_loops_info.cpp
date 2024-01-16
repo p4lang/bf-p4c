@@ -106,7 +106,7 @@ struct ParserLoopsInfo::GetMaxLoopDepth : public Inspector {
     int max_loop_depth = -1;
 
     /// Identify stack depth prior to SimplifyReferences
-    bool preorder(const IR::MethodCallStatement *mc) {
+    bool preorder(const IR::MethodCallStatement *mc) override {
         if (mc->methodCall->arguments->size() == 0) return mc;
         auto *dest = mc->methodCall->arguments->at(0)->expression->to<IR::Member>();
         if (!dest) return true;

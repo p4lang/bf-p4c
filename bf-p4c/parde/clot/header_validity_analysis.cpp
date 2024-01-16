@@ -78,7 +78,7 @@ bool HeaderValidityAnalysis::preorder(const IR::MAU::Instruction* instruction) {
     povBitsUpdateActions[dstField].insert(action);
     if (definitely_invalidated || (!definitely_invalidated && !definitely_validated))
         povBitsUpdateOrInvalidateActions[dstField].insert(action);
-    if (definitely_validated || (!definitely_validated && !definitely_validated))
+    if (definitely_validated || (!definitely_invalidated && !definitely_validated))
         povBitsUpdateOrValidateActions[dstField].insert(action);
     if (definitely_invalidated)
         povBitsInvalidateActions[dstField].insert(action);
