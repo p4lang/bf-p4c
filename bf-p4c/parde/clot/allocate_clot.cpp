@@ -5,6 +5,7 @@
 #include "field_slice_extract_info.h"
 #include "field_pov_analysis.h"
 #include "header_validity_analysis.h"
+#include "merge_desugared_varbit_valids.h"
 #include "bf-p4c/common/utils.h"
 #include "bf-p4c/parde/count_strided_header_refs.h"
 #include "bf-p4c/parde/parser_info.h"
@@ -1562,7 +1563,8 @@ class GreedyClotAllocator : public Visitor {
 };
 
 AllocateClot::AllocateClot(ClotInfo &clotInfo, const PhvInfo &phv, PhvUse &uses,
-                           PragmaDoNotUseClot &pragmaDoNotUseClot, bool log)
+                           PragmaDoNotUseClot &pragmaDoNotUseClot,
+                           PragmaAlias &pragmaAlias, bool log)
     : clotInfo(clotInfo) {
     addPasses({
         &uses,
@@ -1574,7 +1576,8 @@ AllocateClot::AllocateClot(ClotInfo &clotInfo, const PhvInfo &phv, PhvUse &uses,
         new CollectClotInfo(phv, clotInfo, pragmaDoNotUseClot),
         new GreedyClotAllocator(phv, clotInfo, log),
         new CheckClotGroups(phv, clotInfo),
-        LOGGING(3) ? new DumpParser("after_clot_allocation") : nullptr
+        LOGGING(3) ? new DumpParser("after_clot_allocation") : nullptr,
+        new MergeDesugaredVarbitValids(phv, clotInfo, pragmaAlias),
     });
 }
 

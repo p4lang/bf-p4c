@@ -45,8 +45,10 @@ class PragmaAlias : public Inspector, public Pragma::PrettyPrint {
     /// All PHV::Field objects that have expressions associated with them.
     /// This is used to replace IR::Expression objects for aliased fields later.
     bitvec fieldsWithExpressions;
-    /// All fields involved in aliasing operations (either as source or destination).
-    bitvec fieldsWithAliasing;
+    /// All fields involved in aliasing operations as a source
+    bitvec fieldsWithAliasingSrc;
+    /// All fields involved in aliasing operations as a destination
+    bitvec fieldsWithAliasingDst;
 
     profile_t init_apply(const IR::Node* root) override;
 
@@ -72,7 +74,8 @@ class PragmaAlias : public Inspector, public Pragma::PrettyPrint {
     std::optional<std::pair<const PHV::Field*, const PHV::Field*>> mayAddAlias(
             const PHV::Field* f1,
             const PHV::Field* f2,
-            bool suppressWarning = false);
+            bool suppressWarning = false,
+            CreatedBy who = PRAGMA);
 
     bool addAlias(const PHV::Field* f1, const PHV::Field* f2,
             bool suppressWarning = false, CreatedBy who = PRAGMA);

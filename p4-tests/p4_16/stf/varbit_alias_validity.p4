@@ -1,7 +1,9 @@
 #include <core.p4>
 #include <t2na.p4>
 
-#ifndef DISABLE_POV_ALIASES
+// Manual definition of the aliases should _no_ be necessary. The compiler
+// should automatically determine these.
+#ifdef MANUAL_POV_ALIASES
 @pa_alias("ingress", 
                 "hdr.variable_h_var_bits_8b.$valid",
                 "hdr.variable_h_var_bits_16b.$valid",
@@ -11,7 +13,7 @@
                 "hdr.variable_h_var_bits_48b.$valid",
                 "hdr.variable_h_var_bits_56b.$valid",
                 "hdr.variable_h_var_bits_64b.$valid")
-#endif  /* DISABLE_POV_ALIASES */
+#endif  /* MANUAL_POV_ALIASES */
 
 header variable_h {
     varbit<64> bits;

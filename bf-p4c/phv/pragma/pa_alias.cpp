@@ -43,7 +43,8 @@ const char *PragmaAlias::help =
 Visitor::profile_t PragmaAlias::init_apply(const IR::Node* root) {
     aliasMap.clear();
     fieldsWithExpressions.clear();
-    fieldsWithAliasing.clear();
+    fieldsWithAliasingSrc.clear();
+    fieldsWithAliasingDst.clear();
     return Inspector::init_apply(root);
 }
 
@@ -57,8 +58,9 @@ bool PragmaAlias::preorder(const IR::Expression* expr) {
 std::optional<std::pair<const PHV::Field*, const PHV::Field*>> PragmaAlias::mayAddAlias(
         const PHV::Field* field1,
         const PHV::Field* field2,
-        bool suppressWarning) {
-    if (fieldsWithAliasing[field1->id]) {
+        bool suppressWarning,
+        PragmaAlias::CreatedBy who) {
+    if (fieldsWithAliasingSrc[field1->id]) {
         WARN_CHECK(suppressWarning,
                 "@pragma pa_alias for fields %1% and %2% ignored because "
                 "field %1% already aliases with a different field %3%",
@@ -66,7 +68,7 @@ std::optional<std::pair<const PHV::Field*, const PHV::Field*>> PragmaAlias::mayA
                 (aliasMap.count(field1->name) ? aliasMap[field1->name].field : ""));
         return std::nullopt; }
 
-    if (fieldsWithAliasing[field2->id]) {
+    if (fieldsWithAliasingSrc[field2->id]) {
         WARN_CHECK(suppressWarning,
                 "@pragma pa_alias for fields %1% and %2% ignored because "
                 "field %2% already aliases with a different field %3%",
@@ -112,7 +114,8 @@ std::optional<std::pair<const PHV::Field*, const PHV::Field*>> PragmaAlias::mayA
         aliasSrc = field1;
         aliasDest = field2;
     } else if ((field1->metadata && field2->metadata) ||
-               (BFNContext::get().options().allow_pov_aliasing && field1->pov && field2->pov)) {
+               ((who == COMPILER || BFNContext::get().options().allow_pov_aliasing) &&
+                field1->pov && field2->pov)) {
         // When the aliasing relationship is between a metadata and a header field, the header field
         // is chosen as the alias destination. When the aliasing relationship is between two
         // metadata fields and one of those metadata fields is not used in an IR::Expression object,
@@ -140,6 +143,15 @@ std::optional<std::pair<const PHV::Field*, const PHV::Field*>> PragmaAlias::mayA
     }
     BUG_CHECK(aliasDest && aliasSrc, "Internal compiler error: Did not calculate aliasDest and "
             "aliasSrc");
+
+    if (fieldsWithAliasingDst[aliasSrc->id]) {
+        WARN_CHECK(suppressWarning,
+                "@pragma pa_alias for fields %1% and %2% ignored because "
+                "field %2% already aliases with a different field %3%",
+                aliasDest->name, aliasSrc->name,
+                (aliasMap.count(aliasSrc->name) ? aliasMap[aliasSrc->name].field : ""));
+        return std::nullopt; }
+
     if (aliasSrc->size > aliasDest->size) {
         WARN_CHECK(suppressWarning,
                 "@pragma pa_alias ignored because metadata field %1%<%2%> is larger than the "
@@ -172,11 +184,11 @@ std::optional<std::pair<const PHV::Field*, const PHV::Field*>> PragmaAlias::mayA
 
 bool PragmaAlias::addAlias(const PHV::Field* f1, const PHV::Field* f2,
         bool suppressWarning, PragmaAlias::CreatedBy who) {
-    auto mayAlias = mayAddAlias(f1, f2, suppressWarning);
+    auto mayAlias = mayAddAlias(f1, f2, suppressWarning, who);
     if (!mayAlias) return false;
     aliasMap[mayAlias->second->name] = { mayAlias->first->name, std::nullopt, who };
-    fieldsWithAliasing[mayAlias->second->id] = true;
-    fieldsWithAliasing[mayAlias->first->id] = true;
+    fieldsWithAliasingSrc[mayAlias->second->id] = true;
+    fieldsWithAliasingDst[mayAlias->first->id] = true;
     LOG1("\t Alias (src-->dst): " << mayAlias->second->name << " --> " << mayAlias->first->name);
     return true;
 }
@@ -260,8 +272,8 @@ void PragmaAlias::postorder(const IR::BFN::Pipe* pipe) {
             if (field == aliasDest)
                 continue;
             aliasMap[field->name] = { aliasDest->name, std::nullopt, PragmaAlias::PRAGMA };
-            fieldsWithAliasing[field->id] = true;
-            fieldsWithAliasing[aliasDest->id] = true;
+            fieldsWithAliasingSrc[field->id] = true;
+            fieldsWithAliasingDst[aliasDest->id] = true;
             LOG1("\t  " << field->name << " --> " << aliasDest->name);
         }
     }

@@ -3,12 +3,15 @@
 
 #include "clot_info.h"
 
+class PragmaAlias;
+
 class AllocateClot : public PassManager {
     ClotInfo clotInfo;
 
  public:
     explicit AllocateClot(ClotInfo &clotInfo, const PhvInfo &phv, PhvUse &uses,
-                          PragmaDoNotUseClot& pragmaDoNotUseClot, bool log = true);
+                          PragmaDoNotUseClot& pragmaDoNotUseClot,
+                          PragmaAlias& pragmaAlias, bool log = true);
 };
 
 /**

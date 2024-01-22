@@ -534,6 +534,7 @@ set (BF_P4C_BACKEND_PARDE_SRCS
   parde/clot/field_slice_extract_info.cpp
   parde/clot/field_pov_analysis.cpp
   parde/clot/header_validity_analysis.cpp
+  parde/clot/merge_desugared_varbit_valids.cpp
   parde/clot/pseudoheader.cpp
   parde/clot/pragma/do_not_use_clot.cpp
   parde/lowered/compute_buffer_requirements.cpp
@@ -599,6 +600,7 @@ set (BF_P4C_BACKEND_PARDE_HDRS
   parde/clot/field_slice_set.h
   parde/clot/field_pov_analysis.h
   parde/clot/header_validity_analysis.h
+  parde/clot/merge_desugared_varbit_valids.h
   parde/clot/pseudoheader.h
   parde/clot/pragma/do_not_use_clot.h
   parde/common/allocators.h

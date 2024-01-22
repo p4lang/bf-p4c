@@ -182,13 +182,14 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
     // Create even if Tofino, since this checks power is within limits.
     power_and_mpr = new MauPower::FinalizeMauPredDepsPower(phv, deps, &nextTblProp, options);
 
-    auto* pragmaDoNotUseClot = new PragmaDoNotUseClot(phv);
-    auto* allocateClot = Device::numClots() > 0 && options.use_clot ?
-        new AllocateClot(clot, phv, uses, *pragmaDoNotUseClot) : nullptr;
-
     liveRangeReport = new LiveRangeReport(phv, table_summary, defuse);
     auto *noOverlay = new PragmaNoOverlay(phv);
     auto *pragmaAlias = new PragmaAlias(phv, *noOverlay);
+
+    auto* pragmaDoNotUseClot = new PragmaDoNotUseClot(phv);
+    auto* allocateClot = Device::numClots() > 0 && options.use_clot ?
+        new AllocateClot(clot, phv, uses, *pragmaDoNotUseClot, *pragmaAlias) : nullptr;
+
     addPasses({
         new DumpPipe("Initial table graph"),
         flexibleLogging,

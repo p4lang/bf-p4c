@@ -8,6 +8,8 @@
 #include "bf-p4c/parde/clot/pragma/do_not_use_clot.h"
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/phv_parde_mau_use.h"
+#include "bf-p4c/phv/pragma/pa_alias.h"
+#include "bf-p4c/phv/pragma/pa_no_overlay.h"
 #include "bf-p4c/test/gtest/tofino_gtest_utils.h"
 #include "test/gtest/helpers.h"
 
@@ -133,7 +135,8 @@ using ExpectedClot = std::vector<SliceSpec>;
 using ExpectedAllocation = std::set<ExpectedClot>;
 
 void runClotTest(std::optional<TofinoPipeTestCase> test,
-             ExpectedAllocation expectedAlloc) {
+             ExpectedAllocation expectedAlloc,
+             ExpectedAllocation expectedAliases = {}) {
     PhvInfo phvInfo;
     PhvUse phvUse(phvInfo);
     ClotInfo clotInfo(phvUse);
@@ -141,17 +144,20 @@ void runClotTest(std::optional<TofinoPipeTestCase> test,
 
     CollectHeaderStackInfo collectHeaderStackInfo;
     CollectPhvInfo collectPhvInfo(phvInfo);
+    PragmaNoOverlay pragmaNoOverlay(phvInfo);
+    PragmaAlias pragmaAlias(phvInfo, pragmaNoOverlay);
     PragmaDoNotUseClot pragmaDoNotUseClot(phvInfo);
     FieldPovAnalysis fieldPovAnalysis(clotInfo, phvInfo);
     CollectClotInfo collectClotInfo(phvInfo, clotInfo, pragmaDoNotUseClot);
     InstructionSelection instructionSelection(BackendOptions(), phvInfo, red_info);
-    AllocateClot allocateClot(clotInfo, phvInfo, phvUse, pragmaDoNotUseClot, false);
+    AllocateClot allocateClot(clotInfo, phvInfo, phvUse, pragmaDoNotUseClot, pragmaAlias, false);
 
     PassManager passes = {
       &collectHeaderStackInfo,
       &collectPhvInfo,
       &clotInfo.parserInfo,
       &instructionSelection,
+      &pragmaAlias,
       &pragmaDoNotUseClot,
       &fieldPovAnalysis,
       &collectClotInfo,
@@ -199,6 +205,47 @@ void runClotTest(std::optional<TofinoPipeTestCase> test,
     }
 
     EXPECT_EQ(expectedClots, actualClots);
+
+    if (expectedAliases.size()) {
+        // Identify all fields participating in aliases
+        std::map<cstring, cstring> aliasSrcToDst;
+        std::set<cstring> aliasDst;
+        for (auto& [src, dst] : pragmaAlias.getAliasMap()) {
+            aliasSrcToDst.emplace(src, dst.field);
+            aliasDst.emplace(dst.field);
+        }
+
+        // Verify that the fields in each group participate in the same alias
+        for (auto& aliasGrp : expectedAliases) {
+            EXPECT_NE(aliasGrp.size(), 0UL);
+            for (auto gress : {INGRESS, EGRESS}) {
+                cstring dst = "";
+                for (auto &slice : aliasGrp) {
+                    auto fieldName = toString(gress) + "::hdr." + slice.fieldName;
+
+                    EXPECT_EQ(aliasSrcToDst.count(fieldName) || aliasDst.count(fieldName), true)
+                        << "Field " << fieldName << " was not found in the alias map.";
+
+                    if (aliasSrcToDst.count(fieldName)) {
+                        if (dst == "")
+                            dst = aliasSrcToDst.at(fieldName);
+                        else
+                            EXPECT_EQ(aliasSrcToDst.at(fieldName), dst)
+                                << "Alias destition for " << fieldName << " is "
+                                << aliasSrcToDst.at(fieldName) << " but expecting " << dst;
+                    }
+
+                    if (aliasDst.count(fieldName)) {
+                        if (dst == "")
+                            dst = fieldName;
+                        else
+                            EXPECT_EQ(fieldName, dst)
+                                << "Alias destition is " << fieldName << " but expecting " << dst;
+                    }
+                }
+            }
+        }
+    }
 }
 
 TEST_F(ClotTest, Basic1) {
@@ -1581,6 +1628,70 @@ TEST_F(ClotTest, ZeroInitAndExtractConstantBetweenTwoClots) {
 
     runClotTest(test,
                     {{"a.f1", "a.f2", "b.f1", "b.f2"}, {"d.f1", "d.f2"}, {{"e.f1", FromTo(0, 7)}}});
+}
+
+TEST_F(ClotTest, MergeVarbitValidsForClots) {
+    auto test = createClotTest(P4_SOURCE(R"(
+        )"), P4_SOURCE(R"(
+            header variable_h {
+                varbit<64> bits;
+            }
+
+            header sample_h {
+                bit<8> counterIndex;
+            }
+        )"), P4_SOURCE(R"(
+            sample_h sample;
+            variable_h var;
+            sample_h sample2;
+            sample_h sample3;
+        )"), P4_SOURCE(R"(
+            state start {
+                pkt.extract(hdr.sample);
+                transition select(hdr.sample.counterIndex[6:0]) {
+                    1 : parse_var_1;
+                    2 : parse_var_1;
+                    3 : parse_var_1;
+                    4 : parse_var_1;
+                    default : accept;
+                }
+            }
+
+            state parse_var_1 {
+                pkt.extract(hdr.var, (bit<32>)(((bit<16>)hdr.sample.counterIndex[3:0]) * 8));
+                transition select(hdr.sample.counterIndex[6:6]) {
+                    0 : parse_sample2;
+                    1 : accept;
+                }
+            }
+
+            state parse_sample2 {
+                pkt.extract(hdr.sample2);
+                transition accept;
+            }
+        )"), P4_SOURCE(R"(
+            apply {
+                if (hdr.sample.counterIndex[7:7] == 1w1) {
+                    hdr.sample.counterIndex = 8w0xff;
+                    hdr.var.setInvalid();
+                } else {
+                    hdr.sample3.setValid();
+                    hdr.sample3.counterIndex = 8w0xf8;
+                }
+            }
+        )"), P4_SOURCE(R"(
+            pkt.emit(hdr);
+        )"));
+
+    runClotTest(test,
+                {{"variable_h_var_bits_8b.field", "variable_h_var_bits_16b.field",
+                  "variable_h_var_bits_24b.field", "variable_h_var_bits_32b.field",
+                  "variable_h_var_bits_40b.field", "variable_h_var_bits_48b.field",
+                  "variable_h_var_bits_56b.field", "variable_h_var_bits_64b.field"}},
+                {{"variable_h_var_bits_8b.$valid", "variable_h_var_bits_16b.$valid",
+                  "variable_h_var_bits_24b.$valid", "variable_h_var_bits_32b.$valid",
+                  "variable_h_var_bits_40b.$valid", "variable_h_var_bits_48b.$valid",
+                  "variable_h_var_bits_56b.$valid", "variable_h_var_bits_64b.$valid"}});
 }
 
 }  // namespace Test

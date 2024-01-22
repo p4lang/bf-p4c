@@ -124,7 +124,6 @@ set (P16_JNA_EXCLUDE_PATTERNS
   "p4c-4943\\.p4"
   "p4c-3582\\.p4"
   "p4c-5223-leaf-tof2\\.p4"
-  "varbit_alias_validity\\.p4"  # P4C-5309 - remove when implemented
 )
 
 include(JBayErrors.cmake)
@@ -672,12 +671,6 @@ p4c_add_bf_backend_tests("tofino2" "jbay" "t2na" "base" "${CMAKE_CURRENT_SOURCE_
 set_tests_properties("tofino2/extensions/p4_tests/p4_16/stf/MODEL-1095.p4" PROPERTIES TIMEOUT 1200)
 p4c_add_bf_backend_tests("tofino2" "jbay" "t2na" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/jbay/p4c-4072.p4" "-to 1200")
 set_tests_properties("tofino2/extensions/p4_tests/p4_16/jbay/p4c-4072.p4" PROPERTIES TIMEOUT 1200)
-
-# P4C-5308 / P4C-5309 -- need a temporary command line option until P4C-5309 is implemented
-#
-# Keep the test but remove this line and the exclusion in P16_JNA_EXCLUDE_PATTERNS
-bfn_add_test_with_args("tofino2" "jbay" "extensions/p4_tests/p4_16/stf/varbit_alias_validity.p4"
-	"extensions/p4_tests/p4_16/stf/varbit_alias_validity.p4" "" "-Xp4c=--allow-pov-aliasing")
 
 p4c_add_ptf_test_with_ptfdir ("tofino2" "t2na_misc2" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16/misc2/misc2.p4" "${testExtraArgs} -target tofino2 -arch t2na -bfrt" "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/internal_p4_16/misc2")
 

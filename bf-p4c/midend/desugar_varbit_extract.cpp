@@ -1461,7 +1461,7 @@ bool RewriteVarbitTypes::preorder(IR::Type_StructLike* type_struct) {
                 auto field = new IR::StructField(create_instance_name(type->name),
                                      new IR::Type_Name(type->name));
                 type_struct->fields.push_back(field);
-                LOG3("Adding " << field << "in " << type_struct);
+                LOG3("Adding " << field << " in " << type_struct);
             }
         }
 
