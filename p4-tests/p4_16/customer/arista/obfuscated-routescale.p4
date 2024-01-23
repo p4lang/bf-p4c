@@ -215,8 +215,10 @@ struct Lathrop {
 }
 
 struct Clarion {
-    PortId_t Aguilita;
-    bit<16>  Harbor;
+    PortId_t  Aguilita;
+    bit<16>   Harbor;
+    QueueId_t BigRun;
+    bit<16>   Robins;
 }
 
 struct IttaBena {
@@ -353,8 +355,21 @@ header Palmhurst {
     bit<16> Freeman;
 }
 
+header Medulla {
+    bit<192> Garibaldi;
+}
+
+header Corry {
+    bit<64> Garibaldi;
+}
+
 header Comfrey {
-    bit<416> Garibaldi;
+    bit<8>     Eckman;
+    varbit<48> Garibaldi;
+}
+
+header Hiwassee {
+    bit<368> Garibaldi;
 }
 
 header Kalida {
@@ -608,7 +623,6 @@ struct Onycha {
     bit<12> Oriskany;
     bit<20> Bowden;
     bit<12> Delavan;
-    bit<1>  Bennet;
     bit<16> Irvine;
     bit<8>  Beasley;
     bit<8>  Petrey;
@@ -1084,7 +1098,6 @@ struct Bratt {
     Killen      Swanlake;
     Dennison[2] Geistown;
     Dennison    Lindy;
-    Dennison    Brady;
     Palmhurst   Emden;
     Armona      Skillman;
     Loris       Olcott;
@@ -1119,6 +1132,11 @@ struct Hettinger {
     bit<32> Bellamy;
 }
 
+control WestBend(inout Baker Uniopolis, inout Bratt Moosic, in egress_intrinsic_metadata_t Funston, in egress_intrinsic_metadata_from_parser_t Nowlin, inout egress_intrinsic_metadata_for_deparser_t Sully, inout egress_intrinsic_metadata_for_output_port_t Ragley) {
+    apply {
+    }
+}
+
 control Tularosa(inout Baker Uniopolis, inout Bratt Moosic, in ingress_intrinsic_metadata_t Lemont, in ingress_intrinsic_metadata_from_parser_t Ossining, inout ingress_intrinsic_metadata_for_deparser_t Nason, inout ingress_intrinsic_metadata_for_tm_t Hookdale) {
     apply {
     }
@@ -1139,12 +1157,10 @@ parser GunnCity(packet_in Oneonta, out Baker Uniopolis, out Bratt Moosic, out in
     @name(".Goodlett") value_set<bit<9>>(2) Goodlett;
     @name(".BigPoint") value_set<bit<19>>(4) BigPoint;
     @name(".Tenstrike") value_set<bit<19>>(4) Tenstrike;
-    @name(".Castle") value_set<PortId_t>(4) Castle;
     state Aguila {
         transition select(Lemont.ingress_port) {
             Goodlett: Nixon;
             9w68 &&& 9w0x7f: Scottdale;
-            Castle: Camargo;
             default: Midas;
         }
     }
@@ -1262,40 +1278,6 @@ parser GunnCity(packet_in Oneonta, out Baker Uniopolis, out Bratt Moosic, out in
             24w0x9100 &&& 24w0xffff: Crown;
             24w0x88a8 &&& 24w0xffff: Crown;
             24w0x8100 &&& 24w0xffff: Crown;
-            24w0x806 &&& 24w0xffff: Mulvane;
-            24w0x450800 &&& 24w0xffffff: Luning;
-            24w0x50800 &&& 24w0xfffff: Cairo;
-            24w0x400800 &&& 24w0xfcffff: Exeter;
-            24w0x440800 &&& 24w0xffffff: Exeter;
-            24w0x800 &&& 24w0xffff: Oconee;
-            24w0x6086dd &&& 24w0xf0ffff: Earlham;
-            24w0x86dd &&& 24w0xffff: Absecon;
-            24w0x8808 &&& 24w0xffff: Brodnax;
-            24w0x88f7 &&& 24w0xffff: Bowers;
-            default: Yulee;
-        }
-    }
-    state Camargo {
-        Oneonta.extract<Killen>(Uniopolis.Swanlake);
-        transition select((Oneonta.lookahead<bit<24>>())[7:0], (Oneonta.lookahead<bit<16>>())[15:0]) {
-            (8w0x0 &&& 8w0x0, 16w0x9100 &&& 16w0xffff): Pioche;
-            (8w0x0 &&& 8w0x0, 16w0x88a8 &&& 16w0xffff): Pioche;
-            (8w0x0 &&& 8w0x0, 16w0x8100 &&& 16w0xffff): Pioche;
-            (8w0x0 &&& 8w0x0, 16w0x806 &&& 16w0xffff): Mulvane;
-            (8w0x45 &&& 8w0xff, 16w0x800): Luning;
-            (8w0x5 &&& 8w0xf, 16w0x800 &&& 16w0xffff): Cairo;
-            (8w0x40 &&& 8w0xfc, 16w0x800 &&& 16w0xffff): Exeter;
-            (8w0x44 &&& 8w0xff, 16w0x800 &&& 16w0xffff): Exeter;
-            (8w0x0 &&& 8w0x0, 16w0x800 &&& 16w0xffff): Oconee;
-            (8w0x60 &&& 8w0xf0, 16w0x86dd &&& 16w0xffff): Earlham;
-            (8w0x0 &&& 8w0x0, 16w0x86dd &&& 16w0xffff): Absecon;
-            (8w0x0 &&& 8w0x0, 16w0x8808 &&& 16w0xffff): Brodnax;
-            default: Yulee;
-        }
-    }
-    state Pioche {
-        Oneonta.extract<Dennison>(Uniopolis.Lindy);
-        transition select((bit<8>)(Oneonta.lookahead<bit<24>>())[7:0] ++ (bit<16>)(Oneonta.lookahead<bit<16>>())) {
             24w0x806 &&& 24w0xffff: Mulvane;
             24w0x450800 &&& 24w0xffffff: Luning;
             24w0x50800 &&& 24w0xfffff: Cairo;
@@ -1585,12 +1567,6 @@ parser GunnCity(packet_in Oneonta, out Baker Uniopolis, out Bratt Moosic, out in
         Oneonta.extract<Killen>(Uniopolis.RockHill);
         Moosic.Hearne.Turkey = Uniopolis.RockHill.Turkey;
         Moosic.Hearne.Riner = Uniopolis.RockHill.Riner;
-        transition select((Oneonta.lookahead<Palmhurst>()).Freeman) {
-            16w0x8100: SanPablo;
-            default: Forepaugh;
-        }
-    }
-    state Forepaugh {
         Oneonta.extract<Palmhurst>(Uniopolis.Robstown);
         Moosic.Hearne.Freeman = Uniopolis.Robstown.Freeman;
         transition select((Oneonta.lookahead<bit<8>>())[7:0], Moosic.Hearne.Freeman) {
@@ -1602,10 +1578,6 @@ parser GunnCity(packet_in Oneonta, out Baker Uniopolis, out Bratt Moosic, out in
             (8w0x0 &&& 8w0x0, 16w0x86dd &&& 16w0xffff): Kellner;
             default: accept;
         }
-    }
-    state SanPablo {
-        Oneonta.extract<Dennison>(Uniopolis.Brady);
-        transition Forepaugh;
     }
     state Bowers {
         transition Yulee;
@@ -1760,7 +1732,6 @@ control Algonquin(packet_out Oneonta, inout Baker Uniopolis, in Bratt Moosic, in
         Oneonta.emit<Killen>(Uniopolis.Swanlake);
         Oneonta.emit<Dennison>(Uniopolis.Geistown[0]);
         Oneonta.emit<Dennison>(Uniopolis.Geistown[1]);
-        Oneonta.emit<Dennison>(Uniopolis.Lindy);
         Oneonta.emit<Palmhurst>(Uniopolis.Emden);
         Oneonta.emit<Armona>(Uniopolis.Skillman);
         Oneonta.emit<Loris>(Uniopolis.Olcott);
@@ -1773,7 +1744,6 @@ control Algonquin(packet_out Oneonta, inout Baker Uniopolis, in Bratt Moosic, in
         {
             Oneonta.emit<Montross>(Uniopolis.Dwight);
             Oneonta.emit<Killen>(Uniopolis.RockHill);
-            Oneonta.emit<Dennison>(Uniopolis.Brady);
             Oneonta.emit<Palmhurst>(Uniopolis.Robstown);
             Oneonta.emit<Chloride>(Uniopolis.Chatanika);
             Oneonta.emit<Armona>(Uniopolis.Ponder);
@@ -1868,10 +1838,9 @@ control Penzance(inout Baker Uniopolis, inout Bratt Moosic, in ingress_intrinsic
             @defaultonly NoAction();
         }
         key = {
-            Moosic.Hearne.Delavan    : exact @name("Hearne.Delavan") ;
-            Moosic.Hearne.Turkey     : exact @name("Hearne.Turkey") ;
-            Moosic.Hearne.Riner      : exact @name("Hearne.Riner") ;
-            Uniopolis.Brady.isValid(): exact @name("Brady") ;
+            Moosic.Hearne.Delavan: exact @name("Hearne.Delavan") ;
+            Moosic.Hearne.Turkey : exact @name("Hearne.Turkey") ;
+            Moosic.Hearne.Riner  : exact @name("Hearne.Riner") ;
         }
         size = 2048;
         const default_action = NoAction();
@@ -1883,12 +1852,11 @@ control Penzance(inout Baker Uniopolis, inout Bratt Moosic, in ingress_intrinsic
             Weathers();
         }
         key = {
-            Moosic.Hearne.Delavan    : ternary @name("Hearne.Delavan") ;
-            Moosic.Hearne.Turkey     : ternary @name("Hearne.Turkey") ;
-            Moosic.Hearne.Riner      : ternary @name("Hearne.Riner") ;
-            Moosic.Hearne.Etter      : ternary @name("Hearne.Etter") ;
-            Moosic.Biggers.Naubinway : ternary @name("Biggers.Naubinway") ;
-            Uniopolis.Brady.isValid(): exact @name("Brady") ;
+            Moosic.Hearne.Delavan   : ternary @name("Hearne.Delavan") ;
+            Moosic.Hearne.Turkey    : ternary @name("Hearne.Turkey") ;
+            Moosic.Hearne.Riner     : ternary @name("Hearne.Riner") ;
+            Moosic.Hearne.Etter     : ternary @name("Hearne.Etter") ;
+            Moosic.Biggers.Naubinway: ternary @name("Biggers.Naubinway") ;
         }
         const default_action = Weathers();
         size = 512;
@@ -3744,8 +3712,8 @@ control Eudora(inout Baker Uniopolis, inout Bratt Moosic, in egress_intrinsic_me
             @defaultonly Buras();
         }
         key = {
-            Funston.egress_rid : exact @name("Funston.egress_rid") ;
-            Funston.egress_port: exact @name("Funston.Aguilita") ;
+            Funston.egress_rid     : exact @name("Funston.egress_rid") ;
+            Moosic.Funston.Aguilita: exact @name("Funston.Aguilita") ;
         }
         size = 1024;
         const default_action = Buras();
@@ -3764,7 +3732,7 @@ control Twichell(inout Baker Uniopolis, inout Bratt Moosic, in egress_intrinsic_
             Ferndale();
         }
         key = {
-            Funston.egress_port: exact @name("Funston.Aguilita") ;
+            Moosic.Funston.Aguilita: exact @name("Funston.Aguilita") ;
         }
         const default_action = Ferndale(10w0);
         size = 128;
@@ -4237,9 +4205,9 @@ control Minetto(inout Baker Uniopolis, inout Bratt Moosic, in egress_intrinsic_m
             Kinston();
         }
         key = {
-            Moosic.Garrison.LasVegas    : exact @name("Garrison.LasVegas") ;
-            Funston.egress_port & 9w0x7f: exact @name("Funston.Aguilita") ;
-            Moosic.Garrison.Ipava       : exact @name("Garrison.Ipava") ;
+            Moosic.Garrison.LasVegas        : exact @name("Garrison.LasVegas") ;
+            Moosic.Funston.Aguilita & 9w0x7f: exact @name("Funston.Aguilita") ;
+            Moosic.Garrison.Ipava           : exact @name("Garrison.Ipava") ;
         }
         const default_action = Kinston();
         size = 128;
@@ -4425,6 +4393,7 @@ control Bosco(inout Baker Uniopolis, inout Bratt Moosic, in egress_intrinsic_met
             @defaultonly NoAction();
         }
         key = {
+            Uniopolis.Rhinebeck.isValid()            : ternary @name("Broussard") ;
             Moosic.Garrison.FortHunt                 : ternary @name("Garrison.FortHunt") ;
             Moosic.Garrison.Satolah                  : exact @name("Garrison.Satolah") ;
             Moosic.Garrison.Miranda                  : ternary @name("Garrison.Miranda") ;
@@ -4466,8 +4435,8 @@ control Bosco(inout Baker Uniopolis, inout Bratt Moosic, in egress_intrinsic_met
             @defaultonly NoAction();
         }
         key = {
-            Moosic.Garrison.Montague    : exact @name("Garrison.Montague") ;
-            Funston.egress_port & 9w0x7f: exact @name("Funston.Aguilita") ;
+            Moosic.Garrison.Montague        : exact @name("Garrison.Montague") ;
+            Moosic.Funston.Aguilita & 9w0x7f: exact @name("Funston.Aguilita") ;
         }
         size = 512;
         const default_action = NoAction();
@@ -5374,7 +5343,7 @@ control McClusky(inout Baker Uniopolis, inout Bratt Moosic, in egress_intrinsic_
     @name(".Conklin.Roosville") Hash<bit<12>>(HashAlgorithm_t.IDENTITY) Conklin;
     @name(".Mocane") action Mocane() {
         bit<12> Vananda;
-        Vananda = Conklin.get<tuple<bit<9>, bit<5>>>({ Funston.egress_port, Funston.egress_qid[4:0] });
+        Vananda = Conklin.get<tuple<bit<9>, bit<5>>>({ Moosic.Funston.Aguilita, Funston.egress_qid[4:0] });
         Anniston.count((bit<12>)Vananda);
     }
     @disable_atomic_modify(1) @name(".Humble") table Humble {
@@ -5409,8 +5378,8 @@ control Nashua(inout Baker Uniopolis, inout Bratt Moosic, in egress_intrinsic_me
             Slick();
         }
         key = {
-            Funston.egress_port & 9w0x7f: exact @name("Funston.Aguilita") ;
-            Moosic.Garrison.Pajaros     : exact @name("Garrison.Pajaros") ;
+            Moosic.Funston.Aguilita & 9w0x7f: exact @name("Funston.Aguilita") ;
+            Moosic.Garrison.Pajaros         : exact @name("Garrison.Pajaros") ;
         }
         const default_action = Slick();
         size = 4096;
@@ -5434,7 +5403,7 @@ control Rardin(inout Baker Uniopolis, inout Bratt Moosic, in egress_intrinsic_me
     @name(".Easley.Dunedin") Hash<bit<19>>(HashAlgorithm_t.IDENTITY) Easley;
     @name(".Rawson") action Rawson() {
         bit<19> Vananda;
-        Vananda = Easley.get<tuple<bit<9>, bit<12>>>({ Funston.egress_port, (bit<12>)Moosic.Garrison.Pajaros });
+        Vananda = Easley.get<tuple<bit<9>, bit<12>>>({ Moosic.Funston.Aguilita, (bit<12>)Moosic.Garrison.Pajaros });
         Moosic.Frederika.Murphy = Parmele.execute((bit<32>)Vananda);
     }
     @name(".Oakford") Register<bit<1>, bit<32>>(32w294912, 1w0) Oakford;
@@ -5449,7 +5418,7 @@ control Rardin(inout Baker Uniopolis, inout Bratt Moosic, in egress_intrinsic_me
     };
     @name(".Horsehead") action Horsehead() {
         bit<19> Vananda;
-        Vananda = Easley.get<tuple<bit<9>, bit<12>>>({ Funston.egress_port, (bit<12>)Moosic.Garrison.Pajaros });
+        Vananda = Easley.get<tuple<bit<9>, bit<12>>>({ Moosic.Funston.Aguilita, (bit<12>)Moosic.Garrison.Pajaros });
         Moosic.Frederika.Edwards = Alberta.execute((bit<32>)Vananda);
     }
     @disable_atomic_modify(1) @name(".Lakefield") table Lakefield {
@@ -5487,14 +5456,14 @@ control Switzer(inout Baker Uniopolis, inout Bratt Moosic, in egress_intrinsic_m
             Flats();
         }
         key = {
-            Funston.egress_port & 9w0x7f: ternary @name("Funston.Aguilita") ;
-            Moosic.Frederika.Edwards    : ternary @name("Frederika.Edwards") ;
-            Moosic.Frederika.Murphy     : ternary @name("Frederika.Murphy") ;
-            Moosic.Garrison.Rocklake    : ternary @name("Garrison.Rocklake") ;
-            Uniopolis.Skillman.Petrey   : ternary @name("Skillman.Petrey") ;
-            Uniopolis.Skillman.isValid(): ternary @name("Skillman") ;
-            Moosic.Garrison.Chavies     : ternary @name("Garrison.Chavies") ;
-            Moosic.Chevak               : exact @name("Chevak") ;
+            Moosic.Funston.Aguilita & 9w0x7f: ternary @name("Funston.Aguilita") ;
+            Moosic.Frederika.Edwards        : ternary @name("Frederika.Edwards") ;
+            Moosic.Frederika.Murphy         : ternary @name("Frederika.Murphy") ;
+            Moosic.Garrison.Rocklake        : ternary @name("Garrison.Rocklake") ;
+            Uniopolis.Skillman.Petrey       : ternary @name("Skillman.Petrey") ;
+            Uniopolis.Skillman.isValid()    : ternary @name("Skillman") ;
+            Moosic.Garrison.Chavies         : ternary @name("Garrison.Chavies") ;
+            Moosic.Chevak                   : exact @name("Chevak") ;
         }
         default_action = Flats();
         size = 512;
@@ -5837,7 +5806,6 @@ control Vincent(inout Baker Uniopolis, inout Bratt Moosic, in egress_intrinsic_m
         Uniopolis.Emden.setInvalid();
         Uniopolis.Geistown[0].setInvalid();
         Uniopolis.Geistown[1].setInvalid();
-        Uniopolis.Lindy.setInvalid();
     }
     @name(".Woodville") action Woodville() {
     }
@@ -6255,7 +6223,7 @@ control Oxnard(inout Baker Uniopolis, inout Bratt Moosic, in egress_intrinsic_me
             @defaultonly NoAction();
         }
         key = {
-            Funston.egress_port        : exact @name("Funston.Aguilita") ;
+            Moosic.Funston.Aguilita    : exact @name("Funston.Aguilita") ;
             Moosic.Biggers.Lamona      : exact @name("Biggers.Lamona") ;
             Moosic.Garrison.Miranda    : exact @name("Garrison.Miranda") ;
             Moosic.Garrison.FortHunt   : exact @name("Garrison.FortHunt") ;
@@ -6303,6 +6271,7 @@ control Oxnard(inout Baker Uniopolis, inout Bratt Moosic, in egress_intrinsic_me
     @name(".Hillister") Motley() Hillister;
     @name(".Camden") Kirkwood() Camden;
     @name(".Careywood") Waumandee() Careywood;
+    @name(".Kulpmont") WestBend() Kulpmont;
     @name(".Earlsboro") Petrolia() Earlsboro;
     @name(".Seabrook") DeerPark() Seabrook;
     @name(".Devore") Sodaville() Devore;
@@ -6364,6 +6333,7 @@ control Oxnard(inout Baker Uniopolis, inout Bratt Moosic, in egress_intrinsic_me
             } else if (Uniopolis.Rochert.isValid()) {
                 Melvina.apply(Uniopolis, Moosic, Funston, Nowlin, Sully, Ragley);
             }
+            Kulpmont.apply(Uniopolis, Moosic, Funston, Nowlin, Sully, Ragley);
         }
     }
 }
@@ -6465,7 +6435,8 @@ parser Seibert(packet_in Oneonta, out Baker Uniopolis, out Bratt Moosic, out egr
     state start {
         Oneonta.extract<egress_intrinsic_metadata_t>(Funston);
         Moosic.Funston.Harbor = Funston.pkt_length;
-        transition select(Funston.egress_port ++ (Oneonta.lookahead<Grabill>()).Uintah) {
+        Moosic.Funston.Aguilita = Funston.egress_port;
+        transition select(Moosic.Funston.Aguilita ++ (Oneonta.lookahead<Grabill>()).Uintah) {
             Maybee: LaMarque;
             17w0 &&& 17w0x7: Mishawaka;
             default: Villanova;

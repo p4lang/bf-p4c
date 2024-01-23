@@ -167,8 +167,10 @@ struct Glassboro {
 }
 
 struct Moorcroft {
-    PortId_t Toklat;
-    bit<16>  Bledsoe;
+    PortId_t  Toklat;
+    bit<16>   Bledsoe;
+    QueueId_t Petroleum;
+    bit<16>   Frederic;
 }
 
 struct Blencoe {
@@ -305,8 +307,21 @@ header Ledoux {
     bit<16> Connell;
 }
 
+header Armstrong {
+    bit<192> Quogue;
+}
+
+header Anaconda {
+    bit<64> Quogue;
+}
+
 header Steger {
-    bit<416> Quogue;
+    bit<8>     Zeeland;
+    varbit<48> Quogue;
+}
+
+header Herald {
+    bit<368> Quogue;
 }
 
 header Findlay {
@@ -1061,6 +1076,11 @@ struct Palouse {
 struct Wagener {
     bit<32> Monrovia;
     bit<32> Rienzi;
+}
+
+control Hilltop(inout Milano Olmitz, inout Sequim Baker, in egress_intrinsic_metadata_t Humeston, in egress_intrinsic_metadata_from_parser_t Basye, inout egress_intrinsic_metadata_for_deparser_t Woolwine, inout egress_intrinsic_metadata_for_output_port_t Agawam) {
+    apply {
+    }
 }
 
 control Ambler(inout Milano Olmitz, inout Sequim Baker, in ingress_intrinsic_metadata_t Yorkshire, in ingress_intrinsic_metadata_from_parser_t Glenoma, inout ingress_intrinsic_metadata_for_deparser_t Thurmond, inout ingress_intrinsic_metadata_for_tm_t Knights) {
@@ -3405,8 +3425,8 @@ control Cornwall(inout Milano Olmitz, inout Sequim Baker, in egress_intrinsic_me
             @defaultonly Amboy();
         }
         key = {
-            Humeston.egress_rid : exact @name("Humeston.egress_rid") ;
-            Humeston.egress_port: exact @name("Humeston.Toklat") ;
+            Humeston.egress_rid  : exact @name("Humeston.egress_rid") ;
+            Baker.Humeston.Toklat: exact @name("Humeston.Toklat") ;
         }
         size = 8;
         const default_action = Amboy();
@@ -3425,7 +3445,7 @@ control Catlin(inout Milano Olmitz, inout Sequim Baker, in egress_intrinsic_meta
             Antoine();
         }
         key = {
-            Humeston.egress_port: exact @name("Humeston.Toklat") ;
+            Baker.Humeston.Toklat: exact @name("Humeston.Toklat") ;
         }
         const default_action = Antoine(10w0);
         size = 128;
@@ -3854,9 +3874,9 @@ control Devola(inout Milano Olmitz, inout Sequim Baker, in egress_intrinsic_meta
             Eudora();
         }
         key = {
-            Baker.Earling.Turkey         : exact @name("Earling.Turkey") ;
-            Humeston.egress_port & 9w0x7f: exact @name("Humeston.Toklat") ;
-            Baker.Earling.LakeLure       : exact @name("Earling.LakeLure") ;
+            Baker.Earling.Turkey          : exact @name("Earling.Turkey") ;
+            Baker.Humeston.Toklat & 9w0x7f: exact @name("Humeston.Toklat") ;
+            Baker.Earling.LakeLure        : exact @name("Earling.LakeLure") ;
         }
         const default_action = Eudora();
         size = 128;
@@ -4043,8 +4063,8 @@ control Mantee(inout Milano Olmitz, inout Sequim Baker, in egress_intrinsic_meta
             @defaultonly NoAction();
         }
         key = {
-            Baker.Earling.Monahans       : exact @name("Earling.Monahans") ;
-            Humeston.egress_port & 9w0x7f: exact @name("Humeston.Toklat") ;
+            Baker.Earling.Monahans        : exact @name("Earling.Monahans") ;
+            Baker.Humeston.Toklat & 9w0x7f: exact @name("Humeston.Toklat") ;
         }
         size = 512;
         const default_action = NoAction();
@@ -4950,7 +4970,7 @@ control Hodges(inout Milano Olmitz, inout Sequim Baker, in egress_intrinsic_meta
     @name(".Northboro.Roosville") Hash<bit<12>>(HashAlgorithm_t.IDENTITY) Northboro;
     @name(".Waterford") action Waterford() {
         bit<12> Nighthawk;
-        Nighthawk = Northboro.get<tuple<bit<9>, bit<5>>>({ Humeston.egress_port, Humeston.egress_qid[4:0] });
+        Nighthawk = Northboro.get<tuple<bit<9>, bit<5>>>({ Baker.Humeston.Toklat, Humeston.egress_qid[4:0] });
         Rendon.count((bit<12>)Nighthawk);
     }
     @disable_atomic_modify(1) @name(".RushCity") table RushCity {
@@ -4985,9 +5005,9 @@ control Naguabo(inout Milano Olmitz, inout Sequim Baker, in egress_intrinsic_met
             Arion();
         }
         key = {
-            Humeston.egress_port & 9w0x7f: exact @name("Humeston.Toklat") ;
-            Baker.Earling.Tombstone      : exact @name("Earling.Tombstone") ;
-            Baker.Earling.Marcus & 6w0x3f: exact @name("Earling.Marcus") ;
+            Baker.Humeston.Toklat & 9w0x7f: exact @name("Humeston.Toklat") ;
+            Baker.Earling.Tombstone       : exact @name("Earling.Tombstone") ;
+            Baker.Earling.Marcus & 6w0x3f : exact @name("Earling.Marcus") ;
         }
         const default_action = Arion();
         size = 16;
@@ -5011,7 +5031,7 @@ control Burnett(inout Milano Olmitz, inout Sequim Baker, in egress_intrinsic_met
     @name(".Lovett.Dunedin") Hash<bit<19>>(HashAlgorithm_t.IDENTITY) Lovett;
     @name(".Chamois") action Chamois() {
         bit<19> Nighthawk;
-        Nighthawk = Lovett.get<tuple<bit<9>, bit<12>>>({ Humeston.egress_port, (bit<12>)Baker.Earling.Tombstone });
+        Nighthawk = Lovett.get<tuple<bit<9>, bit<12>>>({ Baker.Humeston.Toklat, (bit<12>)Baker.Earling.Tombstone });
         Baker.Picabo.SourLake = Casselman.execute((bit<32>)Nighthawk);
     }
     @name(".Cruso") Register<bit<1>, bit<32>>(32w294912, 1w0) Cruso;
@@ -5026,7 +5046,7 @@ control Burnett(inout Milano Olmitz, inout Sequim Baker, in egress_intrinsic_met
     };
     @name(".Leetsdale") action Leetsdale() {
         bit<19> Nighthawk;
-        Nighthawk = Lovett.get<tuple<bit<9>, bit<12>>>({ Humeston.egress_port, (bit<12>)Baker.Earling.Tombstone });
+        Nighthawk = Lovett.get<tuple<bit<9>, bit<12>>>({ Baker.Humeston.Toklat, (bit<12>)Baker.Earling.Tombstone });
         Baker.Picabo.Juneau = Rembrandt.execute((bit<32>)Nighthawk);
     }
     @disable_atomic_modify(1) @name(".Valmont") table Valmont {
@@ -5064,13 +5084,13 @@ control Decorah(inout Milano Olmitz, inout Sequim Baker, in egress_intrinsic_met
             Stout();
         }
         key = {
-            Humeston.egress_port & 9w0x7f: ternary @name("Humeston.Toklat") ;
-            Baker.Picabo.Juneau          : ternary @name("Picabo.Juneau") ;
-            Baker.Picabo.SourLake        : ternary @name("Picabo.SourLake") ;
-            Baker.Earling.Pinole         : ternary @name("Earling.Pinole") ;
-            Olmitz.Wanamassa.Wallula     : ternary @name("Wanamassa.Wallula") ;
-            Olmitz.Wanamassa.isValid()   : ternary @name("Wanamassa") ;
-            Baker.Earling.Richvale       : ternary @name("Earling.Richvale") ;
+            Baker.Humeston.Toklat & 9w0x7f: ternary @name("Humeston.Toklat") ;
+            Baker.Picabo.Juneau           : ternary @name("Picabo.Juneau") ;
+            Baker.Picabo.SourLake         : ternary @name("Picabo.SourLake") ;
+            Baker.Earling.Pinole          : ternary @name("Earling.Pinole") ;
+            Olmitz.Wanamassa.Wallula      : ternary @name("Wanamassa.Wallula") ;
+            Olmitz.Wanamassa.isValid()    : ternary @name("Wanamassa") ;
+            Baker.Earling.Richvale        : ternary @name("Earling.Richvale") ;
         }
         default_action = Stout();
         size = 512;
@@ -5663,7 +5683,7 @@ control Powhatan(inout Milano Olmitz, inout Sequim Baker, in egress_intrinsic_me
             @defaultonly NoAction();
         }
         key = {
-            Humeston.egress_port      : exact @name("Humeston.Toklat") ;
+            Baker.Humeston.Toklat     : exact @name("Humeston.Toklat") ;
             Baker.Aniak.Basalt        : exact @name("Aniak.Basalt") ;
             Baker.Earling.SomesBar    : exact @name("Earling.SomesBar") ;
             Baker.Earling.Goulds      : exact @name("Earling.Goulds") ;
@@ -5711,6 +5731,7 @@ control Powhatan(inout Milano Olmitz, inout Sequim Baker, in egress_intrinsic_me
     @name(".Gracewood") Emigrant() Gracewood;
     @name(".Beaman") Statham() Beaman;
     @name(".Challenge") Owentown() Challenge;
+    @name(".Shivwits") Hilltop() Shivwits;
     @name(".Seaford") Bluff() Seaford;
     @name(".Craigtown") Dougherty() Craigtown;
     @name(".Panola") Devola() Panola;
@@ -5770,6 +5791,7 @@ control Powhatan(inout Milano Olmitz, inout Sequim Baker, in egress_intrinsic_me
             } else if (Olmitz.Bronwood.isValid()) {
                 Panola.apply(Olmitz, Baker, Humeston, Basye, Woolwine, Agawam);
             }
+            Shivwits.apply(Olmitz, Baker, Humeston, Basye, Woolwine, Agawam);
         }
     }
 }
@@ -5871,7 +5893,8 @@ parser Compton(packet_in Nephi, out Milano Olmitz, out Sequim Baker, out egress_
     state start {
         Nephi.extract<egress_intrinsic_metadata_t>(Humeston);
         Baker.Humeston.Bledsoe = Humeston.pkt_length;
-        transition select(Humeston.egress_port ++ (Nephi.lookahead<Willard>()).Bayshore) {
+        Baker.Humeston.Toklat = Humeston.egress_port;
+        transition select(Baker.Humeston.Toklat ++ (Nephi.lookahead<Willard>()).Bayshore) {
             Penalosa: Doyline;
             17w0 &&& 17w0x7: Torrance;
             default: Bridgton;

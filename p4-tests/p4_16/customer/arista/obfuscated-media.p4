@@ -193,8 +193,10 @@ struct Glassboro {
 }
 
 struct Moorcroft {
-    PortId_t Toklat;
-    bit<16>  Bledsoe;
+    PortId_t  Toklat;
+    bit<16>   Bledsoe;
+    QueueId_t Senatobia;
+    bit<16>   Danforth;
 }
 
 struct Blencoe {
@@ -353,8 +355,21 @@ header Kalida {
     bit<16> Connell;
 }
 
+header Opelika {
+    bit<192> Dennison;
+}
+
+header Yemassee {
+    bit<64> Dennison;
+}
+
 header Wallula {
-    bit<416> Dennison;
+    bit<8>     Qulin;
+    varbit<48> Dennison;
+}
+
+header Caliente {
+    bit<368> Dennison;
 }
 
 header Fairhaven {
@@ -1202,6 +1217,11 @@ struct Castle {
 struct Mattapex {
     bit<32> Midas;
     bit<32> Kapowsin;
+}
+
+control Padroni(inout Fishers Vanoss, inout Sunbury Potosi, in egress_intrinsic_metadata_t Lindy, in egress_intrinsic_metadata_from_parser_t Asharoken, inout egress_intrinsic_metadata_for_deparser_t Weissert, inout egress_intrinsic_metadata_for_output_port_t Bellmead) {
+    apply {
+    }
 }
 
 control Crown(inout Fishers Vanoss, inout Sunbury Potosi, in ingress_intrinsic_metadata_t Swanlake, in ingress_intrinsic_metadata_from_parser_t Mulvane, inout ingress_intrinsic_metadata_for_deparser_t Luning, inout ingress_intrinsic_metadata_for_tm_t Geistown) {
@@ -2158,7 +2178,7 @@ control Quijotoa(inout Fishers Vanoss, inout Sunbury Potosi, in egress_intrinsic
 
 control Yatesboro(inout Fishers Vanoss, inout Sunbury Potosi, in egress_intrinsic_metadata_t Lindy, in egress_intrinsic_metadata_from_parser_t Asharoken, inout egress_intrinsic_metadata_for_deparser_t Weissert, inout egress_intrinsic_metadata_for_output_port_t Bellmead) {
     apply {
-        if (Lindy.egress_rid != 16w0 && Lindy.egress_port == 9w68) {
+        if (Lindy.egress_rid != 16w0 && Potosi.Lindy.Toklat == 9w68) {
             Vanoss.Indios.setValid();
             Vanoss.Indios.Tehachapi = (bit<8>)8w0x3;
         }
@@ -3815,8 +3835,8 @@ control RedBay(inout Fishers Vanoss, inout Sunbury Potosi, in egress_intrinsic_m
             @defaultonly BoyRiver();
         }
         key = {
-            Lindy.egress_rid : exact @name("Lindy.egress_rid") ;
-            Lindy.egress_port: exact @name("Lindy.Toklat") ;
+            Lindy.egress_rid   : exact @name("Lindy.egress_rid") ;
+            Potosi.Lindy.Toklat: exact @name("Lindy.Toklat") ;
         }
         size = 1024;
         const default_action = BoyRiver();
@@ -3835,7 +3855,7 @@ control Upalco(inout Fishers Vanoss, inout Sunbury Potosi, in egress_intrinsic_m
             Alnwick();
         }
         key = {
-            Lindy.egress_port: exact @name("Lindy.Toklat") ;
+            Potosi.Lindy.Toklat: exact @name("Lindy.Toklat") ;
         }
         const default_action = Alnwick(10w0);
         size = 128;
@@ -4182,9 +4202,9 @@ control Newcomb(inout Fishers Vanoss, inout Sunbury Potosi, in egress_intrinsic_
             Kiron();
         }
         key = {
-            Potosi.Hookdale.Norcatur  : exact @name("Hookdale.Norcatur") ;
-            Lindy.egress_port & 9w0x7f: exact @name("Lindy.Toklat") ;
-            Potosi.Hookdale.Raiford   : exact @name("Hookdale.Raiford") ;
+            Potosi.Hookdale.Norcatur    : exact @name("Hookdale.Norcatur") ;
+            Potosi.Lindy.Toklat & 9w0x7f: exact @name("Lindy.Toklat") ;
+            Potosi.Hookdale.Raiford     : exact @name("Hookdale.Raiford") ;
         }
         const default_action = Kiron();
         size = 128;
@@ -4293,8 +4313,8 @@ control Minetto(inout Fishers Vanoss, inout Sunbury Potosi, in egress_intrinsic_
             @defaultonly NoAction();
         }
         key = {
-            Potosi.Hookdale.RossFork  : exact @name("Hookdale.RossFork") ;
-            Lindy.egress_port & 9w0x7f: exact @name("Lindy.Toklat") ;
+            Potosi.Hookdale.RossFork    : exact @name("Hookdale.RossFork") ;
+            Potosi.Lindy.Toklat & 9w0x7f: exact @name("Lindy.Toklat") ;
         }
         size = 512;
         const default_action = NoAction();
@@ -4749,7 +4769,7 @@ control Decorah(inout Fishers Vanoss, inout Sunbury Potosi, in egress_intrinsic_
     @name(".Moxley.Roosville") Hash<bit<12>>(HashAlgorithm_t.IDENTITY) Moxley;
     @name(".Stout") action Stout() {
         bit<12> Waseca;
-        Waseca = Moxley.get<tuple<bit<9>, bit<5>>>({ Lindy.egress_port, Lindy.egress_qid[4:0] });
+        Waseca = Moxley.get<tuple<bit<9>, bit<5>>>({ Potosi.Lindy.Toklat, Lindy.egress_qid[4:0] });
         Waretown.count((bit<12>)Waseca);
     }
     @disable_atomic_modify(1) @name(".Blunt") table Blunt {
@@ -4784,7 +4804,7 @@ control Ludowici(inout Fishers Vanoss, inout Sunbury Potosi, in egress_intrinsic
             Longport();
         }
         key = {
-            Lindy.egress_port & 9w0x7f      : exact @name("Lindy.Toklat") ;
+            Potosi.Lindy.Toklat & 9w0x7f    : exact @name("Lindy.Toklat") ;
             Potosi.Hookdale.Basic           : exact @name("Hookdale.Basic") ;
             Potosi.Hookdale.LaUnion & 6w0x3f: exact @name("Hookdale.LaUnion") ;
         }
@@ -4810,7 +4830,7 @@ control Wrens(inout Fishers Vanoss, inout Sunbury Potosi, in egress_intrinsic_me
     @name(".Manasquan.Dunedin") Hash<bit<19>>(HashAlgorithm_t.IDENTITY) Manasquan;
     @name(".Salamonia") action Salamonia() {
         bit<19> Waseca;
-        Waseca = Manasquan.get<tuple<bit<9>, bit<12>>>({ Lindy.egress_port, (bit<12>)Potosi.Hookdale.Basic });
+        Waseca = Manasquan.get<tuple<bit<9>, bit<12>>>({ Potosi.Lindy.Toklat, (bit<12>)Potosi.Hookdale.Basic });
         Potosi.RichBar.Gotham = Mabelvale.execute((bit<32>)Waseca);
     }
     @name(".Sargent") Register<bit<1>, bit<32>>(32w294912, 1w0) Sargent;
@@ -4825,7 +4845,7 @@ control Wrens(inout Fishers Vanoss, inout Sunbury Potosi, in egress_intrinsic_me
     };
     @name(".Wibaux") action Wibaux() {
         bit<19> Waseca;
-        Waseca = Manasquan.get<tuple<bit<9>, bit<12>>>({ Lindy.egress_port, (bit<12>)Potosi.Hookdale.Basic });
+        Waseca = Manasquan.get<tuple<bit<9>, bit<12>>>({ Potosi.Lindy.Toklat, (bit<12>)Potosi.Hookdale.Basic });
         Potosi.RichBar.Osyka = Brockton.execute((bit<32>)Waseca);
     }
     @disable_atomic_modify(1) @name(".Downs") table Downs {
@@ -4863,15 +4883,15 @@ control Ancho(inout Fishers Vanoss, inout Sunbury Potosi, in egress_intrinsic_me
             Clarendon();
         }
         key = {
-            Lindy.egress_port & 9w0x7f: ternary @name("Lindy.Toklat") ;
-            Potosi.RichBar.Osyka      : ternary @name("RichBar.Osyka") ;
-            Potosi.RichBar.Gotham     : ternary @name("RichBar.Gotham") ;
-            Potosi.Hookdale.Wisdom    : ternary @name("Hookdale.Wisdom") ;
-            Vanoss.Tularosa.Madawaska : ternary @name("Tularosa.Madawaska") ;
-            Vanoss.Tularosa.isValid() : ternary @name("Tularosa") ;
-            Potosi.Hookdale.Exton     : ternary @name("Hookdale.Exton") ;
-            Potosi.Tofte.Nooksack     : ternary @name("Tofte.Nooksack") ;
-            Potosi.Spearman           : exact @name("Spearman") ;
+            Potosi.Lindy.Toklat & 9w0x7f: ternary @name("Lindy.Toklat") ;
+            Potosi.RichBar.Osyka        : ternary @name("RichBar.Osyka") ;
+            Potosi.RichBar.Gotham       : ternary @name("RichBar.Gotham") ;
+            Potosi.Hookdale.Wisdom      : ternary @name("Hookdale.Wisdom") ;
+            Vanoss.Tularosa.Madawaska   : ternary @name("Tularosa.Madawaska") ;
+            Vanoss.Tularosa.isValid()   : ternary @name("Tularosa") ;
+            Potosi.Hookdale.Exton       : ternary @name("Hookdale.Exton") ;
+            Potosi.Tofte.Nooksack       : ternary @name("Tofte.Nooksack") ;
+            Potosi.Spearman             : exact @name("Spearman") ;
         }
         default_action = Clarendon();
         size = 512;
@@ -6095,8 +6115,8 @@ control Saltair(inout Fishers Vanoss, inout Sunbury Potosi, in egress_intrinsic_
             Penzance();
         }
         key = {
-            Lindy.egress_port: ternary @name("Lindy.Toklat") ;
-            Lindy.egress_rid : ternary @name("Lindy.egress_rid") ;
+            Potosi.Lindy.Toklat: ternary @name("Lindy.Toklat") ;
+            Lindy.egress_rid   : ternary @name("Lindy.egress_rid") ;
         }
         const default_action = Penzance();
         size = 512;
@@ -6140,7 +6160,7 @@ control Saltair(inout Fishers Vanoss, inout Sunbury Potosi, in egress_intrinsic_
             @defaultonly NoAction();
         }
         key = {
-            Lindy.egress_port         : exact @name("Lindy.Toklat") ;
+            Potosi.Lindy.Toklat       : exact @name("Lindy.Toklat") ;
             Potosi.Halltown.Maumee    : exact @name("Halltown.Maumee") ;
             Potosi.Hookdale.Basalt    : exact @name("Hookdale.Basalt") ;
             Potosi.Hookdale.Kalkaska  : exact @name("Hookdale.Kalkaska") ;
@@ -6196,6 +6216,7 @@ control Saltair(inout Fishers Vanoss, inout Sunbury Potosi, in egress_intrinsic_
     @name(".Hilltop") Unity() Hilltop;
     @name(".Shivwits") Parmele() Shivwits;
     @name(".Elsinore") Wright() Elsinore;
+    @name(".Ashley") Padroni() Ashley;
     @name(".Caguas") Turney() Caguas;
     @name(".Duncombe") Sodaville() Duncombe;
     @name(".Noonan") Newcomb() Noonan;
@@ -6268,6 +6289,7 @@ control Saltair(inout Fishers Vanoss, inout Sunbury Potosi, in egress_intrinsic_
             } else if (Vanoss.Ackerly.isValid()) {
                 Noonan.apply(Vanoss, Potosi, Lindy, Asharoken, Weissert, Bellmead);
             }
+            Ashley.apply(Vanoss, Potosi, Lindy, Asharoken, Weissert, Bellmead);
         }
     }
 }
@@ -6456,7 +6478,8 @@ parser Tanner(packet_in Nucla, out Fishers Vanoss, out Sunbury Potosi, out egres
     state start {
         Nucla.extract<egress_intrinsic_metadata_t>(Lindy);
         Potosi.Lindy.Bledsoe = Lindy.pkt_length;
-        transition select(Lindy.egress_port ++ (Nucla.lookahead<Willard>()).Bayshore) {
+        Potosi.Lindy.Toklat = Lindy.egress_port;
+        transition select(Potosi.Lindy.Toklat ++ (Nucla.lookahead<Willard>()).Bayshore) {
             Spindale: Bellville;
             17w0 &&& 17w0x7: Maybee;
             default: Seibert;

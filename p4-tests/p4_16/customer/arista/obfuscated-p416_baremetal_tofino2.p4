@@ -261,8 +261,10 @@ struct Grabill {
 }
 
 struct Toklat {
-    PortId_t Bledsoe;
-    bit<16>  Blencoe;
+    PortId_t  Bledsoe;
+    bit<16>   Blencoe;
+    QueueId_t Trout;
+    bit<16>   Eldora;
 }
 
 struct AquaPark {
@@ -440,8 +442,21 @@ header Kalida {
     bit<16> Cisco;
 }
 
+header Alvordton {
+    bit<192> Florien;
+}
+
+header Salamatof {
+    bit<64> Florien;
+}
+
 header Wallula {
-    bit<416> Florien;
+    bit<8>     Tarnov;
+    varbit<48> Florien;
+}
+
+header Goessel {
+    bit<368> Florien;
 }
 
 header Dennison {
@@ -1207,7 +1222,13 @@ struct HighRock {
     NewMelle     Clearmont;
     NewMelle     Ruffin;
     NewMelle     Rochert;
+    Alvordton    Deering;
+    Salamatof    Southdown;
+    Salamatof    Iredell;
+    Salamatof    Manteo;
+    Salamatof    Reubens;
     Wallula      Swanlake;
+    Goessel      Wheeling;
     Coconino     Tahlequah;
     Falmouth     Viroqua;
 }
@@ -1321,7 +1342,6 @@ control RockHill(inout Frederika Lefor, inout HighRock Starkey, in ingress_intri
             Starkey.Covert.Placedo  : exact @name("Covert.Placedo") ;
             Starkey.Covert.Palmhurst: exact @name("Covert.Palmhurst") ;
             Starkey.Covert.Comfrey  : exact @name("Covert.Comfrey") ;
-            Lefor.Callao.isValid()  : exact @name("Callao") ;
         }
         size = 2048;
         const default_action = NoAction();
@@ -1338,7 +1358,8 @@ control RockHill(inout Frederika Lefor, inout HighRock Starkey, in ingress_intri
             Starkey.Covert.Comfrey  : ternary @name("Covert.Comfrey") ;
             Starkey.Covert.Onycha   : ternary @name("Covert.Onycha") ;
             Starkey.Jayton.Edwards  : ternary @name("Jayton.Edwards") ;
-            Lefor.Callao.isValid()  : exact @name("Callao") ;
+            Lefor.Callao.isValid()  : ternary @name("Callao") ;
+            Starkey.Wyndmoor.LaLuz  : ternary @name("Wyndmoor.LaLuz") ;
         }
         const default_action = Ponder();
         size = 512;
@@ -2754,7 +2775,7 @@ control Palco(inout Frederika Lefor, inout HighRock Starkey, in egress_intrinsic
         }
         key = {
             Dacono.egress_rid      : exact @name("Dacono.egress_rid") ;
-            Dacono.egress_port     : exact @name("Dacono.Bledsoe") ;
+            Starkey.Dacono.Bledsoe : exact @name("Dacono.Bledsoe") ;
             Starkey.Wyndmoor.Pinole: ternary @name("Wyndmoor.Pinole") ;
         }
         size = 1024;
@@ -3591,9 +3612,9 @@ control Granville(inout Frederika Lefor, inout HighRock Starkey, in egress_intri
             Capitola();
         }
         key = {
-            Starkey.Wyndmoor.Newfane   : exact @name("Wyndmoor.Newfane") ;
-            Dacono.egress_port & 9w0x7f: exact @name("Dacono.Bledsoe") ;
-            Starkey.Wyndmoor.Hematite  : exact @name("Wyndmoor.Hematite") ;
+            Starkey.Wyndmoor.Newfane       : exact @name("Wyndmoor.Newfane") ;
+            Starkey.Dacono.Bledsoe & 9w0x7f: exact @name("Dacono.Bledsoe") ;
+            Starkey.Wyndmoor.Hematite      : exact @name("Wyndmoor.Hematite") ;
         }
         const default_action = Capitola();
         size = 128;
@@ -3821,8 +3842,8 @@ control Doyline(inout Frederika Lefor, inout HighRock Starkey, in egress_intrins
             @defaultonly NoAction();
         }
         key = {
-            Starkey.Wyndmoor.Stilwell  : exact @name("Wyndmoor.Stilwell") ;
-            Dacono.egress_port & 9w0x7f: exact @name("Dacono.Bledsoe") ;
+            Starkey.Wyndmoor.Stilwell      : exact @name("Wyndmoor.Stilwell") ;
+            Starkey.Dacono.Bledsoe & 9w0x7f: exact @name("Dacono.Bledsoe") ;
         }
         size = 512;
         const default_action = NoAction();
@@ -4733,7 +4754,7 @@ control Robinette(inout Frederika Lefor, inout HighRock Starkey, in egress_intri
     @name(".DelRey.Roosville") Hash<bit<12>>(HashAlgorithm_t.IDENTITY) DelRey;
     @name(".TonkaBay") action TonkaBay() {
         bit<12> Waterman;
-        Waterman = DelRey.get<tuple<bit<9>, bit<5>>>({ Dacono.egress_port, Dacono.egress_qid[4:0] });
+        Waterman = DelRey.get<tuple<bit<9>, bit<5>>>({ Starkey.Dacono.Bledsoe, Dacono.egress_qid[4:0] });
         Akhiok.count((bit<12>)Waterman);
     }
     @disable_atomic_modify(1) @name(".Cisne") table Cisne {
@@ -4770,7 +4791,7 @@ control Perryton(inout Frederika Lefor, inout HighRock Starkey, in egress_intrin
             BigBow();
         }
         key = {
-            Dacono.egress_port & 9w0x7f       : exact @name("Dacono.Bledsoe") ;
+            Starkey.Dacono.Bledsoe & 9w0x7f   : exact @name("Dacono.Bledsoe") ;
             Starkey.Wyndmoor.Wauconda         : exact @name("Wyndmoor.Wauconda") ;
             Starkey.Wyndmoor.SomesBar & 6w0x3f: exact @name("Wyndmoor.SomesBar") ;
         }
@@ -4796,7 +4817,7 @@ control Hughson(inout Frederika Lefor, inout HighRock Starkey, in egress_intrins
     @name(".Anthony.Dunedin") Hash<bit<19>>(HashAlgorithm_t.IDENTITY) Anthony;
     @name(".Waiehu") action Waiehu() {
         bit<19> Waterman;
-        Waterman = Anthony.get<tuple<bit<9>, bit<12>>>({ Dacono.egress_port, (bit<12>)Starkey.Wyndmoor.Wauconda });
+        Waterman = Anthony.get<tuple<bit<9>, bit<12>>>({ Starkey.Dacono.Bledsoe, (bit<12>)Starkey.Wyndmoor.Wauconda });
         Starkey.Harriet.Bessie = DeKalb.execute((bit<32>)Waterman);
     }
     @name(".Stamford") Register<bit<1>, bit<32>>(32w294912, 1w0) Stamford;
@@ -4811,7 +4832,7 @@ control Hughson(inout Frederika Lefor, inout HighRock Starkey, in egress_intrins
     };
     @name(".Pierson") action Pierson() {
         bit<19> Waterman;
-        Waterman = Anthony.get<tuple<bit<9>, bit<12>>>({ Dacono.egress_port, (bit<12>)Starkey.Wyndmoor.Wauconda });
+        Waterman = Anthony.get<tuple<bit<9>, bit<12>>>({ Starkey.Dacono.Bledsoe, (bit<12>)Starkey.Wyndmoor.Wauconda });
         Starkey.Harriet.Savery = Tampa.execute((bit<32>)Waterman);
     }
     @disable_atomic_modify(1) @name(".Piedmont") table Piedmont {
@@ -4849,15 +4870,15 @@ control Dollar(inout Frederika Lefor, inout HighRock Starkey, in egress_intrinsi
             Marvin();
         }
         key = {
-            Dacono.egress_port & 9w0x7f: ternary @name("Dacono.Bledsoe") ;
-            Starkey.Harriet.Savery     : ternary @name("Harriet.Savery") ;
-            Starkey.Harriet.Bessie     : ternary @name("Harriet.Bessie") ;
-            Starkey.Wyndmoor.Crestone  : ternary @name("Wyndmoor.Crestone") ;
-            Starkey.Wyndmoor.LaUnion   : ternary @name("Wyndmoor.LaUnion") ;
-            Lefor.Monrovia.Dunstable   : ternary @name("Monrovia.Dunstable") ;
-            Lefor.Monrovia.isValid()   : ternary @name("Monrovia") ;
-            Starkey.Wyndmoor.Wellton   : ternary @name("Wyndmoor.Wellton") ;
-            Starkey.Wyndmoor.Ralls     : ternary @name("Wyndmoor.Ralls") ;
+            Starkey.Dacono.Bledsoe & 9w0x7f: ternary @name("Dacono.Bledsoe") ;
+            Starkey.Harriet.Savery         : ternary @name("Harriet.Savery") ;
+            Starkey.Harriet.Bessie         : ternary @name("Harriet.Bessie") ;
+            Starkey.Wyndmoor.Crestone      : ternary @name("Wyndmoor.Crestone") ;
+            Starkey.Wyndmoor.LaUnion       : ternary @name("Wyndmoor.LaUnion") ;
+            Lefor.Monrovia.Dunstable       : ternary @name("Monrovia.Dunstable") ;
+            Lefor.Monrovia.isValid()       : ternary @name("Monrovia") ;
+            Starkey.Wyndmoor.Wellton       : ternary @name("Wyndmoor.Wellton") ;
+            Starkey.Wyndmoor.Ralls         : ternary @name("Wyndmoor.Ralls") ;
         }
         default_action = Marvin();
         size = 512;
@@ -5335,7 +5356,7 @@ control Elliston(inout Frederika Lefor, inout HighRock Starkey, in egress_intrin
             Manakin();
         }
         key = {
-            Dacono.egress_port       : ternary @name("Dacono.Bledsoe") ;
+            Starkey.Dacono.Bledsoe   : ternary @name("Dacono.Bledsoe") ;
             Starkey.Wyndmoor.Bennet  : ternary @name("Wyndmoor.Bennet") ;
             Starkey.Wyndmoor.Jenners : ternary @name("Wyndmoor.Jenners") ;
             Starkey.Wyndmoor.Volcano : exact @name("Wyndmoor.Volcano") ;
@@ -5371,6 +5392,169 @@ control Jarreau(inout Frederika Lefor, inout HighRock Starkey, in ingress_intrin
 
 control ElRio(inout Frederika Lefor, inout HighRock Starkey, in egress_intrinsic_metadata_t Dacono, in egress_intrinsic_metadata_from_parser_t Franktown, inout egress_intrinsic_metadata_for_deparser_t Willette, inout egress_intrinsic_metadata_for_output_port_t Mayview) {
     apply {
+    }
+}
+
+control Harmony(inout Frederika Lefor, inout HighRock Starkey, in egress_intrinsic_metadata_t Dacono, in egress_intrinsic_metadata_from_parser_t Franktown, inout egress_intrinsic_metadata_for_deparser_t Willette, inout egress_intrinsic_metadata_for_output_port_t Mayview) {
+    @name(".Boistfort") action Boistfort() {
+        Willette.mirror_type = (bit<4>)4w2;
+        @in_hash {
+            Starkey.Thawville.Ackley[7:0] = Starkey.Wyndmoor.Freeburg[7:0];
+        }
+        Willette.mirror_io_select = (bit<1>)1w1;
+        Willette.mtu_trunc_len = (bit<14>)14w64;
+        Lefor.Wheeling.Florien = (bit<368>)368w0;
+        Lefor.Wheeling.setValid();
+    }
+    @hidden @disable_atomic_modify(1) @name(".Gaston") table Gaston {
+        actions = {
+            Boistfort();
+            @defaultonly NoAction();
+        }
+        key = {
+            Lefor.Deering.isValid(): exact @name("Deering") ;
+        }
+        size = 1;
+        const entries = {
+                        true : Boistfort();
+
+        }
+
+        default_action = NoAction();
+    }
+    apply {
+        if (Starkey.Dacono.Blencoe[15:8] == 8w0 && Starkey.Dacono.Blencoe[7:0] < 8w68) {
+            Gaston.apply();
+        }
+    }
+}
+
+control Enderlin(inout Frederika Lefor, inout HighRock Starkey, in egress_intrinsic_metadata_t Dacono, in egress_intrinsic_metadata_from_parser_t Franktown, inout egress_intrinsic_metadata_for_deparser_t Willette, inout egress_intrinsic_metadata_for_output_port_t Mayview) {
+    @name(".Roxboro") action Roxboro() {
+    }
+@pa_no_init("egress" , "eg_intr_md_for_dprsr.mirror_egress_port")
+@pa_mutually_exclusive("egress" , "eg_intr_md_for_dprsr.mirror_egress_port" , "Lefor.Saugatuck")
+@pa_mutually_exclusive("egress" , "eg_intr_md_for_dprsr.mirror_egress_port" , "Lefor.Flaherty")
+@name(".Timken") action Timken() {
+        Willette.mirror_egress_port = Starkey.Dacono.Bledsoe;
+        @in_hash {
+            Starkey.Dacono.Bledsoe[7:0] = Starkey.Thawville.Ackley[7:0];
+        }
+        Willette.mirror_type = (bit<4>)4w3;
+        Willette.mirror_io_select = (bit<1>)1w1;
+        Willette.mirror_qid = Dacono.egress_qid;
+        Willette.drop_ctl = (bit<3>)3w1;
+        Starkey.Thawville.Ackley = (bit<10>)10w192;
+    }
+    @hidden @disable_atomic_modify(1) @name(".Lamboglia") table Lamboglia {
+        key = {
+            Lefor.Casnovia.isValid()  : ternary @name("Casnovia") ;
+            Lefor.Palouse[0].isValid(): ternary @name("Palouse[0]") ;
+            Lefor.Palouse[1].isValid(): ternary @name("Palouse[1]") ;
+            Lefor.Sespe.isValid()     : ternary @name("Sespe") ;
+            Lefor.Lemont.isValid()    : ternary @name("Lemont") ;
+            Lefor.Hookdale.isValid()  : ternary @name("Hookdale") ;
+            Lefor.Recluse.isValid()   : ternary @name("Recluse") ;
+            Starkey.Wyndmoor.Kenney   : ternary @name("Wyndmoor.Kenney") ;
+            Lefor.Rochert.isValid()   : ternary @name("Rochert") ;
+            Starkey.Wyndmoor.LaLuz    : ternary @name("Wyndmoor.LaLuz") ;
+            Starkey.Dacono.Blencoe    : range @name("Dacono.Blencoe") ;
+        }
+        actions = {
+            Roxboro();
+            Timken();
+        }
+        size = 64;
+        requires_versioning = false;
+        const default_action = Roxboro();
+        const entries = {
+                        (false, default, default, default, default, default, default, default, default, 3w2, default) : Roxboro();
+
+                        (false, default, default, default, default, default, true, default, default, default, default) : Roxboro();
+
+                        (false, default, default, default, true, default, default, default, default, default, default) : Roxboro();
+
+                        (false, default, default, default, default, true, default, default, default, default, default) : Roxboro();
+
+                        (true, default, default, default, false, false, false, default, default, 3w1, 16w0 .. 16w90) : Timken();
+
+                        (true, default, default, default, false, false, false, default, default, 3w1, default) : Roxboro();
+
+                        (true, default, default, default, false, false, false, default, default, 3w5, 16w0 .. 16w90) : Timken();
+
+                        (true, default, default, default, false, false, false, default, default, 3w5, default) : Roxboro();
+
+                        (true, default, default, default, false, false, false, default, default, 3w6, 16w0 .. 16w90) : Timken();
+
+                        (true, default, default, default, false, false, false, default, default, 3w6, default) : Roxboro();
+
+                        (true, default, default, default, false, false, false, 1w0, false, default, 16w0 .. 16w90) : Timken();
+
+                        (true, default, default, default, false, false, false, 1w1, false, default, 16w0 .. 16w94) : Timken();
+
+                        (true, default, default, default, false, false, false, 1w1, true, default, 16w0 .. 16w94) : Timken();
+
+                        (true, default, default, default, false, false, false, default, default, default, default) : Roxboro();
+
+                        (false, false, false, default, false, false, false, default, default, 3w1, 16w0 .. 16w104) : Timken();
+
+                        (false, true, false, default, false, false, false, default, default, 3w1, 16w0 .. 16w100) : Timken();
+
+                        (false, true, true, default, false, false, false, default, default, 3w1, 16w0 .. 16w96) : Timken();
+
+                        (false, default, default, default, false, false, false, default, default, 3w1, default) : Roxboro();
+
+                        (false, false, false, default, false, false, false, default, default, 3w5, 16w0 .. 16w104) : Timken();
+
+                        (false, true, false, default, false, false, false, default, default, 3w5, 16w0 .. 16w100) : Timken();
+
+                        (false, true, true, default, false, false, false, default, default, 3w5, 16w0 .. 16w96) : Timken();
+
+                        (false, default, default, default, false, false, false, default, default, 3w5, default) : Roxboro();
+
+                        (false, false, false, default, false, false, false, default, default, 3w6, 16w0 .. 16w104) : Timken();
+
+                        (false, true, false, default, false, false, false, default, default, 3w6, 16w0 .. 16w100) : Timken();
+
+                        (false, true, true, default, false, false, false, default, default, 3w6, 16w0 .. 16w96) : Timken();
+
+                        (false, default, default, default, false, false, false, default, default, 3w6, default) : Roxboro();
+
+                        (false, default, default, default, false, false, false, default, default, 3w2, 16w0 .. 16w104) : Timken();
+
+                        (false, default, default, default, false, false, false, default, default, 3w2, default) : Roxboro();
+
+                        (false, false, false, false, false, false, false, default, true, default, 16w0 .. 16w108) : Timken();
+
+                        (false, true, false, false, false, false, false, default, true, default, 16w0 .. 16w104) : Timken();
+
+                        (false, true, true, false, false, false, false, default, true, default, 16w0 .. 16w100) : Timken();
+
+                        (false, false, false, default, false, false, false, 1w0, false, default, 16w0 .. 16w104) : Timken();
+
+                        (false, false, false, default, false, false, false, 1w1, false, default, 16w0 .. 16w108) : Timken();
+
+                        (false, false, false, default, false, false, false, 1w1, true, default, 16w0 .. 16w112) : Timken();
+
+                        (false, true, false, default, false, false, false, 1w0, false, default, 16w0 .. 16w100) : Timken();
+
+                        (false, true, false, default, false, false, false, 1w1, false, default, 16w0 .. 16w104) : Timken();
+
+                        (false, true, false, default, false, false, false, 1w1, true, default, 16w0 .. 16w108) : Timken();
+
+                        (false, true, true, default, false, false, false, 1w0, false, default, 16w0 .. 16w96) : Timken();
+
+                        (false, true, true, default, false, false, false, 1w1, false, default, 16w0 .. 16w100) : Timken();
+
+                        (false, true, true, default, false, false, false, 1w1, true, default, 16w0 .. 16w104) : Timken();
+
+        }
+
+    }
+    apply {
+        if (Lefor.Saugatuck.isValid() && Willette.drop_ctl == 3w0) {
+            Lamboglia.apply();
+        }
     }
 }
 
@@ -10034,7 +10218,9 @@ parser Trammel(packet_in Thistle, out Frederika Lefor, out HighRock Starkey, out
     state start {
         Thistle.extract<egress_intrinsic_metadata_t>(Dacono);
         Starkey.Dacono.Blencoe = Dacono.pkt_length;
-        transition select(Dacono.egress_port ++ (Thistle.lookahead<Willard>()).Bayshore) {
+        Starkey.Dacono.Bledsoe = Dacono.egress_port;
+        transition select(Starkey.Dacono.Bledsoe ++ (Thistle.lookahead<Willard>()).Bayshore) {
+            17w3 &&& 17w0xff: Caliente;
             Caldwell: Snook;
             17w0 &&& 17w0x7: Padroni;
             default: Caliente;
@@ -10069,6 +10255,7 @@ parser Trammel(packet_in Thistle, out Frederika Lefor, out HighRock Starkey, out
         transition select(Tabler.Bayshore) {
             8w1 &&& 8w0x7: Sahuarita;
             8w2 &&& 8w0x7: Ikatan;
+            8w3 &&& 8w0x7: Chualar;
             default: Melrude;
         }
     }
@@ -10085,12 +10272,61 @@ parser Trammel(packet_in Thistle, out Frederika Lefor, out HighRock Starkey, out
         }
         transition Seagrove;
     }
+    state Chualar {
+        transition select(Starkey.Dacono.Blencoe[7:0]) {
+            8w0x0 &&& 8w0xe0: Biddle;
+            8w0x20 &&& 8w0xf8: Biddle;
+            8w0x28 &&& 8w0xf8: Eggleston;
+            8w0x30 &&& 8w0xf8: Heron;
+            8w0x38 &&& 8w0xf8: Paisley;
+            8w0x40 &&& 8w0xf8: Bajandas;
+            default: Melrude;
+        }
+    }
+    state Biddle {
+        Thistle.extract<Alvordton>(Lefor.Deering);
+        transition Handley;
+    }
+    state Eggleston {
+        Thistle.extract<Alvordton>(Lefor.Deering);
+        Thistle.extract<Salamatof>(Lefor.Southdown);
+        transition Handley;
+    }
+    state Heron {
+        Thistle.extract<Alvordton>(Lefor.Deering);
+        Thistle.extract<Salamatof>(Lefor.Southdown);
+        Thistle.extract<Salamatof>(Lefor.Iredell);
+        transition Handley;
+    }
+    state Paisley {
+        Thistle.extract<Alvordton>(Lefor.Deering);
+        Thistle.extract<Salamatof>(Lefor.Southdown);
+        Thistle.extract<Salamatof>(Lefor.Iredell);
+        Thistle.extract<Salamatof>(Lefor.Manteo);
+        transition Handley;
+    }
+    state Bajandas {
+        Thistle.extract<Alvordton>(Lefor.Deering);
+        Thistle.extract<Salamatof>(Lefor.Southdown);
+        Thistle.extract<Salamatof>(Lefor.Iredell);
+        Thistle.extract<Salamatof>(Lefor.Manteo);
+        Thistle.extract<Salamatof>(Lefor.Reubens);
+        transition Handley;
+    }
+    state Handley {
+        transition select(Starkey.Dacono.Blencoe[2:0]) {
+            3w0: Melrude;
+            default: McGovern;
+        }
+    }
+    state McGovern {
+        Thistle.extract<Wallula>(Lefor.Swanlake, (bit<32>)((bit<8>)(Starkey.Dacono.Blencoe[2:0] - 3w1) * 8w8));
+        transition Melrude;
+    }
     state Melrude {
         transition accept;
     }
     state Danforth {
-        Lefor.Swanlake.setValid();
-        Lefor.Swanlake = Thistle.lookahead<Wallula>();
         transition accept;
     }
 }
@@ -10134,7 +10370,7 @@ control Ashley(inout Frederika Lefor, inout HighRock Starkey, in egress_intrinsi
             @defaultonly NoAction();
         }
         key = {
-            Dacono.egress_port     : exact @name("Dacono.Bledsoe") ;
+            Starkey.Dacono.Bledsoe : exact @name("Dacono.Bledsoe") ;
             Starkey.Jayton.Murphy  : exact @name("Jayton.Murphy") ;
             Starkey.Wyndmoor.Kenney: exact @name("Wyndmoor.Kenney") ;
             Starkey.Wyndmoor.LaLuz : exact @name("Wyndmoor.LaLuz") ;
@@ -10153,117 +10389,6 @@ control Ashley(inout Frederika Lefor, inout HighRock Starkey, in egress_intrinsi
         }
         size = 512;
         default_action = NoAction();
-    }
-    @name(".Roxboro") action Roxboro() {
-        Lefor.Swanlake.setInvalid();
-    }
-    @name(".Timken") action Timken() {
-        Willette.mtu_trunc_len = (bit<14>)14w64;
-    }
-    @hidden @disable_atomic_modify(1) @name(".Lamboglia") table Lamboglia {
-        key = {
-            Lefor.Casnovia.isValid()  : ternary @name("Casnovia") ;
-            Lefor.Palouse[0].isValid(): ternary @name("Palouse[0]") ;
-            Lefor.Palouse[1].isValid(): ternary @name("Palouse[1]") ;
-            Lefor.Sespe.isValid()     : ternary @name("Sespe") ;
-            Lefor.Lemont.isValid()    : ternary @name("Lemont") ;
-            Lefor.Hookdale.isValid()  : ternary @name("Hookdale") ;
-            Lefor.Recluse.isValid()   : ternary @name("Recluse") ;
-            Starkey.Wyndmoor.Kenney   : ternary @name("Wyndmoor.Kenney") ;
-            Lefor.Rochert.isValid()   : ternary @name("Rochert") ;
-            Starkey.Wyndmoor.LaLuz    : ternary @name("Wyndmoor.LaLuz") ;
-            Starkey.Dacono.Blencoe    : range @name("Dacono.Blencoe") ;
-        }
-        actions = {
-            Roxboro();
-            Timken();
-        }
-        size = 64;
-        requires_versioning = false;
-        const default_action = Roxboro();
-        const entries = {
-                        (false, default, default, default, default, default, default, default, default, 3w2, default) : Roxboro();
-
-                        (false, default, default, default, default, default, true, default, default, default, default) : Roxboro();
-
-                        (false, default, default, default, true, default, default, default, default, default, default) : Roxboro();
-
-                        (false, default, default, default, default, true, default, default, default, default, default) : Roxboro();
-
-                        (true, default, default, default, false, false, false, default, default, 3w1, 16w0 .. 16w90) : Timken();
-
-                        (true, default, default, default, false, false, false, default, default, 3w1, default) : Roxboro();
-
-                        (true, default, default, default, false, false, false, default, default, 3w5, 16w0 .. 16w90) : Timken();
-
-                        (true, default, default, default, false, false, false, default, default, 3w5, default) : Roxboro();
-
-                        (true, default, default, default, false, false, false, default, default, 3w6, 16w0 .. 16w90) : Timken();
-
-                        (true, default, default, default, false, false, false, default, default, 3w6, default) : Roxboro();
-
-                        (true, default, default, default, false, false, false, 1w0, false, default, 16w0 .. 16w90) : Timken();
-
-                        (true, default, default, default, false, false, false, 1w1, false, default, 16w0 .. 16w94) : Timken();
-
-                        (true, default, default, default, false, false, false, 1w1, true, default, 16w0 .. 16w94) : Timken();
-
-                        (true, default, default, default, false, false, false, default, default, default, default) : Roxboro();
-
-                        (false, false, false, default, false, false, false, default, default, 3w1, 16w0 .. 16w104) : Timken();
-
-                        (false, true, false, default, false, false, false, default, default, 3w1, 16w0 .. 16w100) : Timken();
-
-                        (false, true, true, default, false, false, false, default, default, 3w1, 16w0 .. 16w96) : Timken();
-
-                        (false, default, default, default, false, false, false, default, default, 3w1, default) : Roxboro();
-
-                        (false, false, false, default, false, false, false, default, default, 3w5, 16w0 .. 16w104) : Timken();
-
-                        (false, true, false, default, false, false, false, default, default, 3w5, 16w0 .. 16w100) : Timken();
-
-                        (false, true, true, default, false, false, false, default, default, 3w5, 16w0 .. 16w96) : Timken();
-
-                        (false, default, default, default, false, false, false, default, default, 3w5, default) : Roxboro();
-
-                        (false, false, false, default, false, false, false, default, default, 3w6, 16w0 .. 16w104) : Timken();
-
-                        (false, true, false, default, false, false, false, default, default, 3w6, 16w0 .. 16w100) : Timken();
-
-                        (false, true, true, default, false, false, false, default, default, 3w6, 16w0 .. 16w96) : Timken();
-
-                        (false, default, default, default, false, false, false, default, default, 3w6, default) : Roxboro();
-
-                        (false, default, default, default, false, false, false, default, default, 3w2, 16w0 .. 16w104) : Timken();
-
-                        (false, default, default, default, false, false, false, default, default, 3w2, default) : Roxboro();
-
-                        (false, false, false, false, false, false, false, default, true, default, 16w0 .. 16w108) : Timken();
-
-                        (false, true, false, false, false, false, false, default, true, default, 16w0 .. 16w104) : Timken();
-
-                        (false, true, true, false, false, false, false, default, true, default, 16w0 .. 16w100) : Timken();
-
-                        (false, false, false, default, false, false, false, 1w0, false, default, 16w0 .. 16w104) : Timken();
-
-                        (false, false, false, default, false, false, false, 1w1, false, default, 16w0 .. 16w108) : Timken();
-
-                        (false, false, false, default, false, false, false, 1w1, true, default, 16w0 .. 16w112) : Timken();
-
-                        (false, true, false, default, false, false, false, 1w0, false, default, 16w0 .. 16w100) : Timken();
-
-                        (false, true, false, default, false, false, false, 1w1, false, default, 16w0 .. 16w104) : Timken();
-
-                        (false, true, false, default, false, false, false, 1w1, true, default, 16w0 .. 16w108) : Timken();
-
-                        (false, true, true, default, false, false, false, 1w0, false, default, 16w0 .. 16w96) : Timken();
-
-                        (false, true, true, default, false, false, false, 1w1, false, default, 16w0 .. 16w100) : Timken();
-
-                        (false, true, true, default, false, false, false, 1w1, true, default, 16w0 .. 16w104) : Timken();
-
-        }
-
     }
     @name(".Bairoa") ElRio() Bairoa;
     @name(".CatCreek") Doral() CatCreek;
@@ -10294,6 +10419,8 @@ control Ashley(inout Frederika Lefor, inout HighRock Starkey, in egress_intrinsi
     @name(".Huffman") Mabelvale() Huffman;
     @name(".Eastover") Wibaux() Eastover;
     @name(".Iraan") Bains() Iraan;
+    @name(".Reinbeck") Enderlin() Reinbeck;
+    @name(".Equality") Harmony() Equality;
     @name(".Verdigris") Issaquah() Verdigris;
     @name(".Elihu") Baldridge() Elihu;
     @name(".Cypress") Maury() Cypress;
@@ -10350,6 +10477,9 @@ control Ashley(inout Frederika Lefor, inout HighRock Starkey, in egress_intrinsi
             }
             Yantis.apply(Lefor, Starkey, Dacono, Franktown, Willette, Mayview);
             Bairoa.apply(Lefor, Starkey, Dacono, Franktown, Willette, Mayview);
+            Reinbeck.apply(Lefor, Starkey, Dacono, Franktown, Willette, Mayview);
+        } else if (Lefor.Deering.isValid()) {
+            Equality.apply(Lefor, Starkey, Dacono, Franktown, Willette, Mayview);
         } else {
             if (Lefor.Saugatuck.isValid() == false) {
                 Powelton.apply(Lefor, Starkey, Dacono, Franktown, Willette, Mayview);
@@ -10364,9 +10494,7 @@ control Ashley(inout Frederika Lefor, inout HighRock Starkey, in egress_intrinsi
             } else if (Lefor.Arapahoe.isValid()) {
                 Telocaset.apply(Lefor, Starkey, Dacono, Franktown, Willette, Mayview);
             }
-        }
-        if (Lefor.Swanlake.isValid()) {
-            Lamboglia.apply();
+            Reinbeck.apply(Lefor, Starkey, Dacono, Franktown, Willette, Mayview);
         }
     }
 }
@@ -10378,6 +10506,13 @@ control Manistee(packet_out Thistle, inout Frederika Lefor, in HighRock Starkey,
     apply {
         {
             if (Willette.mirror_type == 4w2) {
+                Willard Thalia;
+                Thalia.setValid();
+                Thalia.Bayshore = Starkey.Tabler.Bayshore;
+                Thalia.Florien = Starkey.Tabler.Bayshore;
+                Thalia.Freeburg = Starkey.Dacono.Bledsoe;
+                Waukegan.emit<Willard>((MirrorId_t)Starkey.Thawville.Ackley, Thalia);
+            } else if (Willette.mirror_type == 4w3) {
                 Willard Thalia;
                 Thalia.setValid();
                 Thalia.Bayshore = Starkey.Tabler.Bayshore;
@@ -10408,7 +10543,13 @@ control Manistee(packet_out Thistle, inout Frederika Lefor, in HighRock Starkey,
             Thistle.emit<Powderly>(Lefor.Olmitz);
             Thistle.emit<Lowes>(Lefor.Glenoma);
             Thistle.emit<Kapalua>(Lefor.Wabbaseka);
+            Thistle.emit<Alvordton>(Lefor.Deering);
+            Thistle.emit<Salamatof>(Lefor.Southdown);
+            Thistle.emit<Salamatof>(Lefor.Iredell);
+            Thistle.emit<Salamatof>(Lefor.Manteo);
+            Thistle.emit<Salamatof>(Lefor.Reubens);
             Thistle.emit<Wallula>(Lefor.Swanlake);
+            Thistle.emit<Goessel>(Lefor.Wheeling);
         }
     }
 }

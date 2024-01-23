@@ -99,26 +99,11 @@
 @pa_no_overlay("pipe_b" , "ingress" , "Lefor.Neponset.Wondervu")
 @pa_no_overlay("pipe_b" , "ingress" , "Lefor.Neponset.Hadley")
 @pa_no_overlay("pipe_b" , "ingress" , "Lefor.Neponset.Neubert")
+@pa_container_size("pipe_a" , "ingress" , "Westoak.Rienzi.Powderly" , 16)
 @pa_no_overlay("pipe_b" , "ingress" , "Lefor.Lookeba.Dateland")
 @pa_no_init("ingress" , "Lefor.Ekwok.Suring")
 @pa_mutually_exclusive("egress" , "Lefor.Ekwok.Suring" , "Westoak.Sedan.Armona")
 @pa_mutually_exclusive("egress" , "Lefor.Ekwok.Suring" , "Westoak.Almota.Parkville")
-@pa_container_size("pipe_a" , "egress" , "Lefor.Ekwok.Ipava" , 8)
-@pa_mutually_exclusive("pipe_a" , "ingress" , "Lefor.Ekwok.Suring" , "Westoak.Flaherty.Cisco")
-@pa_mutually_exclusive("pipe_a" , "ingress" , "Westoak.Peoria.Kooskia" , "Westoak.Flaherty.Cisco")
-@pa_mutually_exclusive("pipe_a" , "egress" , "Westoak.Sedan.Armona" , "Westoak.Peoria.Kooskia")
-@pa_mutually_exclusive("pipe_a" , "egress" , "Westoak.Almota.Parkville" , "Westoak.Peoria.Kooskia")
-@pa_no_init("egress" , "Lefor.Ekwok.Bells")
-@pa_no_init("egress" , "Lefor.Ekwok.Corydon")
-@pa_mutually_exclusive("pipe_a" , "egress" , "Westoak.Mayflower.DonaAna" , "Lefor.Ekwok.Bells")
-@pa_mutually_exclusive("pipe_a" , "egress" , "Westoak.Mayflower.Bowden" , "Lefor.Ekwok.Corydon")
-@pa_mutually_exclusive("pipe_a" , "egress" , "Westoak.Recluse.Montross" , "Lefor.Ekwok.Bells")
-@pa_mutually_exclusive("pipe_a" , "egress" , "Westoak.Recluse.Montross" , "Lefor.Ekwok.Corydon")
-@pa_mutually_exclusive("pipe_a" , "egress" , "Westoak.Frederika.Ocoee" , "Westoak.Flaherty.Littleton")
-@pa_mutually_exclusive("pipe_a" , "egress" , "Westoak.Frederika.Horton" , "Westoak.Sunbury.Palmhurst")
-@pa_mutually_exclusive("pipe_a" , "egress" , "Westoak.Frederika.Cecilton" , "Westoak.Sunbury.Riner")
-@pa_mutually_exclusive("pipe_a" , "egress" , "Westoak.Sedan.Tallassee" , "Lefor.Lookeba.Paulding")
-@pa_mutually_exclusive("pipe_a" , "egress" , "Westoak.Almota.Tallassee" , "Lefor.Lookeba.Paulding")
 @pa_mutually_exclusive("ingress" , "Lefor.Courtdale.Amenia" , "Lefor.Covert.Sublett")
 @pa_no_overlay("ingress" , "Westoak.Sespe.Loris")
 @pa_no_overlay("ingress" , "Westoak.Callao.Loris")
@@ -171,7 +156,6 @@
 @pa_alias("ingress" , "Lefor.WebbCity.Pilar" , "Lefor.Harriet.Pilar")
 @pa_alias("ingress" , "Lefor.Gamaliel.Candle" , "Lefor.Gamaliel.Newfolden")
 @pa_alias("egress" , "eg_intr_md.egress_port" , "Lefor.Garrison.Bledsoe" , "Lefor.Ekwok.Oilmont")
-@pa_alias("egress" , "eg_intr_md.egress_qid" , "eg_intr_md_for_dprsr.mirror_qid")
 @pa_alias("egress" , "eg_intr_md_for_dprsr.mirror_type" , "Lefor.Dushore.Bayshore")
 @pa_alias("egress" , "Westoak.Peoria.Kooskia" , "Lefor.Ekwok.Suring")
 @pa_alias("egress" , "Westoak.Peoria.Elmore" , "Lefor.Ekwok.Brave")
@@ -300,10 +284,8 @@ struct Grabill {
 }
 
 struct Toklat {
-    PortId_t  Bledsoe;
-    bit<16>   Blencoe;
-    QueueId_t Artas;
-    bit<16>   Corfu;
+    PortId_t Bledsoe;
+    bit<16>  Blencoe;
 }
 
 struct AquaPark {
@@ -483,21 +465,8 @@ header Comfrey {
     bit<16> Cisco;
 }
 
-header Aberfoil {
-    bit<192> Florien;
-}
-
-header Pasadena {
-    bit<64> Florien;
-}
-
 header Kalida {
-    bit<8>     Blueberry;
-    varbit<48> Florien;
-}
-
-header Haverford {
-    bit<368> Florien;
+    bit<416> Florien;
 }
 
 header Wallula {
@@ -1268,13 +1237,7 @@ struct Talco {
     Chatmoss              Jerico;
     Chatmoss              Wabbaseka;
     Chatmoss              Clearmont;
-    Aberfoil              Plata;
-    Pasadena              Umkumiut;
-    Pasadena              Portville;
-    Pasadena              Nanakuli;
-    Pasadena              Campton;
     Kalida                Ruffin;
-    Haverford             LaPlata;
     Piperton              Rochert;
     Altus                 Dunnegan;
     pktgen_timer_header_t Volcano;
@@ -2099,7 +2062,7 @@ control Elkton(inout Wanamassa Westoak, inout Talco Lefor, in ingress_intrinsic_
     @name(".Horatio") action Horatio() {
         Lefor.HighRock.RioPecos = (bit<1>)1w1;
     }
-    @disable_atomic_modify(1) @stage(1) @name(".Rives") table Rives {
+    @disable_atomic_modify(1) @name(".Rives") table Rives {
         actions = {
             Shasta();
             Weathers();
@@ -2689,32 +2652,12 @@ control Kosmos(inout Wanamassa Westoak, inout Talco Lefor, in ingress_intrinsic_
 }
 
 control Telephone(inout Wanamassa Westoak, inout Talco Lefor, in ingress_intrinsic_metadata_t Moultrie, in ingress_intrinsic_metadata_from_parser_t Starkey, inout ingress_intrinsic_metadata_for_deparser_t Volens, inout ingress_intrinsic_metadata_for_tm_t Pinetop) {
-    @name(".Ionia") action Ionia(bit<8> Armona) {
-        Lefor.Ekwok.Suring = Armona;
-    }
-    @name(".Auburn") action Auburn() {
-        Ionia(Westoak.Flaherty.Cisco[7:0]);
-    }
-    @hidden @disable_atomic_modify(1) @name(".Minburn") table Minburn {
-        actions = {
-            Ionia();
-            Auburn();
-            @defaultonly NoAction();
-        }
-        key = {
-            Westoak.Flaherty.isValid(): exact @name("Flaherty") ;
-        }
-        const entries = {
-                        true : Auburn();
-
-                        false : Ionia(8w64);
-
-        }
-
-        default_action = NoAction();
-    }
     apply {
-        Minburn.apply();
+        if (Westoak.Flaherty.isValid()) {
+            Lefor.Ekwok.Suring = Westoak.Flaherty.Cisco[7:0];
+        } else {
+            Lefor.Ekwok.Suring = (bit<8>)8w64;
+        }
     }
 }
 
@@ -2886,9 +2829,9 @@ control Palco(inout Wanamassa Westoak, inout Talco Lefor, in egress_intrinsic_me
             @defaultonly Equality();
         }
         key = {
-            Garrison.egress_rid   : exact @name("Garrison.egress_rid") ;
-            Lefor.Garrison.Bledsoe: exact @name("Garrison.Bledsoe") ;
-            Lefor.Ekwok.Townville : ternary @name("Ekwok.Townville") ;
+            Garrison.egress_rid  : exact @name("Garrison.egress_rid") ;
+            Garrison.egress_port : exact @name("Garrison.Bledsoe") ;
+            Lefor.Ekwok.Townville: ternary @name("Ekwok.Townville") ;
         }
         size = 1024;
         const default_action = Equality();
@@ -3760,9 +3703,9 @@ control Moorman(inout Wanamassa Westoak, inout Talco Lefor, in egress_intrinsic_
             Bagwell();
         }
         key = {
-            Lefor.Ekwok.Westboro           : exact @name("Ekwok.Westboro") ;
-            Lefor.Garrison.Bledsoe & 9w0x7f: exact @name("Garrison.Bledsoe") ;
-            Lefor.Ekwok.Hammond            : exact @name("Ekwok.Hammond") ;
+            Lefor.Ekwok.Westboro         : exact @name("Ekwok.Westboro") ;
+            Garrison.egress_port & 9w0x7f: exact @name("Garrison.Bledsoe") ;
+            Lefor.Ekwok.Hammond          : exact @name("Ekwok.Hammond") ;
         }
         const default_action = Bagwell();
         size = 128;
@@ -4011,8 +3954,8 @@ control Stone(inout Wanamassa Westoak, inout Talco Lefor, in egress_intrinsic_me
             @defaultonly NoAction();
         }
         key = {
-            Lefor.Ekwok.Rocklake           : exact @name("Ekwok.Rocklake") ;
-            Lefor.Garrison.Bledsoe & 9w0x7f: exact @name("Garrison.Bledsoe") ;
+            Lefor.Ekwok.Rocklake         : exact @name("Ekwok.Rocklake") ;
+            Garrison.egress_port & 9w0x7f: exact @name("Garrison.Bledsoe") ;
         }
         size = 512;
         const default_action = NoAction();
@@ -4942,7 +4885,7 @@ control Engle(inout Wanamassa Westoak, inout Talco Lefor, in egress_intrinsic_me
     @name(".BigBow.Roosville") Hash<bit<12>>(HashAlgorithm_t.IDENTITY) BigBow;
     @name(".Hooks") action Hooks() {
         bit<12> Newtonia;
-        Newtonia = BigBow.get<tuple<bit<9>, bit<5>>>({ Lefor.Garrison.Bledsoe, Garrison.egress_qid[4:0] });
+        Newtonia = BigBow.get<tuple<bit<9>, bit<5>>>({ Garrison.egress_port, Garrison.egress_qid[4:0] });
         Duster.count((bit<12>)Newtonia);
     }
     @disable_atomic_modify(1) @name(".Hughson") table Hughson {
@@ -4987,8 +4930,8 @@ control Sultana(inout Wanamassa Westoak, inout Talco Lefor, in egress_intrinsic_
             Tampa();
         }
         key = {
-            Lefor.Garrison.Bledsoe & 9w0x7f: exact @name("Garrison.Bledsoe") ;
-            Lefor.Ekwok.Pajaros            : exact @name("Ekwok.Pajaros") ;
+            Garrison.egress_port & 9w0x7f: exact @name("Garrison.Bledsoe") ;
+            Lefor.Ekwok.Pajaros          : exact @name("Ekwok.Pajaros") ;
         }
         const default_action = Tampa();
         size = 4096;
@@ -5012,7 +4955,7 @@ control Piedmont(inout Wanamassa Westoak, inout Talco Lefor, in egress_intrinsic
     @name(".Flomaton.Dunedin") Hash<bit<19>>(HashAlgorithm_t.IDENTITY) Flomaton;
     @name(".LaHabra") action LaHabra() {
         bit<19> Newtonia;
-        Newtonia = Flomaton.get<tuple<bit<9>, bit<12>>>({ Lefor.Garrison.Bledsoe, (bit<12>)Lefor.Ekwok.Pajaros });
+        Newtonia = Flomaton.get<tuple<bit<9>, bit<12>>>({ Garrison.egress_port, (bit<12>)Lefor.Ekwok.Pajaros });
         Lefor.SanRemo.Edwards = Dollar.execute((bit<32>)Newtonia);
     }
     @name(".Marvin") Register<bit<1>, bit<32>>(32w294912, 1w0) Marvin;
@@ -5027,7 +4970,7 @@ control Piedmont(inout Wanamassa Westoak, inout Talco Lefor, in egress_intrinsic
     };
     @name(".Ripley") action Ripley() {
         bit<19> Newtonia;
-        Newtonia = Flomaton.get<tuple<bit<9>, bit<12>>>({ Lefor.Garrison.Bledsoe, (bit<12>)Lefor.Ekwok.Pajaros });
+        Newtonia = Flomaton.get<tuple<bit<9>, bit<12>>>({ Garrison.egress_port, (bit<12>)Lefor.Ekwok.Pajaros });
         Lefor.SanRemo.Mausdale = Daguao.execute((bit<32>)Newtonia);
     }
     @disable_atomic_modify(1) @name(".Conejo") table Conejo {
@@ -5065,15 +5008,15 @@ control Canton(inout Wanamassa Westoak, inout Talco Lefor, in egress_intrinsic_m
             Northboro();
         }
         key = {
-            Lefor.Garrison.Bledsoe & 9w0x7f: ternary @name("Garrison.Bledsoe") ;
-            Lefor.SanRemo.Mausdale         : ternary @name("SanRemo.Mausdale") ;
-            Lefor.SanRemo.Edwards          : ternary @name("SanRemo.Edwards") ;
-            Lefor.Ekwok.Wellton            : ternary @name("Ekwok.Wellton") ;
-            Lefor.Ekwok.Fredonia           : ternary @name("Ekwok.Fredonia") ;
-            Westoak.Sespe.Armona           : ternary @name("Sespe.Armona") ;
-            Westoak.Sespe.isValid()        : ternary @name("Sespe") ;
-            Lefor.Ekwok.Miranda            : ternary @name("Ekwok.Miranda") ;
-            Lefor.Ekwok.Whitefish          : ternary @name("Ekwok.Whitefish") ;
+            Garrison.egress_port & 9w0x7f: ternary @name("Garrison.Bledsoe") ;
+            Lefor.SanRemo.Mausdale       : ternary @name("SanRemo.Mausdale") ;
+            Lefor.SanRemo.Edwards        : ternary @name("SanRemo.Edwards") ;
+            Lefor.Ekwok.Wellton          : ternary @name("Ekwok.Wellton") ;
+            Lefor.Ekwok.Fredonia         : ternary @name("Ekwok.Fredonia") ;
+            Westoak.Sespe.Armona         : ternary @name("Sespe.Armona") ;
+            Westoak.Sespe.isValid()      : ternary @name("Sespe") ;
+            Lefor.Ekwok.Miranda          : ternary @name("Ekwok.Miranda") ;
+            Lefor.Ekwok.Whitefish        : ternary @name("Ekwok.Whitefish") ;
         }
         default_action = Northboro();
         size = 512;
@@ -5700,7 +5643,7 @@ control Holcut(inout Wanamassa Westoak, inout Talco Lefor, in egress_intrinsic_m
         Poynette.count();
         Lefor.Ekwok.Biddle = (bit<1>)1w1;
     }
-    @disable_atomic_modify(1) @stage(4 , 5120) @stage(5 , 11264) @name(".Chunchula") table Chunchula {
+    @disable_atomic_modify(1) @name(".Chunchula") table Chunchula {
         actions = {
             Wyanet();
             @defaultonly NoAction();
@@ -5723,7 +5666,7 @@ control Holcut(inout Wanamassa Westoak, inout Talco Lefor, in egress_intrinsic_m
         Darden.count();
         Lefor.Ekwok.Biddle = (bit<1>)1w1;
     }
-    @disable_atomic_modify(1) @stage(4 , 4096) @name(".McCartys") table McCartys {
+    @disable_atomic_modify(1) @name(".McCartys") table McCartys {
         actions = {
             ElJebel();
             @defaultonly NoAction();
@@ -5765,11 +5708,11 @@ control Holcut(inout Wanamassa Westoak, inout Talco Lefor, in egress_intrinsic_m
             Dante();
         }
         key = {
-            Lefor.Garrison.Bledsoe: ternary @name("Garrison.Bledsoe") ;
-            Lefor.Ekwok.Delavan   : ternary @name("Ekwok.Delavan") ;
-            Lefor.Ekwok.Etter     : ternary @name("Ekwok.Etter") ;
-            Lefor.Ekwok.Biddle    : exact @name("Ekwok.Biddle") ;
-            Lefor.Ekwok.Ipava     : ternary @name("Ekwok.Ipava") ;
+            Garrison.egress_port: ternary @name("Garrison.Bledsoe") ;
+            Lefor.Ekwok.Delavan : ternary @name("Ekwok.Delavan") ;
+            Lefor.Ekwok.Etter   : ternary @name("Ekwok.Etter") ;
+            Lefor.Ekwok.Biddle  : exact @name("Ekwok.Biddle") ;
+            Lefor.Ekwok.Ipava   : ternary @name("Ekwok.Ipava") ;
         }
         const default_action = Dante();
         size = 512;
@@ -5797,7 +5740,7 @@ control Indrio(inout Wanamassa Westoak, inout Talco Lefor, in ingress_intrinsic_
     @name(".Yantis") action Yantis(bit<16> Millhaven) {
         Lefor.Hillside.Correo = (bit<13>)Millhaven;
     }
-    @disable_atomic_modify(1) @stage(1) @name(".Harvard") table Harvard {
+    @disable_atomic_modify(1) @name(".Harvard") table Harvard {
         actions = {
             Yantis();
         }
@@ -6055,169 +5998,6 @@ control Toxey(inout Wanamassa Westoak, inout Talco Lefor, in egress_intrinsic_me
     apply {
         if (Lefor.Ekwok.FortHunt == 3w2 || Lefor.Ekwok.FortHunt == 3w3) {
             Gallion.apply();
-        }
-    }
-}
-
-control Fouke(inout Wanamassa Westoak, inout Talco Lefor, in egress_intrinsic_metadata_t Garrison, in egress_intrinsic_metadata_from_parser_t Franktown, inout egress_intrinsic_metadata_for_deparser_t Willette, inout egress_intrinsic_metadata_for_output_port_t Mayview) {
-    @name(".Yakutat") action Yakutat() {
-        Willette.mirror_type = (bit<4>)4w2;
-        @in_hash {
-            Lefor.Orting.Newfolden[7:0] = Lefor.Ekwok.Freeburg[7:0];
-        }
-        Willette.mirror_io_select = (bit<1>)1w1;
-        Willette.mtu_trunc_len = (bit<14>)14w64;
-        Westoak.LaPlata.Florien = (bit<368>)368w0;
-        Westoak.LaPlata.setValid();
-    }
-    @hidden @disable_atomic_modify(1) @name(".McQueen") table McQueen {
-        actions = {
-            Yakutat();
-            @defaultonly NoAction();
-        }
-        key = {
-            Westoak.Plata.isValid(): exact @name("Plata") ;
-        }
-        size = 1;
-        const entries = {
-                        true : Yakutat();
-
-        }
-
-        default_action = NoAction();
-    }
-    apply {
-        if (Lefor.Garrison.Blencoe[15:8] == 8w0 && Lefor.Garrison.Blencoe[7:0] < 8w68) {
-            McQueen.apply();
-        }
-    }
-}
-
-control Kahului(inout Wanamassa Westoak, inout Talco Lefor, in egress_intrinsic_metadata_t Garrison, in egress_intrinsic_metadata_from_parser_t Franktown, inout egress_intrinsic_metadata_for_deparser_t Willette, inout egress_intrinsic_metadata_for_output_port_t Mayview) {
-    @name(".Powelton") action Powelton() {
-    }
-@pa_no_init("egress" , "eg_intr_md_for_dprsr.mirror_egress_port")
-@pa_mutually_exclusive("egress" , "eg_intr_md_for_dprsr.mirror_egress_port" , "Westoak.Peoria")
-@pa_mutually_exclusive("egress" , "eg_intr_md_for_dprsr.mirror_egress_port" , "Westoak.Frederika")
-@name(".Annette") action Annette() {
-        Willette.mirror_egress_port = Lefor.Garrison.Bledsoe;
-        @in_hash {
-            Lefor.Garrison.Bledsoe[7:0] = Lefor.Orting.Newfolden[7:0];
-        }
-        Willette.mirror_type = (bit<4>)4w3;
-        Willette.mirror_io_select = (bit<1>)1w1;
-        Willette.mirror_qid = Garrison.egress_qid;
-        Willette.drop_ctl = (bit<3>)3w1;
-        Lefor.Orting.Newfolden = (bit<10>)10w192;
-    }
-    @hidden @disable_atomic_modify(1) @name(".Wainaku") table Wainaku {
-        key = {
-            Westoak.Flaherty.isValid()  : ternary @name("Flaherty") ;
-            Westoak.Parkway[0].isValid(): ternary @name("Parkway[0]") ;
-            Westoak.Parkway[1].isValid(): ternary @name("Parkway[1]") ;
-            Westoak.LakeHart.isValid()  : ternary @name("LakeHart") ;
-            Westoak.Sedan.isValid()     : ternary @name("Sedan") ;
-            Westoak.Almota.isValid()    : ternary @name("Almota") ;
-            Westoak.Mayflower.isValid() : ternary @name("Mayflower") ;
-            Lefor.Ekwok.Peebles         : ternary @name("Ekwok.Peebles") ;
-            Westoak.Clearmont.isValid() : ternary @name("Clearmont") ;
-            Lefor.Ekwok.FortHunt        : ternary @name("Ekwok.FortHunt") ;
-            Lefor.Garrison.Blencoe      : range @name("Garrison.Blencoe") ;
-        }
-        actions = {
-            Powelton();
-            Annette();
-        }
-        size = 64;
-        requires_versioning = false;
-        const default_action = Powelton();
-        const entries = {
-                        (false, default, default, default, default, default, default, default, default, 3w2, default) : Powelton();
-
-                        (false, default, default, default, default, default, true, default, default, default, default) : Powelton();
-
-                        (false, default, default, default, true, default, default, default, default, default, default) : Powelton();
-
-                        (false, default, default, default, default, true, default, default, default, default, default) : Powelton();
-
-                        (true, default, default, default, false, false, false, default, default, 3w1, 16w0 .. 16w91) : Annette();
-
-                        (true, default, default, default, false, false, false, default, default, 3w1, default) : Powelton();
-
-                        (true, default, default, default, false, false, false, default, default, 3w5, 16w0 .. 16w91) : Annette();
-
-                        (true, default, default, default, false, false, false, default, default, 3w5, default) : Powelton();
-
-                        (true, default, default, default, false, false, false, default, default, 3w6, 16w0 .. 16w91) : Annette();
-
-                        (true, default, default, default, false, false, false, default, default, 3w6, default) : Powelton();
-
-                        (true, default, default, default, false, false, false, 1w0, false, default, 16w0 .. 16w91) : Annette();
-
-                        (true, default, default, default, false, false, false, 1w1, false, default, 16w0 .. 16w95) : Annette();
-
-                        (true, default, default, default, false, false, false, 1w1, true, default, 16w0 .. 16w95) : Annette();
-
-                        (true, default, default, default, false, false, false, default, default, default, default) : Powelton();
-
-                        (false, false, false, default, false, false, false, default, default, 3w1, 16w0 .. 16w105) : Annette();
-
-                        (false, true, false, default, false, false, false, default, default, 3w1, 16w0 .. 16w101) : Annette();
-
-                        (false, true, true, default, false, false, false, default, default, 3w1, 16w0 .. 16w97) : Annette();
-
-                        (false, default, default, default, false, false, false, default, default, 3w1, default) : Powelton();
-
-                        (false, false, false, default, false, false, false, default, default, 3w5, 16w0 .. 16w105) : Annette();
-
-                        (false, true, false, default, false, false, false, default, default, 3w5, 16w0 .. 16w101) : Annette();
-
-                        (false, true, true, default, false, false, false, default, default, 3w5, 16w0 .. 16w97) : Annette();
-
-                        (false, default, default, default, false, false, false, default, default, 3w5, default) : Powelton();
-
-                        (false, false, false, default, false, false, false, default, default, 3w6, 16w0 .. 16w105) : Annette();
-
-                        (false, true, false, default, false, false, false, default, default, 3w6, 16w0 .. 16w101) : Annette();
-
-                        (false, true, true, default, false, false, false, default, default, 3w6, 16w0 .. 16w97) : Annette();
-
-                        (false, default, default, default, false, false, false, default, default, 3w6, default) : Powelton();
-
-                        (false, default, default, default, false, false, false, default, default, 3w2, 16w0 .. 16w105) : Annette();
-
-                        (false, default, default, default, false, false, false, default, default, 3w2, default) : Powelton();
-
-                        (false, false, false, false, false, false, false, default, true, default, 16w0 .. 16w109) : Annette();
-
-                        (false, true, false, false, false, false, false, default, true, default, 16w0 .. 16w105) : Annette();
-
-                        (false, true, true, false, false, false, false, default, true, default, 16w0 .. 16w101) : Annette();
-
-                        (false, false, false, default, false, false, false, 1w0, false, default, 16w0 .. 16w105) : Annette();
-
-                        (false, false, false, default, false, false, false, 1w1, false, default, 16w0 .. 16w109) : Annette();
-
-                        (false, false, false, default, false, false, false, 1w1, true, default, 16w0 .. 16w113) : Annette();
-
-                        (false, true, false, default, false, false, false, 1w0, false, default, 16w0 .. 16w101) : Annette();
-
-                        (false, true, false, default, false, false, false, 1w1, false, default, 16w0 .. 16w105) : Annette();
-
-                        (false, true, false, default, false, false, false, 1w1, true, default, 16w0 .. 16w109) : Annette();
-
-                        (false, true, true, default, false, false, false, 1w0, false, default, 16w0 .. 16w97) : Annette();
-
-                        (false, true, true, default, false, false, false, 1w1, false, default, 16w0 .. 16w101) : Annette();
-
-                        (false, true, true, default, false, false, false, 1w1, true, default, 16w0 .. 16w105) : Annette();
-
-        }
-
-    }
-    apply {
-        if (Westoak.Peoria.isValid() && Willette.drop_ctl == 3w0) {
-            Wainaku.apply();
         }
     }
 }
@@ -16005,9 +15785,7 @@ parser Belfast(packet_in Kinsley, out Wanamassa Westoak, out Talco Lefor, out eg
     state start {
         Kinsley.extract<egress_intrinsic_metadata_t>(Garrison);
         Lefor.Garrison.Blencoe = Garrison.pkt_length;
-        Lefor.Garrison.Bledsoe = Garrison.egress_port;
-        transition select(Lefor.Garrison.Bledsoe ++ (Kinsley.lookahead<Willard>()).Bayshore) {
-            17w3 &&& 17w0xff: Krupp;
+        transition select(Garrison.egress_port ++ (Kinsley.lookahead<Willard>()).Bayshore) {
             SwissAlp: Protivin;
             17w0 &&& 17w0x7: Baltic;
             default: Krupp;
@@ -16042,7 +15820,6 @@ parser Belfast(packet_in Kinsley, out Wanamassa Westoak, out Talco Lefor, out eg
         transition select(Dushore.Bayshore) {
             8w1 &&& 8w0x7: Woodland;
             8w2 &&& 8w0x7: Timken;
-            8w3 &&& 8w0x7: Leonore;
             default: Roxboro;
         }
     }
@@ -16059,61 +15836,12 @@ parser Belfast(packet_in Kinsley, out Wanamassa Westoak, out Talco Lefor, out eg
         }
         transition Lamboglia;
     }
-    state Leonore {
-        transition select(Lefor.Garrison.Blencoe[7:0]) {
-            8w0x0 &&& 8w0xe0: Keachi;
-            8w0x20 &&& 8w0xf8: Keachi;
-            8w0x28 &&& 8w0xf8: Bladen;
-            8w0x30 &&& 8w0xf8: Carlin;
-            8w0x38 &&& 8w0xf8: Mumford;
-            8w0x40 &&& 8w0xf8: Tecumseh;
-            default: Roxboro;
-        }
-    }
-    state Keachi {
-        Kinsley.extract<Aberfoil>(Westoak.Plata);
-        transition Sylva;
-    }
-    state Bladen {
-        Kinsley.extract<Aberfoil>(Westoak.Plata);
-        Kinsley.extract<Pasadena>(Westoak.Umkumiut);
-        transition Sylva;
-    }
-    state Carlin {
-        Kinsley.extract<Aberfoil>(Westoak.Plata);
-        Kinsley.extract<Pasadena>(Westoak.Umkumiut);
-        Kinsley.extract<Pasadena>(Westoak.Portville);
-        transition Sylva;
-    }
-    state Mumford {
-        Kinsley.extract<Aberfoil>(Westoak.Plata);
-        Kinsley.extract<Pasadena>(Westoak.Umkumiut);
-        Kinsley.extract<Pasadena>(Westoak.Portville);
-        Kinsley.extract<Pasadena>(Westoak.Nanakuli);
-        transition Sylva;
-    }
-    state Tecumseh {
-        Kinsley.extract<Aberfoil>(Westoak.Plata);
-        Kinsley.extract<Pasadena>(Westoak.Umkumiut);
-        Kinsley.extract<Pasadena>(Westoak.Portville);
-        Kinsley.extract<Pasadena>(Westoak.Nanakuli);
-        Kinsley.extract<Pasadena>(Westoak.Campton);
-        transition Sylva;
-    }
-    state Sylva {
-        transition select(Lefor.Garrison.Blencoe[2:0]) {
-            3w0: Roxboro;
-            default: Garwood;
-        }
-    }
-    state Garwood {
-        Kinsley.extract<Kalida>(Westoak.Ruffin, (bit<32>)((bit<8>)(Lefor.Garrison.Blencoe[2:0] - 3w1) * 8w8));
-        transition Roxboro;
-    }
     state Roxboro {
         transition accept;
     }
     state CatCreek {
+        Westoak.Ruffin.setValid();
+        Westoak.Ruffin = Kinsley.lookahead<Kalida>();
         transition accept;
     }
 }
@@ -16157,7 +15885,7 @@ control Geeville(inout Wanamassa Westoak, inout Talco Lefor, in egress_intrinsic
             @defaultonly NoAction();
         }
         key = {
-            Lefor.Garrison.Bledsoe   : exact @name("Garrison.Bledsoe") ;
+            Garrison.egress_port     : exact @name("Garrison.Bledsoe") ;
             Lefor.Picabo.Naubinway   : exact @name("Picabo.Naubinway") ;
             Lefor.Ekwok.Peebles      : exact @name("Ekwok.Peebles") ;
             Lefor.Ekwok.FortHunt     : exact @name("Ekwok.FortHunt") ;
@@ -16176,6 +15904,117 @@ control Geeville(inout Wanamassa Westoak, inout Talco Lefor, in egress_intrinsic
         }
         size = 512;
         default_action = NoAction();
+    }
+    @name(".Powelton") action Powelton() {
+        Westoak.Ruffin.setInvalid();
+    }
+    @name(".Annette") action Annette() {
+        Willette.mtu_trunc_len = (bit<14>)14w64;
+    }
+    @hidden @disable_atomic_modify(1) @name(".Wainaku") table Wainaku {
+        key = {
+            Westoak.Flaherty.isValid()  : ternary @name("Flaherty") ;
+            Westoak.Parkway[0].isValid(): ternary @name("Parkway[0]") ;
+            Westoak.Parkway[1].isValid(): ternary @name("Parkway[1]") ;
+            Westoak.LakeHart.isValid()  : ternary @name("LakeHart") ;
+            Westoak.Sedan.isValid()     : ternary @name("Sedan") ;
+            Westoak.Almota.isValid()    : ternary @name("Almota") ;
+            Westoak.Mayflower.isValid() : ternary @name("Mayflower") ;
+            Lefor.Ekwok.Peebles         : ternary @name("Ekwok.Peebles") ;
+            Westoak.Clearmont.isValid() : ternary @name("Clearmont") ;
+            Lefor.Ekwok.FortHunt        : ternary @name("Ekwok.FortHunt") ;
+            Lefor.Garrison.Blencoe      : range @name("Garrison.Blencoe") ;
+        }
+        actions = {
+            Powelton();
+            Annette();
+        }
+        size = 64;
+        requires_versioning = false;
+        const default_action = Powelton();
+        const entries = {
+                        (false, default, default, default, default, default, default, default, default, 3w2, default) : Powelton();
+
+                        (false, default, default, default, default, default, true, default, default, default, default) : Powelton();
+
+                        (false, default, default, default, true, default, default, default, default, default, default) : Powelton();
+
+                        (false, default, default, default, default, true, default, default, default, default, default) : Powelton();
+
+                        (true, default, default, default, false, false, false, default, default, 3w1, 16w0 .. 16w91) : Annette();
+
+                        (true, default, default, default, false, false, false, default, default, 3w1, default) : Powelton();
+
+                        (true, default, default, default, false, false, false, default, default, 3w5, 16w0 .. 16w91) : Annette();
+
+                        (true, default, default, default, false, false, false, default, default, 3w5, default) : Powelton();
+
+                        (true, default, default, default, false, false, false, default, default, 3w6, 16w0 .. 16w91) : Annette();
+
+                        (true, default, default, default, false, false, false, default, default, 3w6, default) : Powelton();
+
+                        (true, default, default, default, false, false, false, 1w0, false, default, 16w0 .. 16w91) : Annette();
+
+                        (true, default, default, default, false, false, false, 1w1, false, default, 16w0 .. 16w95) : Annette();
+
+                        (true, default, default, default, false, false, false, 1w1, true, default, 16w0 .. 16w95) : Annette();
+
+                        (true, default, default, default, false, false, false, default, default, default, default) : Powelton();
+
+                        (false, false, false, default, false, false, false, default, default, 3w1, 16w0 .. 16w105) : Annette();
+
+                        (false, true, false, default, false, false, false, default, default, 3w1, 16w0 .. 16w101) : Annette();
+
+                        (false, true, true, default, false, false, false, default, default, 3w1, 16w0 .. 16w97) : Annette();
+
+                        (false, default, default, default, false, false, false, default, default, 3w1, default) : Powelton();
+
+                        (false, false, false, default, false, false, false, default, default, 3w5, 16w0 .. 16w105) : Annette();
+
+                        (false, true, false, default, false, false, false, default, default, 3w5, 16w0 .. 16w101) : Annette();
+
+                        (false, true, true, default, false, false, false, default, default, 3w5, 16w0 .. 16w97) : Annette();
+
+                        (false, default, default, default, false, false, false, default, default, 3w5, default) : Powelton();
+
+                        (false, false, false, default, false, false, false, default, default, 3w6, 16w0 .. 16w105) : Annette();
+
+                        (false, true, false, default, false, false, false, default, default, 3w6, 16w0 .. 16w101) : Annette();
+
+                        (false, true, true, default, false, false, false, default, default, 3w6, 16w0 .. 16w97) : Annette();
+
+                        (false, default, default, default, false, false, false, default, default, 3w6, default) : Powelton();
+
+                        (false, default, default, default, false, false, false, default, default, 3w2, 16w0 .. 16w105) : Annette();
+
+                        (false, default, default, default, false, false, false, default, default, 3w2, default) : Powelton();
+
+                        (false, false, false, false, false, false, false, default, true, default, 16w0 .. 16w109) : Annette();
+
+                        (false, true, false, false, false, false, false, default, true, default, 16w0 .. 16w105) : Annette();
+
+                        (false, true, true, false, false, false, false, default, true, default, 16w0 .. 16w101) : Annette();
+
+                        (false, false, false, default, false, false, false, 1w0, false, default, 16w0 .. 16w105) : Annette();
+
+                        (false, false, false, default, false, false, false, 1w1, false, default, 16w0 .. 16w109) : Annette();
+
+                        (false, false, false, default, false, false, false, 1w1, true, default, 16w0 .. 16w113) : Annette();
+
+                        (false, true, false, default, false, false, false, 1w0, false, default, 16w0 .. 16w101) : Annette();
+
+                        (false, true, false, default, false, false, false, 1w1, false, default, 16w0 .. 16w105) : Annette();
+
+                        (false, true, false, default, false, false, false, 1w1, true, default, 16w0 .. 16w109) : Annette();
+
+                        (false, true, true, default, false, false, false, 1w0, false, default, 16w0 .. 16w97) : Annette();
+
+                        (false, true, true, default, false, false, false, 1w1, false, default, 16w0 .. 16w101) : Annette();
+
+                        (false, true, true, default, false, false, false, 1w1, true, default, 16w0 .. 16w105) : Annette();
+
+        }
+
     }
     @name(".Duelm") Toxey() Duelm;
     @name(".Wimbledon") Rodessa() Wimbledon;
@@ -16206,8 +16045,6 @@ control Geeville(inout Wanamassa Westoak, inout Talco Lefor, in egress_intrinsic
     @name(".Cantwell") Salamonia() Cantwell;
     @name(".Rossburg") Emigrant() Rossburg;
     @name(".Rippon") Bains() Rippon;
-    @name(".Cartago") Kahului() Cartago;
-    @name(".Comptche") Fouke() Comptche;
     @name(".Bruce") Bethune() Bruce;
     @name(".Sawpit") Nowlin() Sawpit;
     @name(".Hercules") Rolla() Hercules;
@@ -16265,9 +16102,6 @@ control Geeville(inout Wanamassa Westoak, inout Talco Lefor, in egress_intrinsic
             }
             Slocum.apply(Westoak, Lefor, Garrison, Franktown, Willette, Mayview);
             Duelm.apply(Westoak, Lefor, Garrison, Franktown, Willette, Mayview);
-            Cartago.apply(Westoak, Lefor, Garrison, Franktown, Willette, Mayview);
-        } else if (Westoak.Plata.isValid()) {
-            Comptche.apply(Westoak, Lefor, Garrison, Franktown, Willette, Mayview);
         } else {
             if (Westoak.Peoria.isValid() == false) {
                 Manistee.apply(Westoak, Lefor, Garrison, Franktown, Willette, Mayview);
@@ -16282,7 +16116,9 @@ control Geeville(inout Wanamassa Westoak, inout Talco Lefor, in egress_intrinsic
             } else if (Westoak.Halltown.isValid()) {
                 Hanamaulu.apply(Westoak, Lefor, Garrison, Franktown, Willette, Mayview);
             }
-            Cartago.apply(Westoak, Lefor, Garrison, Franktown, Willette, Mayview);
+        }
+        if (Westoak.Ruffin.isValid()) {
+            Wainaku.apply();
         }
     }
 }
@@ -16294,13 +16130,6 @@ control Lenwood(packet_out Kinsley, inout Wanamassa Westoak, in Talco Lefor, in 
     apply {
         {
             if (Willette.mirror_type == 4w2) {
-                Willard Bonner;
-                Bonner.setValid();
-                Bonner.Bayshore = Lefor.Dushore.Bayshore;
-                Bonner.Florien = Lefor.Dushore.Bayshore;
-                Bonner.Freeburg = Lefor.Garrison.Bledsoe;
-                Hatteras.emit<Willard>((MirrorId_t)Lefor.Orting.Newfolden, Bonner);
-            } else if (Willette.mirror_type == 4w3) {
                 Willard Bonner;
                 Bonner.setValid();
                 Bonner.Bayshore = Lefor.Dushore.Bayshore;
@@ -16334,13 +16163,7 @@ control Lenwood(packet_out Kinsley, inout Wanamassa Westoak, in Talco Lefor, in 
             Kinsley.emit<Weyauwega>(Westoak.Rienzi);
             Kinsley.emit<Teigen>(Westoak.Olmitz);
             Kinsley.emit<Coulter>(Westoak.Tofte);
-            Kinsley.emit<Aberfoil>(Westoak.Plata);
-            Kinsley.emit<Pasadena>(Westoak.Umkumiut);
-            Kinsley.emit<Pasadena>(Westoak.Portville);
-            Kinsley.emit<Pasadena>(Westoak.Nanakuli);
-            Kinsley.emit<Pasadena>(Westoak.Campton);
             Kinsley.emit<Kalida>(Westoak.Ruffin);
-            Kinsley.emit<Haverford>(Westoak.LaPlata);
         }
     }
 }

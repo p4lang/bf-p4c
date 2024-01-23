@@ -256,10 +256,11 @@ struct Aguilita {
 }
 
 struct IttaBena {
-    PortId_t Adona;
-    bit<16>  Connell;
-    bit<5>   Cisco;
-    bit<19>  Higginson;
+    PortId_t  Adona;
+    bit<16>   Connell;
+    QueueId_t Cisco;
+    bit<16>   Krupp;
+    bit<19>   Higginson;
 }
 
 struct Oriskany {
@@ -430,8 +431,21 @@ header Solomon {
     bit<16> PineCity;
 }
 
+header Baltic {
+    bit<192> Bledsoe;
+}
+
+header Geeville {
+    bit<64> Bledsoe;
+}
+
 header Garcia {
-    bit<416> Bledsoe;
+    bit<8>     Onycha;
+    varbit<48> Bledsoe;
+}
+
+header Fowlkes {
+    bit<368> Bledsoe;
 }
 
 header Coalwood {
@@ -1262,6 +1276,11 @@ struct Hester {
 struct Tenstrike {
     bit<32> Freeny;
     bit<32> Glassboro;
+}
+
+control Seguin(inout Emden Aguila, inout Cranbury Nixon, in egress_intrinsic_metadata_t Thurmond, in egress_intrinsic_metadata_from_parser_t Caspian, inout egress_intrinsic_metadata_for_deparser_t Norridge, inout egress_intrinsic_metadata_for_output_port_t Lowemont) {
+    apply {
+    }
 }
 
 control Castle(inout Emden Aguila, inout Cranbury Nixon, in ingress_intrinsic_metadata_t Baker, in ingress_intrinsic_metadata_from_parser_t Mattapex, inout ingress_intrinsic_metadata_for_deparser_t Midas, inout ingress_intrinsic_metadata_for_tm_t Glenoma) {
@@ -3690,7 +3709,7 @@ control Cornish(inout Emden Aguila, inout Cranbury Nixon, in egress_intrinsic_me
         Aguila.Ravinia.Juniata = Beaverdam;
         Aguila.Noyack.Minto = Baskin.execute(32w1);
         Aguila.Noyack.Placedo = Crystola;
-        Aguila.Noyack.Waubun[1:0] = Thurmond.egress_port[8:7];
+        Aguila.Noyack.Waubun[1:0] = Nixon.Thurmond.Adona[8:7];
     }
     @ternary(1) @disable_atomic_modify(1) @name(".LasLomas") table LasLomas {
         actions = {
@@ -3702,7 +3721,7 @@ control Cornish(inout Emden Aguila, inout Cranbury Nixon, in egress_intrinsic_me
         }
         key = {
             Thurmond.egress_rid    : exact @name("Thurmond.egress_rid") ;
-            Thurmond.egress_port   : exact @name("Thurmond.Adona") ;
+            Nixon.Thurmond.Adona   : exact @name("Thurmond.Adona") ;
             Aguila.Noyack.isValid(): exact @name("Noyack") ;
         }
         size = 1024;
@@ -3722,7 +3741,7 @@ control Deeth(inout Emden Aguila, inout Cranbury Nixon, in egress_intrinsic_meta
             Devola();
         }
         key = {
-            Thurmond.egress_port  : exact @name("Thurmond.Adona") ;
+            Nixon.Thurmond.Adona  : exact @name("Thurmond.Adona") ;
             Nixon.Arapahoe.Amenia : exact @name("Arapahoe.Amenia") ;
             Nixon.Arapahoe.Tiburon: exact @name("Arapahoe.Tiburon") ;
         }
@@ -4169,7 +4188,7 @@ control Boyes(inout Emden Aguila, inout Cranbury Nixon, in egress_intrinsic_meta
         }
         key = {
             Nixon.Hillside.Loris         : exact @name("Hillside.Loris") ;
-            Thurmond.egress_port & 9w0x7f: exact @name("Thurmond.Adona") ;
+            Nixon.Thurmond.Adona & 9w0x7f: exact @name("Thurmond.Adona") ;
             Nixon.Hillside.McGrady       : exact @name("Hillside.McGrady") ;
         }
         const default_action = McCallum();
@@ -4358,7 +4377,7 @@ control Selvin(inout Emden Aguila, inout Cranbury Nixon, in egress_intrinsic_met
         }
         key = {
             Nixon.Hillside.Edwards       : exact @name("Hillside.Edwards") ;
-            Thurmond.egress_port & 9w0x7f: exact @name("Thurmond.Adona") ;
+            Nixon.Thurmond.Adona & 9w0x7f: exact @name("Thurmond.Adona") ;
         }
         size = 512;
         const default_action = NoAction();
@@ -5287,7 +5306,7 @@ control Holcut(inout Emden Aguila, inout Cranbury Nixon, in egress_intrinsic_met
     @name(".Dante.Roosville") Hash<bit<12>>(HashAlgorithm_t.IDENTITY) Dante;
     @name(".Poynette") action Poynette() {
         bit<12> Bernstein;
-        Bernstein = Dante.get<tuple<bit<9>, bit<5>>>({ Thurmond.egress_port, Thurmond.egress_qid[4:0] });
+        Bernstein = Dante.get<tuple<bit<9>, bit<5>>>({ Nixon.Thurmond.Adona, Thurmond.egress_qid[4:0] });
         FarrWest.count((bit<12>)Bernstein);
     }
     @disable_atomic_modify(1) @name(".Wyanet") table Wyanet {
@@ -5322,7 +5341,7 @@ control Chunchula(inout Emden Aguila, inout Cranbury Nixon, in egress_intrinsic_
             McCartys();
         }
         key = {
-            Thurmond.egress_port & 9w0x7f : exact @name("Thurmond.Adona") ;
+            Nixon.Thurmond.Adona & 9w0x7f : exact @name("Thurmond.Adona") ;
             Nixon.Hillside.Hoagland       : exact @name("Hillside.Hoagland") ;
             Nixon.Hillside.Ackley & 6w0x3f: exact @name("Hillside.Ackley") ;
         }
@@ -5348,7 +5367,7 @@ control Penrose(inout Emden Aguila, inout Cranbury Nixon, in egress_intrinsic_me
     @name(".SandCity.Dunedin") Hash<bit<19>>(HashAlgorithm_t.IDENTITY) SandCity;
     @name(".Newburgh") action Newburgh() {
         bit<19> Bernstein;
-        Bernstein = SandCity.get<tuple<bit<9>, bit<12>>>({ Thurmond.egress_port, (bit<12>)Nixon.Hillside.Hoagland });
+        Bernstein = SandCity.get<tuple<bit<9>, bit<12>>>({ Nixon.Thurmond.Adona, (bit<12>)Nixon.Hillside.Hoagland });
         Nixon.Sespe.Rainelle = Almont.execute((bit<32>)Bernstein);
     }
     @name(".Baroda") Register<bit<1>, bit<32>>(32w294912, 1w0) Baroda;
@@ -5363,7 +5382,7 @@ control Penrose(inout Emden Aguila, inout Cranbury Nixon, in egress_intrinsic_me
     };
     @name(".NewRoads") action NewRoads() {
         bit<19> Bernstein;
-        Bernstein = SandCity.get<tuple<bit<9>, bit<12>>>({ Thurmond.egress_port, (bit<12>)Nixon.Hillside.Hoagland });
+        Bernstein = SandCity.get<tuple<bit<9>, bit<12>>>({ Nixon.Thurmond.Adona, (bit<12>)Nixon.Hillside.Hoagland });
         Nixon.Sespe.Paulding = Bairoil.execute((bit<32>)Bernstein);
     }
     @disable_atomic_modify(1) @name(".Berrydale") table Berrydale {
@@ -5409,7 +5428,7 @@ control Tusculum(inout Emden Aguila, inout Cranbury Nixon, in egress_intrinsic_m
             Laney();
         }
         key = {
-            Thurmond.egress_port & 9w0x7f: ternary @name("Thurmond.Adona") ;
+            Nixon.Thurmond.Adona & 9w0x7f: ternary @name("Thurmond.Adona") ;
             Nixon.Sespe.Paulding         : ternary @name("Sespe.Paulding") ;
             Nixon.Sespe.Rainelle         : ternary @name("Sespe.Rainelle") ;
             Nixon.Casnovia.Shingler      : ternary @name("Casnovia.Shingler") ;
@@ -5676,7 +5695,7 @@ control Powhatan(inout Emden Aguila, inout Cranbury Nixon, in egress_intrinsic_m
     }
     @disable_atomic_modify(1) @name(".Gonzalez") table Gonzalez {
         key = {
-            Thurmond.egress_port & 9w0x7f: exact @name("Thurmond.Adona") ;
+            Nixon.Thurmond.Adona & 9w0x7f: exact @name("Thurmond.Adona") ;
             Thurmond.egress_qid & 5w0x7  : exact @name("Thurmond.Cisco") ;
         }
         actions = {
@@ -5688,7 +5707,7 @@ control Powhatan(inout Emden Aguila, inout Cranbury Nixon, in egress_intrinsic_m
     }
     @disable_atomic_modify(1) @name(".Motley") table Motley {
         key = {
-            Thurmond.egress_port & 9w0x7f: exact @name("Thurmond.Adona") ;
+            Nixon.Thurmond.Adona & 9w0x7f: exact @name("Thurmond.Adona") ;
             Thurmond.egress_qid & 5w0x7  : exact @name("Thurmond.Cisco") ;
             Nixon.Arapahoe.Tiburon       : exact @name("Arapahoe.Tiburon") ;
         }
@@ -6257,7 +6276,7 @@ control ElMirage(inout Emden Aguila, inout Cranbury Nixon, in egress_intrinsic_m
             @defaultonly NoAction();
         }
         key = {
-            Thurmond.egress_port & 9w0x7f: exact @name("Thurmond.Adona") ;
+            Nixon.Thurmond.Adona & 9w0x7f: exact @name("Thurmond.Adona") ;
             Thurmond.egress_qid & 5w0x7  : exact @name("Thurmond.Cisco") ;
         }
         size = 576;
@@ -6321,7 +6340,7 @@ control ElMirage(inout Emden Aguila, inout Cranbury Nixon, in egress_intrinsic_m
             @defaultonly NoAction();
         }
         key = {
-            Thurmond.egress_port  : exact @name("Thurmond.Adona") ;
+            Nixon.Thurmond.Adona  : exact @name("Thurmond.Adona") ;
             Nixon.Frederika.Cassa : exact @name("Frederika.Cassa") ;
             Nixon.Hillside.Wisdom : exact @name("Hillside.Wisdom") ;
             Nixon.Hillside.Basalt : exact @name("Hillside.Basalt") ;
@@ -6372,6 +6391,7 @@ control ElMirage(inout Emden Aguila, inout Cranbury Nixon, in egress_intrinsic_m
     @name(".Camden") Parmele() Camden;
     @name(".Careywood") Patchogue() Careywood;
     @name(".Earlsboro") Romeo() Earlsboro;
+    @name(".Cloverly") Seguin() Cloverly;
     @name(".Seabrook") LaMarque() Seabrook;
     @name(".Devore") Weimar() Devore;
     @name(".Melvina") Boyes() Melvina;
@@ -6442,6 +6462,7 @@ control ElMirage(inout Emden Aguila, inout Cranbury Nixon, in egress_intrinsic_m
             } else if (Aguila.Robstown.isValid()) {
                 Melvina.apply(Aguila, Nixon, Thurmond, Caspian, Norridge, Lowemont);
             }
+            Cloverly.apply(Aguila, Nixon, Thurmond, Caspian, Norridge, Lowemont);
         }
     }
 }
@@ -6543,13 +6564,14 @@ parser Seibert(packet_in Potosi, out Emden Aguila, out Cranbury Nixon, out egres
     state start {
         Potosi.extract<egress_intrinsic_metadata_t>(Thurmond);
         Nixon.Thurmond.Connell = Thurmond.pkt_length;
+        Nixon.Thurmond.Adona = Thurmond.egress_port;
         transition select(Thurmond.deflection_flag) {
             1w1 &&& 1w1: Jigger;
             default: Villanova;
         }
     }
     state Villanova {
-        transition select(Thurmond.egress_port ++ (Potosi.lookahead<Willard>()).Bayshore) {
+        transition select(Nixon.Thurmond.Adona ++ (Potosi.lookahead<Willard>()).Bayshore) {
             Maybee: Fosston;
             17w0 &&& 17w0x7: Oskawalik;
             17w3 &&& 17w0x7: Pelland;

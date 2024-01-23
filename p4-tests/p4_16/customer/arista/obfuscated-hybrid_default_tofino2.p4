@@ -77,6 +77,15 @@
 @pa_container_type("ingress" , "Moosic.Parkway.Savery" , "normal")
 @pa_container_type("ingress" , "Moosic.Moultrie.Vergennes" , "normal")
 @pa_container_type("ingress" , "Moosic.Moultrie.Oilmont" , "normal")
+@pa_no_init("egress" , "Moosic.Moultrie.Townville")
+@pa_no_init("egress" , "Moosic.Moultrie.Monahans")
+@pa_mutually_exclusive("egress" , "Uniopolis.Rochert.Montross" , "Moosic.Moultrie.Townville")
+@pa_mutually_exclusive("egress" , "Uniopolis.Rochert.Osterdock" , "Moosic.Moultrie.Monahans")
+@pa_mutually_exclusive("egress" , "Uniopolis.Thurmond.Spearman" , "Uniopolis.Lauada.Dowell")
+@pa_mutually_exclusive("egress" , "Uniopolis.Thurmond.Ronda" , "Uniopolis.Harding.Turkey")
+@pa_mutually_exclusive("egress" , "Uniopolis.Thurmond.Laurelton" , "Uniopolis.Harding.Killen")
+@pa_mutually_exclusive("egress" , "Uniopolis.Tofte.Madawaska" , "Moosic.Nooksack.Baytown")
+@pa_mutually_exclusive("egress" , "Uniopolis.Jerico.Madawaska" , "Moosic.Nooksack.Baytown")
 @pa_mutually_exclusive("ingress" , "Moosic.Arapahoe.McGonigle" , "Moosic.Hearne.Aldan")
 @pa_container_type("pipe_a" , "ingress" , "Moosic.Moultrie.RedElm" , "normal")
 @pa_alias("ingress" , "Uniopolis.Thurmond.Suwannee" , "Moosic.Moultrie.Linden")
@@ -230,8 +239,10 @@ struct Clyde {
 }
 
 struct Aguilita {
-    PortId_t Harbor;
-    bit<16>  IttaBena;
+    PortId_t  Harbor;
+    bit<16>   IttaBena;
+    QueueId_t Wahoo;
+    bit<16>   Tennessee;
 }
 
 struct Adona {
@@ -372,8 +383,21 @@ header Sidnaw {
     bit<168> Moorcroft;
 }
 
+header Brazil {
+    bit<192> Moorcroft;
+}
+
+header Cistern {
+    bit<64> Moorcroft;
+}
+
 header Palmhurst {
-    bit<416> Moorcroft;
+    bit<8>     Newkirk;
+    varbit<48> Moorcroft;
+}
+
+header Vinita {
+    bit<368> Moorcroft;
 }
 
 header Comfrey {
@@ -1124,7 +1148,13 @@ struct Harriet {
     Heppner    Levasy;
     Heppner    Indios;
     Heppner    Larwill;
+    Brazil     Faith;
+    Cistern    Dilia;
+    Cistern    NewCity;
+    Cistern    Richlawn;
+    Cistern    Carlsbad;
     Palmhurst  Rhinebeck;
+    Vinita     Contact;
     Sidnaw     BigRun;
     Chloride   Chatanika;
     Gomez      Placida;
@@ -3659,8 +3689,8 @@ control Rockfield(inout Olmitz Uniopolis, inout Harriet Moosic, in egress_intrin
             @defaultonly Redfield();
         }
         key = {
-            Lemont.egress_rid : exact @name("Lemont.egress_rid") ;
-            Lemont.egress_port: exact @name("Lemont.Harbor") ;
+            Lemont.egress_rid   : exact @name("Lemont.egress_rid") ;
+            Moosic.Lemont.Harbor: exact @name("Lemont.Harbor") ;
         }
         size = 1024;
         const default_action = Redfield();
@@ -3677,12 +3707,25 @@ control Eudora(inout Olmitz Uniopolis, inout Harriet Moosic, in egress_intrinsic
     @disable_atomic_modify(1) @name(".Mantee") table Mantee {
         actions = {
             Buras();
+            @defaultonly NoAction();
         }
         key = {
-            Lemont.egress_port: exact @name("Lemont.Harbor") ;
+            Moosic.Lemont.Harbor        : exact @name("Lemont.Harbor") ;
+            Uniopolis.Skillman.isValid(): ternary @name("Skillman") ;
+            Uniopolis.Olcott.isValid()  : ternary @name("Olcott") ;
+            Uniopolis.Olcott.Bonney     : ternary @name("Olcott.Bonney") ;
+            Uniopolis.Olcott.Commack    : ternary @name("Olcott.Commack") ;
+            Uniopolis.Skillman.Bonney   : ternary @name("Skillman.Bonney") ;
+            Uniopolis.Skillman.Commack  : ternary @name("Skillman.Commack") ;
+            Uniopolis.Lefor.Weyauwega   : ternary @name("Lefor.Weyauwega") ;
+            Uniopolis.Lefor.Joslin      : ternary @name("Lefor.Joslin") ;
+            Uniopolis.Skillman.Coalwood : ternary @name("Skillman.Coalwood") ;
+            Uniopolis.Olcott.McBride    : ternary @name("Olcott.McBride") ;
+            Moosic.Swifton.Greenland    : ternary @name("Swifton.Greenland") ;
         }
-        const default_action = Buras(10w0);
-        size = 128;
+        const default_action = NoAction();
+        requires_versioning = false;
+        size = 512;
     }
     apply {
         Mantee.apply();
@@ -4006,7 +4049,7 @@ control Keltys(inout Olmitz Uniopolis, inout Harriet Moosic, in egress_intrinsic
         const default_action = Maupin(32w0, 32w0);
         size = 65536;
     }
-    @use_hash_action(1) @disable_atomic_modify(1) @name(".BigPark") table BigPark {
+    @use_hash_action(1) @disable_atomic_modify(1) @stage(2) @name(".BigPark") table BigPark {
         actions = {
             Maupin();
         }
@@ -4167,9 +4210,9 @@ control Turney(inout Olmitz Uniopolis, inout Harriet Moosic, in egress_intrinsic
             Fittstown();
         }
         key = {
-            Moosic.Moultrie.Woodfield  : exact @name("Moultrie.Woodfield") ;
-            Lemont.egress_port & 9w0x7f: exact @name("Lemont.Harbor") ;
-            Moosic.Moultrie.Hematite   : exact @name("Moultrie.Hematite") ;
+            Moosic.Moultrie.Woodfield    : exact @name("Moultrie.Woodfield") ;
+            Moosic.Lemont.Harbor & 9w0x7f: exact @name("Lemont.Harbor") ;
+            Moosic.Moultrie.Hematite     : exact @name("Moultrie.Hematite") ;
         }
         const default_action = Fittstown();
         size = 128;
@@ -4397,8 +4440,8 @@ control Rotonda(inout Olmitz Uniopolis, inout Harriet Moosic, in egress_intrinsi
             @defaultonly NoAction();
         }
         key = {
-            Moosic.Moultrie.Buncombe   : exact @name("Moultrie.Buncombe") ;
-            Lemont.egress_port & 9w0x7f: exact @name("Lemont.Harbor") ;
+            Moosic.Moultrie.Buncombe     : exact @name("Moultrie.Buncombe") ;
+            Moosic.Lemont.Harbor & 9w0x7f: exact @name("Lemont.Harbor") ;
         }
         size = 512;
         const default_action = NoAction();
@@ -5305,7 +5348,7 @@ control Bairoil(inout Olmitz Uniopolis, inout Harriet Moosic, in egress_intrinsi
     @name(".Berrydale.Roosville") Hash<bit<12>>(HashAlgorithm_t.IDENTITY) Berrydale;
     @name(".Benitez") action Benitez() {
         bit<12> Basye;
-        Basye = Berrydale.get<tuple<bit<9>, bit<5>>>({ Lemont.egress_port, Lemont.egress_qid[4:0] });
+        Basye = Berrydale.get<tuple<bit<9>, bit<5>>>({ Moosic.Lemont.Harbor, Lemont.egress_qid[4:0] });
         NewRoads.count((bit<12>)Basye);
     }
     @disable_atomic_modify(1) @name(".Tusculum") table Tusculum {
@@ -5340,8 +5383,8 @@ control Forman(inout Olmitz Uniopolis, inout Harriet Moosic, in egress_intrinsic
             Laney();
         }
         key = {
-            Lemont.egress_port & 9w0x7f: exact @name("Lemont.Harbor") ;
-            Moosic.Moultrie.RedElm     : exact @name("Moultrie.RedElm") ;
+            Moosic.Lemont.Harbor & 9w0x7f: exact @name("Lemont.Harbor") ;
+            Moosic.Moultrie.RedElm       : exact @name("Moultrie.RedElm") ;
         }
         const default_action = Laney();
         size = 4096;
@@ -5365,7 +5408,7 @@ control Anniston(inout Olmitz Uniopolis, inout Harriet Moosic, in egress_intrins
     @name(".Humble.Dunedin") Hash<bit<19>>(HashAlgorithm_t.IDENTITY) Humble;
     @name(".Nashua") action Nashua() {
         bit<19> Basye;
-        Basye = Humble.get<tuple<bit<9>, bit<12>>>({ Lemont.egress_port, (bit<12>)Moosic.Moultrie.RedElm });
+        Basye = Humble.get<tuple<bit<9>, bit<12>>>({ Moosic.Lemont.Harbor, (bit<12>)Moosic.Moultrie.RedElm });
         Moosic.Wanamassa.Naubinway = Mocane.execute((bit<32>)Basye);
     }
     @name(".Skokomish") Register<bit<1>, bit<32>>(32w294912, 1w0) Skokomish;
@@ -5380,7 +5423,7 @@ control Anniston(inout Olmitz Uniopolis, inout Harriet Moosic, in egress_intrins
     };
     @name(".Slick") action Slick() {
         bit<19> Basye;
-        Basye = Humble.get<tuple<bit<9>, bit<12>>>({ Lemont.egress_port, (bit<12>)Moosic.Moultrie.RedElm });
+        Basye = Humble.get<tuple<bit<9>, bit<12>>>({ Moosic.Lemont.Harbor, (bit<12>)Moosic.Moultrie.RedElm });
         Moosic.Wanamassa.Ovett = Freetown.execute((bit<32>)Basye);
     }
     @disable_atomic_modify(1) @name(".Lansdale") table Lansdale {
@@ -5418,13 +5461,13 @@ control Blackwood(inout Olmitz Uniopolis, inout Harriet Moosic, in egress_intrin
             Rawson();
         }
         key = {
-            Lemont.egress_port & 9w0x7f : ternary @name("Lemont.Harbor") ;
-            Moosic.Wanamassa.Ovett      : ternary @name("Wanamassa.Ovett") ;
-            Moosic.Wanamassa.Naubinway  : ternary @name("Wanamassa.Naubinway") ;
-            Moosic.Moultrie.Pettry      : ternary @name("Moultrie.Pettry") ;
-            Uniopolis.Skillman.Burrel   : ternary @name("Skillman.Burrel") ;
-            Uniopolis.Skillman.isValid(): ternary @name("Skillman") ;
-            Moosic.Moultrie.Corydon     : ternary @name("Moultrie.Corydon") ;
+            Moosic.Lemont.Harbor & 9w0x7f: ternary @name("Lemont.Harbor") ;
+            Moosic.Wanamassa.Ovett       : ternary @name("Wanamassa.Ovett") ;
+            Moosic.Wanamassa.Naubinway   : ternary @name("Wanamassa.Naubinway") ;
+            Moosic.Moultrie.Pettry       : ternary @name("Moultrie.Pettry") ;
+            Uniopolis.Skillman.Burrel    : ternary @name("Skillman.Burrel") ;
+            Uniopolis.Skillman.isValid() : ternary @name("Skillman") ;
+            Moosic.Moultrie.Corydon      : ternary @name("Moultrie.Corydon") ;
         }
         default_action = Rawson();
         size = 512;
@@ -5740,6 +5783,135 @@ control Waukesha(inout Olmitz Uniopolis, inout Harriet Moosic, in ingress_intrin
                 }
             }
 
+        }
+    }
+}
+
+control Needham(inout Olmitz Uniopolis, inout Harriet Moosic, in egress_intrinsic_metadata_t Lemont, in egress_intrinsic_metadata_from_parser_t Langford, inout egress_intrinsic_metadata_for_deparser_t Cowley, inout egress_intrinsic_metadata_for_output_port_t Lackey) {
+    @name(".Kamas") action Kamas() {
+        Cowley.mirror_type = (bit<4>)4w2;
+        @in_hash {
+            Moosic.Hillside.Broussard[7:0] = Moosic.Moultrie.Toklat[7:0];
+        }
+        Cowley.mirror_io_select = (bit<1>)1w1;
+        Cowley.mtu_trunc_len = (bit<14>)14w64;
+        Uniopolis.Contact.Moorcroft = (bit<368>)368w0;
+        Uniopolis.Contact.setValid();
+    }
+    @hidden @disable_atomic_modify(1) @name(".Norco") table Norco {
+        actions = {
+            Kamas();
+            @defaultonly NoAction();
+        }
+        key = {
+            Uniopolis.Faith.isValid(): exact @name("Faith") ;
+        }
+        size = 1;
+        const entries = {
+                        true : Kamas();
+
+        }
+
+        default_action = NoAction();
+    }
+    apply {
+        if (Moosic.Lemont.IttaBena[15:8] == 8w0 && Moosic.Lemont.IttaBena[7:0] < 8w68) {
+            Norco.apply();
+        }
+    }
+}
+
+control Sandpoint(inout Olmitz Uniopolis, inout Harriet Moosic, in egress_intrinsic_metadata_t Lemont, in egress_intrinsic_metadata_from_parser_t Langford, inout egress_intrinsic_metadata_for_deparser_t Cowley, inout egress_intrinsic_metadata_for_output_port_t Lackey) {
+    @name(".Petroleum") action Petroleum() {
+    }
+@pa_no_init("egress" , "eg_intr_md_for_dprsr.mirror_egress_port")
+@pa_mutually_exclusive("egress" , "eg_intr_md_for_dprsr.mirror_egress_port" , "Uniopolis.Thurmond")
+@name(".Frederic") action Frederic() {
+        Cowley.mirror_egress_port = Moosic.Lemont.Harbor;
+        @in_hash {
+            Moosic.Lemont.Harbor[7:0] = Moosic.Hillside.Broussard[7:0];
+        }
+        Cowley.mirror_type = (bit<4>)4w3;
+        Cowley.mirror_io_select = (bit<1>)1w1;
+        Cowley.mirror_qid = Lemont.egress_qid;
+        Cowley.drop_ctl = (bit<3>)3w1;
+        Moosic.Hillside.Broussard = (bit<10>)10w192;
+    }
+    @hidden @disable_atomic_modify(1) @name(".Armstrong") table Armstrong {
+        key = {
+            Moosic.Bratt.Grovetown      : ternary @name("Bratt.Grovetown") ;
+            Uniopolis.Lauada.isValid()  : ternary @name("Lauada") ;
+            Uniopolis.Lindy[0].isValid(): ternary @name("Lindy[0]") ;
+            Uniopolis.Lindy[1].isValid(): ternary @name("Lindy[1]") ;
+            Uniopolis.Brady.isValid()   : ternary @name("Brady") ;
+            Uniopolis.Tofte.isValid()   : ternary @name("Tofte") ;
+            Uniopolis.Jerico.isValid()  : ternary @name("Jerico") ;
+            Uniopolis.Rochert.isValid() : ternary @name("Rochert") ;
+            Moosic.Moultrie.Heuvelton   : ternary @name("Moultrie.Heuvelton") ;
+            Uniopolis.Larwill.isValid() : ternary @name("Larwill") ;
+            Moosic.Moultrie.Vergennes   : ternary @name("Moultrie.Vergennes") ;
+            Moosic.Lemont.IttaBena      : range @name("Lemont.IttaBena") ;
+        }
+        actions = {
+            Petroleum();
+            Frederic();
+        }
+        size = 64;
+        requires_versioning = false;
+        const default_action = Petroleum();
+        const entries = {
+                        (default, false, default, default, default, default, default, default, default, default, 3w2, default) : Petroleum();
+
+                        (default, true, default, default, default, false, false, false, 1w0, false, 3w5, 16w0 .. 16w69) : Frederic();
+
+                        (default, true, default, default, default, false, false, false, 1w1, false, 3w5, 16w0 .. 16w73) : Frederic();
+
+                        (default, true, default, default, default, false, false, false, default, default, 3w5, default) : Petroleum();
+
+                        (default, true, default, default, default, false, false, false, 1w0, false, 3w6, 16w0 .. 16w89) : Frederic();
+
+                        (default, true, default, default, default, false, false, false, 1w1, false, 3w6, 16w0 .. 16w93) : Frederic();
+
+                        (default, true, default, default, default, false, false, false, default, default, 3w6, default) : Petroleum();
+
+                        (default, false, false, false, default, false, false, false, 1w0, false, 3w5, 16w0 .. 16w83) : Frederic();
+
+                        (default, false, false, false, default, false, false, false, 1w1, false, 3w5, 16w0 .. 16w87) : Frederic();
+
+                        (default, false, true, false, default, false, false, false, 1w0, false, 3w5, 16w0 .. 16w79) : Frederic();
+
+                        (default, false, true, false, default, false, false, false, 1w1, false, 3w5, 16w0 .. 16w83) : Frederic();
+
+                        (default, false, true, true, default, false, false, false, 1w0, false, 3w5, 16w0 .. 16w75) : Frederic();
+
+                        (default, false, true, true, default, false, false, false, 1w1, false, 3w5, 16w0 .. 16w79) : Frederic();
+
+                        (default, false, default, default, default, false, false, false, default, default, 3w5, default) : Petroleum();
+
+                        (default, false, false, false, default, false, false, false, 1w0, false, 3w6, 16w0 .. 16w103) : Frederic();
+
+                        (default, false, false, false, default, false, false, false, 1w1, false, 3w6, 16w0 .. 16w107) : Frederic();
+
+                        (default, false, true, false, default, false, false, false, 1w0, false, 3w6, 16w0 .. 16w99) : Frederic();
+
+                        (default, false, true, false, default, false, false, false, 1w1, false, 3w6, 16w0 .. 16w103) : Frederic();
+
+                        (default, false, true, true, default, false, false, false, 1w0, false, 3w6, 16w0 .. 16w95) : Frederic();
+
+                        (default, false, true, true, default, false, false, false, 1w1, false, 3w6, 16w0 .. 16w99) : Frederic();
+
+                        (default, false, default, default, default, false, false, false, default, default, 3w6, default) : Petroleum();
+
+                        (default, default, default, default, default, default, default, default, default, default, default, 16w0 .. 16w63) : Frederic();
+
+                        (default, default, default, default, default, default, default, default, default, default, default, default) : Petroleum();
+
+        }
+
+    }
+    apply {
+        if (Uniopolis.Thurmond.isValid() && Cowley.drop_ctl == 3w0) {
+            Armstrong.apply();
         }
     }
 }
@@ -6230,7 +6402,7 @@ control Tatum(inout Olmitz Uniopolis, inout Harriet Moosic, in egress_intrinsic_
             @defaultonly NoAction();
         }
         key = {
-            Lemont.egress_port         : exact @name("Lemont.Harbor") ;
+            Moosic.Lemont.Harbor       : exact @name("Lemont.Harbor") ;
             Moosic.Milano.Cutten       : exact @name("Milano.Cutten") ;
             Moosic.Moultrie.Heuvelton  : exact @name("Moultrie.Heuvelton") ;
             Moosic.Moultrie.Vergennes  : exact @name("Moultrie.Vergennes") ;
@@ -6249,84 +6421,6 @@ control Tatum(inout Olmitz Uniopolis, inout Harriet Moosic, in egress_intrinsic_
         }
         size = 512;
         default_action = NoAction();
-    }
-    @name(".Petroleum") action Petroleum() {
-        Uniopolis.Rhinebeck.setInvalid();
-    }
-    @name(".Frederic") action Frederic() {
-        Cowley.mtu_trunc_len = (bit<14>)14w64;
-    }
-    @hidden @disable_atomic_modify(1) @name(".Armstrong") table Armstrong {
-        key = {
-            Moosic.Bratt.Grovetown      : ternary @name("Bratt.Grovetown") ;
-            Uniopolis.Lauada.isValid()  : ternary @name("Lauada") ;
-            Uniopolis.Lindy[0].isValid(): ternary @name("Lindy[0]") ;
-            Uniopolis.Lindy[1].isValid(): ternary @name("Lindy[1]") ;
-            Uniopolis.Brady.isValid()   : ternary @name("Brady") ;
-            Uniopolis.Tofte.isValid()   : ternary @name("Tofte") ;
-            Uniopolis.Jerico.isValid()  : ternary @name("Jerico") ;
-            Uniopolis.Rochert.isValid() : ternary @name("Rochert") ;
-            Moosic.Moultrie.Heuvelton   : ternary @name("Moultrie.Heuvelton") ;
-            Uniopolis.Larwill.isValid() : ternary @name("Larwill") ;
-            Moosic.Moultrie.Vergennes   : ternary @name("Moultrie.Vergennes") ;
-            Moosic.Lemont.IttaBena      : range @name("Lemont.IttaBena") ;
-        }
-        actions = {
-            Petroleum();
-            Frederic();
-        }
-        size = 64;
-        requires_versioning = false;
-        const default_action = Petroleum();
-        const entries = {
-                        (default, false, default, default, default, default, default, default, default, default, 3w2, default) : Petroleum();
-
-                        (default, true, default, default, default, false, false, false, 1w0, false, 3w5, 16w0 .. 16w69) : Frederic();
-
-                        (default, true, default, default, default, false, false, false, 1w1, false, 3w5, 16w0 .. 16w73) : Frederic();
-
-                        (default, true, default, default, default, false, false, false, default, default, 3w5, default) : Petroleum();
-
-                        (default, true, default, default, default, false, false, false, 1w0, false, 3w6, 16w0 .. 16w89) : Frederic();
-
-                        (default, true, default, default, default, false, false, false, 1w1, false, 3w6, 16w0 .. 16w93) : Frederic();
-
-                        (default, true, default, default, default, false, false, false, default, default, 3w6, default) : Petroleum();
-
-                        (default, false, false, false, default, false, false, false, 1w0, false, 3w5, 16w0 .. 16w83) : Frederic();
-
-                        (default, false, false, false, default, false, false, false, 1w1, false, 3w5, 16w0 .. 16w87) : Frederic();
-
-                        (default, false, true, false, default, false, false, false, 1w0, false, 3w5, 16w0 .. 16w79) : Frederic();
-
-                        (default, false, true, false, default, false, false, false, 1w1, false, 3w5, 16w0 .. 16w83) : Frederic();
-
-                        (default, false, true, true, default, false, false, false, 1w0, false, 3w5, 16w0 .. 16w75) : Frederic();
-
-                        (default, false, true, true, default, false, false, false, 1w1, false, 3w5, 16w0 .. 16w79) : Frederic();
-
-                        (default, false, default, default, default, false, false, false, default, default, 3w5, default) : Petroleum();
-
-                        (default, false, false, false, default, false, false, false, 1w0, false, 3w6, 16w0 .. 16w103) : Frederic();
-
-                        (default, false, false, false, default, false, false, false, 1w1, false, 3w6, 16w0 .. 16w107) : Frederic();
-
-                        (default, false, true, false, default, false, false, false, 1w0, false, 3w6, 16w0 .. 16w99) : Frederic();
-
-                        (default, false, true, false, default, false, false, false, 1w1, false, 3w6, 16w0 .. 16w103) : Frederic();
-
-                        (default, false, true, true, default, false, false, false, 1w0, false, 3w6, 16w0 .. 16w95) : Frederic();
-
-                        (default, false, true, true, default, false, false, false, 1w1, false, 3w6, 16w0 .. 16w99) : Frederic();
-
-                        (default, false, default, default, default, false, false, false, default, default, 3w6, default) : Petroleum();
-
-                        (default, default, default, default, default, default, default, default, default, default, default, 16w0 .. 16w63) : Frederic();
-
-                        (default, default, default, default, default, default, default, default, default, default, default, default) : Petroleum();
-
-        }
-
     }
     @name(".Iroquois") Shanghai() Iroquois;
     @name(".Anaconda") Gonzalez() Anaconda;
@@ -6356,6 +6450,8 @@ control Tatum(inout Olmitz Uniopolis, inout Harriet Moosic, in egress_intrinsic_
     @name(".Hillister") Powhatan() Hillister;
     @name(".Camden") Blanchard() Camden;
     @name(".Careywood") Saxis() Careywood;
+    @name(".Bassett") Sandpoint() Bassett;
+    @name(".Perkasie") Needham() Perkasie;
     @name(".Earlsboro") Keltys() Earlsboro;
     @name(".Seabrook") Burmester() Seabrook;
     @name(".Devore") McCallum() Devore;
@@ -6404,6 +6500,9 @@ control Tatum(inout Olmitz Uniopolis, inout Harriet Moosic, in egress_intrinsic_
             }
             LaCenter.apply(Uniopolis, Moosic, Lemont, Langford, Cowley, Lackey);
             Iroquois.apply(Uniopolis, Moosic, Lemont, Langford, Cowley, Lackey);
+            Bassett.apply(Uniopolis, Moosic, Lemont, Langford, Cowley, Lackey);
+        } else if (Uniopolis.Faith.isValid()) {
+            Perkasie.apply(Uniopolis, Moosic, Lemont, Langford, Cowley, Lackey);
         } else {
             if (Uniopolis.Thurmond.isValid() == false) {
                 Hartford.apply(Uniopolis, Moosic, Lemont, Langford, Cowley, Lackey);
@@ -6418,9 +6517,7 @@ control Tatum(inout Olmitz Uniopolis, inout Harriet Moosic, in egress_intrinsic_
             } else if (Uniopolis.Swanlake.isValid()) {
                 Melvina.apply(Uniopolis, Moosic, Lemont, Langford, Cowley, Lackey);
             }
-        }
-        if (Uniopolis.Rhinebeck.isValid()) {
-            Armstrong.apply();
+            Bassett.apply(Uniopolis, Moosic, Lemont, Langford, Cowley, Lackey);
         }
     }
 }
@@ -6522,7 +6619,9 @@ parser Seibert(packet_in Oneonta, out Olmitz Uniopolis, out Harriet Moosic, out 
     state start {
         Oneonta.extract<egress_intrinsic_metadata_t>(Lemont);
         Moosic.Lemont.IttaBena = Lemont.pkt_length;
-        transition select(Lemont.egress_port ++ (Oneonta.lookahead<Grabill>()).Uintah) {
+        Moosic.Lemont.Harbor = Lemont.egress_port;
+        transition select(Moosic.Lemont.Harbor ++ (Oneonta.lookahead<Grabill>()).Uintah) {
+            17w3 &&& 17w0xff: Villanova;
             Maybee: TenSleep;
             17w0x80 &&& 17w0xff: Milnor;
             17w0 &&& 17w0x7: Mishawaka;
@@ -6531,7 +6630,7 @@ parser Seibert(packet_in Oneonta, out Olmitz Uniopolis, out Harriet Moosic, out 
     }
     state Milnor {
         Oneonta.extract<Matheson>(Uniopolis.Glenoma);
-        transition select(Lemont.pkt_length) {
+        transition select(Moosic.Lemont.IttaBena) {
             16w0 &&& 16w0xff80: Ogunquit;
             default: Fairborn;
         }
@@ -6565,6 +6664,7 @@ parser Seibert(packet_in Oneonta, out Olmitz Uniopolis, out Harriet Moosic, out 
         transition select(Saugatuck.Uintah) {
             8w1 &&& 8w0x7: Tryon;
             8w2 &&& 8w0x7: China;
+            8w3 &&& 8w0x7: Tusayan;
             default: Fairborn;
         }
     }
@@ -6576,12 +6676,61 @@ parser Seibert(packet_in Oneonta, out Olmitz Uniopolis, out Harriet Moosic, out 
         }
         transition Shorter;
     }
+    state Tusayan {
+        transition select(Moosic.Lemont.IttaBena[7:0]) {
+            8w0x0 &&& 8w0xe0: Nicolaus;
+            8w0x20 &&& 8w0xf8: Nicolaus;
+            8w0x28 &&& 8w0xf8: Laramie;
+            8w0x30 &&& 8w0xf8: Pinebluff;
+            8w0x38 &&& 8w0xf8: Fentress;
+            8w0x40 &&& 8w0xf8: Molino;
+            default: Fairborn;
+        }
+    }
+    state Nicolaus {
+        Oneonta.extract<Brazil>(Uniopolis.Faith);
+        transition Caborn;
+    }
+    state Laramie {
+        Oneonta.extract<Brazil>(Uniopolis.Faith);
+        Oneonta.extract<Cistern>(Uniopolis.Dilia);
+        transition Caborn;
+    }
+    state Pinebluff {
+        Oneonta.extract<Brazil>(Uniopolis.Faith);
+        Oneonta.extract<Cistern>(Uniopolis.Dilia);
+        Oneonta.extract<Cistern>(Uniopolis.NewCity);
+        transition Caborn;
+    }
+    state Fentress {
+        Oneonta.extract<Brazil>(Uniopolis.Faith);
+        Oneonta.extract<Cistern>(Uniopolis.Dilia);
+        Oneonta.extract<Cistern>(Uniopolis.NewCity);
+        Oneonta.extract<Cistern>(Uniopolis.Richlawn);
+        transition Caborn;
+    }
+    state Molino {
+        Oneonta.extract<Brazil>(Uniopolis.Faith);
+        Oneonta.extract<Cistern>(Uniopolis.Dilia);
+        Oneonta.extract<Cistern>(Uniopolis.NewCity);
+        Oneonta.extract<Cistern>(Uniopolis.Richlawn);
+        Oneonta.extract<Cistern>(Uniopolis.Carlsbad);
+        transition Caborn;
+    }
+    state Caborn {
+        transition select(Moosic.Lemont.IttaBena[2:0]) {
+            3w0: Fairborn;
+            default: Goodrich;
+        }
+    }
+    state Goodrich {
+        Oneonta.extract<Palmhurst>(Uniopolis.Rhinebeck, (bit<32>)((bit<8>)(Moosic.Lemont.IttaBena[2:0] - 3w1) * 8w8));
+        transition Fairborn;
+    }
     state Fairborn {
         transition accept;
     }
     state Point {
-        Uniopolis.Rhinebeck.setValid();
-        Uniopolis.Rhinebeck = Oneonta.lookahead<Palmhurst>();
         transition accept;
     }
 }
@@ -6593,6 +6742,13 @@ control Hillcrest(packet_out Oneonta, inout Olmitz Uniopolis, in Harriet Moosic,
     apply {
         {
             if (Cowley.mirror_type == 4w2) {
+                Grabill Baranof;
+                Baranof.setValid();
+                Baranof.Uintah = Moosic.Saugatuck.Uintah;
+                Baranof.Moorcroft = Moosic.Saugatuck.Uintah;
+                Baranof.Toklat = Moosic.Lemont.Harbor;
+                Scottdale.emit<Grabill>((MirrorId_t)Moosic.Hillside.Broussard, Baranof);
+            } else if (Cowley.mirror_type == 4w3) {
                 Grabill Baranof;
                 Baranof.setValid();
                 Baranof.Uintah = Moosic.Saugatuck.Uintah;
@@ -6626,7 +6782,13 @@ control Hillcrest(packet_out Oneonta, inout Olmitz Uniopolis, in Harriet Moosic,
             Oneonta.emit<Whitten>(Uniopolis.Lefor);
             Oneonta.emit<Powderly>(Uniopolis.Volens);
             Oneonta.emit<Thayne>(Uniopolis.Philip);
+            Oneonta.emit<Brazil>(Uniopolis.Faith);
+            Oneonta.emit<Cistern>(Uniopolis.Dilia);
+            Oneonta.emit<Cistern>(Uniopolis.NewCity);
+            Oneonta.emit<Cistern>(Uniopolis.Richlawn);
+            Oneonta.emit<Cistern>(Uniopolis.Carlsbad);
             Oneonta.emit<Palmhurst>(Uniopolis.Rhinebeck);
+            Oneonta.emit<Vinita>(Uniopolis.Contact);
         }
     }
 }

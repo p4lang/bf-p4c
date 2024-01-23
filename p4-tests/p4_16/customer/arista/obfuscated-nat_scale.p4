@@ -247,8 +247,10 @@ struct Glassboro {
 }
 
 struct Moorcroft {
-    PortId_t Toklat;
-    bit<16>  Bledsoe;
+    PortId_t  Toklat;
+    bit<16>   Bledsoe;
+    QueueId_t Seguin;
+    bit<16>   Cloverly;
 }
 
 struct Blencoe {
@@ -454,8 +456,21 @@ header Irvine {
     bit<16> Connell;
 }
 
+header Palmdale {
+    bit<192> Kendrick;
+}
+
+header Calumet {
+    bit<64> Kendrick;
+}
+
 header Antlers {
-    bit<416> Kendrick;
+    bit<8>     Speedway;
+    varbit<48> Kendrick;
+}
+
+header Hotevilla {
+    bit<368> Kendrick;
 }
 
 header Solomon {
@@ -1239,6 +1254,11 @@ struct GunnCity {
 struct Hemlock {
     bit<32> Mabana;
     bit<32> Hester;
+}
+
+control Tolono(inout Skillman BigPoint, inout Kinde Tenstrike, in egress_intrinsic_metadata_t RichBar, in egress_intrinsic_metadata_from_parser_t Brodnax, inout egress_intrinsic_metadata_for_deparser_t Bowers, inout egress_intrinsic_metadata_for_output_port_t Skene) {
+    apply {
+    }
 }
 
 control Goodlett(inout Skillman BigPoint, inout Kinde Tenstrike, in ingress_intrinsic_metadata_t Thurmond, in ingress_intrinsic_metadata_from_parser_t Castle, inout ingress_intrinsic_metadata_for_deparser_t Aguila, inout ingress_intrinsic_metadata_for_tm_t Lauada) {
@@ -2926,8 +2946,8 @@ control Medart(inout Skillman BigPoint, inout Kinde Tenstrike, in egress_intrins
             @defaultonly Opelika();
         }
         key = {
-            RichBar.egress_rid : exact @name("RichBar.egress_rid") ;
-            RichBar.egress_port: exact @name("RichBar.Toklat") ;
+            RichBar.egress_rid      : exact @name("RichBar.egress_rid") ;
+            Tenstrike.RichBar.Toklat: exact @name("RichBar.Toklat") ;
         }
         size = 512;
         const default_action = Opelika();
@@ -2946,7 +2966,7 @@ control Truro(inout Skillman BigPoint, inout Kinde Tenstrike, in egress_intrinsi
             Plush();
         }
         key = {
-            RichBar.egress_port: exact @name("RichBar.Toklat") ;
+            Tenstrike.RichBar.Toklat: exact @name("RichBar.Toklat") ;
         }
         const default_action = Plush(10w0);
         size = 128;
@@ -3262,9 +3282,9 @@ control Doyline(inout Skillman BigPoint, inout Kinde Tenstrike, in egress_intrin
             Moorman();
         }
         key = {
-            Tenstrike.Saugatuck.Bonney  : exact @name("Saugatuck.Bonney") ;
-            RichBar.egress_port & 9w0x7f: exact @name("RichBar.Toklat") ;
-            Tenstrike.Saugatuck.Barrow  : exact @name("Saugatuck.Barrow") ;
+            Tenstrike.Saugatuck.Bonney       : exact @name("Saugatuck.Bonney") ;
+            Tenstrike.RichBar.Toklat & 9w0x7f: exact @name("RichBar.Toklat") ;
+            Tenstrike.Saugatuck.Barrow       : exact @name("Saugatuck.Barrow") ;
         }
         const default_action = Moorman();
         size = 128;
@@ -3373,8 +3393,8 @@ control Bagwell(inout Skillman BigPoint, inout Kinde Tenstrike, in egress_intrin
             @defaultonly NoAction();
         }
         key = {
-            Tenstrike.Saugatuck.Plains  : exact @name("Saugatuck.Plains") ;
-            RichBar.egress_port & 9w0x7f: exact @name("RichBar.Toklat") ;
+            Tenstrike.Saugatuck.Plains       : exact @name("Saugatuck.Plains") ;
+            Tenstrike.RichBar.Toklat & 9w0x7f: exact @name("RichBar.Toklat") ;
         }
         size = 512;
         const default_action = NoAction();
@@ -4278,7 +4298,7 @@ control Holyoke(inout Skillman BigPoint, inout Kinde Tenstrike, in egress_intrin
     @name(".DuPont.Roosville") Hash<bit<12>>(HashAlgorithm_t.IDENTITY) DuPont;
     @name(".Shauck") action Shauck() {
         bit<12> Bains;
-        Bains = DuPont.get<tuple<bit<9>, bit<5>>>({ RichBar.egress_port, RichBar.egress_qid[4:0] });
+        Bains = DuPont.get<tuple<bit<9>, bit<5>>>({ Tenstrike.RichBar.Toklat, RichBar.egress_qid[4:0] });
         Skiatook.count((bit<12>)Bains);
     }
     @disable_atomic_modify(1) @name(".Telegraph") table Telegraph {
@@ -4313,8 +4333,8 @@ control Veradale(inout Skillman BigPoint, inout Kinde Tenstrike, in egress_intri
             Reading();
         }
         key = {
-            RichBar.egress_port & 9w0x7f: exact @name("RichBar.Toklat") ;
-            Tenstrike.Saugatuck.Juneau  : exact @name("Saugatuck.Juneau") ;
+            Tenstrike.RichBar.Toklat & 9w0x7f: exact @name("RichBar.Toklat") ;
+            Tenstrike.Saugatuck.Juneau       : exact @name("Saugatuck.Juneau") ;
         }
         const default_action = Reading();
         size = 4096;
@@ -4338,7 +4358,7 @@ control Aquilla(inout Skillman BigPoint, inout Kinde Tenstrike, in egress_intrin
     @name(".Mulhall.Dunedin") Hash<bit<19>>(HashAlgorithm_t.IDENTITY) Mulhall;
     @name(".Okarche") action Okarche() {
         bit<19> Bains;
-        Bains = Mulhall.get<tuple<bit<9>, bit<12>>>({ RichBar.egress_port, (bit<12>)Tenstrike.Saugatuck.Juneau });
+        Bains = Mulhall.get<tuple<bit<9>, bit<12>>>({ Tenstrike.RichBar.Toklat, (bit<12>)Tenstrike.Saugatuck.Juneau });
         Tenstrike.Wagener.Emida = Tocito.execute((bit<32>)Bains);
     }
     @name(".Covington") Register<bit<1>, bit<32>>(32w294912, 1w0) Covington;
@@ -4353,7 +4373,7 @@ control Aquilla(inout Skillman BigPoint, inout Kinde Tenstrike, in egress_intrin
     };
     @name(".Akhiok") action Akhiok() {
         bit<19> Bains;
-        Bains = Mulhall.get<tuple<bit<9>, bit<12>>>({ RichBar.egress_port, (bit<12>)Tenstrike.Saugatuck.Juneau });
+        Bains = Mulhall.get<tuple<bit<9>, bit<12>>>({ Tenstrike.RichBar.Toklat, (bit<12>)Tenstrike.Saugatuck.Juneau });
         Tenstrike.Wagener.Sopris = Robinette.execute((bit<32>)Bains);
     }
     @disable_atomic_modify(1) @name(".DelRey") table DelRey {
@@ -4391,14 +4411,14 @@ control Cisne(inout Skillman BigPoint, inout Kinde Tenstrike, in egress_intrinsi
             Engle();
         }
         key = {
-            RichBar.egress_port & 9w0x7f: ternary @name("RichBar.Toklat") ;
-            Tenstrike.Wagener.Sopris    : ternary @name("Wagener.Sopris") ;
-            Tenstrike.Wagener.Emida     : ternary @name("Wagener.Emida") ;
-            Tenstrike.Saugatuck.Moose   : ternary @name("Saugatuck.Moose") ;
-            BigPoint.Levasy.Vinemont    : ternary @name("Levasy.Vinemont") ;
-            BigPoint.Levasy.isValid()   : ternary @name("Levasy") ;
-            Tenstrike.Saugatuck.Komatke : ternary @name("Saugatuck.Komatke") ;
-            Tenstrike.Ledoux            : exact @name("Ledoux") ;
+            Tenstrike.RichBar.Toklat & 9w0x7f: ternary @name("RichBar.Toklat") ;
+            Tenstrike.Wagener.Sopris         : ternary @name("Wagener.Sopris") ;
+            Tenstrike.Wagener.Emida          : ternary @name("Wagener.Emida") ;
+            Tenstrike.Saugatuck.Moose        : ternary @name("Saugatuck.Moose") ;
+            BigPoint.Levasy.Vinemont         : ternary @name("Levasy.Vinemont") ;
+            BigPoint.Levasy.isValid()        : ternary @name("Levasy") ;
+            Tenstrike.Saugatuck.Komatke      : ternary @name("Saugatuck.Komatke") ;
+            Tenstrike.Ledoux                 : exact @name("Ledoux") ;
         }
         default_action = Engle();
         size = 512;
@@ -6294,7 +6314,8 @@ parser Lasara(packet_in Belfalls, out Skillman BigPoint, out Kinde Tenstrike, ou
     state start {
         Belfalls.extract<egress_intrinsic_metadata_t>(RichBar);
         Tenstrike.RichBar.Bledsoe = RichBar.pkt_length;
-        transition select(RichBar.egress_port ++ (Belfalls.lookahead<Willard>()).Bayshore) {
+        Tenstrike.RichBar.Toklat = RichBar.egress_port;
+        transition select(Tenstrike.RichBar.Toklat ++ (Belfalls.lookahead<Willard>()).Bayshore) {
             Perma: Nowlin;
             17w0 &&& 17w0x7: Donnelly;
             default: Parmalee;
@@ -6391,7 +6412,7 @@ control Welch(inout Skillman BigPoint, inout Kinde Tenstrike, in egress_intrinsi
             @defaultonly NoAction();
         }
         key = {
-            RichBar.egress_port         : exact @name("RichBar.Toklat") ;
+            Tenstrike.RichBar.Toklat    : exact @name("RichBar.Toklat") ;
             Tenstrike.Casnovia.HillTop  : exact @name("Casnovia.HillTop") ;
             Tenstrike.Saugatuck.Salix   : exact @name("Saugatuck.Salix") ;
             Tenstrike.Saugatuck.Wisdom  : exact @name("Saugatuck.Wisdom") ;
@@ -6442,6 +6463,7 @@ control Welch(inout Skillman BigPoint, inout Kinde Tenstrike, in egress_intrinsi
     @name(".Crumstown") Ripley() Crumstown;
     @name(".LaPointe") Rendon() LaPointe;
     @name(".Eureka") Govan() Eureka;
+    @name(".Ocheyedan") Tolono() Ocheyedan;
     @name(".Millett") Brookwood() Millett;
     @name(".Thistle") Granville() Thistle;
     @name(".Overton") Doyline() Overton;
@@ -6510,6 +6532,7 @@ control Welch(inout Skillman BigPoint, inout Kinde Tenstrike, in egress_intrinsi
             } else if (BigPoint.Robstown.isValid()) {
                 Overton.apply(BigPoint, Tenstrike, RichBar, Brodnax, Bowers, Skene);
             }
+            Ocheyedan.apply(BigPoint, Tenstrike, RichBar, Brodnax, Bowers, Skene);
         }
     }
 }
@@ -6668,7 +6691,7 @@ parser ElMirage(packet_in Belfalls, out Skillman BigPoint, out Kinde Tenstrike, 
     }
     state Unity {
         Belfalls.extract<Tenino>(BigPoint.Rhinebeck);
-        transition reject;
+        transition accept;
     }
     state Murdock {
         Belfalls.extract<Tenino>(BigPoint.Rhinebeck);

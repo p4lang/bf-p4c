@@ -89,6 +89,7 @@ set (P16_JNA_EXCLUDE_PATTERNS
   "obfuscated-ddos_tofino2\\.p4"
   "obfuscated-hybrid_default_tofino2\\.p4"
   "obfuscated-l2_dci\\.p4"
+  "hash_conflicts\\.p4"
   "obfuscated-msee_tofino2\\.p4"
   "obfuscated-nat_tofino2\\.p4"
   "obfuscated-p416_baremetal_tofino2\\.p4"
@@ -202,10 +203,13 @@ set_tests_properties("tofino2/extensions/p4_tests/p4_16/stf/p4c-4535.p4" PROPERT
 #
 # First test has a PTF to test table programming on one table
 p4c_add_ptf_test_with_ptfdir (
-    "tofino2" "extensions/p4_tests/p4_16/customer/arista/obfuscated-msee_tofino2.p4" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/obfuscated-msee_tofino2.p4"
+    "tofino2" "extensions/p4_tests/p4_16/customer/arista/hash_conflicts/hash_conflicts.p4" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/hash_conflicts/hash_conflicts.p4"
     "${testExtraArgs} -target tofino2 -arch t2na -bfrt"
-    "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/hash_conflicts.ptf")
-bfn_set_p4_build_flag("tofino2" "extensions/p4_tests/p4_16/customer/arista/obfuscated-msee_tofino2.p4" "-Xp4c=\"--disable-power-check\"")
+    "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/hash_conflicts")
+bfn_set_p4_build_flag("tofino2" "extensions/p4_tests/p4_16/customer/arista/hash_conflicts/hash_conflicts.p4" "-Xp4c=\"--disable-power-check\"")
+set_tests_properties("tofino2/extensions/p4_tests/p4_16/customer/arista/hash_conflicts/hash_conflicts.p4" PROPERTIES TIMEOUT ${extended_timeout_8times})
+
+p4c_add_bf_backend_tests("tofino2" "jbay" "t2na" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/customer/arista/obfuscated-msee_tofino2.p4" "-Xp4c=\"--set-max-power 65.0\"")
 set_tests_properties("tofino2/extensions/p4_tests/p4_16/customer/arista/obfuscated-msee_tofino2.p4" PROPERTIES TIMEOUT ${extended_timeout_8times})
 p4c_add_test_label("tofino2" "METRICS" "extensions/p4_tests/p4_16/customer/arista/obfuscated-msee_tofino2.p4")
 

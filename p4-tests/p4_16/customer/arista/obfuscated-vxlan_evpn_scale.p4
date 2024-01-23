@@ -206,8 +206,10 @@ struct Glassboro {
 }
 
 struct Moorcroft {
-    PortId_t Toklat;
-    bit<16>  Bledsoe;
+    PortId_t  Toklat;
+    bit<16>   Bledsoe;
+    QueueId_t Seagrove;
+    bit<16>   Dubuque;
 }
 
 struct Blencoe {
@@ -351,8 +353,21 @@ header Glendevey {
     bit<16> Connell;
 }
 
+header Senatobia {
+    bit<192> Killen;
+}
+
+header Danforth {
+    bit<64> Killen;
+}
+
 header Littleton {
-    bit<416> Killen;
+    bit<8>     Opelika;
+    varbit<48> Killen;
+}
+
+header Yemassee {
+    bit<368> Killen;
 }
 
 header Turkey {
@@ -1121,6 +1136,11 @@ struct Jerico {
 struct Ruffin {
     bit<32> Rochert;
     bit<32> Swanlake;
+}
+
+control Qulin(inout Wanamassa Lindy, inout Talco Brady, in egress_intrinsic_metadata_t Garrison, in egress_intrinsic_metadata_from_parser_t CassCity, inout egress_intrinsic_metadata_for_deparser_t Sanborn, inout egress_intrinsic_metadata_for_output_port_t Kerby) {
+    apply {
+    }
 }
 
 control Geistown(inout Wanamassa Lindy, inout Talco Brady, in ingress_intrinsic_metadata_t Moultrie, in ingress_intrinsic_metadata_from_parser_t Emden, inout ingress_intrinsic_metadata_for_deparser_t Skillman, inout ingress_intrinsic_metadata_for_tm_t Pinetop) {
@@ -3977,8 +3997,8 @@ control Rockfield(inout Wanamassa Lindy, inout Talco Brady, in egress_intrinsic_
             @defaultonly Laramie();
         }
         key = {
-            Garrison.egress_rid : exact @name("Garrison.egress_rid") ;
-            Garrison.egress_port: exact @name("Garrison.Toklat") ;
+            Garrison.egress_rid  : exact @name("Garrison.egress_rid") ;
+            Brady.Garrison.Toklat: exact @name("Garrison.Toklat") ;
         }
         size = 1024;
         const default_action = Laramie();
@@ -3997,7 +4017,7 @@ control Shevlin(inout Wanamassa Lindy, inout Talco Brady, in egress_intrinsic_me
             Eudora();
         }
         key = {
-            Garrison.egress_port: exact @name("Garrison.Toklat") ;
+            Brady.Garrison.Toklat: exact @name("Garrison.Toklat") ;
         }
         const default_action = Eudora(10w0);
         size = 128;
@@ -4484,9 +4504,9 @@ control Kinard(inout Wanamassa Lindy, inout Talco Brady, in egress_intrinsic_met
             Pendleton();
         }
         key = {
-            Brady.Ekwok.Wallula          : exact @name("Ekwok.Wallula") ;
-            Garrison.egress_port & 9w0x7f: exact @name("Garrison.Toklat") ;
-            Brady.Ekwok.Lenexa           : exact @name("Ekwok.Lenexa") ;
+            Brady.Ekwok.Wallula           : exact @name("Ekwok.Wallula") ;
+            Brady.Garrison.Toklat & 9w0x7f: exact @name("Garrison.Toklat") ;
+            Brady.Ekwok.Lenexa            : exact @name("Ekwok.Lenexa") ;
         }
         const default_action = Pendleton();
         size = 128;
@@ -4714,8 +4734,8 @@ control Sodaville(inout Wanamassa Lindy, inout Talco Brady, in egress_intrinsic_
             @defaultonly NoAction();
         }
         key = {
-            Brady.Ekwok.Rocklake         : exact @name("Ekwok.Rocklake") ;
-            Garrison.egress_port & 9w0x7f: exact @name("Garrison.Toklat") ;
+            Brady.Ekwok.Rocklake          : exact @name("Ekwok.Rocklake") ;
+            Brady.Garrison.Toklat & 9w0x7f: exact @name("Garrison.Toklat") ;
         }
         size = 512;
         const default_action = NoAction();
@@ -5623,7 +5643,7 @@ control Eustis(inout Wanamassa Lindy, inout Talco Brady, in egress_intrinsic_met
     @name(".SandCity.Roosville") Hash<bit<12>>(HashAlgorithm_t.IDENTITY) SandCity;
     @name(".Newburgh") action Newburgh() {
         bit<12> BirchRun;
-        BirchRun = SandCity.get<tuple<bit<9>, bit<5>>>({ Garrison.egress_port, Garrison.egress_qid[4:0] });
+        BirchRun = SandCity.get<tuple<bit<9>, bit<5>>>({ Brady.Garrison.Toklat, Garrison.egress_qid[4:0] });
         Almont.count((bit<12>)BirchRun);
     }
     @disable_atomic_modify(1) @name(".Baroda") table Baroda {
@@ -5658,8 +5678,8 @@ control Bairoil(inout Wanamassa Lindy, inout Talco Brady, in egress_intrinsic_me
             Benitez();
         }
         key = {
-            Garrison.egress_port & 9w0x7f: exact @name("Garrison.Toklat") ;
-            Brady.Ekwok.Pajaros          : exact @name("Ekwok.Pajaros") ;
+            Brady.Garrison.Toklat & 9w0x7f: exact @name("Garrison.Toklat") ;
+            Brady.Ekwok.Pajaros           : exact @name("Ekwok.Pajaros") ;
         }
         const default_action = Benitez();
         size = 4096;
@@ -5683,7 +5703,7 @@ control Forman(inout Wanamassa Lindy, inout Talco Brady, in egress_intrinsic_met
     @name(".Laney.Dunedin") Hash<bit<19>>(HashAlgorithm_t.IDENTITY) Laney;
     @name(".McClusky") action McClusky() {
         bit<19> BirchRun;
-        BirchRun = Laney.get<tuple<bit<9>, bit<12>>>({ Garrison.egress_port, (bit<12>)Brady.Ekwok.Pajaros });
+        BirchRun = Laney.get<tuple<bit<9>, bit<12>>>({ Brady.Garrison.Toklat, (bit<12>)Brady.Ekwok.Pajaros });
         Brady.SanRemo.Edwards = Lenox.execute((bit<32>)BirchRun);
     }
     @name(".Anniston") Register<bit<1>, bit<32>>(32w294912, 1w0) Anniston;
@@ -5698,7 +5718,7 @@ control Forman(inout Wanamassa Lindy, inout Talco Brady, in egress_intrinsic_met
     };
     @name(".Mocane") action Mocane() {
         bit<19> BirchRun;
-        BirchRun = Laney.get<tuple<bit<9>, bit<12>>>({ Garrison.egress_port, (bit<12>)Brady.Ekwok.Pajaros });
+        BirchRun = Laney.get<tuple<bit<9>, bit<12>>>({ Brady.Garrison.Toklat, (bit<12>)Brady.Ekwok.Pajaros });
         Brady.SanRemo.Mausdale = Conklin.execute((bit<32>)BirchRun);
     }
     @disable_atomic_modify(1) @name(".Humble") table Humble {
@@ -5736,13 +5756,13 @@ control Skokomish(inout Wanamassa Lindy, inout Talco Brady, in egress_intrinsic_
             Lansdale();
         }
         key = {
-            Garrison.egress_port & 9w0x7f: ternary @name("Garrison.Toklat") ;
-            Brady.SanRemo.Mausdale       : ternary @name("SanRemo.Mausdale") ;
-            Brady.SanRemo.Edwards        : ternary @name("SanRemo.Edwards") ;
-            Brady.Ekwok.Fredonia         : ternary @name("Ekwok.Fredonia") ;
-            Lindy.Arapahoe.Westboro      : ternary @name("Arapahoe.Westboro") ;
-            Lindy.Arapahoe.isValid()     : ternary @name("Arapahoe") ;
-            Brady.Ekwok.Miranda          : ternary @name("Ekwok.Miranda") ;
+            Brady.Garrison.Toklat & 9w0x7f: ternary @name("Garrison.Toklat") ;
+            Brady.SanRemo.Mausdale        : ternary @name("SanRemo.Mausdale") ;
+            Brady.SanRemo.Edwards         : ternary @name("SanRemo.Edwards") ;
+            Brady.Ekwok.Fredonia          : ternary @name("Ekwok.Fredonia") ;
+            Lindy.Arapahoe.Westboro       : ternary @name("Arapahoe.Westboro") ;
+            Lindy.Arapahoe.isValid()      : ternary @name("Arapahoe") ;
+            Brady.Ekwok.Miranda           : ternary @name("Ekwok.Miranda") ;
         }
         default_action = Lansdale();
         size = 512;
@@ -6494,7 +6514,7 @@ control Eureka(inout Wanamassa Lindy, inout Talco Brady, in egress_intrinsic_met
             @defaultonly NoAction();
         }
         key = {
-            Garrison.egress_port     : exact @name("Garrison.Toklat") ;
+            Brady.Garrison.Toklat    : exact @name("Garrison.Toklat") ;
             Brady.Picabo.Naubinway   : exact @name("Picabo.Naubinway") ;
             Brady.Ekwok.Peebles      : exact @name("Ekwok.Peebles") ;
             Brady.Ekwok.FortHunt     : exact @name("Ekwok.FortHunt") ;
@@ -6542,6 +6562,7 @@ control Eureka(inout Wanamassa Lindy, inout Talco Brady, in egress_intrinsic_met
     @name(".Caguas") Sheyenne() Caguas;
     @name(".Duncombe") Alvwood() Duncombe;
     @name(".Noonan") Wauregan() Noonan;
+    @name(".Caliente") Qulin() Caliente;
     @name(".Tanner") LaMarque() Tanner;
     @name(".Spindale") BigPark() Spindale;
     @name(".Valier") DeerPark() Valier;
@@ -6603,6 +6624,7 @@ control Eureka(inout Wanamassa Lindy, inout Talco Brady, in egress_intrinsic_met
             } else if (Lindy.Funston.isValid()) {
                 Waimalu.apply(Lindy, Brady, Garrison, CassCity, Sanborn, Kerby);
             }
+            Caliente.apply(Lindy, Brady, Garrison, CassCity, Sanborn, Kerby);
         }
     }
 }
@@ -6704,7 +6726,8 @@ parser Quamba(packet_in Starkey, out Wanamassa Lindy, out Talco Brady, out egres
     state start {
         Starkey.extract<egress_intrinsic_metadata_t>(Garrison);
         Brady.Garrison.Bledsoe = Garrison.pkt_length;
-        transition select(Garrison.egress_port ++ (Starkey.lookahead<Willard>()).Bayshore) {
+        Brady.Garrison.Toklat = Garrison.egress_port;
+        transition select(Brady.Garrison.Toklat ++ (Starkey.lookahead<Willard>()).Bayshore) {
             Pettigrew: Fosston;
             17w0 &&& 17w0x7: Kingsgate;
             default: Tanana;

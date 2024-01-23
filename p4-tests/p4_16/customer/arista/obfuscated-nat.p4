@@ -187,8 +187,10 @@ struct Glassboro {
 }
 
 struct Moorcroft {
-    PortId_t Toklat;
-    bit<16>  Bledsoe;
+    PortId_t  Toklat;
+    bit<16>   Bledsoe;
+    QueueId_t Sandpoint;
+    bit<16>   Bassett;
 }
 
 struct Blencoe {
@@ -336,8 +338,21 @@ header Killen {
     bit<16> Connell;
 }
 
+header Perkasie {
+    bit<192> Riner;
+}
+
+header Tusayan {
+    bit<64> Riner;
+}
+
 header Turkey {
-    bit<416> Riner;
+    bit<8>     Nicolaus;
+    varbit<48> Riner;
+}
+
+header Caborn {
+    bit<368> Riner;
 }
 
 header Palmhurst {
@@ -1113,6 +1128,11 @@ struct Ravinia {
 struct RockHill {
     bit<32> Robstown;
     bit<32> Ponder;
+}
+
+control Goodrich(inout Monrovia Philip, inout Orting Levasy, in egress_intrinsic_metadata_t Casnovia, in egress_intrinsic_metadata_from_parser_t Fordyce, inout egress_intrinsic_metadata_for_deparser_t Ugashik, inout egress_intrinsic_metadata_for_output_port_t Rhodell) {
+    apply {
+    }
 }
 
 control Fishers(inout Monrovia Philip, inout Orting Levasy, in ingress_intrinsic_metadata_t Flaherty, in ingress_intrinsic_metadata_from_parser_t Indios, inout ingress_intrinsic_metadata_for_deparser_t Larwill, inout ingress_intrinsic_metadata_for_tm_t Sunbury) {
@@ -4163,8 +4183,8 @@ control Tillicum(inout Monrovia Philip, inout Orting Levasy, in egress_intrinsic
             @defaultonly WestBend();
         }
         key = {
-            Casnovia.egress_rid : exact @name("Casnovia.egress_rid") ;
-            Casnovia.egress_port: exact @name("Casnovia.Toklat") ;
+            Casnovia.egress_rid   : exact @name("Casnovia.egress_rid") ;
+            Levasy.Casnovia.Toklat: exact @name("Casnovia.Toklat") ;
         }
         size = 512;
         const default_action = WestBend();
@@ -4183,7 +4203,7 @@ control Oakley(inout Monrovia Philip, inout Orting Levasy, in egress_intrinsic_m
             Ontonagon();
         }
         key = {
-            Casnovia.egress_port: exact @name("Casnovia.Toklat") ;
+            Levasy.Casnovia.Toklat: exact @name("Casnovia.Toklat") ;
         }
         const default_action = Ontonagon(10w0);
         size = 128;
@@ -4499,9 +4519,9 @@ control Terry(inout Monrovia Philip, inout Orting Levasy, in egress_intrinsic_me
             Kinard();
         }
         key = {
-            Levasy.Bratt.Fairhaven       : exact @name("Bratt.Fairhaven") ;
-            Casnovia.egress_port & 9w0x7f: exact @name("Casnovia.Toklat") ;
-            Levasy.Bratt.Rudolph         : exact @name("Bratt.Rudolph") ;
+            Levasy.Bratt.Fairhaven         : exact @name("Bratt.Fairhaven") ;
+            Levasy.Casnovia.Toklat & 9w0x7f: exact @name("Casnovia.Toklat") ;
+            Levasy.Bratt.Rudolph           : exact @name("Bratt.Rudolph") ;
         }
         const default_action = Kinard();
         size = 128;
@@ -4610,8 +4630,8 @@ control Pendleton(inout Monrovia Philip, inout Orting Levasy, in egress_intrinsi
             @defaultonly NoAction();
         }
         key = {
-            Levasy.Bratt.RossFork        : exact @name("Bratt.RossFork") ;
-            Casnovia.egress_port & 9w0x7f: exact @name("Casnovia.Toklat") ;
+            Levasy.Bratt.RossFork          : exact @name("Bratt.RossFork") ;
+            Levasy.Casnovia.Toklat & 9w0x7f: exact @name("Casnovia.Toklat") ;
         }
         size = 512;
         const default_action = NoAction();
@@ -5512,7 +5532,7 @@ control Ahmeek(inout Monrovia Philip, inout Orting Levasy, in egress_intrinsic_m
     @name(".Waxhaw.Roosville") Hash<bit<12>>(HashAlgorithm_t.IDENTITY) Waxhaw;
     @name(".Gerster") action Gerster() {
         bit<12> Ocilla;
-        Ocilla = Waxhaw.get<tuple<bit<9>, bit<5>>>({ Casnovia.egress_port, Casnovia.egress_qid[4:0] });
+        Ocilla = Waxhaw.get<tuple<bit<9>, bit<5>>>({ Levasy.Casnovia.Toklat, Casnovia.egress_qid[4:0] });
         Elbing.count((bit<12>)Ocilla);
     }
     @disable_atomic_modify(1) @name(".Rodessa") table Rodessa {
@@ -5547,8 +5567,8 @@ control Hookstown(inout Monrovia Philip, inout Orting Levasy, in egress_intrinsi
             Carrizozo();
         }
         key = {
-            Casnovia.egress_port & 9w0x7f: exact @name("Casnovia.Toklat") ;
-            Levasy.Bratt.Buncombe        : exact @name("Bratt.Buncombe") ;
+            Levasy.Casnovia.Toklat & 9w0x7f: exact @name("Casnovia.Toklat") ;
+            Levasy.Bratt.Buncombe          : exact @name("Bratt.Buncombe") ;
         }
         const default_action = Carrizozo();
         size = 4096;
@@ -5572,7 +5592,7 @@ control Hecker(inout Monrovia Philip, inout Orting Levasy, in egress_intrinsic_m
     @name(".Dante.Dunedin") Hash<bit<19>>(HashAlgorithm_t.IDENTITY) Dante;
     @name(".Poynette") action Poynette() {
         bit<19> Ocilla;
-        Ocilla = Dante.get<tuple<bit<9>, bit<12>>>({ Casnovia.egress_port, (bit<12>)Levasy.Bratt.Buncombe });
+        Ocilla = Dante.get<tuple<bit<9>, bit<12>>>({ Levasy.Casnovia.Toklat, (bit<12>)Levasy.Bratt.Buncombe });
         Levasy.Cotter.Calabash = FarrWest.execute((bit<32>)Ocilla);
     }
     @name(".Wyanet") Register<bit<1>, bit<32>>(32w294912, 1w0) Wyanet;
@@ -5587,7 +5607,7 @@ control Hecker(inout Monrovia Philip, inout Orting Levasy, in egress_intrinsic_m
     };
     @name(".Darden") action Darden() {
         bit<19> Ocilla;
-        Ocilla = Dante.get<tuple<bit<9>, bit<12>>>({ Casnovia.egress_port, (bit<12>)Levasy.Bratt.Buncombe });
+        Ocilla = Dante.get<tuple<bit<9>, bit<12>>>({ Levasy.Casnovia.Toklat, (bit<12>)Levasy.Bratt.Buncombe });
         Levasy.Cotter.Wondervu = Chunchula.execute((bit<32>)Ocilla);
     }
     @disable_atomic_modify(1) @name(".ElJebel") table ElJebel {
@@ -5625,13 +5645,13 @@ control Glouster(inout Monrovia Philip, inout Orting Levasy, in egress_intrinsic
             Almont();
         }
         key = {
-            Casnovia.egress_port & 9w0x7f: ternary @name("Casnovia.Toklat") ;
-            Levasy.Cotter.Wondervu       : ternary @name("Cotter.Wondervu") ;
-            Levasy.Cotter.Calabash       : ternary @name("Cotter.Calabash") ;
-            Levasy.Bratt.Darien          : ternary @name("Bratt.Darien") ;
-            Philip.Nephi.Norcatur        : ternary @name("Nephi.Norcatur") ;
-            Philip.Nephi.isValid()       : ternary @name("Nephi") ;
-            Levasy.Bratt.Daleville       : ternary @name("Bratt.Daleville") ;
+            Levasy.Casnovia.Toklat & 9w0x7f: ternary @name("Casnovia.Toklat") ;
+            Levasy.Cotter.Wondervu         : ternary @name("Cotter.Wondervu") ;
+            Levasy.Cotter.Calabash         : ternary @name("Cotter.Calabash") ;
+            Levasy.Bratt.Darien            : ternary @name("Bratt.Darien") ;
+            Philip.Nephi.Norcatur          : ternary @name("Nephi.Norcatur") ;
+            Philip.Nephi.isValid()         : ternary @name("Nephi") ;
+            Levasy.Bratt.Daleville         : ternary @name("Bratt.Daleville") ;
         }
         default_action = Almont();
         size = 512;
@@ -6288,7 +6308,7 @@ control Keenes(inout Monrovia Philip, inout Orting Levasy, in egress_intrinsic_m
             @defaultonly NoAction();
         }
         key = {
-            Casnovia.egress_port   : exact @name("Casnovia.Toklat") ;
+            Levasy.Casnovia.Toklat : exact @name("Casnovia.Toklat") ;
             Levasy.Moultrie.Burwell: exact @name("Moultrie.Burwell") ;
             Levasy.Bratt.Basalt    : exact @name("Bratt.Basalt") ;
             Levasy.Bratt.LaUnion   : exact @name("Bratt.LaUnion") ;
@@ -6339,6 +6359,7 @@ control Keenes(inout Monrovia Philip, inout Orting Levasy, in egress_intrinsic_m
     @name(".Millett") Skokomish() Millett;
     @name(".Thistle") Oakford() Thistle;
     @name(".Overton") Gwynn() Overton;
+    @name(".Laramie") Goodrich() Laramie;
     @name(".Karluk") Boyes() Karluk;
     @name(".Bothwell") Renfroe() Bothwell;
     @name(".Kealia") Terry() Kealia;
@@ -6407,6 +6428,7 @@ control Keenes(inout Monrovia Philip, inout Orting Levasy, in egress_intrinsic_m
             } else if (Philip.Thurmond.isValid()) {
                 Kealia.apply(Philip, Levasy, Casnovia, Fordyce, Ugashik, Rhodell);
             }
+            Laramie.apply(Philip, Levasy, Casnovia, Fordyce, Ugashik, Rhodell);
         }
     }
 }
@@ -6507,7 +6529,8 @@ parser ElMirage(packet_in Ackerly, out Monrovia Philip, out Orting Levasy, out e
     state start {
         Ackerly.extract<egress_intrinsic_metadata_t>(Casnovia);
         Levasy.Casnovia.Bledsoe = Casnovia.pkt_length;
-        transition select(Casnovia.egress_port ++ (Ackerly.lookahead<Willard>()).Bayshore) {
+        Levasy.Casnovia.Toklat = Casnovia.egress_port;
+        transition select(Levasy.Casnovia.Toklat ++ (Ackerly.lookahead<Willard>()).Bayshore) {
             Amboy: BigPark;
             17w0 &&& 17w0x7: Murdock;
             default: McKibben;

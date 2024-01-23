@@ -59,6 +59,9 @@
 @pa_atomic("ingress" , "Exeter.Dwight.Ankeny")
 @pa_atomic("ingress" , "Exeter.Geistown.Oriskany")
 @pa_atomic("ingress" , "Exeter.Geistown.Renick")
+@pa_mutually_exclusive("pipe_a" , "egress" , "Cairo.Castle.Turkey" , "Cairo.Mattapex.Garcia")
+@pa_mutually_exclusive("pipe_a" , "egress" , "Cairo.Aguila.Cornell" , "Cairo.Midas.Bonney")
+@pa_mutually_exclusive("pipe_a" , "egress" , "Cairo.Aguila.Weinert" , "Cairo.Midas.Commack")
 @pa_no_init("ingress" , "Exeter.Emden.Broadwell")
 @pa_solitary("ingress" , "Exeter.Philip.Humeston")
 @pa_container_size("egress" , "Exeter.Emden.Naubinway" , 16)
@@ -122,6 +125,7 @@
 @pa_alias("ingress" , "ig_intr_md_for_tm.ucast_egress_port" , "Exeter.Emden.Broussard")
 @pa_alias("ingress" , "Exeter.Levasy.Provencal" , "Exeter.Levasy.Ramos")
 @pa_alias("egress" , "eg_intr_md.egress_port" , "Exeter.Tularosa.Harbor")
+@pa_alias("egress" , "eg_intr_md_for_dprsr.mirror_qid" , "Exeter.Tularosa.CatCreek")
 @pa_alias("egress" , "eg_intr_md_for_dprsr.mirror_type" , "Exeter.Boyle.Uintah")
 @pa_alias("egress" , "Cairo.Castle.Glendevey" , "Exeter.Emden.Naubinway")
 @pa_alias("egress" , "Cairo.Castle.Littleton" , "Exeter.Emden.Broadwell")
@@ -247,8 +251,10 @@ struct Clyde {
 }
 
 struct Aguilita {
-    PortId_t Harbor;
-    bit<16>  IttaBena;
+    PortId_t  Harbor;
+    bit<16>   IttaBena;
+    QueueId_t CatCreek;
+    bit<16>   Aguilar;
 }
 
 struct Adona {
@@ -452,8 +458,21 @@ header Pilar {
     bit<16> Exton;
 }
 
+header Paicines {
+    bit<192> Moorcroft;
+}
+
+header Krupp {
+    bit<64> Moorcroft;
+}
+
 header Loris {
-    bit<416> Moorcroft;
+    bit<8>     Baltic;
+    varbit<48> Moorcroft;
+}
+
+header Geeville {
+    bit<368> Moorcroft;
 }
 
 header Mackville {
@@ -1223,7 +1242,13 @@ struct Rochert {
     Edgemoor     WildRose;
     Edgemoor     Kellner;
     Edgemoor     Hagaman;
+    Paicines     Fowlkes;
+    Krupp        Seguin;
+    Krupp        Cloverly;
+    Krupp        Palmdale;
+    Krupp        Calumet;
     Loris        McKenney;
+    Geeville     Speedway;
     Woodfield    Decherd;
     Vinemont     Bucklin;
 }
@@ -1313,7 +1338,7 @@ control Notus(inout Tenstrike Cairo, inout Rochert Exeter, in ingress_intrinsic_
         const default_action = Andrade();
         size = 4096;
     }
-    @disable_atomic_modify(1) @name(".Brodnax") table Brodnax {
+    @disable_atomic_modify(1) @stage(1) @name(".Brodnax") table Brodnax {
         actions = {
             @tableonly Dahlgren();
             @defaultonly McIntyre();
@@ -2921,8 +2946,8 @@ control Ragley(inout Tenstrike Cairo, inout Rochert Exeter, in egress_intrinsic_
             @defaultonly Dunkerton();
         }
         key = {
-            Tularosa.egress_rid : exact @name("Tularosa.egress_rid") ;
-            Tularosa.egress_port: exact @name("Tularosa.Harbor") ;
+            Tularosa.egress_rid   : exact @name("Tularosa.egress_rid") ;
+            Exeter.Tularosa.Harbor: exact @name("Tularosa.Harbor") ;
         }
         size = 512;
         const default_action = Dunkerton();
@@ -2941,7 +2966,7 @@ control Brookwood(inout Tenstrike Cairo, inout Rochert Exeter, in egress_intrins
             Granville();
         }
         key = {
-            Tularosa.egress_port: exact @name("Tularosa.Harbor") ;
+            Exeter.Tularosa.Harbor: exact @name("Tularosa.Harbor") ;
         }
         const default_action = Granville(10w0);
         size = 128;
@@ -3258,9 +3283,9 @@ control Broadford(inout Tenstrike Cairo, inout Rochert Exeter, in egress_intrins
             Konnarock();
         }
         key = {
-            Exeter.Emden.Kearns          : exact @name("Emden.Kearns") ;
-            Tularosa.egress_port & 9w0x7f: exact @name("Tularosa.Harbor") ;
-            Exeter.Emden.Pittsboro       : exact @name("Emden.Pittsboro") ;
+            Exeter.Emden.Kearns            : exact @name("Emden.Kearns") ;
+            Exeter.Tularosa.Harbor & 9w0x7f: exact @name("Tularosa.Harbor") ;
+            Exeter.Emden.Pittsboro         : exact @name("Emden.Pittsboro") ;
         }
         const default_action = Konnarock();
         size = 128;
@@ -3369,8 +3394,8 @@ control Trail(inout Tenstrike Cairo, inout Rochert Exeter, in egress_intrinsic_m
             @defaultonly NoAction();
         }
         key = {
-            Exeter.Emden.Broadwell       : exact @name("Emden.Broadwell") ;
-            Tularosa.egress_port & 9w0x7f: exact @name("Tularosa.Harbor") ;
+            Exeter.Emden.Broadwell         : exact @name("Emden.Broadwell") ;
+            Exeter.Tularosa.Harbor & 9w0x7f: exact @name("Tularosa.Harbor") ;
         }
         size = 512;
         const default_action = NoAction();
@@ -4274,7 +4299,7 @@ control Northboro(inout Tenstrike Cairo, inout Rochert Exeter, in egress_intrins
     @name(".RushCity.Mankato") Hash<bit<12>>(HashAlgorithm_t.IDENTITY) RushCity;
     @name(".Naguabo") action Naguabo() {
         bit<12> Centre;
-        Centre = RushCity.get<tuple<bit<9>, bit<5>>>({ Tularosa.egress_port, Tularosa.egress_qid[4:0] });
+        Centre = RushCity.get<tuple<bit<9>, bit<5>>>({ Exeter.Tularosa.Harbor, Tularosa.egress_qid[4:0] });
         Waterford.count((bit<12>)Centre);
     }
     @disable_atomic_modify(1) @name(".Browning") table Browning {
@@ -4309,8 +4334,8 @@ control Clarinda(inout Tenstrike Cairo, inout Rochert Exeter, in egress_intrinsi
             Burnett();
         }
         key = {
-            Tularosa.egress_port & 9w0x7f: exact @name("Tularosa.Harbor") ;
-            Exeter.Emden.Edwards         : exact @name("Emden.Edwards") ;
+            Exeter.Tularosa.Harbor & 9w0x7f: exact @name("Tularosa.Harbor") ;
+            Exeter.Emden.Edwards           : exact @name("Emden.Edwards") ;
         }
         const default_action = Burnett();
         size = 4096;
@@ -4334,7 +4359,7 @@ control Casselman(inout Tenstrike Cairo, inout Rochert Exeter, in egress_intrins
     @name(".Cruso.Rockport") Hash<bit<19>>(HashAlgorithm_t.IDENTITY) Cruso;
     @name(".Rembrandt") action Rembrandt() {
         bit<19> Centre;
-        Centre = Cruso.get<tuple<bit<9>, bit<12>>>({ Tularosa.egress_port, (bit<12>)Exeter.Emden.Edwards });
+        Centre = Cruso.get<tuple<bit<9>, bit<12>>>({ Exeter.Tularosa.Harbor, (bit<12>)Exeter.Emden.Edwards });
         Exeter.Larwill.Elkville = Chamois.execute((bit<32>)Centre);
     }
     @name(".Leetsdale") Register<bit<1>, bit<32>>(32w294912, 1w0) Leetsdale;
@@ -4349,7 +4374,7 @@ control Casselman(inout Tenstrike Cairo, inout Rochert Exeter, in egress_intrins
     };
     @name(".Millican") action Millican() {
         bit<19> Centre;
-        Centre = Cruso.get<tuple<bit<9>, bit<12>>>({ Tularosa.egress_port, (bit<12>)Exeter.Emden.Edwards });
+        Centre = Cruso.get<tuple<bit<9>, bit<12>>>({ Exeter.Tularosa.Harbor, (bit<12>)Exeter.Emden.Edwards });
         Exeter.Larwill.Corvallis = Valmont.execute((bit<32>)Centre);
     }
     @disable_atomic_modify(1) @name(".Decorah") table Decorah {
@@ -4387,13 +4412,13 @@ control Moxley(inout Tenstrike Cairo, inout Rochert Exeter, in egress_intrinsic_
             Ludowici();
         }
         key = {
-            Tularosa.egress_port & 9w0x7f: ternary @name("Tularosa.Harbor") ;
-            Exeter.Larwill.Corvallis     : ternary @name("Larwill.Corvallis") ;
-            Exeter.Larwill.Elkville      : ternary @name("Larwill.Elkville") ;
-            Exeter.Emden.Belgrade        : ternary @name("Emden.Belgrade") ;
-            Cairo.Cadwell.Bicknell       : ternary @name("Cadwell.Bicknell") ;
-            Cairo.Cadwell.isValid()      : ternary @name("Cadwell") ;
-            Exeter.Emden.Sonoma          : ternary @name("Emden.Sonoma") ;
+            Exeter.Tularosa.Harbor & 9w0x7f: ternary @name("Tularosa.Harbor") ;
+            Exeter.Larwill.Corvallis       : ternary @name("Larwill.Corvallis") ;
+            Exeter.Larwill.Elkville        : ternary @name("Larwill.Elkville") ;
+            Exeter.Emden.Belgrade          : ternary @name("Emden.Belgrade") ;
+            Cairo.Cadwell.Bicknell         : ternary @name("Cadwell.Bicknell") ;
+            Cairo.Cadwell.isValid()        : ternary @name("Cadwell") ;
+            Exeter.Emden.Sonoma            : ternary @name("Emden.Sonoma") ;
         }
         default_action = Ludowici();
         size = 512;
@@ -4567,6 +4592,163 @@ control Varna(inout Tenstrike Cairo, inout Rochert Exeter, in egress_intrinsic_m
 
 control Roxboro(inout Tenstrike Cairo, inout Rochert Exeter, in egress_intrinsic_metadata_t Tularosa, in egress_intrinsic_metadata_from_parser_t Leoma, inout egress_intrinsic_metadata_for_deparser_t Aiken, inout egress_intrinsic_metadata_for_output_port_t Anawalt) {
     apply {
+    }
+}
+
+control Hotevilla(inout Tenstrike Cairo, inout Rochert Exeter, in egress_intrinsic_metadata_t Tularosa, in egress_intrinsic_metadata_from_parser_t Leoma, inout egress_intrinsic_metadata_for_deparser_t Aiken, inout egress_intrinsic_metadata_for_output_port_t Anawalt) {
+    @name(".Tolono") action Tolono() {
+        Aiken.mirror_type = (bit<4>)4w2;
+        @in_hash {
+            Exeter.Indios.Ramos[7:0] = Exeter.Emden.Toklat[7:0];
+        }
+        Aiken.mirror_io_select = (bit<1>)1w1;
+        Aiken.mtu_trunc_len = (bit<14>)14w64;
+        Cairo.Speedway.Moorcroft = (bit<368>)368w0;
+        Cairo.Speedway.setValid();
+    }
+    @hidden @disable_atomic_modify(1) @name(".Ocheyedan") table Ocheyedan {
+        actions = {
+            Tolono();
+            @defaultonly NoAction();
+        }
+        key = {
+            Cairo.Fowlkes.isValid(): exact @name("Fowlkes") ;
+        }
+        size = 1;
+        const entries = {
+                        true : Tolono();
+
+        }
+
+        default_action = NoAction();
+    }
+    apply {
+        if (Exeter.Tularosa.IttaBena[15:8] == 8w0 && Exeter.Tularosa.IttaBena[7:0] < 8w68) {
+            Ocheyedan.apply();
+        }
+    }
+}
+
+control Powelton(inout Tenstrike Cairo, inout Rochert Exeter, in egress_intrinsic_metadata_t Tularosa, in egress_intrinsic_metadata_from_parser_t Leoma, inout egress_intrinsic_metadata_for_deparser_t Aiken, inout egress_intrinsic_metadata_for_output_port_t Anawalt) {
+    @name(".Waimalu") action Waimalu() {
+    }
+@pa_no_init("egress" , "eg_intr_md_for_dprsr.mirror_egress_port")
+@pa_mutually_exclusive("egress" , "eg_intr_md_for_dprsr.mirror_egress_port" , "Cairo.Castle")
+@pa_mutually_exclusive("egress" , "eg_intr_md_for_dprsr.mirror_egress_port" , "Cairo.Aguila")
+@name(".Quamba") action Quamba() {
+        Aiken.mirror_egress_port = Exeter.Tularosa.Harbor;
+        @in_hash {
+            Exeter.Tularosa.Harbor[7:0] = Exeter.Indios.Ramos[7:0];
+        }
+        Aiken.mirror_type = (bit<4>)4w3;
+        Aiken.mirror_io_select = (bit<1>)1w1;
+        Aiken.mirror_qid = Tularosa.egress_qid;
+        Aiken.drop_ctl = (bit<3>)3w1;
+        Exeter.Indios.Ramos = (bit<10>)10w192;
+    }
+    @hidden @disable_atomic_modify(1) @name(".Pettigrew") table Pettigrew {
+        key = {
+            Cairo.Mattapex.isValid()  : ternary @name("Mattapex") ;
+            Cairo.Mulvane[0].isValid(): ternary @name("Mulvane[0]") ;
+            Cairo.Mulvane[1].isValid(): ternary @name("Mulvane[1]") ;
+            Cairo.Luning.isValid()    : ternary @name("Luning") ;
+            Cairo.Crown.isValid()     : ternary @name("Crown") ;
+            Exeter.Emden.Burwell      : ternary @name("Emden.Burwell") ;
+            Cairo.Hagaman.isValid()   : ternary @name("Hagaman") ;
+            Exeter.Emden.Salix        : ternary @name("Emden.Salix") ;
+            Exeter.Tularosa.IttaBena  : range @name("Tularosa.IttaBena") ;
+        }
+        actions = {
+            Waimalu();
+            Quamba();
+        }
+        size = 64;
+        requires_versioning = false;
+        const default_action = Waimalu();
+        const entries = {
+                        (false, default, default, default, default, default, default, 3w2, default) : Waimalu();
+
+                        (false, default, default, default, true, default, default, default, default) : Waimalu();
+
+                        (true, default, default, default, false, default, default, 3w1, 16w0 .. 16w108) : Quamba();
+
+                        (true, default, default, default, false, default, default, 3w1, default) : Waimalu();
+
+                        (true, default, default, default, false, default, default, 3w5, 16w0 .. 16w108) : Quamba();
+
+                        (true, default, default, default, false, default, default, 3w5, default) : Waimalu();
+
+                        (true, default, default, default, false, default, default, 3w6, 16w0 .. 16w108) : Quamba();
+
+                        (true, default, default, default, false, default, default, 3w6, default) : Waimalu();
+
+                        (true, default, default, default, false, 1w0, false, default, 16w0 .. 16w108) : Quamba();
+
+                        (true, default, default, default, false, 1w1, false, default, 16w0 .. 16w112) : Quamba();
+
+                        (true, default, default, default, false, 1w1, true, default, 16w0 .. 16w112) : Quamba();
+
+                        (true, default, default, default, false, default, default, default, default) : Waimalu();
+
+                        (false, false, false, default, false, default, default, 3w1, 16w0 .. 16w122) : Quamba();
+
+                        (false, true, false, default, false, default, default, 3w1, 16w0 .. 16w118) : Quamba();
+
+                        (false, true, true, default, false, default, default, 3w1, 16w0 .. 16w114) : Quamba();
+
+                        (false, default, default, default, false, default, default, 3w1, default) : Waimalu();
+
+                        (false, false, false, default, false, default, default, 3w5, 16w0 .. 16w122) : Quamba();
+
+                        (false, true, false, default, false, default, default, 3w5, 16w0 .. 16w118) : Quamba();
+
+                        (false, true, true, default, false, default, default, 3w5, 16w0 .. 16w114) : Quamba();
+
+                        (false, default, default, default, false, default, default, 3w5, default) : Waimalu();
+
+                        (false, false, false, default, false, default, default, 3w6, 16w0 .. 16w122) : Quamba();
+
+                        (false, true, false, default, false, default, default, 3w6, 16w0 .. 16w118) : Quamba();
+
+                        (false, true, true, default, false, default, default, 3w6, 16w0 .. 16w114) : Quamba();
+
+                        (false, default, default, default, false, default, default, 3w6, default) : Waimalu();
+
+                        (false, default, default, default, false, default, default, 3w2, 16w0 .. 16w122) : Quamba();
+
+                        (false, default, default, default, false, default, default, 3w2, default) : Waimalu();
+
+                        (false, false, false, false, false, default, true, default, 16w0 .. 16w126) : Quamba();
+
+                        (false, true, false, false, false, default, true, default, 16w0 .. 16w122) : Quamba();
+
+                        (false, true, true, false, false, default, true, default, 16w0 .. 16w118) : Quamba();
+
+                        (false, false, false, default, false, 1w0, false, default, 16w0 .. 16w122) : Quamba();
+
+                        (false, false, false, default, false, 1w1, false, default, 16w0 .. 16w126) : Quamba();
+
+                        (false, false, false, default, false, 1w1, true, default, 16w0 .. 16w130) : Quamba();
+
+                        (false, true, false, default, false, 1w0, false, default, 16w0 .. 16w118) : Quamba();
+
+                        (false, true, false, default, false, 1w1, false, default, 16w0 .. 16w122) : Quamba();
+
+                        (false, true, false, default, false, 1w1, true, default, 16w0 .. 16w126) : Quamba();
+
+                        (false, true, true, default, false, 1w0, false, default, 16w0 .. 16w114) : Quamba();
+
+                        (false, true, true, default, false, 1w1, false, default, 16w0 .. 16w118) : Quamba();
+
+                        (false, true, true, default, false, 1w1, true, default, 16w0 .. 16w122) : Quamba();
+
+        }
+
+    }
+    apply {
+        if (Cairo.Castle.isValid() && Aiken.drop_ctl == 3w0) {
+            Pettigrew.apply();
+        }
     }
 }
 
@@ -6259,7 +6441,9 @@ parser Croft(packet_in Tusculum, out Tenstrike Cairo, out Rochert Exeter, out eg
     state start {
         Tusculum.extract<egress_intrinsic_metadata_t>(Tularosa);
         Exeter.Tularosa.IttaBena = Tularosa.pkt_length;
-        transition select(Tularosa.egress_port ++ (Tusculum.lookahead<Grabill>()).Uintah) {
+        Exeter.Tularosa.Harbor = Tularosa.egress_port;
+        transition select(Exeter.Tularosa.Harbor ++ (Tusculum.lookahead<Grabill>()).Uintah) {
+            17w3 &&& 17w0xff: Petroleum;
             Oxnard: Crystola;
             17w0 &&& 17w0x7: Frederic;
             default: Petroleum;
@@ -6294,6 +6478,7 @@ parser Croft(packet_in Tusculum, out Tenstrike Cairo, out Rochert Exeter, out eg
         transition select(Boyle.Uintah) {
             8w1 &&& 8w0x7: McKibben;
             8w2 &&& 8w0x7: Coalton;
+            8w3 &&& 8w0x7: Annette;
             default: Murdock;
         }
     }
@@ -6310,12 +6495,61 @@ parser Croft(packet_in Tusculum, out Tenstrike Cairo, out Rochert Exeter, out eg
         }
         transition Cavalier;
     }
+    state Annette {
+        transition select(Exeter.Tularosa.IttaBena[7:0]) {
+            8w0x0 &&& 8w0xe0: Wainaku;
+            8w0x20 &&& 8w0xf8: Wainaku;
+            8w0x28 &&& 8w0xf8: Pinta;
+            8w0x30 &&& 8w0xf8: Needles;
+            8w0x38 &&& 8w0xf8: Boquet;
+            8w0x40 &&& 8w0xf8: Quealy;
+            default: Murdock;
+        }
+    }
+    state Wainaku {
+        Tusculum.extract<Paicines>(Cairo.Fowlkes);
+        transition Wimbledon;
+    }
+    state Pinta {
+        Tusculum.extract<Paicines>(Cairo.Fowlkes);
+        Tusculum.extract<Krupp>(Cairo.Seguin);
+        transition Wimbledon;
+    }
+    state Needles {
+        Tusculum.extract<Paicines>(Cairo.Fowlkes);
+        Tusculum.extract<Krupp>(Cairo.Seguin);
+        Tusculum.extract<Krupp>(Cairo.Cloverly);
+        transition Wimbledon;
+    }
+    state Boquet {
+        Tusculum.extract<Paicines>(Cairo.Fowlkes);
+        Tusculum.extract<Krupp>(Cairo.Seguin);
+        Tusculum.extract<Krupp>(Cairo.Cloverly);
+        Tusculum.extract<Krupp>(Cairo.Palmdale);
+        transition Wimbledon;
+    }
+    state Quealy {
+        Tusculum.extract<Paicines>(Cairo.Fowlkes);
+        Tusculum.extract<Krupp>(Cairo.Seguin);
+        Tusculum.extract<Krupp>(Cairo.Cloverly);
+        Tusculum.extract<Krupp>(Cairo.Palmdale);
+        Tusculum.extract<Krupp>(Cairo.Calumet);
+        transition Wimbledon;
+    }
+    state Wimbledon {
+        transition select(Exeter.Tularosa.IttaBena[2:0]) {
+            3w0: Murdock;
+            default: Sagamore;
+        }
+    }
+    state Sagamore {
+        Tusculum.extract<Loris>(Cairo.McKenney, (bit<32>)((bit<8>)(Exeter.Tularosa.IttaBena[2:0] - 3w1) * 8w8));
+        transition Murdock;
+    }
     state Murdock {
         transition accept;
     }
     state Shawville {
-        Cairo.McKenney.setValid();
-        Cairo.McKenney = Tusculum.lookahead<Loris>();
         transition accept;
     }
 }
@@ -6359,7 +6593,7 @@ control Armstrong(inout Tenstrike Cairo, inout Rochert Exeter, in egress_intrins
             @defaultonly NoAction();
         }
         key = {
-            Tularosa.egress_port    : exact @name("Tularosa.Harbor") ;
+            Exeter.Tularosa.Harbor  : exact @name("Tularosa.Harbor") ;
             Exeter.Westoak.Mickleton: exact @name("Westoak.Mickleton") ;
             Exeter.Emden.Burwell    : exact @name("Emden.Burwell") ;
             Exeter.Emden.Salix      : exact @name("Emden.Salix") ;
@@ -6378,111 +6612,6 @@ control Armstrong(inout Tenstrike Cairo, inout Rochert Exeter, in egress_intrins
         }
         size = 512;
         default_action = NoAction();
-    }
-    @name(".Waimalu") action Waimalu() {
-        Cairo.McKenney.setInvalid();
-    }
-    @name(".Quamba") action Quamba() {
-        Aiken.mtu_trunc_len = (bit<14>)14w64;
-    }
-    @hidden @disable_atomic_modify(1) @name(".Pettigrew") table Pettigrew {
-        key = {
-            Cairo.Mattapex.isValid()  : ternary @name("Mattapex") ;
-            Cairo.Mulvane[0].isValid(): ternary @name("Mulvane[0]") ;
-            Cairo.Mulvane[1].isValid(): ternary @name("Mulvane[1]") ;
-            Cairo.Luning.isValid()    : ternary @name("Luning") ;
-            Cairo.Crown.isValid()     : ternary @name("Crown") ;
-            Exeter.Emden.Burwell      : ternary @name("Emden.Burwell") ;
-            Cairo.Hagaman.isValid()   : ternary @name("Hagaman") ;
-            Exeter.Emden.Salix        : ternary @name("Emden.Salix") ;
-            Exeter.Tularosa.IttaBena  : range @name("Tularosa.IttaBena") ;
-        }
-        actions = {
-            Waimalu();
-            Quamba();
-        }
-        size = 64;
-        requires_versioning = false;
-        const default_action = Waimalu();
-        const entries = {
-                        (false, default, default, default, default, default, default, 3w2, default) : Waimalu();
-
-                        (false, default, default, default, true, default, default, default, default) : Waimalu();
-
-                        (true, default, default, default, false, default, default, 3w1, 16w0 .. 16w108) : Quamba();
-
-                        (true, default, default, default, false, default, default, 3w1, default) : Waimalu();
-
-                        (true, default, default, default, false, default, default, 3w5, 16w0 .. 16w108) : Quamba();
-
-                        (true, default, default, default, false, default, default, 3w5, default) : Waimalu();
-
-                        (true, default, default, default, false, default, default, 3w6, 16w0 .. 16w108) : Quamba();
-
-                        (true, default, default, default, false, default, default, 3w6, default) : Waimalu();
-
-                        (true, default, default, default, false, 1w0, false, default, 16w0 .. 16w108) : Quamba();
-
-                        (true, default, default, default, false, 1w1, false, default, 16w0 .. 16w112) : Quamba();
-
-                        (true, default, default, default, false, 1w1, true, default, 16w0 .. 16w112) : Quamba();
-
-                        (true, default, default, default, false, default, default, default, default) : Waimalu();
-
-                        (false, false, false, default, false, default, default, 3w1, 16w0 .. 16w122) : Quamba();
-
-                        (false, true, false, default, false, default, default, 3w1, 16w0 .. 16w118) : Quamba();
-
-                        (false, true, true, default, false, default, default, 3w1, 16w0 .. 16w114) : Quamba();
-
-                        (false, default, default, default, false, default, default, 3w1, default) : Waimalu();
-
-                        (false, false, false, default, false, default, default, 3w5, 16w0 .. 16w122) : Quamba();
-
-                        (false, true, false, default, false, default, default, 3w5, 16w0 .. 16w118) : Quamba();
-
-                        (false, true, true, default, false, default, default, 3w5, 16w0 .. 16w114) : Quamba();
-
-                        (false, default, default, default, false, default, default, 3w5, default) : Waimalu();
-
-                        (false, false, false, default, false, default, default, 3w6, 16w0 .. 16w122) : Quamba();
-
-                        (false, true, false, default, false, default, default, 3w6, 16w0 .. 16w118) : Quamba();
-
-                        (false, true, true, default, false, default, default, 3w6, 16w0 .. 16w114) : Quamba();
-
-                        (false, default, default, default, false, default, default, 3w6, default) : Waimalu();
-
-                        (false, default, default, default, false, default, default, 3w2, 16w0 .. 16w122) : Quamba();
-
-                        (false, default, default, default, false, default, default, 3w2, default) : Waimalu();
-
-                        (false, false, false, false, false, default, true, default, 16w0 .. 16w126) : Quamba();
-
-                        (false, true, false, false, false, default, true, default, 16w0 .. 16w122) : Quamba();
-
-                        (false, true, true, false, false, default, true, default, 16w0 .. 16w118) : Quamba();
-
-                        (false, false, false, default, false, 1w0, false, default, 16w0 .. 16w122) : Quamba();
-
-                        (false, false, false, default, false, 1w1, false, default, 16w0 .. 16w126) : Quamba();
-
-                        (false, false, false, default, false, 1w1, true, default, 16w0 .. 16w130) : Quamba();
-
-                        (false, true, false, default, false, 1w0, false, default, 16w0 .. 16w118) : Quamba();
-
-                        (false, true, false, default, false, 1w1, false, default, 16w0 .. 16w122) : Quamba();
-
-                        (false, true, false, default, false, 1w1, true, default, 16w0 .. 16w126) : Quamba();
-
-                        (false, true, true, default, false, 1w0, false, default, 16w0 .. 16w114) : Quamba();
-
-                        (false, true, true, default, false, 1w1, false, default, 16w0 .. 16w118) : Quamba();
-
-                        (false, true, true, default, false, 1w1, true, default, 16w0 .. 16w122) : Quamba();
-
-        }
-
     }
     @name(".Lamboglia") Roxboro() Lamboglia;
     @name(".Hartford") LaHoma() Hartford;
@@ -6515,6 +6644,8 @@ control Armstrong(inout Tenstrike Cairo, inout Rochert Exeter, in egress_intrins
     @name(".Hillcrest") Slayden() Hillcrest;
     @name(".Oskawalik") Corder() Oskawalik;
     @name(".Pelland") Clermont() Pelland;
+    @name(".Huffman") Powelton() Huffman;
+    @name(".Eastover") Hotevilla() Eastover;
     @name(".Gomez") Wells() Gomez;
     @name(".Placida") Edinburgh() Placida;
     @name(".Oketo") Broadford() Oketo;
@@ -6567,6 +6698,9 @@ control Armstrong(inout Tenstrike Cairo, inout Rochert Exeter, in egress_intrins
                 Oketo.apply(Cairo, Exeter, Tularosa, Leoma, Aiken, Anawalt);
             }
             Lamboglia.apply(Cairo, Exeter, Tularosa, Leoma, Aiken, Anawalt);
+            Huffman.apply(Cairo, Exeter, Tularosa, Leoma, Aiken, Anawalt);
+        } else if (Cairo.Fowlkes.isValid()) {
+            Eastover.apply(Cairo, Exeter, Tularosa, Leoma, Aiken, Anawalt);
         } else {
             if (Cairo.Castle.isValid() == false) {
                 Maybee.apply(Cairo, Exeter, Tularosa, Leoma, Aiken, Anawalt);
@@ -6583,9 +6717,7 @@ control Armstrong(inout Tenstrike Cairo, inout Rochert Exeter, in egress_intrins
             } else if (Cairo.Vanoss.isValid()) {
                 Oketo.apply(Cairo, Exeter, Tularosa, Leoma, Aiken, Anawalt);
             }
-        }
-        if (Cairo.McKenney.isValid()) {
-            Pettigrew.apply();
+            Huffman.apply(Cairo, Exeter, Tularosa, Leoma, Aiken, Anawalt);
         }
     }
 }
@@ -6597,6 +6729,13 @@ control LaCenter(packet_out Tusculum, inout Tenstrike Cairo, in Rochert Exeter, 
     apply {
         {
             if (Aiken.mirror_type == 4w2) {
+                Grabill Crossnore;
+                Crossnore.setValid();
+                Crossnore.Uintah = Exeter.Boyle.Uintah;
+                Crossnore.Moorcroft = Exeter.Boyle.Uintah;
+                Crossnore.Toklat = Exeter.Tularosa.Harbor;
+                Paoli.emit<Grabill>((MirrorId_t)Exeter.Indios.Ramos, Crossnore);
+            } else if (Aiken.mirror_type == 4w3) {
                 Grabill Crossnore;
                 Crossnore.setValid();
                 Crossnore.Uintah = Exeter.Boyle.Uintah;
@@ -6622,7 +6761,13 @@ control LaCenter(packet_out Tusculum, inout Tenstrike Cairo, in Rochert Exeter, 
             Tusculum.emit<Elderon>(Cairo.Tillson);
             Tusculum.emit<Glenmora>(Cairo.Lattimore);
             Tusculum.emit<Luzerne>(Cairo.Chewalla);
+            Tusculum.emit<Paicines>(Cairo.Fowlkes);
+            Tusculum.emit<Krupp>(Cairo.Seguin);
+            Tusculum.emit<Krupp>(Cairo.Cloverly);
+            Tusculum.emit<Krupp>(Cairo.Palmdale);
+            Tusculum.emit<Krupp>(Cairo.Calumet);
             Tusculum.emit<Loris>(Cairo.McKenney);
+            Tusculum.emit<Geeville>(Cairo.Speedway);
         }
     }
 }
@@ -6744,7 +6889,7 @@ parser Toano(packet_in Tusculum, out Tenstrike Cairo, out Rochert Exeter, out in
     }
     state Flats {
         Tusculum.extract<Elderon>(Cairo.Tillson);
-        transition reject;
+        transition accept;
     }
     state Hiwassee {
         Tusculum.extract<Elderon>(Cairo.Tillson);

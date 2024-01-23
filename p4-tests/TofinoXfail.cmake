@@ -1607,6 +1607,11 @@ if (TEST_ALT_PHV_ALLOC)
       extensions/p4_tests/p4_14/customer/ruijie/p4c-2250.p4
       switch_ent_dc_general # To be removed when switch-14 profiles are removed
     )
+
+    p4c_add_xfail_reason("tofino"
+      "ActionAnalysis did not split up container by container"
+      extensions/p4_tests/p4_16/customer/arista/obfuscated-nat_vxlan.p4
+    )
 endif (TEST_ALT_PHV_ALLOC)
 
 # P4C-4689: On Tofino1, this test compiles incorrectly but we only report a warning

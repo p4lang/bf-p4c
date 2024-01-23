@@ -93,6 +93,17 @@
 @pa_container_size("pipe_a" , "egress" , "Dwight.Lookeba.Miranda" , 32)
 @pa_no_overlay("pipe_a" , "ingress" , "Dwight.Circle.Whitewood")
 @pa_container_size("pipe_a" , "egress" , "Virgilina.Monrovia.Boerne" , 16)
+@pa_container_size("pipe_a" , "egress" , "Dwight.Lookeba.Hematite" , 8)
+@pa_no_init("egress" , "eg_intr_md_for_dprsr.mirror_egress_port")
+@pa_no_init("egress" , "Dwight.Lookeba.Monahans")
+@pa_no_init("egress" , "Dwight.Lookeba.Pinole")
+@pa_mutually_exclusive("pipe_a" , "egress" , "Virgilina.Wagener.Montross" , "Dwight.Lookeba.Monahans")
+@pa_mutually_exclusive("pipe_a" , "egress" , "Virgilina.Wagener.Bowden" , "Dwight.Lookeba.Pinole")
+@pa_mutually_exclusive("pipe_a" , "egress" , "Virgilina.Lemont.Garibaldi" , "Virgilina.Mayflower.Killen")
+@pa_mutually_exclusive("pipe_a" , "egress" , "Virgilina.Hookdale.Horton" , "Virgilina.Halltown.Comfrey")
+@pa_mutually_exclusive("pipe_a" , "egress" , "Virgilina.Hookdale.Cecilton" , "Virgilina.Halltown.Palmhurst")
+@pa_mutually_exclusive("pipe_a" , "egress" , "Virgilina.Arapahoe.Irvine" , "Dwight.Basco.Buckhorn")
+@pa_mutually_exclusive("pipe_a" , "egress" , "Virgilina.Parkway.Irvine" , "Dwight.Basco.Buckhorn")
 @pa_mutually_exclusive("ingress" , "Dwight.Hillside.Sherack" , "Dwight.Millstone.RossFork")
 @pa_no_overlay("ingress" , "Virgilina.Baker.Freeman")
 @pa_no_overlay("ingress" , "Virgilina.Glenoma.Freeman")
@@ -139,6 +150,7 @@
 @pa_alias("ingress" , "Dwight.Jayton.Basic" , "Dwight.Garrison.Basic")
 @pa_alias("ingress" , "Dwight.Tabler.Kalkaska" , "Dwight.Tabler.Arvada")
 @pa_alias("egress" , "eg_intr_md.egress_port" , "Dwight.Swifton.Bledsoe" , "Dwight.Lookeba.LaConner")
+@pa_alias("egress" , "eg_intr_md_for_dprsr.mirror_qid" , "Dwight.Swifton.Hanamaulu")
 @pa_alias("egress" , "eg_intr_md_for_dprsr.mirror_type" , "Dwight.Milano.Bayshore")
 @pa_alias("egress" , "Virgilina.Lemont.Eldred" , "Dwight.Lookeba.Pettry")
 @pa_alias("egress" , "Virgilina.Lemont.Chloride" , "Dwight.Courtdale.Moorcroft")
@@ -264,8 +276,10 @@ struct Grabill {
 }
 
 struct Toklat {
-    PortId_t Bledsoe;
-    bit<16>  Blencoe;
+    PortId_t  Bledsoe;
+    bit<16>   Blencoe;
+    QueueId_t Hanamaulu;
+    bit<16>   Donna;
 }
 
 struct AquaPark {
@@ -444,8 +458,21 @@ header Kalida {
     bit<16> Cisco;
 }
 
+header Westland {
+    bit<192> Florien;
+}
+
+header Lenwood {
+    bit<64> Florien;
+}
+
 header Wallula {
-    bit<416> Florien;
+    bit<8>     Nathalie;
+    varbit<48> Florien;
+}
+
+header Shongaloo {
+    bit<368> Florien;
 }
 
 header Dennison {
@@ -1219,7 +1246,13 @@ struct Wyndmoor {
     Soledad      Geistown;
     Soledad      Lindy;
     Soledad      Brady;
+    Westland     Bronaugh;
+    Lenwood      Moreland;
+    Lenwood      Bergoo;
+    Lenwood      Dubach;
+    Lenwood      McIntosh;
     Wallula      Emden;
+    Shongaloo    Mizpah;
     Meridean     Aguilar;
     Leflore      Brashear;
 }
@@ -2763,7 +2796,7 @@ control Farner(inout Almota Virgilina, inout Wyndmoor Dwight, in egress_intrinsi
         }
         key = {
             Swifton.egress_rid     : exact @name("Swifton.egress_rid") ;
-            Swifton.egress_port    : exact @name("Swifton.Bledsoe") ;
+            Dwight.Swifton.Bledsoe : exact @name("Swifton.Bledsoe") ;
             Dwight.Lookeba.Hueytown: ternary @name("Lookeba.Hueytown") ;
         }
         size = 1024;
@@ -3349,9 +3382,9 @@ control Trion(inout Almota Virgilina, inout Wyndmoor Dwight, in egress_intrinsic
             Carlson();
         }
         key = {
-            Dwight.Lookeba.Newfane      : exact @name("Lookeba.Newfane") ;
-            Swifton.egress_port & 9w0x7f: exact @name("Swifton.Bledsoe") ;
-            Dwight.Lookeba.Hiland       : exact @name("Lookeba.Hiland") ;
+            Dwight.Lookeba.Newfane         : exact @name("Lookeba.Newfane") ;
+            Dwight.Swifton.Bledsoe & 9w0x7f: exact @name("Swifton.Bledsoe") ;
+            Dwight.Lookeba.Hiland          : exact @name("Lookeba.Hiland") ;
         }
         const default_action = Carlson();
         size = 128;
@@ -3580,8 +3613,8 @@ control Kevil(inout Almota Virgilina, inout Wyndmoor Dwight, in egress_intrinsic
             @defaultonly NoAction();
         }
         key = {
-            Dwight.Lookeba.Pettry       : exact @name("Lookeba.Pettry") ;
-            Swifton.egress_port & 9w0x7f: exact @name("Swifton.Bledsoe") ;
+            Dwight.Lookeba.Pettry          : exact @name("Lookeba.Pettry") ;
+            Dwight.Swifton.Bledsoe & 9w0x7f: exact @name("Swifton.Bledsoe") ;
         }
         size = 512;
         const default_action = NoAction();
@@ -4491,7 +4524,7 @@ control Talkeetna(inout Almota Virgilina, inout Wyndmoor Dwight, in egress_intri
     @name(".Quivero.Roosville") Hash<bit<12>>(HashAlgorithm_t.IDENTITY) Quivero;
     @name(".Eucha") action Eucha() {
         bit<12> Beatrice;
-        Beatrice = Quivero.get<tuple<bit<9>, bit<5>>>({ Swifton.egress_port, Swifton.egress_qid[4:0] });
+        Beatrice = Quivero.get<tuple<bit<9>, bit<5>>>({ Dwight.Swifton.Bledsoe, Swifton.egress_qid[4:0] });
         Gorum.count((bit<12>)Beatrice);
     }
     @disable_atomic_modify(1) @name(".Holyoke") table Holyoke {
@@ -4536,8 +4569,8 @@ control Skiatook(inout Almota Virgilina, inout Wyndmoor Dwight, in egress_intrin
             Parole();
         }
         key = {
-            Swifton.egress_port & 9w0x7f: exact @name("Swifton.Bledsoe") ;
-            Dwight.Lookeba.RedElm       : exact @name("Lookeba.RedElm") ;
+            Dwight.Swifton.Bledsoe & 9w0x7f: exact @name("Swifton.Bledsoe") ;
+            Dwight.Lookeba.RedElm          : exact @name("Lookeba.RedElm") ;
         }
         const default_action = Parole();
         size = 4096;
@@ -4561,7 +4594,7 @@ control Reading(inout Almota Virgilina, inout Wyndmoor Dwight, in egress_intrins
     @name(".Sanatoga.Dunedin") Hash<bit<19>>(HashAlgorithm_t.IDENTITY) Sanatoga;
     @name(".Tocito") action Tocito() {
         bit<19> Beatrice;
-        Beatrice = Sanatoga.get<tuple<bit<9>, bit<12>>>({ Swifton.egress_port, (bit<12>)Dwight.Lookeba.RedElm });
+        Beatrice = Sanatoga.get<tuple<bit<9>, bit<12>>>({ Dwight.Swifton.Bledsoe, (bit<12>)Dwight.Lookeba.RedElm });
         Dwight.Moultrie.Ovett = Aquilla.execute((bit<32>)Beatrice);
     }
     @name(".Mulhall") Register<bit<1>, bit<32>>(32w294912, 1w0) Mulhall;
@@ -4576,7 +4609,7 @@ control Reading(inout Almota Virgilina, inout Wyndmoor Dwight, in egress_intrins
     };
     @name(".Covington") action Covington() {
         bit<19> Beatrice;
-        Beatrice = Sanatoga.get<tuple<bit<9>, bit<12>>>({ Swifton.egress_port, (bit<12>)Dwight.Lookeba.RedElm });
+        Beatrice = Sanatoga.get<tuple<bit<9>, bit<12>>>({ Dwight.Swifton.Bledsoe, (bit<12>)Dwight.Lookeba.RedElm });
         Dwight.Moultrie.Murphy = Okarche.execute((bit<32>)Beatrice);
     }
     @disable_atomic_modify(1) @name(".Robinette") table Robinette {
@@ -4614,14 +4647,14 @@ control DelRey(inout Almota Virgilina, inout Wyndmoor Dwight, in egress_intrinsi
             Perryton();
         }
         key = {
-            Swifton.egress_port & 9w0x7f: ternary @name("Swifton.Bledsoe") ;
-            Dwight.Moultrie.Murphy      : ternary @name("Moultrie.Murphy") ;
-            Dwight.Moultrie.Ovett       : ternary @name("Moultrie.Ovett") ;
-            Dwight.Lookeba.Miranda      : ternary @name("Lookeba.Miranda") ;
-            Dwight.Lookeba.Montague     : ternary @name("Lookeba.Montague") ;
-            Virgilina.Baker.Dunstable   : ternary @name("Baker.Dunstable") ;
-            Virgilina.Baker.isValid()   : ternary @name("Baker") ;
-            Dwight.Lookeba.Heuvelton    : ternary @name("Lookeba.Heuvelton") ;
+            Dwight.Swifton.Bledsoe & 9w0x7f: ternary @name("Swifton.Bledsoe") ;
+            Dwight.Moultrie.Murphy         : ternary @name("Moultrie.Murphy") ;
+            Dwight.Moultrie.Ovett          : ternary @name("Moultrie.Ovett") ;
+            Dwight.Lookeba.Miranda         : ternary @name("Lookeba.Miranda") ;
+            Dwight.Lookeba.Montague        : ternary @name("Lookeba.Montague") ;
+            Virgilina.Baker.Dunstable      : ternary @name("Baker.Dunstable") ;
+            Virgilina.Baker.isValid()      : ternary @name("Baker") ;
+            Dwight.Lookeba.Heuvelton       : ternary @name("Lookeba.Heuvelton") ;
         }
         default_action = Perryton();
         size = 512;
@@ -4989,7 +5022,7 @@ control Rembrandt(inout Almota Virgilina, inout Wyndmoor Dwight, in egress_intri
             Valmont();
         }
         key = {
-            Swifton.egress_port    : ternary @name("Swifton.Bledsoe") ;
+            Dwight.Swifton.Bledsoe : ternary @name("Swifton.Bledsoe") ;
             Dwight.Lookeba.Placedo : ternary @name("Lookeba.Placedo") ;
             Dwight.Lookeba.Delavan : ternary @name("Lookeba.Delavan") ;
             Dwight.Lookeba.Huffman : exact @name("Lookeba.Huffman") ;
@@ -5178,6 +5211,169 @@ control Elliston(inout Almota Virgilina, inout Wyndmoor Dwight, in ingress_intri
 
 control Bruce(inout Almota Virgilina, inout Wyndmoor Dwight, in egress_intrinsic_metadata_t Swifton, in egress_intrinsic_metadata_from_parser_t Neosho, inout egress_intrinsic_metadata_for_deparser_t Islen, inout egress_intrinsic_metadata_for_output_port_t BarNunn) {
     apply {
+    }
+}
+
+control Shelbiana(inout Almota Virgilina, inout Wyndmoor Dwight, in egress_intrinsic_metadata_t Swifton, in egress_intrinsic_metadata_from_parser_t Neosho, inout egress_intrinsic_metadata_for_deparser_t Islen, inout egress_intrinsic_metadata_for_output_port_t BarNunn) {
+    @name(".Snohomish") action Snohomish() {
+        Islen.mirror_type = (bit<4>)4w2;
+        @in_hash {
+            Dwight.Hearne.Arvada[7:0] = Dwight.Lookeba.Freeburg[7:0];
+        }
+        Islen.mirror_io_select = (bit<1>)1w1;
+        Islen.mtu_trunc_len = (bit<14>)14w64;
+        Virgilina.Mizpah.Florien = (bit<368>)368w0;
+        Virgilina.Mizpah.setValid();
+    }
+    @hidden @disable_atomic_modify(1) @name(".Huxley") table Huxley {
+        actions = {
+            Snohomish();
+            @defaultonly NoAction();
+        }
+        key = {
+            Virgilina.Bronaugh.isValid(): exact @name("Bronaugh") ;
+        }
+        size = 1;
+        const entries = {
+                        true : Snohomish();
+
+        }
+
+        default_action = NoAction();
+    }
+    apply {
+        if (Dwight.Swifton.Blencoe[15:8] == 8w0 && Dwight.Swifton.Blencoe[7:0] < 8w68) {
+            Huxley.apply();
+        }
+    }
+}
+
+control Taiban(inout Almota Virgilina, inout Wyndmoor Dwight, in egress_intrinsic_metadata_t Swifton, in egress_intrinsic_metadata_from_parser_t Neosho, inout egress_intrinsic_metadata_for_deparser_t Islen, inout egress_intrinsic_metadata_for_output_port_t BarNunn) {
+    @name(".Herald") action Herald() {
+    }
+@pa_no_init("egress" , "eg_intr_md_for_dprsr.mirror_egress_port")
+@pa_mutually_exclusive("egress" , "eg_intr_md_for_dprsr.mirror_egress_port" , "Virgilina.Lemont")
+@pa_mutually_exclusive("egress" , "eg_intr_md_for_dprsr.mirror_egress_port" , "Virgilina.Hookdale")
+@name(".Hilltop") action Hilltop() {
+        Islen.mirror_egress_port = Dwight.Swifton.Bledsoe;
+        @in_hash {
+            Dwight.Swifton.Bledsoe[7:0] = Dwight.Hearne.Arvada[7:0];
+        }
+        Islen.mirror_type = (bit<4>)4w3;
+        Islen.mirror_io_select = (bit<1>)1w1;
+        Islen.mirror_qid = Swifton.egress_qid;
+        Islen.drop_ctl = (bit<3>)3w1;
+        Dwight.Hearne.Arvada = (bit<10>)10w192;
+    }
+    @hidden @disable_atomic_modify(1) @name(".Shivwits") table Shivwits {
+        key = {
+            Virgilina.Mayflower.isValid(): ternary @name("Mayflower") ;
+            Virgilina.Ambler[0].isValid(): ternary @name("Ambler[0]") ;
+            Virgilina.Ambler[1].isValid(): ternary @name("Ambler[1]") ;
+            Virgilina.CatCreek.isValid() : ternary @name("CatCreek") ;
+            Virgilina.Arapahoe.isValid() : ternary @name("Arapahoe") ;
+            Virgilina.Parkway.isValid()  : ternary @name("Parkway") ;
+            Virgilina.Wagener.isValid()  : ternary @name("Wagener") ;
+            Dwight.Lookeba.Chavies       : ternary @name("Lookeba.Chavies") ;
+            Virgilina.Brady.isValid()    : ternary @name("Brady") ;
+            Dwight.Lookeba.Vergennes     : ternary @name("Lookeba.Vergennes") ;
+            Dwight.Swifton.Blencoe       : range @name("Swifton.Blencoe") ;
+        }
+        actions = {
+            Herald();
+            Hilltop();
+        }
+        size = 64;
+        requires_versioning = false;
+        const default_action = Herald();
+        const entries = {
+                        (false, default, default, default, default, default, default, default, default, 3w2, default) : Herald();
+
+                        (false, default, default, default, default, default, true, default, default, default, default) : Herald();
+
+                        (false, default, default, default, true, default, default, default, default, default, default) : Herald();
+
+                        (false, default, default, default, default, true, default, default, default, default, default) : Herald();
+
+                        (true, default, default, default, false, false, false, default, default, 3w1, 16w0 .. 16w86) : Hilltop();
+
+                        (true, default, default, default, false, false, false, default, default, 3w1, default) : Herald();
+
+                        (true, default, default, default, false, false, false, default, default, 3w5, 16w0 .. 16w86) : Hilltop();
+
+                        (true, default, default, default, false, false, false, default, default, 3w5, default) : Herald();
+
+                        (true, default, default, default, false, false, false, default, default, 3w6, 16w0 .. 16w86) : Hilltop();
+
+                        (true, default, default, default, false, false, false, default, default, 3w6, default) : Herald();
+
+                        (true, default, default, default, false, false, false, 1w0, false, default, 16w0 .. 16w86) : Hilltop();
+
+                        (true, default, default, default, false, false, false, 1w1, false, default, 16w0 .. 16w90) : Hilltop();
+
+                        (true, default, default, default, false, false, false, 1w1, true, default, 16w0 .. 16w90) : Hilltop();
+
+                        (true, default, default, default, false, false, false, default, default, default, default) : Herald();
+
+                        (false, false, false, default, false, false, false, default, default, 3w1, 16w0 .. 16w100) : Hilltop();
+
+                        (false, true, false, default, false, false, false, default, default, 3w1, 16w0 .. 16w96) : Hilltop();
+
+                        (false, true, true, default, false, false, false, default, default, 3w1, 16w0 .. 16w92) : Hilltop();
+
+                        (false, default, default, default, false, false, false, default, default, 3w1, default) : Herald();
+
+                        (false, false, false, default, false, false, false, default, default, 3w5, 16w0 .. 16w100) : Hilltop();
+
+                        (false, true, false, default, false, false, false, default, default, 3w5, 16w0 .. 16w96) : Hilltop();
+
+                        (false, true, true, default, false, false, false, default, default, 3w5, 16w0 .. 16w92) : Hilltop();
+
+                        (false, default, default, default, false, false, false, default, default, 3w5, default) : Herald();
+
+                        (false, false, false, default, false, false, false, default, default, 3w6, 16w0 .. 16w100) : Hilltop();
+
+                        (false, true, false, default, false, false, false, default, default, 3w6, 16w0 .. 16w96) : Hilltop();
+
+                        (false, true, true, default, false, false, false, default, default, 3w6, 16w0 .. 16w92) : Hilltop();
+
+                        (false, default, default, default, false, false, false, default, default, 3w6, default) : Herald();
+
+                        (false, default, default, default, false, false, false, default, default, 3w2, 16w0 .. 16w100) : Hilltop();
+
+                        (false, default, default, default, false, false, false, default, default, 3w2, default) : Herald();
+
+                        (false, false, false, false, false, false, false, default, true, default, 16w0 .. 16w104) : Hilltop();
+
+                        (false, true, false, false, false, false, false, default, true, default, 16w0 .. 16w100) : Hilltop();
+
+                        (false, true, true, false, false, false, false, default, true, default, 16w0 .. 16w96) : Hilltop();
+
+                        (false, false, false, default, false, false, false, 1w0, false, default, 16w0 .. 16w100) : Hilltop();
+
+                        (false, false, false, default, false, false, false, 1w1, false, default, 16w0 .. 16w104) : Hilltop();
+
+                        (false, false, false, default, false, false, false, 1w1, true, default, 16w0 .. 16w108) : Hilltop();
+
+                        (false, true, false, default, false, false, false, 1w0, false, default, 16w0 .. 16w96) : Hilltop();
+
+                        (false, true, false, default, false, false, false, 1w1, false, default, 16w0 .. 16w100) : Hilltop();
+
+                        (false, true, false, default, false, false, false, 1w1, true, default, 16w0 .. 16w104) : Hilltop();
+
+                        (false, true, true, default, false, false, false, 1w0, false, default, 16w0 .. 16w92) : Hilltop();
+
+                        (false, true, true, default, false, false, false, 1w1, false, default, 16w0 .. 16w96) : Hilltop();
+
+                        (false, true, true, default, false, false, false, 1w1, true, default, 16w0 .. 16w100) : Hilltop();
+
+        }
+
+    }
+    apply {
+        if (Virgilina.Lemont.isValid() && Islen.drop_ctl == 3w0) {
+            Shivwits.apply();
+        }
     }
 }
 
@@ -6676,7 +6872,9 @@ parser ElMirage(packet_in Blakeslee, out Almota Virgilina, out Wyndmoor Dwight, 
     state start {
         Blakeslee.extract<egress_intrinsic_metadata_t>(Swifton);
         Dwight.Swifton.Blencoe = Swifton.pkt_length;
-        transition select(Swifton.egress_port ++ (Blakeslee.lookahead<Willard>()).Bayshore) {
+        Dwight.Swifton.Bledsoe = Swifton.egress_port;
+        transition select(Dwight.Swifton.Bledsoe ++ (Blakeslee.lookahead<Willard>()).Bayshore) {
+            17w3 &&& 17w0xff: McKibben;
             Amboy: Pearcy;
             17w0 &&& 17w0x7: Murdock;
             default: McKibben;
@@ -6711,6 +6909,7 @@ parser ElMirage(packet_in Blakeslee, out Almota Virgilina, out Wyndmoor Dwight, 
         transition select(Milano.Bayshore) {
             8w1 &&& 8w0x7: Wiota;
             8w2 &&& 8w0x7: Whitetail;
+            8w3 &&& 8w0x7: Borup;
             default: Minneota;
         }
     }
@@ -6727,12 +6926,61 @@ parser ElMirage(packet_in Blakeslee, out Almota Virgilina, out Wyndmoor Dwight, 
         }
         transition Paoli;
     }
+    state Borup {
+        transition select(Dwight.Swifton.Blencoe[7:0]) {
+            8w0x0 &&& 8w0xe0: Kosciusko;
+            8w0x20 &&& 8w0xf8: Kosciusko;
+            8w0x28 &&& 8w0xf8: Raven;
+            8w0x30 &&& 8w0xf8: Bowdon;
+            8w0x38 &&& 8w0xf8: Kisatchie;
+            8w0x40 &&& 8w0xf8: Coconut;
+            default: Minneota;
+        }
+    }
+    state Kosciusko {
+        Blakeslee.extract<Westland>(Virgilina.Bronaugh);
+        transition Sawmills;
+    }
+    state Raven {
+        Blakeslee.extract<Westland>(Virgilina.Bronaugh);
+        Blakeslee.extract<Lenwood>(Virgilina.Moreland);
+        transition Sawmills;
+    }
+    state Bowdon {
+        Blakeslee.extract<Westland>(Virgilina.Bronaugh);
+        Blakeslee.extract<Lenwood>(Virgilina.Moreland);
+        Blakeslee.extract<Lenwood>(Virgilina.Bergoo);
+        transition Sawmills;
+    }
+    state Kisatchie {
+        Blakeslee.extract<Westland>(Virgilina.Bronaugh);
+        Blakeslee.extract<Lenwood>(Virgilina.Moreland);
+        Blakeslee.extract<Lenwood>(Virgilina.Bergoo);
+        Blakeslee.extract<Lenwood>(Virgilina.Dubach);
+        transition Sawmills;
+    }
+    state Coconut {
+        Blakeslee.extract<Westland>(Virgilina.Bronaugh);
+        Blakeslee.extract<Lenwood>(Virgilina.Moreland);
+        Blakeslee.extract<Lenwood>(Virgilina.Bergoo);
+        Blakeslee.extract<Lenwood>(Virgilina.Dubach);
+        Blakeslee.extract<Lenwood>(Virgilina.McIntosh);
+        transition Sawmills;
+    }
+    state Sawmills {
+        transition select(Dwight.Swifton.Blencoe[2:0]) {
+            3w0: Minneota;
+            default: Dorothy;
+        }
+    }
+    state Dorothy {
+        Blakeslee.extract<Wallula>(Virgilina.Emden, (bit<32>)((bit<8>)(Dwight.Swifton.Blencoe[2:0] - 3w1) * 8w8));
+        transition Minneota;
+    }
     state Minneota {
         transition accept;
     }
     state Tatum {
-        Virgilina.Emden.setValid();
-        Virgilina.Emden = Blakeslee.lookahead<Wallula>();
         transition accept;
     }
 }
@@ -6776,7 +7024,7 @@ control Coalton(inout Almota Virgilina, inout Wyndmoor Dwight, in egress_intrins
             @defaultonly NoAction();
         }
         key = {
-            Swifton.egress_port         : exact @name("Swifton.Bledsoe") ;
+            Dwight.Swifton.Bledsoe      : exact @name("Swifton.Bledsoe") ;
             Dwight.Yorkshire.Lewiston   : exact @name("Yorkshire.Lewiston") ;
             Dwight.Lookeba.Chavies      : exact @name("Lookeba.Chavies") ;
             Dwight.Lookeba.Vergennes    : exact @name("Lookeba.Vergennes") ;
@@ -6795,117 +7043,6 @@ control Coalton(inout Almota Virgilina, inout Wyndmoor Dwight, in egress_intrins
         }
         size = 512;
         default_action = NoAction();
-    }
-    @name(".Herald") action Herald() {
-        Virgilina.Emden.setInvalid();
-    }
-    @name(".Hilltop") action Hilltop() {
-        Islen.mtu_trunc_len = (bit<14>)14w64;
-    }
-    @hidden @disable_atomic_modify(1) @name(".Shivwits") table Shivwits {
-        key = {
-            Virgilina.Mayflower.isValid(): ternary @name("Mayflower") ;
-            Virgilina.Ambler[0].isValid(): ternary @name("Ambler[0]") ;
-            Virgilina.Ambler[1].isValid(): ternary @name("Ambler[1]") ;
-            Virgilina.CatCreek.isValid() : ternary @name("CatCreek") ;
-            Virgilina.Arapahoe.isValid() : ternary @name("Arapahoe") ;
-            Virgilina.Parkway.isValid()  : ternary @name("Parkway") ;
-            Virgilina.Wagener.isValid()  : ternary @name("Wagener") ;
-            Dwight.Lookeba.Chavies       : ternary @name("Lookeba.Chavies") ;
-            Virgilina.Brady.isValid()    : ternary @name("Brady") ;
-            Dwight.Lookeba.Vergennes     : ternary @name("Lookeba.Vergennes") ;
-            Dwight.Swifton.Blencoe       : range @name("Swifton.Blencoe") ;
-        }
-        actions = {
-            Herald();
-            Hilltop();
-        }
-        size = 64;
-        requires_versioning = false;
-        const default_action = Herald();
-        const entries = {
-                        (false, default, default, default, default, default, default, default, default, 3w2, default) : Herald();
-
-                        (false, default, default, default, default, default, true, default, default, default, default) : Herald();
-
-                        (false, default, default, default, true, default, default, default, default, default, default) : Herald();
-
-                        (false, default, default, default, default, true, default, default, default, default, default) : Herald();
-
-                        (true, default, default, default, false, false, false, default, default, 3w1, 16w0 .. 16w86) : Hilltop();
-
-                        (true, default, default, default, false, false, false, default, default, 3w1, default) : Herald();
-
-                        (true, default, default, default, false, false, false, default, default, 3w5, 16w0 .. 16w86) : Hilltop();
-
-                        (true, default, default, default, false, false, false, default, default, 3w5, default) : Herald();
-
-                        (true, default, default, default, false, false, false, default, default, 3w6, 16w0 .. 16w86) : Hilltop();
-
-                        (true, default, default, default, false, false, false, default, default, 3w6, default) : Herald();
-
-                        (true, default, default, default, false, false, false, 1w0, false, default, 16w0 .. 16w86) : Hilltop();
-
-                        (true, default, default, default, false, false, false, 1w1, false, default, 16w0 .. 16w90) : Hilltop();
-
-                        (true, default, default, default, false, false, false, 1w1, true, default, 16w0 .. 16w90) : Hilltop();
-
-                        (true, default, default, default, false, false, false, default, default, default, default) : Herald();
-
-                        (false, false, false, default, false, false, false, default, default, 3w1, 16w0 .. 16w100) : Hilltop();
-
-                        (false, true, false, default, false, false, false, default, default, 3w1, 16w0 .. 16w96) : Hilltop();
-
-                        (false, true, true, default, false, false, false, default, default, 3w1, 16w0 .. 16w92) : Hilltop();
-
-                        (false, default, default, default, false, false, false, default, default, 3w1, default) : Herald();
-
-                        (false, false, false, default, false, false, false, default, default, 3w5, 16w0 .. 16w100) : Hilltop();
-
-                        (false, true, false, default, false, false, false, default, default, 3w5, 16w0 .. 16w96) : Hilltop();
-
-                        (false, true, true, default, false, false, false, default, default, 3w5, 16w0 .. 16w92) : Hilltop();
-
-                        (false, default, default, default, false, false, false, default, default, 3w5, default) : Herald();
-
-                        (false, false, false, default, false, false, false, default, default, 3w6, 16w0 .. 16w100) : Hilltop();
-
-                        (false, true, false, default, false, false, false, default, default, 3w6, 16w0 .. 16w96) : Hilltop();
-
-                        (false, true, true, default, false, false, false, default, default, 3w6, 16w0 .. 16w92) : Hilltop();
-
-                        (false, default, default, default, false, false, false, default, default, 3w6, default) : Herald();
-
-                        (false, default, default, default, false, false, false, default, default, 3w2, 16w0 .. 16w100) : Hilltop();
-
-                        (false, default, default, default, false, false, false, default, default, 3w2, default) : Herald();
-
-                        (false, false, false, false, false, false, false, default, true, default, 16w0 .. 16w104) : Hilltop();
-
-                        (false, true, false, false, false, false, false, default, true, default, 16w0 .. 16w100) : Hilltop();
-
-                        (false, true, true, false, false, false, false, default, true, default, 16w0 .. 16w96) : Hilltop();
-
-                        (false, false, false, default, false, false, false, 1w0, false, default, 16w0 .. 16w100) : Hilltop();
-
-                        (false, false, false, default, false, false, false, 1w1, false, default, 16w0 .. 16w104) : Hilltop();
-
-                        (false, false, false, default, false, false, false, 1w1, true, default, 16w0 .. 16w108) : Hilltop();
-
-                        (false, true, false, default, false, false, false, 1w0, false, default, 16w0 .. 16w96) : Hilltop();
-
-                        (false, true, false, default, false, false, false, 1w1, false, default, 16w0 .. 16w100) : Hilltop();
-
-                        (false, true, false, default, false, false, false, 1w1, true, default, 16w0 .. 16w104) : Hilltop();
-
-                        (false, true, true, default, false, false, false, 1w0, false, default, 16w0 .. 16w92) : Hilltop();
-
-                        (false, true, true, default, false, false, false, 1w1, false, default, 16w0 .. 16w96) : Hilltop();
-
-                        (false, true, true, default, false, false, false, 1w1, true, default, 16w0 .. 16w100) : Hilltop();
-
-        }
-
     }
     @name(".Hercules") Bruce() Hercules;
     @name(".Elsinore") Cruso() Elsinore;
@@ -6936,6 +7073,8 @@ control Coalton(inout Almota Virgilina, inout Wyndmoor Dwight, in egress_intrins
     @name(".Devore") Clarinda() Devore;
     @name(".Melvina") Casselman() Melvina;
     @name(".Seibert") Swandale() Seibert;
+    @name(".Urbanette") Taiban() Urbanette;
+    @name(".Temelec") Shelbiana() Temelec;
     @name(".Maybee") Truro() Maybee;
     @name(".Tryon") Natalbany() Tryon;
     @name(".Fairborn") Wauregan() Fairborn;
@@ -6994,6 +7133,9 @@ control Coalton(inout Almota Virgilina, inout Wyndmoor Dwight, in egress_intrins
             }
             Alamance.apply(Virgilina, Dwight, Swifton, Neosho, Islen, BarNunn);
             Hercules.apply(Virgilina, Dwight, Swifton, Neosho, Islen, BarNunn);
+            Urbanette.apply(Virgilina, Dwight, Swifton, Neosho, Islen, BarNunn);
+        } else if (Virgilina.Bronaugh.isValid()) {
+            Temelec.apply(Virgilina, Dwight, Swifton, Neosho, Islen, BarNunn);
         } else {
             if (Virgilina.Lemont.isValid() == false) {
                 Mellott.apply(Virgilina, Dwight, Swifton, Neosho, Islen, BarNunn);
@@ -7008,9 +7150,7 @@ control Coalton(inout Almota Virgilina, inout Wyndmoor Dwight, in egress_intrins
             } else if (Virgilina.Monrovia.isValid()) {
                 China.apply(Virgilina, Dwight, Swifton, Neosho, Islen, BarNunn);
             }
-        }
-        if (Virgilina.Emden.isValid()) {
-            Shivwits.apply();
+            Urbanette.apply(Virgilina, Dwight, Swifton, Neosho, Islen, BarNunn);
         }
     }
 }
@@ -7022,6 +7162,13 @@ control McFaddin(packet_out Blakeslee, inout Almota Virgilina, in Wyndmoor Dwigh
     apply {
         {
             if (Islen.mirror_type == 4w2) {
+                Willard Newberg;
+                Newberg.setValid();
+                Newberg.Bayshore = Dwight.Milano.Bayshore;
+                Newberg.Florien = Dwight.Milano.Bayshore;
+                Newberg.Freeburg = Dwight.Swifton.Bledsoe;
+                Kealia.emit<Willard>((MirrorId_t)Dwight.Hearne.Arvada, Newberg);
+            } else if (Islen.mirror_type == 4w3) {
                 Willard Newberg;
                 Newberg.setValid();
                 Newberg.Bayshore = Dwight.Milano.Bayshore;
@@ -7052,7 +7199,13 @@ control McFaddin(packet_out Blakeslee, inout Almota Virgilina, in Wyndmoor Dwigh
             Blakeslee.emit<Whitten>(Virgilina.Lauada);
             Blakeslee.emit<Powderly>(Virgilina.Harding);
             Blakeslee.emit<Thayne>(Virgilina.Swanlake);
+            Blakeslee.emit<Westland>(Virgilina.Bronaugh);
+            Blakeslee.emit<Lenwood>(Virgilina.Moreland);
+            Blakeslee.emit<Lenwood>(Virgilina.Bergoo);
+            Blakeslee.emit<Lenwood>(Virgilina.Dubach);
+            Blakeslee.emit<Lenwood>(Virgilina.McIntosh);
             Blakeslee.emit<Wallula>(Virgilina.Emden);
+            Blakeslee.emit<Shongaloo>(Virgilina.Mizpah);
         }
     }
 }

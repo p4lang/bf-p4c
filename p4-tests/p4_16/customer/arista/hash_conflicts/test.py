@@ -1,4 +1,4 @@
-# PTF test for obfuscated-msee_tofino2.
+# PTF test for hash_conflicts.
 #
 # Tests table programming for the Pierson table. This is to catch cases where
 # hashing changes cause increased collisions, resulting in entries being
@@ -4023,7 +4023,7 @@ entries = [
 
 class TableOccupancyTest(BfRuntimeTest):
     def setUp(self):
-        BfRuntimeTest.setUp(self, 0, 'obfuscated-msee_tofino2')
+        BfRuntimeTest.setUp(self, 0, 'hash_conflicts')
         self.dev_id = 0
         self.table_entries = []
         self.bfrt_info = None
@@ -4056,7 +4056,7 @@ class TableOccupancyTest(BfRuntimeTest):
 
     def runTest(self):
         # Get bfrt_info and set it as part of the test.
-        self.bfrt_info = self.interface.bfrt_info_get('obfuscated-msee_tofino2')
+        self.bfrt_info = self.interface.bfrt_info_get('hash_conflicts')
 
         # Set target to all pipes on device self.dev_id.
         self.target = gc.Target(device_id = self.dev_id, pipe_id = 0xffff)

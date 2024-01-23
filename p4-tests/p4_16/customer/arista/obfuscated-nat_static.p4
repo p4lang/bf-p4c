@@ -194,8 +194,10 @@ struct Glassboro {
 }
 
 struct Moorcroft {
-    PortId_t Toklat;
-    bit<16>  Bledsoe;
+    PortId_t  Toklat;
+    bit<16>   Bledsoe;
+    QueueId_t Dubach;
+    bit<16>   McIntosh;
 }
 
 struct Blencoe {
@@ -345,8 +347,21 @@ header Turkey {
     bit<16> Connell;
 }
 
+header Mizpah {
+    bit<192> Palmhurst;
+}
+
+header Shelbiana {
+    bit<64> Palmhurst;
+}
+
 header Riner {
-    bit<416> Palmhurst;
+    bit<8>     Snohomish;
+    varbit<48> Palmhurst;
+}
+
+header Huxley {
+    bit<368> Palmhurst;
 }
 
 header Comfrey {
@@ -1130,6 +1145,11 @@ struct Levasy {
 struct Rhinebeck {
     bit<32> Chatanika;
     bit<32> Boyle;
+}
+
+control Taiban(inout Baker Noyack, inout Harriet Hettinger, in egress_intrinsic_metadata_t Hookdale, in egress_intrinsic_metadata_from_parser_t Duchesne, inout egress_intrinsic_metadata_for_deparser_t Centre, inout egress_intrinsic_metadata_for_output_port_t Pocopson) {
+    apply {
+    }
 }
 
 control Ackerly(inout Baker Noyack, inout Harriet Hettinger, in ingress_intrinsic_metadata_t Almota, in ingress_intrinsic_metadata_from_parser_t Coryville, inout ingress_intrinsic_metadata_for_deparser_t Bellamy, inout ingress_intrinsic_metadata_for_tm_t Lemont) {
@@ -3137,7 +3157,7 @@ control FourTown(inout Baker Noyack, inout Harriet Hettinger, in egress_intrinsi
 
 control OldTown(inout Baker Noyack, inout Harriet Hettinger, in egress_intrinsic_metadata_t Hookdale, in egress_intrinsic_metadata_from_parser_t Duchesne, inout egress_intrinsic_metadata_for_deparser_t Centre, inout egress_intrinsic_metadata_for_output_port_t Pocopson) {
     apply {
-        if (Hookdale.egress_rid != 16w0 && Hookdale.egress_port == 9w68) {
+        if (Hookdale.egress_rid != 16w0 && Hettinger.Hookdale.Toklat == 9w68) {
             Noyack.Lauada.setValid();
             Noyack.Lauada.DonaAna = (bit<8>)8w0x3;
         }
@@ -4765,8 +4785,8 @@ control Chandalar(inout Baker Noyack, inout Harriet Hettinger, in egress_intrins
             @defaultonly Brashear();
         }
         key = {
-            Hookdale.egress_rid : exact @name("Hookdale.egress_rid") ;
-            Hookdale.egress_port: exact @name("Hookdale.Toklat") ;
+            Hookdale.egress_rid      : exact @name("Hookdale.egress_rid") ;
+            Hettinger.Hookdale.Toklat: exact @name("Hookdale.Toklat") ;
         }
         size = 512;
         const default_action = Brashear();
@@ -4785,7 +4805,7 @@ control Gorum(inout Baker Noyack, inout Harriet Hettinger, in egress_intrinsic_m
             Quivero();
         }
         key = {
-            Hookdale.egress_port: exact @name("Hookdale.Toklat") ;
+            Hettinger.Hookdale.Toklat: exact @name("Hookdale.Toklat") ;
         }
         const default_action = Quivero(10w0);
         size = 128;
@@ -5128,9 +5148,9 @@ control Browning(inout Baker Noyack, inout Harriet Hettinger, in egress_intrinsi
             Arion();
         }
         key = {
-            Hettinger.Moultrie.Woodfield : exact @name("Moultrie.Woodfield") ;
-            Hookdale.egress_port & 9w0x7f: exact @name("Hookdale.Toklat") ;
-            Hettinger.Moultrie.Bufalo    : exact @name("Moultrie.Bufalo") ;
+            Hettinger.Moultrie.Woodfield      : exact @name("Moultrie.Woodfield") ;
+            Hettinger.Hookdale.Toklat & 9w0x7f: exact @name("Hookdale.Toklat") ;
+            Hettinger.Moultrie.Bufalo         : exact @name("Moultrie.Bufalo") ;
         }
         const default_action = Arion();
         size = 128;
@@ -5239,8 +5259,8 @@ control Burnett(inout Baker Noyack, inout Harriet Hettinger, in egress_intrinsic
             @defaultonly NoAction();
         }
         key = {
-            Hettinger.Moultrie.Maddock   : exact @name("Moultrie.Maddock") ;
-            Hookdale.egress_port & 9w0x7f: exact @name("Hookdale.Toklat") ;
+            Hettinger.Moultrie.Maddock        : exact @name("Moultrie.Maddock") ;
+            Hettinger.Hookdale.Toklat & 9w0x7f: exact @name("Hookdale.Toklat") ;
         }
         size = 512;
         const default_action = NoAction();
@@ -6155,7 +6175,7 @@ control Alvwood(inout Baker Noyack, inout Harriet Hettinger, in egress_intrinsic
     @name(".Burtrum.Roosville") Hash<bit<12>>(HashAlgorithm_t.IDENTITY) Burtrum;
     @name(".Blanchard") action Blanchard() {
         bit<12> Bagwell;
-        Bagwell = Burtrum.get<tuple<bit<9>, bit<5>>>({ Hookdale.egress_port, Hookdale.egress_qid[4:0] });
+        Bagwell = Burtrum.get<tuple<bit<9>, bit<5>>>({ Hettinger.Hookdale.Toklat, Hookdale.egress_qid[4:0] });
         Glenpool.count((bit<12>)Bagwell);
     }
     @disable_atomic_modify(1) @stage(0) @name(".Gonzalez") table Gonzalez {
@@ -6190,8 +6210,8 @@ control Motley(inout Baker Noyack, inout Harriet Hettinger, in egress_intrinsic_
             Conda();
         }
         key = {
-            Hookdale.egress_port & 9w0x7f: exact @name("Hookdale.Toklat") ;
-            Hettinger.Moultrie.Pettry    : exact @name("Moultrie.Pettry") ;
+            Hettinger.Hookdale.Toklat & 9w0x7f: exact @name("Hookdale.Toklat") ;
+            Hettinger.Moultrie.Pettry         : exact @name("Moultrie.Pettry") ;
         }
         const default_action = Conda();
         size = 4096;
@@ -6215,7 +6235,7 @@ control Harney(inout Baker Noyack, inout Harriet Hettinger, in egress_intrinsic_
     @name(".Colburn.Dunedin") Hash<bit<19>>(HashAlgorithm_t.IDENTITY) Colburn;
     @name(".Kirkwood") action Kirkwood() {
         bit<19> Bagwell;
-        Bagwell = Colburn.get<tuple<bit<9>, bit<12>>>({ Hookdale.egress_port, (bit<12>)Hettinger.Moultrie.Pettry });
+        Bagwell = Colburn.get<tuple<bit<9>, bit<12>>>({ Hettinger.Hookdale.Toklat, (bit<12>)Hettinger.Moultrie.Pettry });
         Hettinger.Peoria.Maumee = Lenapah.execute((bit<32>)Bagwell);
     }
     @name(".Munich") Register<bit<1>, bit<32>>(32w294912, 1w0) Munich;
@@ -6230,7 +6250,7 @@ control Harney(inout Baker Noyack, inout Harriet Hettinger, in egress_intrinsic_
     };
     @name(".Warsaw") action Warsaw() {
         bit<19> Bagwell;
-        Bagwell = Colburn.get<tuple<bit<9>, bit<12>>>({ Hookdale.egress_port, (bit<12>)Hettinger.Moultrie.Pettry });
+        Bagwell = Colburn.get<tuple<bit<9>, bit<12>>>({ Hettinger.Hookdale.Toklat, (bit<12>)Hettinger.Moultrie.Pettry });
         Hettinger.Peoria.Broadwell = Nuevo.execute((bit<32>)Bagwell);
     }
     @disable_atomic_modify(1) @name(".Belcher") table Belcher {
@@ -6268,14 +6288,14 @@ control Vincent(inout Baker Noyack, inout Harriet Hettinger, in egress_intrinsic
             Denning();
         }
         key = {
-            Hookdale.egress_port & 9w0x7f: ternary @name("Hookdale.Toklat") ;
-            Hettinger.Peoria.Broadwell   : ternary @name("Peoria.Broadwell") ;
-            Hettinger.Peoria.Maumee      : ternary @name("Peoria.Maumee") ;
-            Hettinger.Moultrie.Norma     : ternary @name("Moultrie.Norma") ;
-            Hettinger.Moultrie.Cutten    : ternary @name("Moultrie.Cutten") ;
-            Noyack.Rochert.Burrel        : ternary @name("Rochert.Burrel") ;
-            Noyack.Rochert.isValid()     : ternary @name("Rochert") ;
-            Hettinger.Moultrie.Basalt    : ternary @name("Moultrie.Basalt") ;
+            Hettinger.Hookdale.Toklat & 9w0x7f: ternary @name("Hookdale.Toklat") ;
+            Hettinger.Peoria.Broadwell        : ternary @name("Peoria.Broadwell") ;
+            Hettinger.Peoria.Maumee           : ternary @name("Peoria.Maumee") ;
+            Hettinger.Moultrie.Norma          : ternary @name("Moultrie.Norma") ;
+            Hettinger.Moultrie.Cutten         : ternary @name("Moultrie.Cutten") ;
+            Noyack.Rochert.Burrel             : ternary @name("Rochert.Burrel") ;
+            Noyack.Rochert.isValid()          : ternary @name("Rochert") ;
+            Hettinger.Moultrie.Basalt         : ternary @name("Moultrie.Basalt") ;
         }
         default_action = Denning();
         size = 512;
@@ -7019,7 +7039,7 @@ control Devore(inout Baker Noyack, inout Harriet Hettinger, in egress_intrinsic_
             @defaultonly NoAction();
         }
         key = {
-            Hookdale.egress_port     : exact @name("Hookdale.Toklat") ;
+            Hettinger.Hookdale.Toklat: exact @name("Hookdale.Toklat") ;
             Hettinger.Milano.Calabash: exact @name("Milano.Calabash") ;
             Hettinger.Moultrie.Darien: exact @name("Moultrie.Darien") ;
             Hettinger.Moultrie.Cuprum: exact @name("Moultrie.Cuprum") ;
@@ -7079,6 +7099,7 @@ control Devore(inout Baker Noyack, inout Harriet Hettinger, in egress_intrinsic_
     @name(".Richlawn") Asherton() Richlawn;
     @name(".Carlsbad") Lasara() Carlsbad;
     @name(".Contact") Hartwell() Contact;
+    @name(".Borup") Taiban() Borup;
     @name(".Needham") Rendon() Needham;
     @name(".Kamas") Northboro() Kamas;
     @name(".Norco") Browning() Norco;
@@ -7157,6 +7178,7 @@ control Devore(inout Baker Noyack, inout Harriet Hettinger, in egress_intrinsic_
             } else if (Noyack.Tofte.isValid()) {
                 Norco.apply(Noyack, Hettinger, Hookdale, Duchesne, Centre, Pocopson);
             }
+            Borup.apply(Noyack, Hettinger, Hookdale, Duchesne, Centre, Pocopson);
         }
     }
 }
@@ -7273,7 +7295,8 @@ parser Perkasie(packet_in Ossining, out Baker Noyack, out Harriet Hettinger, out
     state start {
         Ossining.extract<egress_intrinsic_metadata_t>(Hookdale);
         Hettinger.Hookdale.Bledsoe = Hookdale.pkt_length;
-        transition select(Hookdale.egress_port ++ (Ossining.lookahead<Willard>()).Bayshore) {
+        Hettinger.Hookdale.Toklat = Hookdale.egress_port;
+        transition select(Hettinger.Hookdale.Toklat ++ (Ossining.lookahead<Willard>()).Bayshore) {
             Tusayan: Piedmont;
             17w0 &&& 17w0x7: Meridean;
             default: Ossineke;

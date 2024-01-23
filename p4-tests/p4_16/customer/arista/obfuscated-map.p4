@@ -152,8 +152,10 @@ struct Glassboro {
 }
 
 struct Moorcroft {
-    PortId_t Toklat;
-    bit<16>  Bledsoe;
+    PortId_t  Toklat;
+    bit<16>   Bledsoe;
+    QueueId_t Eureka;
+    bit<16>   Millett;
 }
 
 struct Blencoe {
@@ -311,8 +313,21 @@ header Palmhurst {
     bit<16> Connell;
 }
 
+header Thistle {
+    bit<192> Kalida;
+}
+
+header Overton {
+    bit<64> Kalida;
+}
+
 header Comfrey {
-    bit<416> Kalida;
+    bit<8>     Karluk;
+    varbit<48> Kalida;
+}
+
+header Bothwell {
+    bit<368> Kalida;
 }
 
 header Wallula {
@@ -1081,6 +1096,11 @@ struct Jerico {
 struct Ruffin {
     bit<32> Rochert;
     bit<32> Swanlake;
+}
+
+control Kealia(inout Lemont Lindy, inout Wyndmoor Brady, in egress_intrinsic_metadata_t PeaRidge, in egress_intrinsic_metadata_from_parser_t Centre, inout egress_intrinsic_metadata_for_deparser_t Pocopson, inout egress_intrinsic_metadata_for_output_port_t Barnwell) {
+    apply {
+    }
 }
 
 control Geistown(inout Lemont Lindy, inout Wyndmoor Brady, in ingress_intrinsic_metadata_t Courtdale, in ingress_intrinsic_metadata_from_parser_t Emden, inout ingress_intrinsic_metadata_for_deparser_t Skillman, inout ingress_intrinsic_metadata_for_tm_t Swifton) {
@@ -2985,8 +3005,8 @@ control Chappell(inout Lemont Lindy, inout Wyndmoor Brady, in egress_intrinsic_m
             @defaultonly Tahuya();
         }
         key = {
-            PeaRidge.egress_rid : exact @name("PeaRidge.egress_rid") ;
-            PeaRidge.egress_port: exact @name("PeaRidge.Toklat") ;
+            PeaRidge.egress_rid  : exact @name("PeaRidge.egress_rid") ;
+            Brady.PeaRidge.Toklat: exact @name("PeaRidge.Toklat") ;
         }
         size = 1024;
         const default_action = Tahuya();
@@ -3005,7 +3025,7 @@ control Durant(inout Lemont Lindy, inout Wyndmoor Brady, in egress_intrinsic_met
             Kingsdale();
         }
         key = {
-            PeaRidge.egress_port: exact @name("PeaRidge.Toklat") ;
+            Brady.PeaRidge.Toklat: exact @name("PeaRidge.Toklat") ;
         }
         const default_action = Kingsdale(10w0);
         size = 128;
@@ -3351,9 +3371,9 @@ control Carlson(inout Lemont Lindy, inout Wyndmoor Brady, in egress_intrinsic_me
             Kevil();
         }
         key = {
-            Brady.Lookeba.Westboro       : exact @name("Lookeba.Westboro") ;
-            PeaRidge.egress_port & 9w0x7f: exact @name("PeaRidge.Toklat") ;
-            Brady.Lookeba.Rudolph        : exact @name("Lookeba.Rudolph") ;
+            Brady.Lookeba.Westboro        : exact @name("Lookeba.Westboro") ;
+            Brady.PeaRidge.Toklat & 9w0x7f: exact @name("PeaRidge.Toklat") ;
+            Brady.Lookeba.Rudolph         : exact @name("Lookeba.Rudolph") ;
         }
         const default_action = Kevil();
         size = 128;
@@ -3462,8 +3482,8 @@ control Waumandee(inout Lemont Lindy, inout Wyndmoor Brady, in egress_intrinsic_
             @defaultonly NoAction();
         }
         key = {
-            Brady.Lookeba.Townville      : exact @name("Lookeba.Townville") ;
-            PeaRidge.egress_port & 9w0x7f: exact @name("PeaRidge.Toklat") ;
+            Brady.Lookeba.Townville       : exact @name("Lookeba.Townville") ;
+            Brady.PeaRidge.Toklat & 9w0x7f: exact @name("PeaRidge.Toklat") ;
         }
         size = 512;
         const default_action = NoAction();
@@ -3848,7 +3868,7 @@ control Dundee(inout Lemont Lindy, inout Wyndmoor Brady, in egress_intrinsic_met
     @name(".Tunis.Roosville") Hash<bit<12>>(HashAlgorithm_t.IDENTITY) Tunis;
     @name(".Pound") action Pound() {
         bit<12> ElkMills;
-        ElkMills = Tunis.get<tuple<bit<9>, bit<5>>>({ PeaRidge.egress_port, PeaRidge.egress_qid[4:0] });
+        ElkMills = Tunis.get<tuple<bit<9>, bit<5>>>({ Brady.PeaRidge.Toklat, PeaRidge.egress_qid[4:0] });
         RedBay.count((bit<12>)ElkMills);
     }
     @disable_atomic_modify(1) @name(".Oakley") table Oakley {
@@ -3883,8 +3903,8 @@ control Ontonagon(inout Lemont Lindy, inout Wyndmoor Brady, in egress_intrinsic_
             Olivet();
         }
         key = {
-            PeaRidge.egress_port & 9w0x7f: exact @name("PeaRidge.Toklat") ;
-            Brady.Lookeba.Basic          : exact @name("Lookeba.Basic") ;
+            Brady.PeaRidge.Toklat & 9w0x7f: exact @name("PeaRidge.Toklat") ;
+            Brady.Lookeba.Basic           : exact @name("Lookeba.Basic") ;
         }
         const default_action = Olivet();
         size = 4096;
@@ -3908,7 +3928,7 @@ control Upalco(inout Lemont Lindy, inout Wyndmoor Brady, in egress_intrinsic_met
     @name(".Ranier.Dunedin") Hash<bit<19>>(HashAlgorithm_t.IDENTITY) Ranier;
     @name(".Hartwell") action Hartwell() {
         bit<19> ElkMills;
-        ElkMills = Ranier.get<tuple<bit<9>, bit<12>>>({ PeaRidge.egress_port, (bit<12>)Brady.Lookeba.Basic });
+        ElkMills = Ranier.get<tuple<bit<9>, bit<12>>>({ Brady.PeaRidge.Toklat, (bit<12>)Brady.Lookeba.Basic });
         Brady.Pinetop.Aldan = Osakis.execute((bit<32>)ElkMills);
     }
     @name(".Corum") Register<bit<1>, bit<32>>(32w294912, 1w0) Corum;
@@ -3923,7 +3943,7 @@ control Upalco(inout Lemont Lindy, inout Wyndmoor Brady, in egress_intrinsic_met
     };
     @name(".Fosston") action Fosston() {
         bit<19> ElkMills;
-        ElkMills = Ranier.get<tuple<bit<9>, bit<12>>>({ PeaRidge.egress_port, (bit<12>)Brady.Lookeba.Basic });
+        ElkMills = Ranier.get<tuple<bit<9>, bit<12>>>({ Brady.PeaRidge.Toklat, (bit<12>)Brady.Lookeba.Basic });
         Brady.Pinetop.RossFork = Nicollet.execute((bit<32>)ElkMills);
     }
     @disable_atomic_modify(1) @name(".Newsoms") table Newsoms {
@@ -3961,14 +3981,14 @@ control Nashwauk(inout Lemont Lindy, inout Wyndmoor Brady, in egress_intrinsic_m
             GlenDean();
         }
         key = {
-            PeaRidge.egress_port & 9w0x7f: ternary @name("PeaRidge.Toklat") ;
-            Brady.Pinetop.RossFork       : ternary @name("Pinetop.RossFork") ;
-            Brady.Pinetop.Aldan          : ternary @name("Pinetop.Aldan") ;
-            Brady.Lookeba.SomesBar       : ternary @name("Lookeba.SomesBar") ;
-            Lindy.Wagener.Armona         : ternary @name("Wagener.Armona") ;
-            Lindy.Wagener.isValid()      : ternary @name("Wagener") ;
-            Brady.Lookeba.Exton          : ternary @name("Lookeba.Exton") ;
-            Brady.Eldred                 : exact @name("Eldred") ;
+            Brady.PeaRidge.Toklat & 9w0x7f: ternary @name("PeaRidge.Toklat") ;
+            Brady.Pinetop.RossFork        : ternary @name("Pinetop.RossFork") ;
+            Brady.Pinetop.Aldan           : ternary @name("Pinetop.Aldan") ;
+            Brady.Lookeba.SomesBar        : ternary @name("Lookeba.SomesBar") ;
+            Lindy.Wagener.Armona          : ternary @name("Wagener.Armona") ;
+            Lindy.Wagener.isValid()       : ternary @name("Wagener") ;
+            Brady.Lookeba.Exton           : ternary @name("Lookeba.Exton") ;
+            Brady.Eldred                  : exact @name("Eldred") ;
         }
         default_action = GlenDean();
         size = 512;
@@ -4769,7 +4789,7 @@ control Browning(inout Lemont Lindy, inout Wyndmoor Brady, in egress_intrinsic_m
         size = 1;
     }
     apply {
-        if (Brady.Neponset.Belmore == 1w1 && PeaRidge.egress_port == 9w68) {
+        if (Brady.Neponset.Belmore == 1w1 && Brady.PeaRidge.Toklat == 9w68) {
             Arion.apply();
         }
     }
@@ -5220,7 +5240,7 @@ control Anniston(inout Lemont Lindy, inout Wyndmoor Brady, in egress_intrinsic_m
             @defaultonly NoAction();
         }
         key = {
-            PeaRidge.egress_port    : exact @name("PeaRidge.Toklat") ;
+            Brady.PeaRidge.Toklat   : exact @name("PeaRidge.Toklat") ;
             Brady.Yorkshire.SourLake: exact @name("Yorkshire.SourLake") ;
             Brady.Lookeba.Richvale  : exact @name("Lookeba.Richvale") ;
             Brady.Lookeba.McGrady   : exact @name("Lookeba.McGrady") ;
@@ -5272,6 +5292,7 @@ control Anniston(inout Lemont Lindy, inout Wyndmoor Brady, in egress_intrinsic_m
     @name(".McDaniels") Aguada() McDaniels;
     @name(".Netarts") Renfroe() Netarts;
     @name(".Hartwick") Duchesne() Hartwick;
+    @name(".BelAir") Kealia() BelAir;
     @name(".Crossnore") Langford() Crossnore;
     @name(".Cataract") Cowley() Cataract;
     @name(".Alvwood") Carlson() Alvwood;
@@ -5341,6 +5362,7 @@ control Anniston(inout Lemont Lindy, inout Wyndmoor Brady, in egress_intrinsic_m
             } else if (Lindy.Parkway.isValid()) {
                 Alvwood.apply(Lindy, Brady, PeaRidge, Centre, Pocopson, Barnwell);
             }
+            BelAir.apply(Lindy, Brady, PeaRidge, Centre, Pocopson, Barnwell);
         }
     }
 }
@@ -5443,7 +5465,8 @@ parser Blanchard(packet_in Starkey, out Lemont Lindy, out Wyndmoor Brady, out eg
     state start {
         Starkey.extract<egress_intrinsic_metadata_t>(PeaRidge);
         Brady.PeaRidge.Bledsoe = PeaRidge.pkt_length;
-        transition select(PeaRidge.egress_port ++ (Starkey.lookahead<Willard>()).Bayshore) {
+        Brady.PeaRidge.Toklat = PeaRidge.egress_port;
+        transition select(Brady.PeaRidge.Toklat ++ (Starkey.lookahead<Willard>()).Bayshore) {
             Gonzalez: Brunson;
             17w0 &&& 17w0x7: Colburn;
             default: Lenapah;

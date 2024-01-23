@@ -216,8 +216,10 @@ struct Glassboro {
 }
 
 struct Moorcroft {
-    PortId_t Toklat;
-    bit<16>  Bledsoe;
+    PortId_t  Toklat;
+    bit<16>   Bledsoe;
+    QueueId_t Bonner;
+    bit<16>   Belfast;
 }
 
 struct Blencoe {
@@ -363,8 +365,21 @@ header Killen {
     bit<16> Connell;
 }
 
+header SwissAlp {
+    bit<192> Riner;
+}
+
+header Woodland {
+    bit<64> Riner;
+}
+
 header Turkey {
-    bit<416> Riner;
+    bit<8>     Roxboro;
+    varbit<48> Riner;
+}
+
+header Timken {
+    bit<368> Riner;
 }
 
 header Palmhurst {
@@ -1139,6 +1154,11 @@ struct Brady {
     bit<32> Skillman;
 }
 
+control Lamboglia(inout Frederika Westoak, inout WebbCity Lefor, in egress_intrinsic_metadata_t Biggers, in egress_intrinsic_metadata_from_parser_t Waumandee, inout egress_intrinsic_metadata_for_deparser_t Nowlin, inout egress_intrinsic_metadata_for_output_port_t Sully) {
+    apply {
+    }
+}
+
 control Olcott(inout Frederika Westoak, inout WebbCity Lefor, in ingress_intrinsic_metadata_t Milano, in ingress_intrinsic_metadata_from_parser_t Starkey, inout ingress_intrinsic_metadata_for_deparser_t Volens, inout ingress_intrinsic_metadata_for_tm_t Dacono) {
     apply {
     }
@@ -1899,10 +1919,9 @@ control FairOaks(inout Frederika Westoak, inout WebbCity Lefor, in ingress_intri
             @defaultonly NoAction();
         }
         key = {
-            Lefor.Ekwok.Morstein   : exact @name("Ekwok.Morstein") ;
-            Lefor.Ekwok.Glendevey  : exact @name("Ekwok.Glendevey") ;
-            Lefor.Ekwok.Littleton  : exact @name("Ekwok.Littleton") ;
-            Westoak.Sespe.isValid(): exact @name("Sespe") ;
+            Lefor.Ekwok.Morstein : exact @name("Ekwok.Morstein") ;
+            Lefor.Ekwok.Glendevey: exact @name("Ekwok.Glendevey") ;
+            Lefor.Ekwok.Littleton: exact @name("Ekwok.Littleton") ;
         }
         size = 2048;
         const default_action = NoAction();
@@ -1919,7 +1938,8 @@ control FairOaks(inout Frederika Westoak, inout WebbCity Lefor, in ingress_intri
             Lefor.Ekwok.Littleton   : ternary @name("Ekwok.Littleton") ;
             Lefor.Ekwok.Minto       : ternary @name("Ekwok.Minto") ;
             Lefor.Millstone.Mausdale: ternary @name("Millstone.Mausdale") ;
-            Westoak.Sespe.isValid() : exact @name("Sespe") ;
+            Westoak.Sespe.isValid() : ternary @name("Sespe") ;
+            Lefor.Picabo.Townville  : ternary @name("Picabo.Townville") ;
         }
         const default_action = Anita();
         size = 512;
@@ -4071,8 +4091,8 @@ control Walland(inout Frederika Westoak, inout WebbCity Lefor, in egress_intrins
             @defaultonly Sahuarita();
         }
         key = {
-            Biggers.egress_rid : exact @name("Biggers.egress_rid") ;
-            Biggers.egress_port: exact @name("Biggers.Toklat") ;
+            Biggers.egress_rid  : exact @name("Biggers.egress_rid") ;
+            Lefor.Biggers.Toklat: exact @name("Biggers.Toklat") ;
         }
         size = 1024;
         const default_action = Sahuarita();
@@ -4091,7 +4111,7 @@ control Broadford(inout Frederika Westoak, inout WebbCity Lefor, in egress_intri
             Nerstrand();
         }
         key = {
-            Biggers.egress_port: exact @name("Biggers.Toklat") ;
+            Lefor.Biggers.Toklat: exact @name("Biggers.Toklat") ;
         }
         const default_action = Nerstrand(10w0);
         size = 128;
@@ -4578,9 +4598,9 @@ control August(inout Frederika Westoak, inout WebbCity Lefor, in egress_intrinsi
             Chandalar();
         }
         key = {
-            Lefor.Picabo.Fairhaven      : exact @name("Picabo.Fairhaven") ;
-            Biggers.egress_port & 9w0x7f: exact @name("Biggers.Toklat") ;
-            Lefor.Picabo.Rockham        : exact @name("Picabo.Rockham") ;
+            Lefor.Picabo.Fairhaven       : exact @name("Picabo.Fairhaven") ;
+            Lefor.Biggers.Toklat & 9w0x7f: exact @name("Biggers.Toklat") ;
+            Lefor.Picabo.Rockham         : exact @name("Picabo.Rockham") ;
         }
         const default_action = Chandalar();
         size = 128;
@@ -4807,8 +4827,8 @@ control Almeria(inout Frederika Westoak, inout WebbCity Lefor, in egress_intrins
             @defaultonly NoAction();
         }
         key = {
-            Lefor.Picabo.LaUnion        : exact @name("Picabo.LaUnion") ;
-            Biggers.egress_port & 9w0x7f: exact @name("Biggers.Toklat") ;
+            Lefor.Picabo.LaUnion         : exact @name("Picabo.LaUnion") ;
+            Lefor.Biggers.Toklat & 9w0x7f: exact @name("Biggers.Toklat") ;
         }
         size = 512;
         const default_action = NoAction();
@@ -5716,7 +5736,7 @@ control Laney(inout Frederika Westoak, inout WebbCity Lefor, in egress_intrinsic
     @name(".Anniston.Roosville") Hash<bit<12>>(HashAlgorithm_t.IDENTITY) Anniston;
     @name(".Conklin") action Conklin() {
         bit<12> Wyandanch;
-        Wyandanch = Anniston.get<tuple<bit<9>, bit<5>>>({ Biggers.egress_port, Biggers.egress_qid[4:0] });
+        Wyandanch = Anniston.get<tuple<bit<9>, bit<5>>>({ Lefor.Biggers.Toklat, Biggers.egress_qid[4:0] });
         McClusky.count((bit<12>)Wyandanch);
     }
     @disable_atomic_modify(1) @name(".Mocane") table Mocane {
@@ -5751,8 +5771,8 @@ control Humble(inout Frederika Westoak, inout WebbCity Lefor, in egress_intrinsi
             Freetown();
         }
         key = {
-            Biggers.egress_port & 9w0x7f: exact @name("Biggers.Toklat") ;
-            Lefor.Picabo.SomesBar       : exact @name("Picabo.SomesBar") ;
+            Lefor.Biggers.Toklat & 9w0x7f: exact @name("Biggers.Toklat") ;
+            Lefor.Picabo.SomesBar        : exact @name("Picabo.SomesBar") ;
         }
         const default_action = Freetown();
         size = 4096;
@@ -5776,7 +5796,7 @@ control Lansdale(inout Frederika Westoak, inout WebbCity Lefor, in egress_intrin
     @name(".Parmele.Dunedin") Hash<bit<19>>(HashAlgorithm_t.IDENTITY) Parmele;
     @name(".Easley") action Easley() {
         bit<19> Wyandanch;
-        Wyandanch = Parmele.get<tuple<bit<9>, bit<12>>>({ Biggers.egress_port, (bit<12>)Lefor.Picabo.SomesBar });
+        Wyandanch = Parmele.get<tuple<bit<9>, bit<12>>>({ Lefor.Biggers.Toklat, (bit<12>)Lefor.Picabo.SomesBar });
         Lefor.Dushore.Savery = Blackwood.execute((bit<32>)Wyandanch);
     }
     @name(".Rawson") Register<bit<1>, bit<32>>(32w294912, 1w0) Rawson;
@@ -5791,7 +5811,7 @@ control Lansdale(inout Frederika Westoak, inout WebbCity Lefor, in egress_intrin
     };
     @name(".Alberta") action Alberta() {
         bit<19> Wyandanch;
-        Wyandanch = Parmele.get<tuple<bit<9>, bit<12>>>({ Biggers.egress_port, (bit<12>)Lefor.Picabo.SomesBar });
+        Wyandanch = Parmele.get<tuple<bit<9>, bit<12>>>({ Lefor.Biggers.Toklat, (bit<12>)Lefor.Picabo.SomesBar });
         Lefor.Dushore.Quinault = Oakford.execute((bit<32>)Wyandanch);
     }
     @disable_atomic_modify(1) @name(".Horsehead") table Horsehead {
@@ -5829,14 +5849,14 @@ control Tolley(inout Frederika Westoak, inout WebbCity Lefor, in egress_intrinsi
             BigBay();
         }
         key = {
-            Biggers.egress_port & 9w0x7f: ternary @name("Biggers.Toklat") ;
-            Lefor.Dushore.Quinault      : ternary @name("Dushore.Quinault") ;
-            Lefor.Dushore.Savery        : ternary @name("Dushore.Savery") ;
-            Lefor.Picabo.Cuprum         : ternary @name("Picabo.Cuprum") ;
-            Westoak.Wagener.Norcatur    : ternary @name("Wagener.Norcatur") ;
-            Westoak.Wagener.isValid()   : ternary @name("Wagener") ;
-            Lefor.Picabo.Kenney         : ternary @name("Picabo.Kenney") ;
-            Lefor.Albemarle             : exact @name("Albemarle") ;
+            Lefor.Biggers.Toklat & 9w0x7f: ternary @name("Biggers.Toklat") ;
+            Lefor.Dushore.Quinault       : ternary @name("Dushore.Quinault") ;
+            Lefor.Dushore.Savery         : ternary @name("Dushore.Savery") ;
+            Lefor.Picabo.Cuprum          : ternary @name("Picabo.Cuprum") ;
+            Westoak.Wagener.Norcatur     : ternary @name("Wagener.Norcatur") ;
+            Westoak.Wagener.isValid()    : ternary @name("Wagener") ;
+            Lefor.Picabo.Kenney          : ternary @name("Picabo.Kenney") ;
+            Lefor.Albemarle              : exact @name("Albemarle") ;
         }
         default_action = BigBay();
         size = 512;
@@ -6589,7 +6609,7 @@ control Whitetail(inout Frederika Westoak, inout WebbCity Lefor, in egress_intri
             @defaultonly NoAction();
         }
         key = {
-            Biggers.egress_port       : exact @name("Biggers.Toklat") ;
+            Lefor.Biggers.Toklat      : exact @name("Biggers.Toklat") ;
             Lefor.Millstone.Edwards   : exact @name("Millstone.Edwards") ;
             Lefor.Picabo.Crestone     : exact @name("Picabo.Crestone") ;
             Lefor.Picabo.Townville    : exact @name("Picabo.Townville") ;
@@ -6637,6 +6657,7 @@ control Whitetail(inout Frederika Westoak, inout WebbCity Lefor, in egress_intri
     @name(".Alderson") Gonzalez() Alderson;
     @name(".Mellott") Colburn() Mellott;
     @name(".CruzBay") Newland() CruzBay;
+    @name(".CatCreek") Lamboglia() CatCreek;
     @name(".Tanana") Aguada() Tanana;
     @name(".Kingsgate") Renfroe() Kingsgate;
     @name(".Hillister") Fittstown() Hillister;
@@ -6698,6 +6719,7 @@ control Whitetail(inout Frederika Westoak, inout WebbCity Lefor, in egress_intri
             } else if (Westoak.Recluse.isValid()) {
                 Camden.apply(Westoak, Lefor, Biggers, Waumandee, Nowlin, Sully);
             }
+            CatCreek.apply(Westoak, Lefor, Biggers, Waumandee, Nowlin, Sully);
         }
     }
 }
@@ -6799,7 +6821,8 @@ parser Careywood(packet_in RockHill, out Frederika Westoak, out WebbCity Lefor, 
     state start {
         RockHill.extract<egress_intrinsic_metadata_t>(Biggers);
         Lefor.Biggers.Bledsoe = Biggers.pkt_length;
-        transition select(Biggers.egress_port ++ (RockHill.lookahead<Willard>()).Bayshore) {
+        Lefor.Biggers.Toklat = Biggers.egress_port;
+        transition select(Lefor.Biggers.Toklat ++ (RockHill.lookahead<Willard>()).Bayshore) {
             Earlsboro: Kinter;
             17w0 &&& 17w0x7: Jigger;
             default: McFaddin;

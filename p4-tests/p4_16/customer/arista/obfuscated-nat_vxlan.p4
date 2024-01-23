@@ -250,8 +250,10 @@ struct Glassboro {
 }
 
 struct Moorcroft {
-    PortId_t Toklat;
-    bit<16>  Bledsoe;
+    PortId_t  Toklat;
+    bit<16>   Bledsoe;
+    QueueId_t Bendavis;
+    bit<16>   Picayune;
 }
 
 struct Blencoe {
@@ -461,8 +463,21 @@ header Irvine {
     bit<16> Connell;
 }
 
+header Coconino {
+    bit<192> Kendrick;
+}
+
+header Pierpont {
+    bit<64> Kendrick;
+}
+
 header Antlers {
-    bit<416> Kendrick;
+    bit<8>     Cotuit;
+    varbit<48> Kendrick;
+}
+
+header Perrin {
+    bit<368> Kendrick;
 }
 
 header Solomon {
@@ -1278,6 +1293,11 @@ struct Hester {
     bit<32> BigPoint;
 }
 
+control Wenham(inout Westoak Castle, inout Wanamassa Aguila, in egress_intrinsic_metadata_t Nephi, in egress_intrinsic_metadata_from_parser_t Oconee, inout egress_intrinsic_metadata_for_deparser_t Salitpa, inout egress_intrinsic_metadata_for_output_port_t Spanaway) {
+    apply {
+    }
+}
+
 control Tenstrike(inout Westoak Castle, inout Wanamassa Aguila, in ingress_intrinsic_metadata_t RichBar, in ingress_intrinsic_metadata_from_parser_t Nixon, inout ingress_intrinsic_metadata_for_deparser_t Mattapex, inout ingress_intrinsic_metadata_for_tm_t Harding) {
     apply {
     }
@@ -1899,7 +1919,7 @@ control Algonquin(inout Westoak Castle, inout Wanamassa Aguila, in ingress_intri
             Aguila.Hookdale.Ramos    : exact @name("Hookdale.Ramos") ;
         }
         const default_action = Potosi();
-        size = 65536;
+        size = 73728;
         idle_timeout = true;
     }
     @disable_atomic_modify(1) @name(".Timken") table Timken {
@@ -3178,8 +3198,8 @@ control Haugen(inout Westoak Castle, inout Wanamassa Aguila, in egress_intrinsic
             @defaultonly Bassett();
         }
         key = {
-            Nephi.egress_rid : exact @name("Nephi.egress_rid") ;
-            Nephi.egress_port: exact @name("Nephi.Toklat") ;
+            Nephi.egress_rid   : exact @name("Nephi.egress_rid") ;
+            Aguila.Nephi.Toklat: exact @name("Nephi.Toklat") ;
         }
         size = 512;
         const default_action = Bassett();
@@ -3199,7 +3219,7 @@ control Bethune(inout Westoak Castle, inout Wanamassa Aguila, in egress_intrinsi
             @defaultonly NoAction();
         }
         key = {
-            Nephi.egress_port         : exact @name("Nephi.Toklat") ;
+            Aguila.Nephi.Toklat       : exact @name("Nephi.Toklat") ;
             Castle.Larwill.isValid()  : ternary @name("Larwill") ;
             Castle.Rhinebeck.isValid(): ternary @name("Rhinebeck") ;
             Castle.Rhinebeck.Provo    : ternary @name("Rhinebeck.Provo") ;
@@ -3584,9 +3604,9 @@ control Moorman(inout Westoak Castle, inout Wanamassa Aguila, in egress_intrinsi
             Bagwell();
         }
         key = {
-            Aguila.Sunbury.Bonney     : exact @name("Sunbury.Bonney") ;
-            Nephi.egress_port & 9w0x7f: exact @name("Nephi.Toklat") ;
-            Aguila.Sunbury.Barrow     : exact @name("Sunbury.Barrow") ;
+            Aguila.Sunbury.Bonney       : exact @name("Sunbury.Bonney") ;
+            Aguila.Nephi.Toklat & 9w0x7f: exact @name("Nephi.Toklat") ;
+            Aguila.Sunbury.Barrow       : exact @name("Sunbury.Barrow") ;
         }
         const default_action = Bagwell();
         size = 128;
@@ -3773,8 +3793,8 @@ control Stone(inout Westoak Castle, inout Wanamassa Aguila, in egress_intrinsic_
             @defaultonly NoAction();
         }
         key = {
-            Aguila.Sunbury.Tiburon    : exact @name("Sunbury.Tiburon") ;
-            Nephi.egress_port & 9w0x7f: exact @name("Nephi.Toklat") ;
+            Aguila.Sunbury.Tiburon      : exact @name("Sunbury.Tiburon") ;
+            Aguila.Nephi.Toklat & 9w0x7f: exact @name("Nephi.Toklat") ;
         }
         size = 512;
         const default_action = NoAction();
@@ -4684,7 +4704,7 @@ control DuPont(inout Westoak Castle, inout Wanamassa Aguila, in egress_intrinsic
     @name(".Telegraph.Roosville") Hash<bit<12>>(HashAlgorithm_t.IDENTITY) Telegraph;
     @name(".Veradale") action Veradale() {
         bit<12> Willette;
-        Willette = Telegraph.get<tuple<bit<9>, bit<5>>>({ Nephi.egress_port, Nephi.egress_qid[4:0] });
+        Willette = Telegraph.get<tuple<bit<9>, bit<5>>>({ Aguila.Nephi.Toklat, Nephi.egress_qid[4:0] });
         Shauck.count((bit<12>)Willette);
     }
     @disable_atomic_modify(1) @name(".Parole") table Parole {
@@ -4719,8 +4739,8 @@ control Picacho(inout Westoak Castle, inout Wanamassa Aguila, in egress_intrinsi
             Aquilla();
         }
         key = {
-            Nephi.egress_port & 9w0x7f: exact @name("Nephi.Toklat") ;
-            Aguila.Sunbury.Aldan      : exact @name("Sunbury.Aldan") ;
+            Aguila.Nephi.Toklat & 9w0x7f: exact @name("Nephi.Toklat") ;
+            Aguila.Sunbury.Aldan        : exact @name("Sunbury.Aldan") ;
         }
         const default_action = Aquilla();
         size = 4096;
@@ -4744,7 +4764,7 @@ control Tocito(inout Westoak Castle, inout Wanamassa Aguila, in egress_intrinsic
     @name(".Covington.Dunedin") Hash<bit<19>>(HashAlgorithm_t.IDENTITY) Covington;
     @name(".Robinette") action Robinette() {
         bit<19> Willette;
-        Willette = Covington.get<tuple<bit<9>, bit<12>>>({ Nephi.egress_port, (bit<12>)Aguila.Sunbury.Aldan });
+        Willette = Covington.get<tuple<bit<9>, bit<12>>>({ Aguila.Nephi.Toklat, (bit<12>)Aguila.Sunbury.Aldan });
         Aguila.Rienzi.Thaxton = Okarche.execute((bit<32>)Willette);
     }
     @name(".Akhiok") Register<bit<1>, bit<32>>(32w294912, 1w0) Akhiok;
@@ -4759,7 +4779,7 @@ control Tocito(inout Westoak Castle, inout Wanamassa Aguila, in egress_intrinsic
     };
     @name(".TonkaBay") action TonkaBay() {
         bit<19> Willette;
-        Willette = Covington.get<tuple<bit<9>, bit<12>>>({ Nephi.egress_port, (bit<12>)Aguila.Sunbury.Aldan });
+        Willette = Covington.get<tuple<bit<9>, bit<12>>>({ Aguila.Nephi.Toklat, (bit<12>)Aguila.Sunbury.Aldan });
         Aguila.Rienzi.Lawai = DelRey.execute((bit<32>)Willette);
     }
     @disable_atomic_modify(1) @name(".Cisne") table Cisne {
@@ -4797,14 +4817,14 @@ control Canalou(inout Westoak Castle, inout Wanamassa Aguila, in egress_intrinsi
             BigBow();
         }
         key = {
-            Nephi.egress_port & 9w0x7f: ternary @name("Nephi.Toklat") ;
-            Aguila.Rienzi.Lawai       : ternary @name("Rienzi.Lawai") ;
-            Aguila.Rienzi.Thaxton     : ternary @name("Rienzi.Thaxton") ;
-            Aguila.Sunbury.Freeny     : ternary @name("Sunbury.Freeny") ;
-            Castle.Larwill.Vinemont   : ternary @name("Larwill.Vinemont") ;
-            Castle.Larwill.isValid()  : ternary @name("Larwill") ;
-            Aguila.Sunbury.Moose      : ternary @name("Sunbury.Moose") ;
-            Aguila.Ledoux             : exact @name("Ledoux") ;
+            Aguila.Nephi.Toklat & 9w0x7f: ternary @name("Nephi.Toklat") ;
+            Aguila.Rienzi.Lawai         : ternary @name("Rienzi.Lawai") ;
+            Aguila.Rienzi.Thaxton       : ternary @name("Rienzi.Thaxton") ;
+            Aguila.Sunbury.Freeny       : ternary @name("Sunbury.Freeny") ;
+            Castle.Larwill.Vinemont     : ternary @name("Larwill.Vinemont") ;
+            Castle.Larwill.isValid()    : ternary @name("Larwill") ;
+            Aguila.Sunbury.Moose        : ternary @name("Sunbury.Moose") ;
+            Aguila.Ledoux               : exact @name("Ledoux") ;
         }
         default_action = BigBow();
         size = 512;
@@ -5117,15 +5137,6 @@ control Valmont(inout Westoak Castle, inout Wanamassa Aguila, in ingress_intrins
         Decorah(Denhoff, Palmhurst, Morrow);
         Dovray.count();
     }
-    @name(".Waretown") action Waretown() {
-        Aguila.Frederika.Richvale = Aguila.Saugatuck.Provo;
-        Aguila.Frederika.Wauconda = Castle.Boyle.Fairland;
-    }
-    @name(".Moxley") action Moxley() {
-        Aguila.Frederika.Richvale = (bit<32>)32w0;
-        Aguila.Frederika.Wauconda = (bit<16>)Aguila.Frederika.Vergennes;
-        Aguila.Frederika.Needham = (bit<1>)1w1;
-    }
     @disable_atomic_modify(1) @name(".Stout") table Stout {
         actions = {
             Millican();
@@ -5155,22 +5166,6 @@ control Valmont(inout Westoak Castle, inout Wanamassa Aguila, in ingress_intrins
         counters = Dovray;
         size = 12288;
     }
-    @disable_atomic_modify(1) @name(".Ludowici") table Ludowici {
-        actions = {
-            Waretown();
-            Moxley();
-        }
-        key = {
-            Aguila.Frederika.Vergennes: ternary @name("Frederika.Vergennes") ;
-            Castle.Larwill.Denhoff    : ternary @name("Larwill.Denhoff") ;
-            Castle.Larwill.Provo      : ternary @name("Larwill.Provo") ;
-            Castle.Boyle.Pridgen      : ternary @name("Boyle.Pridgen") ;
-            Castle.Boyle.Fairland     : ternary @name("Boyle.Fairland") ;
-            Aguila.Frederika.Galloway : ternary @name("Frederika.Galloway") ;
-        }
-        const default_action = Waretown();
-        size = 1024;
-    }
     @idletime_precision(1) @disable_atomic_modify(1) @name(".Forbes") table Forbes {
         actions = {
             Millican();
@@ -5186,11 +5181,10 @@ control Valmont(inout Westoak Castle, inout Wanamassa Aguila, in ingress_intrins
             Aguila.Hookdale.Ramos    : exact @name("Hookdale.Ramos") ;
         }
         const default_action = Potosi();
-        size = 98304;
+        size = 106496;
         idle_timeout = true;
     }
     apply {
-        Ludowici.apply();
         if (Aguila.Hookdale.Bergton == 1w1 && Aguila.Hookdale.Provencal & 4w0x1 == 4w0x1 && Aguila.Frederika.Atoka == 3w0x1 && Harding.copy_to_cpu == 1w0) {
             switch (Forbes.apply().action_run) {
                 Potosi: {
@@ -6351,7 +6345,8 @@ parser Challenge(packet_in Longport, out Westoak Castle, out Wanamassa Aguila, o
     state start {
         Longport.extract<egress_intrinsic_metadata_t>(Nephi);
         Aguila.Nephi.Bledsoe = Nephi.pkt_length;
-        transition select(Nephi.egress_port ++ (Longport.lookahead<Willard>()).Bayshore) {
+        Aguila.Nephi.Toklat = Nephi.egress_port;
+        transition select(Aguila.Nephi.Toklat ++ (Longport.lookahead<Willard>()).Bayshore) {
             Seaford: Ragley;
             17w0 &&& 17w0x7: Cassadaga;
             default: Weslaco;
@@ -6448,7 +6443,7 @@ control Chispa(inout Westoak Castle, inout Wanamassa Aguila, in egress_intrinsic
             @defaultonly NoAction();
         }
         key = {
-            Nephi.egress_port        : exact @name("Nephi.Toklat") ;
+            Aguila.Nephi.Toklat      : exact @name("Nephi.Toklat") ;
             Aguila.Almota.Doddridge  : exact @name("Almota.Doddridge") ;
             Aguila.Sunbury.Minturn   : exact @name("Sunbury.Minturn") ;
             Aguila.Sunbury.Lewiston  : exact @name("Sunbury.Lewiston") ;
@@ -6498,6 +6493,7 @@ control Chispa(inout Westoak Castle, inout Wanamassa Aguila, in egress_intrinsic
     @name(".WolfTrap") Marvin() WolfTrap;
     @name(".Isabel") Canton() Isabel;
     @name(".Padonia") Rumson() Padonia;
+    @name(".Magnolia") Wenham() Magnolia;
     @name(".Gosnell") Council() Gosnell;
     @name(".Wharton") Capitola() Wharton;
     @name(".Cortland") Moorman() Cortland;
@@ -6559,6 +6555,7 @@ control Chispa(inout Westoak Castle, inout Wanamassa Aguila, in egress_intrinsic
             } else if (Castle.Fishers.isValid()) {
                 Cortland.apply(Castle, Aguila, Nephi, Oconee, Salitpa, Spanaway);
             }
+            Magnolia.apply(Castle, Aguila, Nephi, Oconee, Salitpa, Spanaway);
         }
     }
 }
@@ -6721,7 +6718,7 @@ parser Reidville(packet_in Longport, out Westoak Castle, out Wanamassa Aguila, o
     }
     state Manakin {
         Longport.extract<Tenino>(Castle.Boyle);
-        transition reject;
+        transition accept;
     }
     state Ardara {
         Longport.extract<Tenino>(Castle.Boyle);
@@ -6797,6 +6794,15 @@ control Rixford(inout Westoak Castle, inout Wanamassa Aguila, in ingress_intrins
     @name(".Taiban") action Taiban() {
         Huxley.count();
     }
+    @name(".Waretown") action Waretown() {
+        Aguila.Frederika.Richvale = Aguila.Saugatuck.Provo;
+        Aguila.Frederika.Wauconda = Castle.Boyle.Fairland;
+    }
+    @name(".Moxley") action Moxley() {
+        Aguila.Frederika.Richvale = (bit<32>)32w0;
+        Aguila.Frederika.Wauconda = (bit<16>)Aguila.Frederika.Vergennes;
+        Aguila.Frederika.Needham = (bit<1>)1w1;
+    }
 @pa_no_init("ingress" , "Aguila.Sunbury.Mausdale")
 @pa_no_init("ingress" , "Aguila.Sunbury.Bessie")
 @name(".Caborn") action Caborn(bit<1> Raiford, bit<1> Ayden) {
@@ -6841,6 +6847,22 @@ control Rixford(inout Westoak Castle, inout Wanamassa Aguila, in ingress_intrins
         const default_action = Eureka();
         size = 4096;
         requires_versioning = false;
+    }
+    @disable_atomic_modify(1) @name(".Ludowici") table Ludowici {
+        actions = {
+            Waretown();
+            Moxley();
+        }
+        key = {
+            Aguila.Frederika.Vergennes: ternary @name("Frederika.Vergennes") ;
+            Castle.Larwill.Denhoff    : ternary @name("Larwill.Denhoff") ;
+            Castle.Larwill.Provo      : ternary @name("Larwill.Provo") ;
+            Castle.Boyle.Pridgen      : ternary @name("Boyle.Pridgen") ;
+            Castle.Boyle.Fairland     : ternary @name("Boyle.Fairland") ;
+            Aguila.Frederika.Galloway : ternary @name("Frederika.Galloway") ;
+        }
+        const default_action = Waretown();
+        size = 1024;
     }
     @disable_atomic_modify(1) @name(".Borup") table Borup {
         actions = {
@@ -7144,16 +7166,14 @@ control Rixford(inout Westoak Castle, inout Wanamassa Aguila, in ingress_intrins
         const default_action = Potosi();
         size = 32768;
     }
-    @idletime_precision(1) @disable_atomic_modify(1) @name(".Kansas") table Kansas {
+    @idletime_precision(1) @ways(1) @pack(5) @disable_atomic_modify(1) @name(".Kansas") table Kansas {
         actions = {
             Vanoss();
-            Potosi();
         }
         key = {
-            Aguila.Grottoes.Yemassee: exact @name("Grottoes.Yemassee") ;
-            Aguila.Grottoes.Opelika : exact @name("Grottoes.Opelika") ;
+            Aguila.Grottoes.Opelika: exact @name("Grottoes.Opelika") ;
         }
-        const default_action = Potosi();
+        const default_action = Vanoss();
         size = 32768;
         idle_timeout = true;
     }
@@ -7237,6 +7257,7 @@ control Rixford(inout Westoak Castle, inout Wanamassa Aguila, in ingress_intrins
         Wiota.apply(Castle, Aguila, RichBar, Nixon, Mattapex, Harding);
         Paoli.apply(Castle, Aguila, RichBar, Nixon, Mattapex, Harding);
         Karluk.apply();
+        Ludowici.apply();
         Temelec.apply();
         if (Aguila.Grottoes.Dubuque == 8w0) {
             Coconut.apply();
@@ -7259,7 +7280,9 @@ control Rixford(inout Westoak Castle, inout Wanamassa Aguila, in ingress_intrins
                 if (Aguila.Hookdale.Provencal & 4w0x2 == 4w0x2) {
                     switch (Vacherie.apply().action_run) {
                         Denby: {
-                            Kansas.apply();
+                            if (Aguila.Grottoes.Yemassee == 1w0) {
+                                Kansas.apply();
+                            }
                         }
                         Potosi: {
                             Slovan.apply();

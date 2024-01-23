@@ -194,8 +194,10 @@ struct Glassboro {
 }
 
 struct Moorcroft {
-    PortId_t Toklat;
-    bit<16>  Bledsoe;
+    PortId_t  Toklat;
+    bit<16>   Bledsoe;
+    QueueId_t Molino;
+    bit<16>   Ossineke;
 }
 
 struct Blencoe {
@@ -338,8 +340,21 @@ header Findlay {
     bit<16> Connell;
 }
 
+header Meridean {
+    bit<192> Glendevey;
+}
+
+header Tinaja {
+    bit<64> Glendevey;
+}
+
 header Dowell {
-    bit<416> Glendevey;
+    bit<8>     Dovray;
+    varbit<48> Glendevey;
+}
+
+header Ellinger {
+    bit<368> Glendevey;
 }
 
 header Littleton {
@@ -1156,6 +1171,11 @@ struct Virgilina {
 struct Robstown {
     bit<32> Ponder;
     bit<32> Fishers;
+}
+
+control BoyRiver(inout Hookdale Levasy, inout Jayton Indios, in egress_intrinsic_metadata_t Neponset, in egress_intrinsic_metadata_from_parser_t Amalga, inout egress_intrinsic_metadata_for_deparser_t Burmah, inout egress_intrinsic_metadata_for_output_port_t Leacock) {
+    apply {
+    }
 }
 
 control Philip(inout Hookdale Levasy, inout Jayton Indios, in ingress_intrinsic_metadata_t PeaRidge, in ingress_intrinsic_metadata_from_parser_t Larwill, inout ingress_intrinsic_metadata_for_deparser_t Rhinebeck, inout ingress_intrinsic_metadata_for_tm_t Cranbury) {
@@ -3754,8 +3774,8 @@ control Bigspring(inout Hookdale Levasy, inout Jayton Indios, in egress_intrinsi
             @defaultonly Needham();
         }
         key = {
-            Neponset.egress_rid : exact @name("Neponset.egress_rid") ;
-            Neponset.egress_port: exact @name("Neponset.Toklat") ;
+            Neponset.egress_rid   : exact @name("Neponset.egress_rid") ;
+            Indios.Neponset.Toklat: exact @name("Neponset.Toklat") ;
         }
         size = 256;
         const default_action = Needham();
@@ -3774,7 +3794,7 @@ control Deeth(inout Hookdale Levasy, inout Jayton Indios, in egress_intrinsic_me
             Devola();
         }
         key = {
-            Neponset.egress_port: exact @name("Neponset.Toklat") ;
+            Indios.Neponset.Toklat: exact @name("Neponset.Toklat") ;
         }
         const default_action = Devola(10w0);
         size = 128;
@@ -4186,9 +4206,9 @@ control Dresden(inout Hookdale Levasy, inout Jayton Indios, in egress_intrinsic_
             Dundalk();
         }
         key = {
-            Indios.Yorkshire.Comfrey     : exact @name("Yorkshire.Comfrey") ;
-            Neponset.egress_port & 9w0x7f: exact @name("Neponset.Toklat") ;
-            Indios.Yorkshire.Ayden       : exact @name("Yorkshire.Ayden") ;
+            Indios.Yorkshire.Comfrey       : exact @name("Yorkshire.Comfrey") ;
+            Indios.Neponset.Toklat & 9w0x7f: exact @name("Neponset.Toklat") ;
+            Indios.Yorkshire.Ayden         : exact @name("Yorkshire.Ayden") ;
         }
         const default_action = Dundalk();
         size = 128;
@@ -4400,8 +4420,8 @@ control DeerPark(inout Hookdale Levasy, inout Jayton Indios, in egress_intrinsic
             @defaultonly NoAction();
         }
         key = {
-            Indios.Yorkshire.Knoke       : exact @name("Yorkshire.Knoke") ;
-            Neponset.egress_port & 9w0x7f: exact @name("Neponset.Toklat") ;
+            Indios.Yorkshire.Knoke         : exact @name("Yorkshire.Knoke") ;
+            Indios.Neponset.Toklat & 9w0x7f: exact @name("Neponset.Toklat") ;
         }
         size = 512;
         const default_action = NoAction();
@@ -4853,7 +4873,7 @@ control Decorah(inout Hookdale Levasy, inout Jayton Indios, in egress_intrinsic_
     @name(".Moxley.Roosville") Hash<bit<12>>(HashAlgorithm_t.IDENTITY) Moxley;
     @name(".Stout") action Stout() {
         bit<12> Ardsley;
-        Ardsley = Moxley.get<tuple<bit<9>, bit<5>>>({ Neponset.egress_port, Neponset.egress_qid[4:0] });
+        Ardsley = Moxley.get<tuple<bit<9>, bit<5>>>({ Indios.Neponset.Toklat, Neponset.egress_qid[4:0] });
         Waretown.count((bit<12>)Ardsley);
     }
     @disable_atomic_modify(1) @name(".Blunt") table Blunt {
@@ -4888,8 +4908,8 @@ control Ludowici(inout Hookdale Levasy, inout Jayton Indios, in egress_intrinsic
             Longport();
         }
         key = {
-            Neponset.egress_port & 9w0x7f: exact @name("Neponset.Toklat") ;
-            Indios.Yorkshire.Bells       : exact @name("Yorkshire.Bells") ;
+            Indios.Neponset.Toklat & 9w0x7f: exact @name("Neponset.Toklat") ;
+            Indios.Yorkshire.Bells         : exact @name("Yorkshire.Bells") ;
         }
         const default_action = Longport();
         size = 4096;
@@ -4913,7 +4933,7 @@ control Wrens(inout Hookdale Levasy, inout Jayton Indios, in egress_intrinsic_me
     @name(".Manasquan.Dunedin") Hash<bit<19>>(HashAlgorithm_t.IDENTITY) Manasquan;
     @name(".Salamonia") action Salamonia() {
         bit<19> Ardsley;
-        Ardsley = Manasquan.get<tuple<bit<9>, bit<12>>>({ Neponset.egress_port, (bit<12>)Indios.Yorkshire.Bells });
+        Ardsley = Manasquan.get<tuple<bit<9>, bit<12>>>({ Indios.Neponset.Toklat, (bit<12>)Indios.Yorkshire.Bells });
         Indios.Milano.Sherack = Mabelvale.execute((bit<32>)Ardsley);
     }
     @name(".Sargent") Register<bit<1>, bit<32>>(32w294912, 1w0) Sargent;
@@ -4928,7 +4948,7 @@ control Wrens(inout Hookdale Levasy, inout Jayton Indios, in egress_intrinsic_me
     };
     @name(".Wibaux") action Wibaux() {
         bit<19> Ardsley;
-        Ardsley = Manasquan.get<tuple<bit<9>, bit<12>>>({ Neponset.egress_port, (bit<12>)Indios.Yorkshire.Bells });
+        Ardsley = Manasquan.get<tuple<bit<9>, bit<12>>>({ Indios.Neponset.Toklat, (bit<12>)Indios.Yorkshire.Bells });
         Indios.Milano.Plains = Brockton.execute((bit<32>)Ardsley);
     }
     @disable_atomic_modify(1) @name(".Downs") table Downs {
@@ -4966,13 +4986,13 @@ control Ancho(inout Hookdale Levasy, inout Jayton Indios, in egress_intrinsic_me
             Clarendon();
         }
         key = {
-            Neponset.egress_port & 9w0x7f: ternary @name("Neponset.Toklat") ;
-            Indios.Milano.Plains         : ternary @name("Milano.Plains") ;
-            Indios.Milano.Sherack        : ternary @name("Milano.Sherack") ;
-            Levasy.Glenoma.Woodfield     : ternary @name("Glenoma.Woodfield") ;
-            Levasy.Glenoma.isValid()     : ternary @name("Glenoma") ;
-            Indios.Yorkshire.Cuprum      : ternary @name("Yorkshire.Cuprum") ;
-            Indios.Algodones             : exact @name("Algodones") ;
+            Indios.Neponset.Toklat & 9w0x7f: ternary @name("Neponset.Toklat") ;
+            Indios.Milano.Plains           : ternary @name("Milano.Plains") ;
+            Indios.Milano.Sherack          : ternary @name("Milano.Sherack") ;
+            Levasy.Glenoma.Woodfield       : ternary @name("Glenoma.Woodfield") ;
+            Levasy.Glenoma.isValid()       : ternary @name("Glenoma") ;
+            Indios.Yorkshire.Cuprum        : ternary @name("Yorkshire.Cuprum") ;
+            Indios.Algodones               : exact @name("Algodones") ;
         }
         default_action = Clarendon();
         size = 512;
@@ -6110,7 +6130,7 @@ control Chubbuck(inout Hookdale Levasy, inout Jayton Indios, in egress_intrinsic
             @defaultonly NoAction();
         }
         key = {
-            Neponset.egress_port    : exact @name("Neponset.Toklat") ;
+            Indios.Neponset.Toklat  : exact @name("Neponset.Toklat") ;
             Indios.Armagh.McCaskill : exact @name("Armagh.McCaskill") ;
             Indios.Yorkshire.Belview: exact @name("Yorkshire.Belview") ;
             Indios.Yorkshire.Wellton: exact @name("Yorkshire.Wellton") ;
@@ -6225,6 +6245,7 @@ control Chubbuck(inout Hookdale Levasy, inout Jayton Indios, in egress_intrinsic
     @name(".Paoli") Rodessa() Paoli;
     @name(".Tatum") Munday() Tatum;
     @name(".Croft") CassCity() Croft;
+    @name(".Waukegan") BoyRiver() Waukegan;
     @name(".Oxnard") Elysburg() Oxnard;
     @name(".McKibben") Keltys() McKibben;
     @name(".Murdock") Weimar() Murdock;
@@ -6296,6 +6317,7 @@ control Chubbuck(inout Hookdale Levasy, inout Jayton Indios, in egress_intrinsic
             } else if (Levasy.Rienzi.isValid()) {
                 Coalton.apply(Levasy, Indios, Neponset, Amalga, Burmah, Leacock);
             }
+            Waukegan.apply(Levasy, Indios, Neponset, Amalga, Burmah, Leacock);
         }
     }
 }
@@ -6420,7 +6442,8 @@ parser Cavalier(packet_in Noyack, out Hookdale Levasy, out Jayton Indios, out eg
     state start {
         Noyack.extract<egress_intrinsic_metadata_t>(Neponset);
         Indios.Neponset.Bledsoe = Neponset.pkt_length;
-        transition select(Neponset.egress_port ++ (Noyack.lookahead<Willard>()).Bayshore) {
+        Indios.Neponset.Toklat = Neponset.egress_port;
+        transition select(Indios.Neponset.Toklat ++ (Noyack.lookahead<Willard>()).Bayshore) {
             Shawville: Corum;
             17w0 &&& 17w0x7: Duncombe;
             default: Caguas;
