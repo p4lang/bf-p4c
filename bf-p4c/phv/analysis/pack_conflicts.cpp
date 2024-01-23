@@ -135,7 +135,7 @@ void PackConflicts::end_apply() {
             if (t1 == t2) continue;
             ordered_set<int> stage = bt.inSameStage(t1, t2);
             bool on_same_stage = false;
-            if (table_summary) {
+            if (table_summary && (table_summary->getActualState() == State::SUCCESS)) {
                 // In most cases, stage information is the same in table summary and backtracker.
                 // However, backtracker's stage information is updated during backtracking and
                 // table summary's stage information is updated after table placement. If
