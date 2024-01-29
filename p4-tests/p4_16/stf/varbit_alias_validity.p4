@@ -1,7 +1,7 @@
 #include <core.p4>
 #include <t2na.p4>
 
-// Manual definition of the aliases should _no_ be necessary. The compiler
+// Manual definition of the aliases should _not_ be necessary. The compiler
 // should automatically determine these.
 #ifdef MANUAL_POV_ALIASES
 @pa_alias("ingress", 
