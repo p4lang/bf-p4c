@@ -9,6 +9,7 @@
 #include "bf-p4c/common/utils.h"
 #include "bf-p4c/parde/count_strided_header_refs.h"
 #include "bf-p4c/parde/parser_info.h"
+#include "bf-p4c/phv/pragma/pa_alias.h"
 #include "lib/log_fixup.h"
 
 /**
@@ -1577,6 +1578,7 @@ AllocateClot::AllocateClot(ClotInfo &clotInfo, const PhvInfo &phv, PhvUse &uses,
         new GreedyClotAllocator(phv, clotInfo, log),
         new CheckClotGroups(phv, clotInfo),
         LOGGING(3) ? new DumpParser("after_clot_allocation") : nullptr,
+        &pragmaAlias,  // Rerun because the field IDs are out-of-date
         new MergeDesugaredVarbitValids(phv, clotInfo, pragmaAlias),
     });
 }
