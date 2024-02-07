@@ -494,17 +494,17 @@ using ordered_set = ::ordered_set<Key, Compare, Allocator>;
 // extracts reference to the underlying standard container from the `assoc::` container wrapper.
 template<class K, class T, class V, class Comp, class Alloc, Iterable It>
 inline V get(const map<K, V, Comp, Alloc, It> &m, T key, V def = V()) {
-    return GetImpl::get(m.unstable_iterable(), key, def);
+    return get(m.unstable_iterable(), key, def);
 }
 
 template<class K, class T, class V, class Comp, class Alloc, Iterable It>
 inline V *getref(map<K, V, Comp, Alloc, It> &m, T key) {
-    return GetImpl::getref(m.unstable_iterable(), key);
+    return getref(m.unstable_iterable(), key);
 }
 
 template<class K, class T, class V, class Comp, class Alloc, Iterable It>
 inline const V *getref(const map<K, V, Comp, Alloc, It> &m, T key) {
-    return GetImpl::getref(m.unstable_iterable(), key);
+    return getref(m.unstable_iterable(), key);
 }
 
 template<class K, class T, class V, class Comp, class Alloc, Iterable It>

@@ -1220,7 +1220,7 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "warning: AssignmentStatement: Padding fields do not need to be explicitly set.* Tofino does not support action data/constant with rotated PHV source at the same time|ACTION_CANNOT_BE_SYNTHESIZED|PHV allocation creates an invalid container action within a Tofino ALU"
+  "warning: .*: Padding fields do not need to be explicitly set.* Tofino does not support action data/constant with rotated PHV source at the same time|ACTION_CANNOT_BE_SYNTHESIZED|PHV allocation creates an invalid container action within a Tofino ALU"
   extensions/p4_tests/p4_16/compile_only/p4c-3453.p4
 )
 
@@ -1478,7 +1478,7 @@ p4c_add_xfail_reason("tofino"
 
 # p4c update 04/26/2022 (new tests)
 p4c_add_xfail_reason("tofino"
-  "error: [(]bit<.*>[)]"
+  "error: '[(]bit<.*>[)]"
   testdata/p4_16_samples/m_psa-dpdk-non-zero-arg-default-action-08.p4
   testdata/p4_16_samples/psa-dpdk-non-zero-arg-default-action-01.p4
   testdata/p4_16_samples/psa-dpdk-non-zero-arg-default-action-02.p4

@@ -149,10 +149,10 @@ class ConstantLogicValue : public Inspector {
 
             // 3] Do the strength reduction, check the result and aggregate
             // the flag.
-            PassRepeated reduc_pass = {
+            PassRepeated reduc_pass({
                 new P4::DoStrengthReduction(),
                 new P4::DoConstantFolding(nullptr, nullptr, true),
-            };
+            });
             rew_expr = rew_expr->apply(reduc_pass);
             LOG4("Strength reduction result: " << rew_expr);
             // The result can be an expression which needs to be

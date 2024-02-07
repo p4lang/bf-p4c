@@ -161,7 +161,7 @@ TestCode(44): [--Wwarn=uninitialized_use] warning: val_undefined may be uninitia
 }
 
 TEST_F(ErrorReporterTest, WarningWithSuffixConformToExpectedFormat) {
-    const std::string EXPECTED_WARN_1 = R"(TestCode(44): [--Werror=type-error] error: return ix + 1
+    const std::string EXPECTED_WARN_1 = R"(TestCode(44): [--Werror=type-error] error: 'return ix + 1'
                 return (ix + 1);
                 ^^^^^^
   ---- Actual error:
@@ -175,7 +175,7 @@ TEST_F(ErrorReporterTest, WarningWithSuffixConformToExpectedFormat) {
   TestCode(43)
               bool f(in bit<16> ix) {
               ^^^^
-TestCode(42): [--Werror=type-error] error: cntr
+TestCode(42): [--Werror=type-error] error: 'cntr'
         Virtual() cntr = {
                   ^^^^
   ---- Actual error:
