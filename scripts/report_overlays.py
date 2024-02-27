@@ -16,6 +16,10 @@ import sys
 # Populate ContainerAlloc instances by parsing all allocations
 #    while populating ContainerAlloc's keep track of container bits that have more than one LiveFields
 
+
+# **************
+# Class IntRange: Auxiliary class representing integer range
+# **************
 class IntRange:
     def __init__(self, lsb, msb):
         self.lsb = lsb
@@ -37,6 +41,9 @@ class IntRange:
     def get_bits_in_range(self):
         return range(self.lsb, self.msb + 1)
 
+# ***************
+# Class LiveField: Represent field liverange
+# ***************
 class LiveField:
     def __init__(self, fld, f_stage, l_stage):
         self.field = fld
@@ -76,6 +83,9 @@ class LiveField:
             return not (self.last_stage < other.first_stage or self.first_stage > other.last_stage)
         return False
 
+# *********
+# has_stage_overlap(): Find if there is stage overlap between fields in lf_set.
+# *********
 def has_stage_overlap(lf_set):
     lf_list = list(lf_set)
 
@@ -84,7 +94,7 @@ def has_stage_overlap(lf_set):
             lf1 = lf_list[i]
             if not isinstance(lf1, LiveField):
                 continue
-            lf2 = of_list[j]
+            lf2 = lf_list[j]
             if not isinstance(lf2, LiveField):
                 continue
             if lf1.has_lrange_overlap(lf2):
@@ -92,6 +102,9 @@ def has_stage_overlap(lf_set):
 
     return False
     
+# ********
+# Class ContainerAlloc: Represent field allocations per container bit
+# ********
 class ContainerAlloc:
     def __init__(self, name):
         self.name = name
@@ -101,6 +114,18 @@ class ContainerAlloc:
             self.size = 16
         elif re.search(r'[W]', name):
             self.size = 32
+
+    # Comparison function
+    def __eq__(self, other):
+        if isinstance(other, ContainerAlloc):
+            return (self.field == other.name and self.size == other.size)
+        return False
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __hash__(self):
+        return hash('{}'.format(self.name))
 
     # Check container name to determine overlay risk
     def overlay_risk(self):
@@ -113,28 +138,27 @@ class ContainerAlloc:
         return True
     
     def add_field_alloc(self, live_field, bit_range):
-        # overlapping_fields = False
         cntr_range = IntRange(bit_range, self.size)
         for c_bit in cntr_range.get_bits_in_range():
             assert c_bit < self.size
             if c_bit not in self.bit_allocs:
                 self.bit_allocs[c_bit] = set()
             self.bit_allocs[c_bit].add(live_field)
-            # if len(self.bit_allocs[c_bit]) > 1:
-            #     overlapping_fields = True
+        return '({}..{})'.format(cntr_range.lsb, cntr_range.msb)
 
-        # return overlapping_fields
+    def update_alloc(self, other):
+        for c_bit, fld in other.bit_allocs.items():
+            assert c_bit < self.size
+            if c_bit not in self.bit_allocs:
+                self.bit_allocs[c_bit] = set()
+            self.bit_allocs[c_bit].update(fld)
 
 
     def get_overlay_bits(self, bit_range): #, stage_overlap):
         bits = set()
         for c_bit in bit_range.get_bits_in_range():
             if (c_bit in self.bit_allocs) and len(self.bit_allocs[c_bit]) > 1:
-                # if stage_overlap and has_stage_overlap(self.bit_allocs[c_bit]):
-                #     bits.append(c_bit)
-                # elif not stage_overlap:
-                    bits.append(c_bit)
-
+                    bits.add(c_bit)
         return bits
 
     def __str__(self):
@@ -146,36 +170,58 @@ class ContainerAlloc:
             pretty_cntr += '\n  '
         return pretty_cntr +'\n'
 
+# ***********************
+# Class ContainerOverlays: Collect and summarize overlays of fields per container bit or per container
+# ***********************
 class ContainerOverlays:
-    def __init__(self, container_allocs):
+    def __init__(self, container_allocs, verb):
         self.bit_overlays = {}  # map container bit (e.g. B2[0]) to set of overlaid fields
+        self.verbose = verb
 
-        for alloc in container_allocs:
+        for cntr, alloc in container_allocs.items():
             # Collect overlay bits regardless of liverange (stage) overlap
-            ov_bits = alloc.get_overlay_bits(IntRange('', alloc.size)) 
+            ov_bits = alloc.get_overlay_bits(IntRange('', alloc.size))
+            # cnt_id = '{}[{}..{}]'.format(alloc.name, min(ov_bits), max(ov_bits)) if len(ov_bits) else ''
+            cnt_id = ''
+            prv_ovlays = set()
+            prv_ov_bit = -1
 
             for ov_bit in ov_bits:
-                bit_id = '{}[{}]'.format(alloc.name, ov_bit)
-                bit_overlays[bit_id] = set(alloc.bit_allocs[ov_bit])
-                # if has_stage_overlap(alloc.bit_allocs[ov_bit]):
-                #     stage_overlays[bit_id] = set(alloc.bit_allocs[ov_bit])
+                # print('ContainerOverlays: {}[{}]'.format(alloc.name, ov_bit))
+                if (self.verbose):
+                    bit_id = '{}[{}]'.format(alloc.name, ov_bit)
+                    self.bit_overlays[bit_id] = set(alloc.bit_allocs[ov_bit])
+                else:
+                    if prv_ovlays != alloc.bit_allocs[ov_bit]:
+                        if len(cnt_id):
+                            cnt_id += '..{}]'.format(prv_ov_bit)
+                            self.bit_overlays[cnt_id] = set(prv_ovlays)
+
+                        cnt_id = '{}[{}'.format(alloc.name, ov_bit)
+                        prv_ovlays = set(alloc.bit_allocs[ov_bit])
+                    prv_ov_bit = ov_bit
+
+            if len(cnt_id):
+                cnt_id += '..{}]'.format(prv_ov_bit)
+                self.bit_overlays[cnt_id] = set(prv_ovlays)
 
     def filter_liverange_overlaps(self):
         # Collect non liverange overlapping bits
         rem_bits = set()
-        for key, value in bit_overlays.items():
+        for key, value in self.bit_overlays.items():
             if not has_stage_overlap(value):
                 rem_bits.add(key)
 
         # Remove them from set of overlaid bits
         for b in rem_bits:
-            del bit_overlays[b]
+            del self.bit_overlays[b]
 
     def __str__(self):
-        pretty_overlay_bits = '\n'
-        for key, value in self.bit_overlays.items():
-            pretty_overlay_bits += '{} : '.format(key)
-            for item in value:
+        ordered_cntr_bits = sorted(self.bit_overlays)
+        pretty_overlay_bits = '\n  '
+        for key in ordered_cntr_bits:
+            pretty_overlay_bits += '  {} : '.format(key)
+            for item in self.bit_overlays[key]:
                 pretty_overlay_bits += '{} , '.format(str(item))
             pretty_overlay_bits += '\n  '
         return pretty_overlay_bits +'\n'
@@ -185,11 +231,13 @@ class ContainerOverlays:
             return True
         return False
     
-
+# ************
+# parse_file(): main parsing function which collects field allocations and creates ContainerAlloc objects
+# ************
 def parse_file(filename, start_token, stop_token):
     num_stages = 12  # Set it for Tofino and update later for Tofino2
     mappings = {}
-    container_allocs = []
+    container_allocs = {}
 
     with open(filename, 'r') as file:
         is_parsing = False
@@ -221,10 +269,13 @@ def parse_file(filename, start_token, stop_token):
                     mappings[cntr] = fld
                     lf = LiveField(fld, stg, num_stages)
                     c_alloc = ContainerAlloc(cntr)
-                    c_alloc.add_field_alloc(lf, cntr_range)
+                    c_range = c_alloc.add_field_alloc(lf, cntr_range)
                     if c_alloc.overlay_risk():
-                        container_allocs.append(c_alloc)
-                    print(cntr, '[', cntr_range, ']', " --> ", fld, " @stage " , stg)
+                        if cntr in container_allocs:
+                            container_allocs[cntr].update_alloc(c_alloc)
+                        else:
+                            container_allocs[cntr] = c_alloc
+                    # print(cntr, '[', c_range, ']', " --> ", fld, " @stage " , stg)
                     continue
 
                 # Match container slice WITHOUT stage info
@@ -237,25 +288,28 @@ def parse_file(filename, start_token, stop_token):
                     cntr_bits = ''
                     if cntr_range is not None:
                         cntr_bits = cntr_range
-                    c_alloc.add_field_alloc(lf, cntr_bits)
+                    c_range = c_alloc.add_field_alloc(lf, cntr_bits)
                     if c_alloc.overlay_risk():
-                        container_allocs.append(c_alloc)
-                    print("2. ", cntr, ' [', cntr_range, "] --> ", fld)
+                        if cntr in container_allocs:
+                            container_allocs[cntr].update_alloc(c_alloc)
+                        else:
+                            container_allocs[cntr] = c_alloc
+                    # print("2. ", cntr, ' [', c_range, "] --> ", fld)
                     continue
 
                 
     return mappings, container_allocs
 
 
-def main(input_file, output_file):
+def main(input_file, output_file, verb):
     print('Parsing bfa file: {}'.format(input_file))
         
-    i_result, i_allocs = parse_file(input_file, 'phv ingress:', 'context_json:')
-    ingr_overlays = ContainerOverlays(i_allocs)
-    e_result, e_allocs = parse_file(input_file, 'phv egress:', 'context_json:')
-    egr_overlays = ContainerOverlays(e_allocs)
+    i_result, i_allocs_dict = parse_file(input_file, 'phv ingress:', 'context_json:')
+    ingr_overlays = ContainerOverlays(i_allocs_dict, verb)
+    e_result, e_allocs_dict = parse_file(input_file, 'phv egress:', 'context_json:')
+    egr_overlays = ContainerOverlays(e_allocs_dict, verb)
 
-    # *TODO* report overlay for non liverange overlaps using ContainerOverlays.filter_liverange_overlaps()
+    # Report overlays irrespective of liveranges 
     with open(output_file, 'w') as file:
         # Report Ingress Overlays
         file.write('********   INGRESS OVERLAYS  *********\n')
@@ -273,21 +327,45 @@ def main(input_file, output_file):
             file.write(str(egr_overlays))
         file.write('\n')
 
-            
-    print('\nOutput stored in file {}'.format(output_file))
+    # Report overlays only for liverange overlaps
+    ingr_overlays.filter_liverange_overlaps()
+    egr_overlays.filter_liverange_overlaps()
+    output_file_lrange = output_file + '.lrange'
+    with open(output_file_lrange, 'w') as file:
+        # Report Ingress Overlays with Liverange overlaps only
+        file.write('********   INGRESS OVERLAYS W/ LIVERANGE OVERLAP  *********\n')
+        if (ingr_overlays.no_overlays()):
+            file.write('NO OVERLAYS FOUND!!!')
+        else:
+            file.write(str(ingr_overlays))
+        file.write('\n')
+
+        # Report Egress Overlays with Liverange overlaps only
+        file.write('********   EGRESS OVERLAYS W/ LIVERANGE OVERLAP  *********\n')
+        if (egr_overlays.no_overlays()):
+            file.write('NO OVERLAYS FOUND!!!')
+        else:
+            file.write(str(egr_overlays))
+        file.write('\n')
+
+
+    print('\nOutput stored in files {}(.lrange)'.format(output_file))
 
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='''\nUsage info: \n\nn  report_overlays.py 
-                                                  -i <input.bfa> [-o <output.log>]''')
+                                                  -i <input.bfa> [-o <output.log>] [-v]''')
 
-    parser.add_argument("-i", "--input", required=True, help = "Input BF assembly file")
-    parser.add_argument("-0", "--output", help = "Output text report file")
+    parser.add_argument("-i", "--input", required=True, help = "Specify input tofino assembly file")
+    parser.add_argument("-o", "--output", help = "Speficy name of output text report file")
+    parser.add_argument("-v", "--verbose", action='store_true',
+                        help = "Generate overlay report per container bit (default per container)")
     args = parser.parse_args()
     in_file = args.input
     if (not re.match(r'\S+\.bfa$', in_file)):
         sys.exit("Input file is not a *.bfa")
     out_file = args.output if args.output else in_file.replace('.bfa', '.log')
+    verbose = True if args.verbose else False
 
-    main(in_file, out_file)
+    main(in_file, out_file, verbose)
