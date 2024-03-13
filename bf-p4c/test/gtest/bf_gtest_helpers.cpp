@@ -443,14 +443,18 @@ TestCode::TestCode(Hdr header, std::string code,
             o.target = "tofino2";
             o.arch = "t2na";
            break;
+#if HAVE_CLOUDBREAK
         case Hdr::Tofino3arch:
             o.target = "tofino3";
             o.arch = "t3na";
             break;
+#endif  /* HAVE_CLOUDBREAK */
+#if HAVE_FLATROCK
         case Hdr::Tofino5arch:
             o.target = "tofino5";
             o.arch = "t5na";
             break;
+#endif  /* HAVE_FLATROCK */
     }
 
     std::vector<char*> argv;
@@ -481,12 +485,16 @@ TestCode::TestCode(Hdr header, std::string code,
         case Hdr::Tofino2arch:
             source << p4headers().tofino2arch_p4;
             break;
+#if HAVE_CLOUDBREAK
         case Hdr::Tofino3arch:
             source << p4headers().tofino3arch_p4;
             break;
+#endif  /* HAVE_CLOUDBREAK */
+#if HAVE_FLATROCK
         case Hdr::Tofino5arch:
             source << p4headers().tofino5arch_p4;
             break;
+#endif  /* HAVE_FLATROCK */
         case Hdr::V1model_2018:
             source << p4headers().v1model_2018_p4;
             break;

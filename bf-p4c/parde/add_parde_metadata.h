@@ -27,7 +27,9 @@ class AddParserMetadata : public ParserModifier {
     void addTofinoIngressParserEntryPoint(IR::BFN::Parser *);
     void addTofinoEgressParserEntryPoint(IR::BFN::Parser *);
 
+#if HAVE_FLATROCK
     void addFlatrockIngressParserEntryPoint(IR::BFN::Parser *);
+#endif  // HAVE_FLATROCK
 
     const IR::BFN::Pipe* pipe;
     bool isV1;

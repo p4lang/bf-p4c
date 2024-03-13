@@ -7,7 +7,9 @@
 
 // template specialization declarations
 #include "tofino/action_table.h"
+#if HAVE_FLATROCK
 #include "flatrock/action_table.h"
+#endif  /* HAVE_FLATROCK */
 
 /// See 6.2.8.4.3 of the MAU Micro-Architecture document.
 const unsigned MAX_AD_SHIFT = 5U;

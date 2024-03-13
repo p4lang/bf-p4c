@@ -1,5 +1,7 @@
 #include "bf-p4c/mau/table_placement.h"
+#if HAVE_FLATROCK
 #include "bf-p4c/mau/flatrock/table_format.h"
+#endif  /* HAVE_FLATROCK */
 
 #ifdef MULTITHREAD
 #include <gc/gc.h>

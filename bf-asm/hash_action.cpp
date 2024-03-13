@@ -7,7 +7,9 @@
 #include "misc.h"
 
 // target specific instantiatitions
+#if HAVE_FLATROCK
 #include "flatrock/hash_action.h"
+#endif  /* HAVE_FLATROCK */
 
 Table::Format::Field *HashActionTable::lookup_field(const std::string &n,
         const std::string &act) const {

@@ -192,9 +192,11 @@ const IMemSpec &JBayMauSpec::getIMemSpec() const { return imem_; }
 
 const IXBarSpec &JBayMauSpec::getIXBarSpec() const { return ixbar_; }
 
+#if HAVE_CLOUDBREAK
 const IXBarSpec &CloudbreakMauSpec::getIXBarSpec() const { return ixbar_; }
 
 const IMemSpec &CloudbreakMauSpec::getIMemSpec() const { return imem_; }
+#endif  /* HAVE_CLOUDBREAK */
 
 #if HAVE_FLATROCK
 

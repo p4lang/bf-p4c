@@ -8,8 +8,12 @@
 
 #include "tofino/stateful.h"
 #include "jbay/stateful.h"
+#if HAVE_CLOUDBREAK
 #include "cloudbreak/stateful.h"
+#endif  /* HAVE_CLOUDBREAK */
+#if HAVE_FLATROCK
 #include "flatrock/stateful.h"
+#endif  /* HAVE_FLATROCK */
 
 void StatefulTable::parse_register_params(int idx, const value_t &val) {
     if (idx < 0 || idx > Target::STATEFUL_REGFILE_ROWS())

@@ -5,7 +5,9 @@
 #include "bfas.h"
 #include "map.h"
 #include "asm-types.h"
+#if HAVE_FLATROCK
 #include "bf-p4c/common/flatrock.h"
+#endif  /* HAVE_FLATROCK */
 
 struct MemUnit;
 

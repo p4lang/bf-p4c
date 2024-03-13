@@ -30,11 +30,10 @@ void CollectPipelines::Pipe::set(unsigned count, unsigned idx, const IR::IDeclar
 
 #if HAVE_FLATROCK
     bool isFlatrock = Device::currentDevice() == Device::FLATROCK;
-#else
-    bool isFlatrock = false;
 #endif
     BUG_CHECK(idx < count, "Pipe argument %1% out of range", idx);
 
+#if HAVE_FLATROCK
     if (isFlatrock) {
         // TODO This will need to change when T5NA gets ghost support
         BUG_CHECK(count == 4, "Cannot process pipelines with %1% arguments on Tofino 5", count);
@@ -45,6 +44,7 @@ void CollectPipelines::Pipe::set(unsigned count, unsigned idx, const IR::IDeclar
             case 3: _setPipe(this, dec, &Pipe::egress, &Gress::deparser, "deparser"); break;
         }
     } else {
+#endif  // HAVE_FLATROCK
         BUG_CHECK(count == 6u || count == 7u,
                   "Cannot process pipelines with %1% arguments", count);
         if (idx == 6) {
@@ -59,7 +59,9 @@ void CollectPipelines::Pipe::set(unsigned count, unsigned idx, const IR::IDeclar
                 case 2: _setPipe(this, dec, gress, &Gress::deparser, "deparser"); break;
             }
         }
+#if HAVE_FLATROCK
     }
+#endif  // HAVE_FLATROCK
 }
 
 bool CollectPipelines::Pipe::operator==(const Pipe &other) const {

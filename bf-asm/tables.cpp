@@ -11,7 +11,9 @@
 #include "tables.h"
 
 // template specialization declarations
+#if HAVE_FLATROCK
 #include "flatrock/action_table.h"
+#endif  /* HAVE_FLATROCK */
 
 const char *MemUnit::desc() const {
     static char buffer[256], *p = buffer;

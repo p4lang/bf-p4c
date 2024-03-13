@@ -423,7 +423,11 @@ void Parser::PriorityUpdate::write_config(REGS &action_row) {
     }
 }
 
+#if HAVE_CLOUDBREAK
 // generic for jbay or cloudbreak (tofino1 is specialized)
+#else
+// for jbay (tofino1 is specialized)
+#endif  /* HAVE_CLOUDBREAK */
 template <> void Parser::RateLimit::write_config(::Tofino::regs_pipe &regs, gress_t gress);
 template <class REGS> void Parser::RateLimit::write_config(REGS &regs, gress_t gress) {
     if (gress == INGRESS) {
@@ -438,8 +442,8 @@ template <class REGS> void Parser::RateLimit::write_config(REGS &regs, gress_t g
         ctrl.max = max;
     }
 }
-// dummy specialization for flatrock
 #ifdef HAVE_FLATROCK
+// dummy specialization for flatrock
 template <> void Parser::RateLimit::write_config(::Flatrock::regs_pipe &regs, gress_t gress);
 #endif  /* HAVE_FLATROCK */
 
@@ -477,7 +481,11 @@ void Parser::State::Match::write_common_row_config(REGS &regs, Parser *pa, State
     write_lookup_config(regs, state, row);
 
     auto &ea_row = regs.memory[state->gress].ml_ea_row[row];
+#if HAVE_CLOUDBREAK
     if (ctr_instr || ctr_load || ctr_imm_amt || ctr_stack_pop || options.target == CLOUDBREAK) {
+#else
+    if (ctr_instr || ctr_load || ctr_imm_amt || ctr_stack_pop) {
+#endif  /* HAVE_CLOUDBREAK */
         write_counter_config(ea_row);
     } else if (def) {
         def->write_counter_config(ea_row);
@@ -646,7 +654,11 @@ void Parser::Checksum::write_row_config(ROW &row) {
         el = (mul_2 >> rsh++) & 1;
 }
 
+#if HAVE_CLOUDBREAK
 // Used both with JBay and Cloudbreak
+#else
+// Used with JBay
+#endif  /* HAVE_CLOUDBREAK */
 bitvec expand_parser_groups(bitvec phvs);
 bitvec remove_nonparser(bitvec phvs);
 void setup_jbay_ownership(bitvec phv_use[2],

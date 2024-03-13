@@ -10,8 +10,12 @@
 // template specialization declarations
 #include "tofino/gateway.h"
 #include "jbay/gateway.h"
+#if HAVE_CLOUDBREAK
 #include "cloudbreak/gateway.h"
+#endif  /* HAVE_CLOUDBREAK */
+#if HAVE_FLATROCK
 #include "flatrock/gateway.h"
+#endif  /* HAVE_FLATROCK */
 
 static struct {
     unsigned         units, bits, half_shift, mask, half_mask;

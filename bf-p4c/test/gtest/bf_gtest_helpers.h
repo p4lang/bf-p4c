@@ -187,7 +187,13 @@ class TestCode {
     enum class Hdr {None,       // You need to provide the 'package' - see min_control_shell().
                     CoreP4,     // The core.p4 package.
                     TofinoMin,  // For building an empty tofino_shell() - add only what you need.
-                    Tofino1arch, Tofino2arch, Tofino3arch, Tofino5arch,  // The regular header files
+                    Tofino1arch, Tofino2arch,  // The regular header files
+#if HAVE_CLOUDBREAK
+                    Tofino3arch,  // Regular TF3 header files
+#endif  // HAVE_CLOUDBREAK
+#if HAVE_FLATROCK
+                    Tofino5arch,  // Regular TF5 header files
+#endif  // HAVE_FLATROCK
                     V1model_2018, V1model_2020};  // The regular header files.
 
     /** See test_bf_gtest_helpers.cpp for example usage of 'TestCode'.

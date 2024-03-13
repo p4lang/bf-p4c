@@ -227,6 +227,7 @@ class JBayMauSpec : public MauSpec {
     const IMemSpec &getIMemSpec() const override;
 };
 
+#if HAVE_CLOUDBREAK
 class CloudbreakMauSpec : public MauSpec {
     const TofinoIXBarSpec ixbar_;
     const TofinoIMemSpec imem_;
@@ -236,6 +237,7 @@ class CloudbreakMauSpec : public MauSpec {
     const IXBarSpec &getIXBarSpec() const override;
     const IMemSpec &getIMemSpec() const override;
 };
+#endif  /* HAVE_CLOUDBREAK */
 
 #if HAVE_FLATROCK
 class FlatrockMauSpec : public MauSpec {

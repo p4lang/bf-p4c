@@ -85,6 +85,7 @@ void AddParserMetadata::addTofinoIngressParserEntryPoint(IR::BFN::Parser* parser
         { new IR::BFN::Transition(match_t(), 0, parser->start) });
 }
 
+#if HAVE_FLATROCK
 void AddParserMetadata::addFlatrockIngressParserEntryPoint(IR::BFN::Parser* parser) {
     // Initialize ingress_intrinsic_metadata_for_tm.$zero to 0
     auto* igTmMeta = getMetadataType(pipe, "ingress_intrinsic_metadata_for_tm");
@@ -97,6 +98,7 @@ void AddParserMetadata::addFlatrockIngressParserEntryPoint(IR::BFN::Parser* pars
     parser->start = new IR::BFN::ParserState(createThreadName(parser->gress, "$entry_point"),
         parser->gress, *prim, { }, { new IR::BFN::Transition(match_t(), 0, parser->start) });
 }
+#endif  // HAVE_FLATROCK
 
 void AddParserMetadata::addIngressMetadata(IR::BFN::Parser *parser) {
     if (Device::currentDevice() == Device::TOFINO ||

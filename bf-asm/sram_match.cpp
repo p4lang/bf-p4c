@@ -7,7 +7,9 @@
 #include "misc.h"
 #include "stage.h"
 #include "tables.h"
+#if HAVE_FLATROCK
 #include "flatrock/sram_match.h"
+#endif  /* HAVE_FLATROCK */
 
 Table::Format::Field *SRamMatchTable::lookup_field(const std::string &n,
         const std::string &act) const {

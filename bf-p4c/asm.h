@@ -7,7 +7,9 @@
 #include "bf-p4c/common/bridged_packing.h"
 #include "bf-p4c/common/utils.h"
 #include "bf-p4c/mau/asm_output.h"
+#if HAVE_FLATROCK
 #include "bf-p4c/mau/flatrock/asm_output.h"
+#endif  /* HAVE_FLATROCK */
 #include "bf-p4c/mau/jbay_next_table.h"
 #include "bf-p4c/mau/tofino/asm_output.h"
 #include "bf-p4c/parde/asm_output.h"

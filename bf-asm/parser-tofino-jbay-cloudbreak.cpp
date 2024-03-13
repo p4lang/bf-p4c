@@ -1314,9 +1314,16 @@ Parser::State::Match::Match(int l, gress_t gress, State* s, match_t m, VECTOR(pa
                 value_set_handle = kv.value.i;
         }  else if (kv.key == "disable_partial_hdr_err") {
             if (!CHECKTYPE(kv.value, tINT)) continue;
+#if HAVE_CLOUDBREAK
             if (options.target != TOFINO2 && options.target != TOFINO3)
                 error(kv.key.lineno,
                         "disable_partial_hdr_err only available for Tofino2 and Tofino3");
+#else
+            if (options.target != TOFINO2)
+                error(kv.key.lineno,
+                        "disable_partial_hdr_err only available for Tofino2");
+#endif  // HAVE_CLOUDBREAK
+
             if (disable_partial_hdr_err != -1)
                 error(kv.key.lineno, "Multiple disable_partial_hdr_err settings in match");
             if (kv.value.i < 0 || kv.value.i > 1)
@@ -1325,9 +1332,14 @@ Parser::State::Match::Match(int l, gress_t gress, State* s, match_t m, VECTOR(pa
             disable_partial_hdr_err = kv.value.i;
         }  else if (kv.key == "partial_hdr_err_proc") {
             if (!CHECKTYPE(kv.value, tINT)) continue;
+#if HAVE_CLOUDBREAK
             if (options.target != TOFINO3)
                 error(kv.key.lineno,
                         "partial_hdr_err_proc only available for Tofino3");
+#else
+            error(kv.key.lineno,
+                    "partial_hdr_err_proc is unsupported");
+#endif  // HAVE_CLOUDBREAK
             if (partial_hdr_err_proc != -1)
                 error(kv.key.lineno, "Multiple partial_hdr_err_proc settings in match");
             if (kv.value.i < 0 || kv.value.i > 1)
@@ -1780,34 +1792,35 @@ void Parser::State::pass2(Parser *pa) {
 
 /********* output *********/
 
-/** Extractor config tracking and register config code
- * Different tofino models have very different ways in which their parser extractors are
- * managed, but all are common in that there are multiple extractions that can happen in
- * parallel in a single parser match tcam row.  We manage this by having a target-specific
- * 'output_map' object passed via a void * to target-sepcific write_output_config methods
- * along with an `unsigned used` mask that tracks which or how many extractors have been
- * used, so as to issue errors for conflicting uses.
- *
- * The `setup_phv_output_map` method creates the target specific output_map object that
- * will be passed to subsequent `write_output_config` calls to deal with each individual
- * extract.  Finally, `mark_unused_output_map` is called to deal with any register setup
- * needed for unused extractors.  They're called 'outputs' as the are concerned with
- * outputting PHV values from the parser.
- *
- * PHV outputs are split into 'saves' and 'sets' which come from different syntax in the
- * asm source.  'saves' copy data from the input buffer into PHVs, while 'sets' write
- * constants into the PHVs.  Different targets have different constraints on how flexible
- * they are for saves vs sets, so some want to do saves first and other sets
- *  - tofino1: do saves first (why? sets seem more constrained, but there's an issue
- *    with ganging smaller extractors to write larger PHVs)
- *  - tofino2: do sets first as some extractors can only do saves
- *  - tofino3: don't care -- extractors are entirely symmetric vis sets vs saves
- *
- * FIXME -- should probably refactor this into a more C++ style base class pointer with
- * derived classes for each target.  Should move the 'used' mask into that object as well.
- * Alternately, could move the entire `setup` to `mark_unused` process into a target specific
- * method.
- */
+/// Extractor config tracking and register config code
+/// Different tofino models have very different ways in which their parser extractors are
+/// managed, but all are common in that there are multiple extractions that can happen in
+/// parallel in a single parser match tcam row.  We manage this by having a target-specific
+/// 'output_map' object passed via a void * to target-sepcific write_output_config methods
+/// along with an `unsigned used` mask that tracks which or how many extractors have been
+/// used, so as to issue errors for conflicting uses.
+///
+/// The `setup_phv_output_map` method creates the target specific output_map object that
+/// will be passed to subsequent `write_output_config` calls to deal with each individual
+/// extract.  Finally, `mark_unused_output_map` is called to deal with any register setup
+/// needed for unused extractors.  They're called 'outputs' as the are concerned with
+/// outputting PHV values from the parser.
+///
+/// PHV outputs are split into 'saves' and 'sets' which come from different syntax in the
+/// asm source.  'saves' copy data from the input buffer into PHVs, while 'sets' write
+/// constants into the PHVs.  Different targets have different constraints on how flexible
+/// they are for saves vs sets, so some want to do saves first and other sets
+///  - tofino1: do saves first (why? sets seem more constrained, but there's an issue
+///    with ganging smaller extractors to write larger PHVs)
+///  - tofino2: do sets first as some extractors can only do saves
+#ifdef HAVE_CLOUDBREAK
+///  - tofino3: don't care -- extractors are entirely symmetric vis sets vs saves
+#endif  /* HAVE_CLOUDBREAK */
+///
+/// FIXME -- should probably refactor this into a more C++ style base class pointer with
+/// derived classes for each target.  Should move the 'used' mask into that object as well.
+/// Alternately, could move the entire `setup` to `mark_unused` process into a target specific
+/// method.
 
 std::set<Parser::State::Match*>
 Parser::State::Match::get_all_preds() {

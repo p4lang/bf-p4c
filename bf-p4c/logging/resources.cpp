@@ -11,7 +11,9 @@
 #include "mau/input_xbar.h"
 #include "mau/instruction_memory.h"
 #include "mau/memories.h"
+#if HAVE_FLATROCK
 #include "mau/flatrock/memories.h"
+#endif  /* HAVE_FLATROCK */
 #include "mau/tofino/memories.h"
 #include "version.h"
 

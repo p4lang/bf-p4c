@@ -8,7 +8,10 @@ const IR::Node* DropPacketWithMirrorEngine_::preorder(IR::BFN::TnaControl *contr
     // ig_intr_md_for_dprsr.mirror_type is always initialized to zero by parser
     // in tofino1
     if (Device::currentDevice() != Device::JBAY &&
-        Device::currentDevice() != Device::CLOUDBREAK) {
+#if HAVE_CLOUDBREAK
+        Device::currentDevice() != Device::CLOUDBREAK
+#endif  // HAVE_CLOUDBREAK
+        ) {
         prune();
         return control; }
 

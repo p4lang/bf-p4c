@@ -318,6 +318,9 @@
  * - Target::JBay::DEPARSER_CLOTS_PER_GROUP = 4
  * - Target::JBay::DEPARSER_TOTAL_CHUNKS = DEPARSER_CHUNK_GROUPS * DEPARSER_CHUNKS_PER_GROUP = 128
  * - Target::JBay::DEPARSER_MAX_FD_ENTRIES = DEPARSER_TOTAL_CHUNKS = 128
+ */
+#if HAVE_CLOUDBREAK
+/**
  *
  * Tofino3:
  * - Target::Cloudbreak::DEPARSER_CHECKSUM_UNITS = 8
@@ -331,6 +334,9 @@
  * - Target::Cloudbreak::DEPARSER_TOTAL_CHUNKS = DEPARSER_CHUNK_GROUPS * DEPARSER_CHUNKS_PER_GROUP
  *                                             = 128
  * - Target::Cloudbreak::DEPARSER_MAX_FD_ENTRIES = DEPARSER_TOTAL_CHUNKS = 128
+ */
+#endif  /* HAVE_CLOUDBREAK */
+/**
  *
  * ## Midend passes
  *

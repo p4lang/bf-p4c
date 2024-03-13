@@ -4,7 +4,9 @@
 #include "hex.h"
 #include "misc.h"
 #include "stage.h"
+#if HAVE_FLATROCK
 #include "flatrock/action_bus.h"
+#endif  /* HAVE_FLATROCK */
 
 static MeterBus_t MeterBus;
 

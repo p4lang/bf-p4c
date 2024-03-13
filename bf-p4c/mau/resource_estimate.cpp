@@ -4,7 +4,9 @@
 #include "memories.h"
 #include "table_placement.h"
 #include "lib/bitops.h"
+#if HAVE_FLATROCK
 #include "flatrock/input_xbar.h"
+#endif  /* HAVE_FLATROCK */
 
 constexpr int RangeEntries::MULTIRANGE_DISTRIBUTION_LIMIT;
 constexpr int RangeEntries::RANGE_ENTRY_PERCENTAGE;

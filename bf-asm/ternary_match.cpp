@@ -8,7 +8,9 @@
 #include "tables.h"
 
 #include "tofino/ternary_match.h"
+#if HAVE_FLATROCK
 #include "flatrock/ternary_match.h"
+#endif  /* HAVE_FLATROCK */
 
 Table::Format::Field *TernaryMatchTable::lookup_field(const std::string &n,
          const std::string &act) const {

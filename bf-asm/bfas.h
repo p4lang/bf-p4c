@@ -10,7 +10,13 @@
 
 enum config_version_t { CONFIG_OLD = 1, CONFIG_NEW = 2, CONFIG_BOTH = 3 };
 enum target_t { NO_TARGET = 0, TOFINO, TOFINO2, JBAY = TOFINO2, TOFINO2H, TOFINO2U, TOFINO2M,
-                TOFINO2A0, TOFINO3, CLOUDBREAK = TOFINO3, TOFINO5, FLATROCK = TOFINO5,
+                TOFINO2A0,
+#if HAVE_CLOUDBREAK
+                TOFINO3, CLOUDBREAK = TOFINO3,
+#endif  // HAVE_CLOUDBREAK
+#if HAVE_FLATROCK
+                TOFINO5, FLATROCK = TOFINO5,
+#endif  // HAVE_FLATROCK
                 TARGET_INDEX_LIMIT };
 enum binary_type_t {
     NO_BINARY = -3,

@@ -1511,7 +1511,11 @@ static CondMoveMux::Decode  tf_opCondMux     ("cmux",  TOFINO, 0x6,  false, 2, "
 static NulOP::Decode        tf_opInvalidate  ("invalidate", TOFINO, 0x3800);                        // NOLINT
 
 #if HAVE_JBAY || HAVE_CLOUDBREAK
-static std::set<target_t>   jb_cb_targets = std::set<target_t>({JBAY, CLOUDBREAK});
+static std::set<target_t>   jb_cb_targets = std::set<target_t>({JBAY,
+#if HAVE_CLOUDBREAK
+                                                                CLOUDBREAK
+#endif  /* HAVE_CLOUDBREAK */
+                                                               });
 
 static AluOP3Src::Decode    jb_cb_opBMSET    ("bitmasked-set", jb_cb_targets, 0x0e);   // NOLINT
 static CondMoveMux::Decode  jb_cb_opCondMove ("cmov",    jb_cb_targets, 0x6, true,  5, "conditional-move");  // NOLINT

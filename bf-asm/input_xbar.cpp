@@ -14,8 +14,12 @@
 // template specialization declarations
 #include "tofino/input_xbar.h"
 #include "jbay/input_xbar.h"
+#if HAVE_CLOUDBREAK
 #include "cloudbreak/input_xbar.h"
+#endif  /* HAVE_CLOUDBREAK */
+#if HAVE_FLATROCK
 #include "flatrock/input_xbar.h"
+#endif  /* HAVE_FLATROCK */
 
 void HashCol::dbprint(std::ostream & out) const {
     out << "HashCol: " <<

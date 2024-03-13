@@ -16,7 +16,9 @@
 #include "bf-p4c/common/debug_info.h"
 #include "bf-p4c/common/field_defuse.h"
 #include "bf-p4c/common/ir_utils.h"
+#ifdef HAVE_FLATROCK
 #include "bf-p4c/common/flatrock.h"
+#endif  // HAVE_FLATROCK
 #include "bf-p4c/common/slice.h"
 #include "bf-p4c/common/utils.h"
 #include "bf-p4c/device.h"
@@ -28,7 +30,9 @@
 #include "bf-p4c/parde/collect_parser_usedef.h"
 #include "bf-p4c/parde/dump_parser.h"
 #include "bf-p4c/parde/field_packing.h"
+#ifdef HAVE_FLATROCK
 #include "bf-p4c/parde/flatrock.h"
+#endif  // HAVE_FLATROCK
 #include "bf-p4c/parde/parde_utils.h"
 #include "bf-p4c/parde/parde_visitor.h"
 #include "bf-p4c/parde/split_parser_state.h"
@@ -242,6 +246,7 @@ struct RemoveNegativeDeposits : public ParserTransform {
     }
 };
 
+#ifdef HAVE_FLATROCK
 /**
  * \ingroup LowerParserIR
  */
@@ -269,6 +274,7 @@ class InsertPayloadPseudoHeaderState : public ParserTransform {
  public:
     InsertPayloadPseudoHeaderState() {}
 };
+#endif
 
 /**
  * \defgroup LowerParserIR LowerParserIR

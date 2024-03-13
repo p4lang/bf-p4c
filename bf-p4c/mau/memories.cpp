@@ -7,7 +7,9 @@
 #include "lib/bitops.h"
 #include "lib/range.h"
 #include "bf-p4c/mau/tofino/memories.h"
+#if HAVE_FLATROCK
 #include "bf-p4c/mau/flatrock/memories.h"
+#endif  /* HAVE_FLATROCK */
 
 constexpr int Memories::SRAM_DEPTH;
 

@@ -9,7 +9,9 @@
 #include "tables.h"
 
 #include "tofino/exact_match.h"
+#if HAVE_FLATROCK
 #include "flatrock/exact_match.h"
+#endif  /* HAVE_FLATROCK */
 
 void ExactMatchTable::setup(VECTOR(pair_t) &data) {
     common_init_setup(data, false, P4Table::MatchEntry);

@@ -9,7 +9,9 @@
 #include <memory>
 
 #include "action_data_bus.h"
+#if HAVE_FLATROCK
 #include "bf-p4c/mau/flatrock/asm_output.h"
+#endif  /* HAVE_FLATROCK */
 #include "boost/range/adaptor/reversed.hpp"
 #include "bf-p4c/common/alias.h"
 #include "bf-p4c/common/ir_utils.h"
