@@ -1968,7 +1968,7 @@ void setup_jbay_no_multi_write(bitvec phv_allow_bitwise_or,
 // The intention for this function is for DEBUG purposes only and should not be
 // checked in with it being called from anywhere for logging due to above
 // potential worst case issue.
-// NOTE: P4C-4306 exhibits this behavior
+// JIRA-DOC: NOTE: P4C-4306 exhibits this behavior
 //
 // Function also checks for cycles in the parser graph.
 // For debug, call function on a parser object and run assembler with -Tparser:1

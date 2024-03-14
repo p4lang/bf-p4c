@@ -609,8 +609,9 @@ void MatchTable::gen_hash_bits(const std::map<int, HashCol> &hash_table,
                 }
                 auto group = input_xbar[0]->hashtable_input_group(hash_table_id);
                 int group_bit = bit;
-                // FIXME -- this adjustment is a hack for tofino1/2/3.  Should have a virtual
+                // FIXME -- this adjustment is a hack for tofino1/2.  Should have a virtual
                 // method on InputXbar?  or something in Target?
+                // TOF3-DOC: Tofino 3 also.
                 if (group.index != hash_table_id.index && (hash_table_id.index & 1))
                     group_bit += 64;
                 bits_to_xor->push_back(json::map{

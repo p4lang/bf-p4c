@@ -181,8 +181,9 @@ class PhvSpec {
      */
     virtual bool hasParserExtractGroups() const = 0;
 
-    /** The Flatrock PHV Builder must have the same extraction type (packet
-     * data vs non packet data) for a set of 4 x 8b or 2 x 16 containers.
+    /**
+     * TOF5-DOC: The Flatrock PHV Builder must have the same extraction type (packet
+     * TOF5-DOC: data vs non packet data) for a set of 4 x 8b or 2 x 16 containers.
      *
      * @return the ids of every container in the same parser group as the
      * provided container.

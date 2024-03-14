@@ -1624,7 +1624,7 @@ class address_map(csr_composite_object):
                             # If the non-zero value is the reset value, do not output it in the binary file.
                             # We are having too many problems where the driver is clearing things (like interrupt enables)
                             # before the binary file is loaded, and then the binary file re-enables them.
-                            # See DRV-1389
+                            # JIRA-DOC: See DRV-1389
                             if reset_value == chip_obj.orig_value:
                                 # print "Skipping setting %s, because it has the same value (%s) as its reset value of %s." % (obj.name, str(chip_obj), hex(reset_value))
                                 continue
@@ -1645,7 +1645,8 @@ class address_map(csr_composite_object):
                         root_parent = obj.parent
                         while type(root_parent) is not str:
                             root_parent = root_parent.parent
-                        # DRV-655, Force the mapram_config register programming
+                        # JIRA-DOC: DRV-655
+                        # Force the mapram_config register programming
                         # on the DMA block write path to avoid a race during
                         # chip init where the map ram is being written and the
                         # ECC mode is also being configured.  Since the map ram

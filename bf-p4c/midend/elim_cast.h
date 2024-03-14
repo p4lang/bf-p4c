@@ -217,8 +217,9 @@ class ElimCasts : public PassManager {
            new P4::ClearTypeMap(typeMap),
            new BFN::TypeChecking(refMap, typeMap, true),
            // FIXME -- StrengthReduction has problems with complex nested things like
-           // (0 ++ field << 1)[15:0] (from brig-405), which causes problems for Rewrite
+           // (0 ++ field << 1)[15:0] which causes problems for Rewrite
            // so we repeat until a fixed point is reached.
+           // JIRA-DOC: (from brig-405)
            new PassRepeated({new StrengthReduction(refMap, typeMap)}),
            new RewriteConcatToSlices(),
            new P4::ClearTypeMap(typeMap),

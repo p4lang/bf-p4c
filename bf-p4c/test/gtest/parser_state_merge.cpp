@@ -228,7 +228,8 @@ Switch(pipe) main;)";
 }
 
 /*
- * P4C-4281: state parse_seg_list could mistakenly be merged because
+ * JIRA-DOC: P4C-4281:
+ *           state parse_seg_list could mistakenly be merged because
  *           the loop created along with state parse_segment was
  *           overlooked in the code.  This test makes sure this
  *           is not the case.
@@ -351,7 +352,8 @@ Switch(pipe) main;
 }
 
 /**
- * P4C-3970: This test checks that correct state is dumped in phv.json for header fields
+ * JIRA-DOC: P4C-3970:
+ * This test checks that correct state is dumped in phv.json for header fields
  * in case the state which they are extracted in is merged.
  */
 TEST(ParserStateMergeTest, CheckStateInPhvJsonAfterMerge) {

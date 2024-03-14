@@ -447,20 +447,21 @@ void MeterTable::write_regs_home_row(REGS &regs, unsigned row) {
             break;
         default:
             meter_ctl.meter_enable = 1;
-            // DRV_1143 -- rng should always be on for normal meters
+            // JIRA-DOC: DRV_1143 -- rng should always be on for normal meters
             // RNG:
             // Enables random number generator for meter probabilistic charging
             // when green/yellow burst size exponent > 14.  This should be set
             // when any meter entry in the table has a burstsize exponent > 14
             // RNG is also enabled whenever red_enable config bit is set.
 
-            // As Mike F. described in DRV-1443, this should always be turned on
+            // JIRA-DOC: As Mike F. described in DRV-1443,
+            // this should always be turned on
             // for color-based meters, to handle an issue with large burst
             // sizes.  This applies to both packet-based and byte-based meters.
             // Mike F said, "The hardware adjusts the rate under the hood to
             // match the desired rate. Without enabling the RNG, the hardware
             // will always overcharge the buckets thereby reducing the rate."
-            // Relate JIRA's - P4C-1024, DRV-1443
+            // JIRA-DOC: Relate JIRA's - P4C-1024, DRV-1443
             meter_ctl.meter_rng_enable = 1;
             meter_ctl.meter_time_scale = profile;
             break; }
@@ -620,7 +621,7 @@ void MeterTable::write_mapram_color_regs(REGS &regs, bool &push_on_overflow) {
          * Bus going to color map rams on right
          *
          * *********************************************
-         * Example (P4C-3781)
+         * JIRA-DOC: Example (P4C-3781)
          *
          * A - Meter 1 Map Rams
          * a - Meter 1 Color Map Rams
@@ -671,7 +672,8 @@ void MeterTable::write_mapram_color_regs(REGS &regs, bool &push_on_overflow) {
              * It should never be set on the switchbox on the current row
              * as that would drive the top overflow down to any color maprams below.
              * This is invalid and can cause corruption if there is another meter occupying
-             * color maprams on the below row. (P4C-4781)
+             * color maprams on the below row.
+             * JIRA-DOC: (P4C-4781)
              */
             // Switch box below home row
             int switchbox_upper = curr_home_row/4U - 1;
@@ -772,7 +774,8 @@ void MeterTable::write_mapram_color_regs(REGS &regs, bool &push_on_overflow) {
     // - map_alu.mapram_color_write_switchbox[x].ctl.b_oflo_color_write_o_sel_r_color_write_i
     // - map_alu.mapram_color_write_switchbox[x].ctl.b_oflo_color_write_o_sel_t_oflo_color_write_i
     // Both these regs should never be set on a swithbox as it implies routing from both top and
-    // right map alu to the bottom rows. This leads to corruption of color data (P4C-4781)
+    // right map alu to the bottom rows. This leads to corruption of color data.
+    // JIRA-DOC: (P4C-4781)
     // Additional BUG_CHECK to verify that top row switchbox does not have
     // this regs set
     // - map_alu.mapram_color_write_switchbox[x].ctl.b_oflo_color_write_o_sel_t_oflo_color_write_i

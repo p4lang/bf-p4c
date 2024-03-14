@@ -120,7 +120,8 @@ IR::BFN::FullChecksumUnitConfig* ComputeLoweredDeparserIR::lowerChecksum(
         fullChecksumUnit->clots.push_back(clot);
     }
     fullChecksumUnit->unit = checksumUnit->unit;
-    // Only for JbayB0 and Cloudbreak
+    // Only for JbayB0
+    // TOF3-DOC: and Cloudbreak
     if (Device::pardeSpec().numDeparserInvertChecksumUnits()) {
         for (auto nestedCsum : emitChecksum->nested_checksum) {
             IR::BFN::PartialChecksumUnitConfig* nestedUnit = nullptr;
@@ -169,7 +170,7 @@ unsigned int ComputeLoweredDeparserIR::getChecksumUnit(bool nested) {
 }
 
 bool ComputeLoweredDeparserIR::preorder(const IR::BFN::Deparser* deparser) {
-    // Flatrock: metadata packer is output as a deparser
+    // TOF5-DOC: Flatrock: metadata packer is output as a deparser
     auto* loweredDeparser = deparser->gress == INGRESS ? igLoweredDeparser : egLoweredDeparser;
 
     // Reset the next checksum unit if needed. On Tofino, each thread has

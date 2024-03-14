@@ -426,9 +426,10 @@ bool StageUseEstimate::ways_provided(const IR::MAU::Table *tbl, LayoutOption *lo
  * address is used, if the table requires a miss-entry, then the all 1 field will collide with
  * the miss-entry.
  *
- * This could be fixed by a dynamic miss-entry, JIRA DRV-2874.  If the miss-entry could move to
+ * This could be fixed by a dynamic miss-entry.  If the miss-entry could move to
  * any open miss-entry, then all of these tables could support this identity hash.  If the table
  * was to ever fill all entries, then by definition, the table could never miss.
+ * JIRA-DOC: DRV-2874.
  *
  * The current limitations are if a direct resource is required.  This will reserve the all 0
  * miss-entry, no matter what.
@@ -438,7 +439,8 @@ bool StageUseEstimate::ways_provided(const IR::MAU::Table *tbl, LayoutOption *lo
  * a more complex check, but not hard to add
  *
  * UPDATE:
- * (P4C-3656) Based on driver fixes in DRV-4341, driver checks if the EXM table
+ * JIRA-DOC: P4C-3656 / DRV-4341
+ * Based on driver fixes, driver checks if the EXM table
  * requires a table location to be reserved for the default (miss) entry.
  * Originally the check was simply whether or not the table used direct
  * resources (action, idle, counter, meter, stful). Now, the check is whether

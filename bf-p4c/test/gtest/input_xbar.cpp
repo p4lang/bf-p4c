@@ -47,9 +47,10 @@ TEST_F(InputXbarAlloc, hello) {
     auto &byte_group_use = ixbar.get_byte_group_use();
     byte_group_use.clear();
 
-    // snapshot of input xbar allocation for
-    // customer/arista/obfuscated-ref-baremetal_2.p4 before the Parole table is
-    // allocated, note that ternary ixbar group[4] has one free byte and
+    // JIRA-DOC: snapshot of input xbar allocation for
+    // JIRA-DOC: customer/arista/obfuscated-ref-baremetal_2.p4 before the Parole table is
+    // JIRA-DOC: allocated,
+    // note that ternary ixbar group[4] has one free byte and
     // group[8] has two free bytes.
     //
     // The better allocation scheme is to allocate two bytes into group[8]

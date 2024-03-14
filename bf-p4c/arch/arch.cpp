@@ -2,7 +2,9 @@
 #include <utility>
 #include "bf-p4c/arch/tna.h"
 #include "bf-p4c/arch/t2na.h"
+#if HAVE_FLATROCK
 #include "bf-p4c/arch/t5na.h"
+#endif  /* HAVE_FLATROCK */
 #include "bf-p4c/arch/v1model.h"
 #include "bf-p4c/arch/psa/psa.h"
 #include "bf-p4c/device.h"
@@ -449,8 +451,11 @@ const IR::Node* RestoreParams::postorder(IR::BFN::TnaControl* control) {
             // with flags such as --target tofino2 --arch t2na.  In this case,
             // the ghost intrinsic metadata should not be present because the
             // program includes 'tna.p4', instead of 't2na.p4'
-            if (Architecture::currentArchitecture() == Architecture::T2NA ||
-                Architecture::currentArchitecture() == Architecture::T3NA) {
+            if (Architecture::currentArchitecture() == Architecture::T2NA
+#if HAVE_CLOUDBREAK
+                || Architecture::currentArchitecture() == Architecture::T3NA
+#endif  /* HAVE_CLOUDBREAK */
+                ) {
                 add_param(tnaParams, params, newParams, "gh_intr_md", 6,
                           "ghost_intrinsic_metadata_t", IR::Direction::In);
             }

@@ -450,7 +450,8 @@ const AllocError* AllocatorBase::is_container_write_mode_ok(const Allocation& al
 
     BUG_CHECK(write_mode, "parser write mode not exist for extracted field %1%", f->name);
 
-    // W0 is not allowed to be used with clear_on_write due to a hardware issue (P4C-4589).
+    // W0 is not allowed to be used with clear_on_write
+    // JIRA-DOC: due to a hardware issue (P4C-4589).
     // W0 is a 32-bit container, and it will be the only container of its parser group,
     // so we do not need to check other containers of its parser group.
     bool w0_bug = Device::currentDevice() == Device::JBAY;
@@ -459,7 +460,11 @@ const AllocError* AllocatorBase::is_container_write_mode_ok(const Allocation& al
 #endif
     if (w0_bug && c == Container({PHV::Kind::normal, PHV::Size::b32}, 0) &&
         write_mode == IR::BFN::ParserWriteMode::CLEAR_ON_WRITE) {
+#if HAVE_CLOUDBREAK
         *err << "W0 must not be used in clear-on-write mode on either Tofino 2 or Tofino 3.";
+#else
+        *err << "W0 must not be used in clear-on-write mode on Tofino 2.";
+#endif  /* HAVE_CLOUDBREAK */
         return err;
     }
 
@@ -475,7 +480,7 @@ const AllocError* AllocatorBase::is_container_write_mode_ok(const Allocation& al
             std::optional<IR::BFN::ParserWriteMode> other_write_mode;
             for (auto e : field_to_states.field_to_writes.at(allocated.field())) {
                 other_write_mode = e->getWriteMode();
-                // See P4C-3033 for more details
+                // JIRA-DOC: See P4C-3033 for more details
                 // In tofino2, all extractions happen using 16b extracts.
                 // So a 16-bit parser extractor extracts over a pair of even and
                 // odd phv 8-bit containers to perform 8-bit extraction.

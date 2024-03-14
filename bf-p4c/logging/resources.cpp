@@ -416,7 +416,7 @@ ResourcesLogging::HashBitsResourceUsage *ResourcesLogging::logHashBits(unsigned 
     using HashBitUsage = Resources_Schema_Logger::HashBitUsage;
     using ElementUsageHash = Resources_Schema_Logger::ElementUsageHash;
 
-    // FIXME -- groups + single bits makes no sense for flatrock
+    // TOF5-DOC: FIXME -- groups + single bits makes no sense for flatrock
     const auto nBits = 10 * Tofino::IXBar::HASH_INDEX_GROUPS + Tofino::IXBar::HASH_SINGLE_BITS;
     const auto nFunctions = Tofino::IXBar::HASH_GROUPS;
 
@@ -444,7 +444,7 @@ ResourcesLogging::HashDistResourceUsage *ResourcesLogging::logHashDist(unsigned 
     using HashDistUnitUsage = Resources_Schema_Logger::HashDistributionUnitUsage;
     using ElementUsageHashDistribution = Resources_Schema_Logger::ElementUsageHashDistribution;
 
-    // FIXME -- no hashDist on flatrock -- xcmp hash is used directly
+    // TOF5-DOC: FIXME -- no hashDist on flatrock -- xcmp hash is used directly
     const auto nHashIds = Tofino::IXBar::HASH_DIST_UNITS;
     const auto nUnitIds = Tofino::IXBar::HASH_DIST_SLICES;
 

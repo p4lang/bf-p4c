@@ -1220,12 +1220,16 @@ bool BuildGatewayMatch::preorder(const IR::MAU::TypedPrimitive *prim) {
     return false;
 }
 
+#if HAVE_FLATROCK
 /** Check that a byte match is compatible with other byte matches that are in the
  *  same byte of the gateway for Flatrock.  If it is not, return false, causing the
  *  caller to do a don't-care match on this byte.  If it is, add the new bits to the
  *  byte match and *remove* them from the overall field match (so later matches against
  *  the same field byte in different bytes of the gateway will be don't care)
  */
+#else
+/** Unused */
+#endif  /* HAVE_FLATROCK */
 bool BuildGatewayMatch::check_per_byte_match(const std::pair<int, le_bitrange> &byte,
                                              big_int mask, big_int val) {
     BUG_CHECK((byte.first % 8) + byte.second.size() <= 8, "match crosses byte boundary");

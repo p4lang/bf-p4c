@@ -232,7 +232,8 @@ void Manifest::serializePipes(Writer& writer) {
     writer.Key("pipes");
     writer.StartArray();  // for each pipe
     for (auto &pipeOutput : m_pipeOutputs) {
-        // XXX(yumin): have to add this check for a ghost thread profile P4C-3327.
+        // XXX(yumin): have to add this check for a ghost thread profile.
+        // JIRA-DOC: P4C-3327
         if (m_pipes.count(pipeOutput.first)) {
             writer.StartObject();
             writer.Key("pipe_id");
@@ -361,7 +362,8 @@ void Manifest::setPipe(const int pipeID_in, const cstring pipe_name) {
     m_pipeId = pipeID_in;
     m_pipes.emplace(m_pipeId, pipe_name);
     // and add implicitly add the pipe outputs so that even if there are no
-    // files produced by the compiler, we get the pipe structure. P4C-2160
+    // files produced by the compiler, we get the pipe structure.
+    // JIRA-DOC: P4C-2160
     getPipeOutputs(pipeID_in);
 }
 

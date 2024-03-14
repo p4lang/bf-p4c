@@ -73,7 +73,8 @@ class GatherDynamicHashAlloc : public MauInspector {
 namespace BFN {
 
 static const unsigned fieldListHandleBase = (0x21 << 24);
-// P4C-4396: dynamic hash handle base is 0x8, not 0x22
+// JIRA-DOC: P4C-4396:
+// dynamic hash handle base is 0x8, not 0x22
 static const unsigned dynHashHandleBase = (0x8 << 24);
 static const unsigned algoHandleBase = (0x23 << 24);
 extern unsigned fieldListHandle;

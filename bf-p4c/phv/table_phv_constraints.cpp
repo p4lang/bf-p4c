@@ -42,7 +42,8 @@ TernaryMatchKeyConstraints::calculateTernaryMatchKeyConstraints(const IR::MAU::T
     // *ALEX*: Commenting *OFF* code used for constraining alignment
     // of ternary match fields. The imposed alignment constraints may
     // lead to erroneous PHV allocation fails due to preventing packing
-    // of 1bit or narrow fields into PHV containers (See P4C-2538)
+    // of 1bit or narrow fields into PHV containers
+    // JIRA-DOC: (See P4C-2538)
 
     // *OFF* ordered_set<PHV::Field*> fields;
 

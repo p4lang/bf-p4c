@@ -259,8 +259,8 @@ class AdjustStatefulInstructions : public MauTransform {
 
     bool check_bit_positions(std::map<int, le_bitrange> &salu_inputs, le_bitrange field_bits,
         int starting_bit);
-    // FIXME -- these need to be folded into a virtual function on IXBar::Use to support
-    // both tofino and flatrock
+    // TOF5-DOC: FIXME -- these need to be folded into a virtual function on IXBar::Use to support
+    // TOF5-DOC: both tofino and flatrock
     bool verify_on_search_bus(const IR::MAU::StatefulAlu *, const Tofino::IXBar::Use &salu_ixbar,
         const PHV::Field *field, le_bitrange &bits, bool &is_hi);
     bool verify_on_hash_bus(const IR::MAU::StatefulAlu *salu,

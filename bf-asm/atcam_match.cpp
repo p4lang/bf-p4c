@@ -440,7 +440,7 @@ void AlgTcamMatchTable::gen_alpm_cfg(json::map &tbl) const {
     // FIXME -- setting next_table_mask unconditionally only works because we process the
     // stage table in stage order (so we'll end up with the value from the last stage table,
     // which is what we want.)  Should we check in case the ordering ever changes?
-    // By DRV-2239 this should move into the stage table anyways?
+    // JIRA-DOC: By DRV-2239 this should move into the stage table anyways?
     tbl["default_next_table_mask"] = next_table_adr_mask;
     // FIXME -- the driver currently always assumes this is 0, so we arrange for it to be
     // when choosing the action encoding.  But we should be able to choose something else

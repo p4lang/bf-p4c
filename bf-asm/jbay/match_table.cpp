@@ -70,7 +70,7 @@ template<> void MatchTable::write_regs(Target::JBay::mau_regs &regs, int type, T
     if (!is_branch && result->get_format_field_size("next") > 3)
         is_branch = true;
 
-    // P4C-5274
+    // JIRA-DOC: P4C-5274
     // Check if any table actions have a next table miss set up
     // if yes, the pred_is_a_brch register must be set on the table to override the next table
     // configuration with this value.

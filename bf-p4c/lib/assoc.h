@@ -251,8 +251,8 @@ class CondIterableAssoc : public CondIterableAssocBase<Base, Itble> {
                       "guaranteed to be stable accross runs and with renaming in the source file. "
                       "If you know for sure it is safe to iterate in string order in this case "
                       "(e.g. map of constant strings or other strings that do not depend on "
-                      "the source code, you can use `iterable_map` instead of `map`. "
-                      "See also P4C-4718.");
+                      "the source code, you can use `iterable_map` instead of `map`. ");
+                      // JIRA-DOC: See also P4C-4718.
     }
 };
 }  // namespace detail

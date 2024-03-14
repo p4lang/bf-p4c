@@ -95,13 +95,14 @@ bool AsmOutput::preorder(const IR::BFN::Pipe *pipe) {
                 out << HeaderAsmOutput(prsr_header_seqs);
 #endif
             out << ParserAsmOutput(pipe, phv, clot, INGRESS);
-            // Flatrock metadata packer is output as "ingress deparser" section
+            // TOF5-DOC: Flatrock metadata packer is output as "ingress deparser" section
             out << DeparserAsmOutput(pipe, phv, clot, INGRESS);
             if (pipe->ghost_thread.ghost_parser != nullptr) {
                 out << "parser ghost: " << std::endl;
                 out << "  ghost_md: " << ghostPhvContainer() << std::endl;
                 if (ghost_only_on_other_pipes(pipe_id)) {
-                    // Fix for P4C-3925. In future this may be tied to a
+                    // JIRA-DOC: Fix for P4C-3925.
+                    // In future this may be tied to a
                     // command line option which dictates the pipe mask
                     // value
                     out << "  pipe_mask: 0" << std::endl;

@@ -40,13 +40,14 @@
 // should also happen before table placement which can cause table
 // splitting across stages.
 //
-// TBD: [JIRA CI-11] Compiler while optimizing may split tables across
+// TBD: Compiler while optimizing may split tables across
 // stages. This could result in multiple scenarios - e.g.
 // - all split stages have same set of actions
 // - one split stage has a different set of actions as compared to the others
 // - one split stage is a no match table and others have a gateway
 // - one split stage has an indirect resource and others dont
 // - one split stage has a partial action completed in the other stages
+// JIRA-DOC: [JIRA CI-11]
 //
 // With current schema the action primitives (used for logging) are
 // populated per table and are stage agnostic. They assume the actions

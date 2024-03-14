@@ -76,7 +76,8 @@ const IR::Node* DropPacketWithMirrorEngine_::postorder(IR::BFN::TnaDeparser *dp)
     auto name = cstring::make_unique(unique_names, "mirror", '_');
     auto args = new IR::Vector<IR::Argument>();
 #if 0
-    // FIXME: P4C-1471, finalize the syntax for mirror extern. When mirror idx
+    // JIRA-DOC: P4C-1471:
+    // FIXME: finalize the syntax for mirror extern. When mirror idx
     // is provided in constructor, do we still support the syntax with
     // if-command. Is the if-command redundant in this example?
     // Mirror(0) mirror;

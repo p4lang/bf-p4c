@@ -195,7 +195,8 @@ class AllocatorBase {
     /// Pruning container group to improve speedup
     /// - Skip containers of the same type (kind and size) if an empty container cannot be allocated
     /// - Skip containers of the same equivalence class which have been tried before
-    /// NOTE: Above pruning improves phv compilation times by 10x in some cases (P4C-5184)
+    /// NOTE: Above pruning improves phv compilation times by 10x in some cases
+    /// JIRA-DOC: (P4C-5184)
     SomeContScopeAllocResult try_slices_to_container_group(
         const ScoreContext& ctx,
         const Allocation& alloc,

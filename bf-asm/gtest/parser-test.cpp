@@ -6,7 +6,7 @@ namespace {
 
 // TEST(parser_test, get_parser_deepest_depth)
 //
-// P4C-4236: parser depth miscalculation.
+// JIRA-DOC: P4C-4236: parser depth miscalculation.
 //
 // While calculating the maximum depth, the assembler goes through the parser tree
 // and visits every state recursively.  The parser depth for a state is taken into account
@@ -445,7 +445,8 @@ parser egress:
 
 // TEST(parser_test, get_parser_deepest_depth_loop_no_stack)
 //
-// P4C-4236: verify that parser with loops that do not store into
+// JIRA-DOC: P4C-4236:
+//           verify that parser with loops that do not store into
 //           header stacks are supported and that the parser max
 //           depth is set to the maximum supported by the target.
 //
@@ -587,7 +588,8 @@ parser egress:
 
 // TEST(parser_test, get_parser_depth_loop_with_stack)
 //
-// P4C-4236: verify that when a parser has loops that store into header
+// JIRA-DOC: P4C-4236:
+//           verify that when a parser has loops that store into header
 //           stacks, that the max parser depth is set according to the
 //           number of entries in the stack.
 //
@@ -881,7 +883,8 @@ parser egress:
 
 // TEST(parser_test, get_parser_depth_untaken_path)
 //
-// P4C-4236: verify that untaken paths are not considered
+// JIRA-DOC: P4C-4236:
+//           verify that untaken paths are not considered
 //           in the parser depth calculation.
 //
 TEST(parser_test, get_parser_depth_untaken_path) {

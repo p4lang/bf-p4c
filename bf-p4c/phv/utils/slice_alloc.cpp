@@ -244,7 +244,7 @@ bool AllocSlice::isLiveAt(int stage, const FieldUse& use) const {
         const int start = min_stage_i.second.isRead() ? min_stage_i.first : min_stage_i.first + 1;
         // XXX(yumin): Unfortunately we will still have tail-write field slices (liverange ends with
         // a write), until we implement fieldslice-level defuse and deadcode-elim.
-        // Example case in P4C-4050:
+        // JIRA-DOC: Example case in P4C-4050:
         // ig_mg.hash is set in stage 6 in expresion `hash[31:0] = ipv6_hash.get(***);`,
         // but only the first half-word is ever read in `ig_md.hash[15:0] : selector;`.
         // Then, live range of ig_md.hash[15:0] will be [6w, 6w].

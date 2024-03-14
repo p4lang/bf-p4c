@@ -226,7 +226,9 @@ class ExcludeDeparserOverlays : public Inspector {
  *  destination. Note: This contraint is added only for tofino because tofino's
  *  checksum engine cannot dynamically predicate entries based on header
  *  validity.  Instead, it relies on the PHV Validity bit.
- *  P4C-3064 - Avoid overlay of checksum fields with other fields that may be
+ *
+ *  JIRA-DOC: P4C-3064:
+ *  Avoid overlay of checksum fields with other fields that may be
  *  present. The pass was updated to detect if checksum source field might come
  *  from a new header being added in MAU. In that case, all of the checksum
  *  source fields are set to be non mutually exclusive with every field being
@@ -243,8 +245,9 @@ class ExcludeCsumOverlays : public Inspector {
         : phv(p), addedFields(a), use(u) { }
 };
 
-/** For checksums that rely on POV bits (Tofino2/3), make sure that none of
+/** For checksums that rely on POV bits (Tofino2), make sure that none of
  *  the source fields are mutually exclusive with each other.
+ *  TOF3-DOC: Also Tofino 3.
  *
  *  Note that source fields in POV-based checksums can be mutually exclusive
  *  with fields that are not used in checksums or that are used in a different

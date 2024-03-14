@@ -34,7 +34,8 @@ bool ComputeLoweredParserIR::preorder(const IR::Type_Header* type) {
         egressMetaSize += 2;
 
         // JBay and later requires the egress intrinsic metadata to be padded to 4-byte aligned
-        // Minimum metadata lengh is 8B (see P4C-5114 / JBay EPB uarch sec 6.1).
+        // Minimum metadata lengh is 8B (see JBay EPB uarch sec 6.1).
+        // JIRA-DOC: (also see P4C-5114).
         if (Device::currentDevice() != Device::TOFINO) {
             egressMetaSize = ((egressMetaSize + 3) / 4) * 4;
             egressMetaSize = std::max(egressMetaSize, Device::egressIntrinsicMetadataMinLen());

@@ -2,31 +2,36 @@
 
 namespace PHV {
 
-ContainerEquivalenceTracker::ContainerEquivalenceTracker(const PHV::Allocation& alloc) :
-    alloc(alloc),
-    isTofino2Or3(Device::currentDevice() == Device::JBAY
+ContainerEquivalenceTracker::ContainerEquivalenceTracker(const PHV::Allocation &alloc)
+    : alloc(alloc),
 #if HAVE_CLOUDBREAK
-                 || Device::currentDevice() == Device::CLOUDBREAK
+    restrictW0(Device::currentDevice() == Device::JBAY ||
+                 Device::currentDevice() == Device::CLOUDBREAK)
+#else
+    restrictW0(Device::currentDevice() == Device::JBAY)
 #endif
-    )
 { }
 
 std::optional<PHV::Container>
 ContainerEquivalenceTracker::find_equivalent_tried_container(PHV::Container c) {
-    if (!isTofino2Or3) {
+    if (!restrictW0) {
         return find_single(c);
     } else {
-        // W0 is special on Tofino 2 & 3 (due to a hardware bug) (P4C-4589)
+        // W0 is special on Tofino 2
+        // TOF3-DOC: and Tofino 3
+        // JIRA-DOC: (due to a hardware bug) (P4C-4589)
         if (c == PHV::Container({PHV::Kind::normal, PHV::Size::b32}, 0))
             return std::nullopt;
         if (!c.is(PHV::Size::b8))
             return find_single(c);
 
-        // Parser write mode is shared for the continuous tuple of B containers on Tofino 2/3
+        // Parser write mode is shared for the continuous tuple of B containers on Tofino 2
         // that share all but last bit of identifier, therefore we can only safely consider
         // the current container c to be equivalent to some other empty container e if the
         // paired container of e is also empty (the paired container of c needs not be empty
-        // as that only means that there are more constrains on c, not less). (P4C-3033)
+        // as that only means that there are more constrains on c, not less).
+        // TOF3-DOC: Applies to Tofino 3 as well.
+        // JIRA-DOC: (P4C-3033)
         auto equiv = find_single(c);
         if (!equiv)
             return std::nullopt;

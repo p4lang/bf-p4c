@@ -135,8 +135,9 @@
 
 /**
  * This is the first pass that is designed to deal with the new Table Placement IR restrictions,
- * specifically the ones that have arisen because of the Tofino2 placement algorithm, tagged
- * as P4C-2325.  Previously, it was a guarantee that a table would appear in a single TableSeq
+ * specifically the ones that have arisen because of the Tofino2 placement algorithm.
+ * JIRA-DOC: Tagged as P4C-2325.
+ * Previously, it was a guarantee that a table would appear in a single TableSeq
  * object.  However, this is no longer the case, specifically after table placement.  Let's delve
  * into why for this example.
  *
@@ -249,7 +250,8 @@
 
 /**
  * The purpose of this pass is to determine which tables always precede another table in
- * table placement.  Let's take a look at an example, similar to p4c-2325.p4
+ * table placement.  Let's take a look at an example,
+ * JIRA-DOC: (similar to p4c-2325.p4)
  *
  * apply {
  *     switch (t1.apply().action_run) {
@@ -515,7 +517,7 @@ void JbayNextTable::Prop::cross_prop(const NTInfo &nti, std::map<int, bitvec> &e
             const IR::MAU::Table *prev_t = nullptr;
             for (int j = i - 1; j >= nti.first_stage; j--) {
                 for (auto pt : stages.at(j)) {
-                    // P4C-2325: Must be propagated to
+                    // JIRA-DOC: P4C-2325: Must be propagated to
                     if (!self.localize_seqs.can_propagate_to(pt, rep))
                         continue;
                     prev_t = pt;

@@ -21,7 +21,8 @@ struct StageUse {
 
 /**
  * @namespace IR::BFN
- * @brief The namespace encapsulating Tofino 1/2/3-specific %IR nodes
+ * @brief The namespace encapsulating Tofino 1/2-specific %IR nodes.
+ * TOF3-DOC: Also Tofino 3.
  */
 namespace BFN {
 struct HeaderStackInfo;

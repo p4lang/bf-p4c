@@ -536,7 +536,8 @@ BFRuntimeSchemaGenerator::addValueSet(Util::JsonArray* tablesJson,
     auto* keyJson = new Util::JsonArray();
     auto parser = TypeSpecParser::make(p4info, valueSet.typeSpec, "ValueSet", valueSet.name);
     for (const auto &f : parser) {
-        // DRV-3112 - Make key fields not mandatory, this allows user to use a
+        // JIRA-DOC: DRV-3112 -
+        // Make key fields not mandatory, this allows user to use a
         // driver initialized default value (0).
         addKeyField(keyJson, f.id, f.name, false /* mandatory */, "Ternary", f.type);
     }

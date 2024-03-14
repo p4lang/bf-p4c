@@ -843,7 +843,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Digest* digest) {
     return true;
 }
 
-/// https://jira.devtools.intel.com/browse/P4C-4469
+/// JIRA-DOC: https://jira.devtools.intel.com/browse/P4C-4469
 bool ValidateAllocation::preorder(const IR::BFN::DeparserParameter* dp) {
     if (!dp->source) return true;
     le_bitrange bits = {};

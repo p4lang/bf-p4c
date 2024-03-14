@@ -427,7 +427,8 @@ void Target::OVERRIDE_NUM_MAU_STAGES(int num) {
 }
 
 int Target::NUM_BUS_OF_TYPE_v(int bus_type) const {
-    // default values for Tofino1/2/3
+    // default values for Tofino1/2
+    // TOF3-DOC: Tofino3 also.
     switch (static_cast<Table::Layout::bus_type_t>(bus_type)) {
     case Table::Layout::SEARCH_BUS:
     case Table::Layout::RESULT_BUS:

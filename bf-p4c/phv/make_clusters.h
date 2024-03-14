@@ -271,7 +271,7 @@ class Clustering : public PassManager {
     /// }
     /// then normal.f1 and normal.f2 cannot be packed into a W container because
     /// the offset on the buffer is different from the offset of the header.
-    /// see P4C-3254 for more details.
+    /// JIRA-DOC: see P4C-3254 for more details.
     /// The output of this pass is a set of fieldslice that the header needs to be split after
     /// the fieldslice.
     class CollectInconsistentFlexibleFieldExtract : public Inspector {

@@ -157,10 +157,11 @@ class ValidToStkvalid : public Transform {
     // extract(stk.$stkvalid[2:2], 0x1).
     //
     // XXX(cole): This is because Brig doesn't currently support extracting
-    // constants to field slices in the parser (see BRIG-584).  As a result,
+    // constants to field slices in the parser.  As a result,
     // this removes the AliasSlice node and hence loses the aliasing
     // information.  However, as parser extracts aren't exposed to the control
     // plane, this should be fine.
+    // JIRA-DOC: See BRIG-584.
     IR::Node* postorder(IR::BFN::Extract* extract) override;
 
  public:

@@ -1562,7 +1562,8 @@ bool CoreAllocation::satisfies_constraints(
             }
         }
 
-        // W0 is not allowed to be used with clear_on_write due to a hardware issue (P4C-4589).
+        // W0 is not allowed to be used with clear_on_write
+        // JIRA-DOC: due to a hardware issue (P4C-4589).
         // W0 is a 32-bit container, and it will be the only container of its parser group,
         // so we do not need to check other containers of its parser group.
         if ((Device::currentDevice() == Device::JBAY
@@ -1629,7 +1630,7 @@ bool CoreAllocation::satisfies_constraints(
 
                     for (auto e : utils_i.field_to_parser_states.field_to_writes.at(sl.field())) {
                         other_write_mode = e->getWriteMode();
-                        // See P4C-3033 for more details
+                        // JIRA-DOC: See P4C-3033 for more details
                         // In tofino2, all extractions happen using 16b extracts.
                         // So a 16-bit parser extractor extracts over a pair of even and
                         // odd phv 8-bit containers to perforn 8-bit extraction.
@@ -2526,7 +2527,7 @@ bool CoreAllocation::check_metadata_and_dark_overlay(
         }
         // Disable metadata initialization if the container for metadata overlay is a mocha
         // or dark container.
-        // XXX(Deep): P4C-1187
+        // JIRA-DOC: XXX(Deep): P4C-1187
         if (!is_mocha_or_dark && metadataOverlay && (!prioritizeARAinits || !darkOverlay)) {
             if (!try_metadata_overlay(c, allocedSlices, slice, initNodes, new_candidate_slices,
                 metaInitSlices, initActions, perContainerAlloc, alloced_slices, actual_cntr_state))

@@ -10,9 +10,9 @@
 #include "top_level.h"
 #include "../lib/stringref.h"
 #include "ubits.h"
+#if HAVE_FLATROCK
 // FIXME: Creating a deparser class hierarchy would eliminate the need to include this Flatrock
 // include file here
-#if HAVE_FLATROCK
 #include "flatrock/common.h"
 #include "flatrock/hdr.h"
 #endif  /* HAVE_FLATROCK */

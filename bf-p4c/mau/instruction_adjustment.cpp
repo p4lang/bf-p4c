@@ -445,7 +445,8 @@ const IR::Node *SplitInstructions::preorder(IR::MAU::Instruction *inst) {
 
     LOG5("Splitting instruction:" << inst);
 
-    // Check if this is an operator that cannot be split (see p4c-2694)
+    // Check if this is an operator that cannot be split
+    // JIRA-DOC: (see p4c-2694)
     cstring opcode = inst->name;
     BUG_CHECK(opcode != "saddu" && opcode != "sadds" &&
             opcode != "ssubu" && opcode != "ssubs",
@@ -1367,7 +1368,8 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
             << " SRC1: " << src1 << "(" << src1_writebits << ")"
             << " SRC2: " << src2 << "(" << src2_writebits << ")");
 
-    // Src1 is not sourced from parameters, but instead is equal to the destination: P4C-914
+    // Src1 is not sourced from parameters, but instead is equal to the destination
+    // JIRA-DOC: P4C-914
     if (cont_action.implicit_src1) {
         BUG_CHECK(src1 == nullptr, "Src1 found in an implicit_src1 calculation");
         src1 = new IR::MAU::MultiOperand(components, container.toString(), true);
@@ -1377,7 +1379,8 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
         LOG5("IMPLICIT SOURCE for " << cont_action.name << " : " << src1_writebits);
     }
 
-    // Src2 is not sources from parameters, but instead is equal to the destination: BRIG-883
+    // Src2 is not sources from parameters, but instead is equal to the destination
+    // JIRA-DOC: BRIG-883
     if (cont_action.implicit_src2) {
         BUG_CHECK(src2 == nullptr, "Src2 found in an implicit_src2 calculation");
         src2 = new IR::MAU::MultiOperand(components, container.toString(), true);

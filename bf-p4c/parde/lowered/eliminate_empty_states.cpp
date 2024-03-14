@@ -24,7 +24,7 @@ bool EliminateEmptyStates::is_empty(const IR::BFN::ParserState* state) {
 
     auto parser = findOrigCtxt<IR::BFN::Parser>();
     // do not merge loopback state for now, need to maitain loopback pointer TODO
-    // p4-tests/p4_16/compile_only/p4c-2153.p4
+    // JIRA-DOC: p4-tests/p4_16/compile_only/p4c-2153.p4
     if (parser_info.graph(parser).is_loopback_state(state->name)) return false;
 
     return true;

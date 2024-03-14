@@ -47,7 +47,7 @@ template<> void MatchTable::write_next_table_regs(Target::Tofino::mau_regs &regs
      *      only a Glass value.  This could always be 0.  Perhaps we can remove from Brig through
      *      compiler version?
      *
-     * Current driver issue is: DRV-2239
+     * JIRA-DOC: Current driver issue is: DRV-2239
      */
 }
 

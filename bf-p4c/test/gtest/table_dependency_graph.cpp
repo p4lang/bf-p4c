@@ -3283,7 +3283,8 @@ TEST_F(TableDependencyGraphTest, P4C_2716_Test1) {
 
     // In this example, node_f has to follow node_e and node_b due to predication-based edges
     // node_f, because of logical_deps through control_deps, also must follow node_c and node_d
-    // node_f was not found logically after node_c and node_d without the fix for P4C-2716
+    // node_f was not found logically after node_c and node_d.
+    // JIRA-DOC: without the fix for P4C-2716
 
     ASSERT_TRUE(test);
     PhvInfo phv;

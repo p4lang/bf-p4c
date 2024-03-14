@@ -15,8 +15,9 @@
  *         (four sub-ALUs, two comparators, output sub-ALU) represented by primitives
  *         (IR::MAU::Primitive) both in backend and assembler.
  *   * Register file:
- *     * Four rows, each one is 32b (Tofino) / 34b (Tofino 2, 3) register
+ *     * Four rows, each one is 32b (Tofino) / 34b (Tofino 2) register
  *       represented by a register parameter in P4 code and IR::MAU::SaluRegfileRow IR node
+ *       TOF3-DOC: 34b (Tofino 3).
  *     * Shared by "large" constants and register parameters
  * * There are four SALUs in a MAU stage.
  *

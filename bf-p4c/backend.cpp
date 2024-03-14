@@ -397,7 +397,7 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
         }),
         PHV_Analysis,
 
-        // P4C-5147
+        // JIRA-DOC: P4C-5147
         // CheckUninitializedReadAndOverlayedReads Pass checks all allocation slices for overlays
         // which can corrupt uninitialized read values and potentially cause fatal errors
         // while running tests.

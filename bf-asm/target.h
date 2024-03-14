@@ -1220,7 +1220,8 @@ void emit_parser_registers(const Target::Flatrock::top_level_regs *regs, std::os
  *    TARGET -- overload on all the different targets
  *    REGISTER_SET -- overload just on the register sets (targets that share a register
  *                    set will only have one overload)
- *    TARGET_CLASS -- overload based on the CLASS (currently just Tofino or Flatrock)
+ *    TARGET_CLASS -- overload based on the CLASS
+ *                    TOF5-DOC: (currently just Tofino or Flatrock)
  * RTYPE NAME ARGDECL together make the declaration of the (generic) function, the overloads
  * will all have a Target::type argument prepended.  The final ARGS argument is the argument
  * list that that will be forwarded (basically ARGDECL without the types)

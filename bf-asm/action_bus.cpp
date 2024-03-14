@@ -485,7 +485,7 @@ void ActionBus::need_alloc(Table *tbl, const ActionBusSource &src,
         src.table->set_address_used();
         break;
     case ActionBusSource::XcmpData:
-        // FIXME -- need something for flatrock?
+        // TOF5-DOC: FIXME -- need something for flatrock?
         break;
     default:
         break; }

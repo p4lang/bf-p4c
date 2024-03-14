@@ -204,7 +204,7 @@ class ClotInfo {
     // may be included in both IPv4 and TCP checksum updates. In such cases,
     // we require the IPv4 fields in both updates to be identical sets in order
     // to be allocated to a CLOT (each CLOT can only compute one checksum)
-    // see P4C-1509
+    // JIRA-DOC: see P4C-1509
     bool is_used_in_multiple_checksum_update_sets(const PHV::Field* field) const;
 
     /// Determines whether a field is extracted in multiple states that are not mutually exclusive.

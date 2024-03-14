@@ -13,7 +13,8 @@
  * MAU and need to be reset before they reach the deparser. Otherwise
  * the fields will corrupt the checksum calculation.
  * This is only needed for Tofino whose deparser checksum entries
- * are statically configured. See P4C-190.
+ * are statically configured.
+ * JIRA-DOC: See P4C-190.
  */
 
 struct CollectPovBitToFields : public DeparserInspector {

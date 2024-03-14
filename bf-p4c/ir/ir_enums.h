@@ -9,8 +9,9 @@ namespace MAU {
 enum class DataAggregation { NONE, PACKETS, BYTES, BOTH, AGGR_TYPES };
 enum class MeterType { UNUSED = 0,
     // we use explicit constants here to map to the meter types defined by hardware
-    // these are (currently) consistent across tofino1/2/3, but perhaps should be
+    // these are (currently) consistent across tofino1/2, but perhaps should be
     // moved to the Device model
+    // TOF3-DOC: Also tofino3
     COLOR_BLIND = 2, SELECTOR = 4, COLOR_AWARE = 6,
     STFUL_INST0 = 1, STFUL_INST1 = 3, STFUL_INST2 = 5, STFUL_INST3 = 7,
     STFUL_CLEAR = 6,

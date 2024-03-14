@@ -1270,10 +1270,11 @@ class MatcherAllocator : public Visitor {
             reg_bytes_ascend += reg.size;
         }
 
-        // All registers are the same size in JBAY and CLOUDBREAK so only
+        // All registers are the same size in JBAY so only
         // ascending allocation needs to be performed.  If this allocation
         // fails, these targets support scratch registers, so try the
         // scratch-enabled allocation.
+        // TOF3-DOC: Also applies to CLOUDBREAK.
         if ((Device::currentDevice() == Device::JBAY)
 #ifdef HAVE_CLOUDBREAK
             || (Device::currentDevice() == Device::CLOUDBREAK)

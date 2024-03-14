@@ -756,7 +756,7 @@ void TernaryMatchTable::gen_match_fields(json::vector &match_field_list,
                 // The byte group represents what goes in top nibble in the tcam
                 // word. Based on the byte config, the corresponding match word is
                 // selected and the field (slice) is placed in the nibble.
-                // E.g. (P4C-2257)
+                // JIRA-DOC: E.g. (P4C-2257)
                 //   byte group 5: { 0: HillTop.Lamona.Whitefish(0..1) ,
                 //                   2: HillTop.RossFork.Adona(0..5) }
                 //   match:

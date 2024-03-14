@@ -159,7 +159,8 @@ void AddSpecialConstraints::end_apply() {
     }
 
     // The meter hack, all destination of meter color go to 8-bit container if they can't be
-    // rotated. This was relaxed from the original constraint, see P4C-3019.
+    // rotated. This was relaxed from the original constraint.
+    // JIRA-DOC: see P4C-3019.
     for (const auto* f : actions_i.meter_color_dests()) {
         auto* meter_color_dest = phv_i.field(f->id);
         CHECK_NULL(meter_color_dest);

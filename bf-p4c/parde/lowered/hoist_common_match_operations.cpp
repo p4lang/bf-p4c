@@ -413,7 +413,7 @@ void HoistCommonMatchOperations::do_hoist(IR::BFN::LoweredParserMatch* match,
 }
 
 // do not merge loopback state for now, need to maintain loopback pointer TODO
-// p4-tests/p4_16/compile_only/p4c-1601-neg.p4
+// JIRA-DOC: p4-tests/p4_16/compile_only/p4c-1601-neg.p4
 bool HoistCommonMatchOperations::is_loopback_state(cstring state) {
     auto parser = findOrigCtxt<IR::BFN::LoweredParser>();
     if (parser_info.graph(parser).is_loopback_state(state)) return true;

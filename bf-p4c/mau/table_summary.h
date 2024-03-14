@@ -270,9 +270,10 @@ class TableSummary: public MauInspector {
     //   ...
     //  }
     std::map<cstring, std::map<le_bitrange, std::map<int, int>>> ixbarBytes;
-    // For ixbar/memory/action_data_bus/imems:  Tofino 1/2/3 share the pipe between
+    // For ixbar/memory/action_data_bus/imems:  Tofino 1/2 share the pipe between
     // ingress and egress, so every will be in the [0] element of these arrays.
-    // Tofino 5 has independent pipes for ingress([0]) and egress([1])
+    // TOF3-DOC: Tofino 3 also shares the pipe between ingress and egress.
+    // TOF5-DOC: Tofino 5 has independent pipes for ingress([0]) and egress([1])
     // Array of Map of Stage -> Input Xbar
     std::map<int, std::unique_ptr<IXBar>> ixbar[2];
     // Map of Stage -> Memories

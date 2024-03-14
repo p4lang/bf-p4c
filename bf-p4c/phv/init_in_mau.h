@@ -47,7 +47,8 @@
 // arise.
 //
 // *TODO* Use "mauInitFields" to also handle initialization for fields
-// that are upcasted in the parser: see P4C-4488
+// that are upcasted in the parser.
+// JIRA-DOC: see P4C-4488
 // *****************************************************************************************
 class AddInitTable : public Transform {
  private:

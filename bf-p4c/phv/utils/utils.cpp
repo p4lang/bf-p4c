@@ -284,7 +284,8 @@ PHV::Allocation::slicesByLiveness(const PHV::Container c, const AllocSlice& sl) 
     this->foreach_slice(c, [&] (const PHV::AllocSlice& slice) {
         bool mutex = phv_i->field_mutex()(slice.field()->id, sl.field()->id);
         // *ALEX* Checking disjoint liveranges may be too conservative due to
-        // default [parser, deparser] liveranges - See P4C-4467
+        // default [parser, deparser] liveranges
+        // JIRA-DOC: See P4C-4467
         bool liverange_mutex = slice.isLiveRangeDisjoint(sl);
         if (!mutex && !liverange_mutex) rs.insert(slice);
     });
@@ -302,7 +303,8 @@ PHV::Allocation::byteSlicesByLiveness(const PHV::Container c, const AllocSlice& 
     this->foreach_slice(c, [&] (const AllocSlice& slice) {
         bool mutex = phv_i->field_mutex()(slice.field()->id, sl.field()->id);
         // *ALEX* Checking disjoint liveranges may be too conservative due to
-        // default [parser, deparser] liveranges - See P4C-4467
+        // default [parser, deparser] liveranges
+        // JIRA-DOC: See P4C-4467
         bool liverange_mutex = slice.isLiveRangeDisjoint(sl);
         // In TF2/3 extraction can be done at byte granularity compared
         // to container-granularity in TF1.

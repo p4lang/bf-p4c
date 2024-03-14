@@ -1218,7 +1218,8 @@ class ConstructSymbolTable : public Inspector {
         // COMPILER-914: In Tofino, Disable clone id - 0 which is reserved in
         // i2e due to a hardware bug. Hence, valid clone ids are 1 - 7.  All
         // clone id's 0 - 7 are valid for e2e
-        // P4C-2661: Using @disable_reserved_i2e_drop_implementation pragma overrides
+        // JIRA-DOC: P4C-2661:
+        // Using @disable_reserved_i2e_drop_implementation pragma overrides
         // reserving clone id 0. This pragma is supported by Glass.
         if ((Device::currentDevice() == Device::TOFINO) && (gress == INGRESS)
                 && !collect_pragma.exists(PragmaDisableI2EReservedDropImplementation::name)) {

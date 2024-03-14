@@ -408,7 +408,7 @@ std::optional<DarkLiveRange::OrderedFieldSummary> DarkLiveRange::produceFieldsIn
     }
 
     // Handle case of fields that have only Parser references (local parser fields)
-    // *ALEX* This should no longer be needed after p4c-1995 is merged into master
+    // JIRA-DOC: *ALEX* This should no longer be needed after p4c-1995 is merged into master
     lastField = nullptr;
     auto sItr = slices.end();
     OrderedFieldSummary rv2;

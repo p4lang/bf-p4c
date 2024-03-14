@@ -26,7 +26,8 @@ bool ParserDominatorBuilder::preorder(const IR::BFN::ParserState* parser_state) 
     // compiling some P4_14 programs. This is most likely a bug, as all states in the parser should
     // have a path leading to EOP.
     //
-    // This fixes "tofino/extensions/p4_tests/p4_14/customer/rdp/case9757.p4" failing in CI/CD.
+    // JIRA-DOC: This fixes "tofino/extensions/p4_tests/p4_14/customer/rdp/case9757.p4"
+    // JIRA-DOC: failing in CI/CD.
     if (parser_state->transitions.empty())
         parser_graphs[parser_state->gress].add_edge(parser_state, nullptr, nullptr);
 

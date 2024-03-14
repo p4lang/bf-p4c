@@ -2273,7 +2273,8 @@ void Table::Actions::add_p4_params(const Action &act, json::vector &cfg) const {
     unsigned start_bit = 0;
     // Add p4 params if present. This will add params even if the action is
     // otherwise empty. Driver will always generate an action spec if p4_params
-    // are present for an action - DRV-1214
+    // are present for an action
+    // JIRA-DOC: DRV-1214
     for (auto &a : act.p4_params_list) {
         json::map param;
         param["name"] = a.name;
@@ -3142,7 +3143,7 @@ void Table::add_match_key_cfg(json::map& tbl) const {
             param["position"] = p.position;
             param["match_type"] = p.type;
             param["is_valid"] = p.is_valid;
-            /* BRIG-288 */
+            /* JIRA-DOC: BRIG-288 */
             std::string fieldname, instname;
             gen_instfield_name(name, instname, fieldname);
             param["instance_name"] = instname;
@@ -3167,7 +3168,7 @@ void Table::common_tbl_cfg(json::map &tbl) const {
     // FIXME -- setting next_table_mask unconditionally only works because we process the
     // stage table in stage order (so we'll end up with the value from the last stage table,
     // which is what we want.)  Should we check in case the ordering ever changes?
-    // By DRV-2239 this should move into the stage table anyways?
+    // JIRA-DOC: By DRV-2239 this should move into the stage table anyways?
     tbl["default_next_table_mask"] = next_table_adr_mask;
     // FIXME -- the driver currently always assumes this is 0, so we arrange for it to be
     // when choosing the action encoding.  But we should be able to choose something else

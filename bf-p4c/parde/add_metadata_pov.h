@@ -8,13 +8,16 @@
 
 /**
  * \ingroup parde
- * @brief Create POV bits for output metadata (JBAY / Cloudbreak / Flatrock)
+ * @brief Create POV bits for output metadata (JBAY)
+ * TOF3-DOC: (Cloudbreak)
+ * TOF5-DOC: (Flatrock)
  *
- * JBay / CloudBreak requires POV bits to control output metadata as implicit
+ * JBay requires POV bits to control output metadata as implicit
  * PHV valid bits are gone.  We create a single POV bit for each metadata in use
  * and set the bit whenever the metadata is set.
+ * TOF3-DOC: Applies to Cloudbreak too.
  *
- * Flatrock requires POV bits for a subset of fields.
+ * TOF5-DOC: Flatrock requires POV bits for a subset of fields.
  */
 
 class AddMetadataPOV : public Transform {

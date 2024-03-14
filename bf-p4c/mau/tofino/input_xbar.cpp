@@ -197,7 +197,8 @@ void IXBar::Use::emit_ixbar_hash_table(int hash_table, safe_vector<Slice> &match
             safe_vector<Slice> reg_ghost;
             safe_vector<Slice> reg_hash = reg.split(fmt->ghost_bits, reg_ghost);
             ghost.insert(ghost.end(), reg_ghost.begin(), reg_ghost.end());
-            // P4C-4496: if dynamic_table_key_masks pragma is applied to the
+            // JIRA-DOC: P4C-4496:
+            // if dynamic_table_key_masks pragma is applied to the
             // table, ghost bits are disabled, as a result, match key must be
             // emitted as match data to generated the correct hash section in
             // bfa and context.json
@@ -1816,7 +1817,8 @@ void IXBar::getHashDistGroups(unsigned hash_table_input, int hash_group_opt[HASH
 }
 
 /**
- * Really should be replaced by an extern function call: P4C-1107
+ * Really should be replaced by an extern function call
+ * JIRA-DOC: P4C-1107
  */
 void IXBar::determine_proxy_hash_alg(const PhvInfo &phv, const IR::MAU::Table *tbl,
                                      Use &alloc, int group) {
@@ -2036,8 +2038,8 @@ bool IXBar::allocProxyHash(const IR::MAU::Table *tbl, const PhvInfo &phv, const 
         alloc.add(a);
     }
 
-    //  P4C-4604
-    //  --------
+    //  JIRA-DOC: P4C-4604
+    //  JIRA-DOC: --------
     this->add_collisions();  //  added 8/19/2022 ~10pm NY time
                              //  based on a pair-debugging session with Chris
 
@@ -3434,7 +3436,8 @@ void IXBar::buildHashDistIRUse(HashDistAllocPostExpand &alloc_req, HashDistUse &
     rv.dest = alloc_req.dest;
     rv.created_hd = alloc_req.created_hd;
     rv.dyn_hash_name = alloc_req.func->dyn_hash_name;
-    // P4C-2169 : The hash_table_inputs value is computed for each HashDistIRUse
+    // JIRA-DOC: P4C-2169 :
+    // The hash_table_inputs value is computed for each HashDistIRUse
     // object vs. HashDistUse, as each HashDistIRUse is output individually.
     // This is the requirement for assembly generation. The HashDistUse
     // requirements are just the OR of all of its HashDistIRUse hash_tables

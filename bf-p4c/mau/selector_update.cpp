@@ -10,7 +10,8 @@ bool AddSelectorSalu::AddSaluIfNeeded::preorder(IR::MAU::Table *tbl) {
                 auto *salu = new IR::MAU::StatefulAlu(sel);
                 salu->name = IR::ID(sel->name + "$salu");
                 salu->width = 1;
-                // P4C-2388: For the driver, the size of the stateful ALU must be the exact
+                // JIRA-DOC: P4C-2388:
+                // For the driver, the size of the stateful ALU must be the exact
                 // number of entries within the stateful SRAM
                 int ram_lines = SelectorRAMLinesPerEntry(sel);
                 ram_lines *= sel->num_pools;

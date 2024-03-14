@@ -411,7 +411,8 @@ void Parser::Checksum::write_output_config(Target::Tofino::parser_regs &regs, Pa
     auto id = dest->reg.parser_id();
     *map[slot.idx].dst = id;
     matchSlotTracker.csumMap.insert(ma, slot.idx, this);
-    // P4C-3659: The source address is checked for source extract errors whenever the dest
+    // JIRA-DOC: P4C-3659:
+    // The source address is checked for source extract errors whenever the dest
     // is not 511. To prevent errors when buf_req = 0 (corresponding to states with no extracts),
     // point the source to the version area of the source range which is always valid.
     *map[slot.idx].src = PARSER_SRC_MAX_IDX - (dest->reg.size / 8) + 1;
@@ -993,10 +994,10 @@ static void check_16b_extractor_configuration(const unsigned pad_idx, const unsi
     }
 }
 
-// Related JIRA & uArch documents (defines why the padding needs to be added):
-// * https://jira.devtools.intel.com/browse/P4C-2878
-// * https://jira.devtools.intel.com/browse/P4C-3725
-// * https://jira.devtools.intel.com/browse/P4C-3926
+// JIRA-DOC: Related JIRA & uArch documents (defines why the padding needs to be added):
+// JIRA-DOC: * https://jira.devtools.intel.com/browse/P4C-2878
+// JIRA-DOC: * https://jira.devtools.intel.com/browse/P4C-3725
+// JIRA-DOC: * https://jira.devtools.intel.com/browse/P4C-3926
 //
 // uArch for Tofino Parser:
 // * Parser Output section

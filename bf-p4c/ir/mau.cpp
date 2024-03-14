@@ -57,7 +57,8 @@ void Table::visit_children(Visitor& v) const { visit_children(this, v); }
  * next, which may be from gateway override, match action chain, or match hit/miss.
  *
  * finally, we visit all the attached tables.  This is incorrect for the flow order, so flow
- * analysis through attached tables will not be correct (P4C-734)
+ * analysis through attached tables will not be correct
+ * JIRA-DOC: (P4C-734)
  */
 
 struct Table::payload_info_t {

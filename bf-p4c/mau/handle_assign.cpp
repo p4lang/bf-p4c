@@ -180,7 +180,8 @@ Visitor::profile_t AssignActionHandle::GuaranteeUniqueHandle::init_apply(const I
 }
 
 /**
- * Ensures that an action handle is unique within a P4 program, as indicated by P4C-1154.
+ * Ensures that an action handle is unique within a P4 program
+ * JIRA-DOC: as indicated by P4C-1154.
  * 
  */
 bool AssignActionHandle::GuaranteeUniqueHandle::preorder(const IR::MAU::Action *act) {

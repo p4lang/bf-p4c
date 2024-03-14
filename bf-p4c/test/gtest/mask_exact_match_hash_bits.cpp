@@ -17,8 +17,8 @@ namespace Test {
  * bits but instead specified in match bits and that SRAM allocation
  * has been adjusted accordignly.
  *
- * The same P4 code is used with p4-tests/p4_16/stf/p4c-4958.stf
- * to validate that packet matching works.
+ * JIRA-DOC: The same P4 code is used with p4-tests/p4_16/stf/p4c-4958.stf
+ * JIRA-DOC: to validate that packet matching works.
  */
 TEST(MaskExactMatchHashBitsTest, TotalFieldExclusion) {
 // P4 program
@@ -229,8 +229,8 @@ Switch(pipe) main;)";
  * they are specified in match bits.  Also checks that SRAM allocation has
  * been adjusted accordignly.
  *
- * The same P4 code is used with p4-tests/p4_16/stf/p4c-4958_2.stf
- * to validate that packet matching works.
+ * JIRA-DOC: The same P4 code is used with p4-tests/p4_16/stf/p4c-4958_2.stf
+ * JIRA-DOC: to validate that packet matching works.
  */
 TEST(MaskExactMatchHashBitsTest, PartialFieldExclusion) {
 // P4 program

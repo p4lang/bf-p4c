@@ -103,7 +103,8 @@ void WalkPowerGraph::end_apply(const IR::Node *root) {
         double set_max_power_threshold = options_.max_power > spec.get_max_power()
                                              ? options_.max_power - spec.get_max_power()
                                              : 0.0;
-        // P4C-3312 : set max power should never exceed absolute max power threshold
+        // JIRA-DOC: P4C-3312 :
+        // set max power should never exceed absolute max power threshold
         if (set_max_power_threshold > spec.get_absolute_max_power_threshold())
             set_max_power_threshold = spec.get_absolute_max_power_threshold();
         bool disable_power_check = (options_.disable_power_check &&
@@ -304,7 +305,8 @@ void WalkPowerGraph::compute_mpr() {
                                     // In addition, if this table is in an action-dependent stage,
                                     // we can't use the mpr_next_table unless we can also set
                                     // mpr_stage to this stage. Otherwise we need to mark it always
-                                    // run.  See P4C-3469
+                                    // run.
+                                    // JIRA-DOC: See P4C-3469
                                     if (t->stage() < mpr->get_mpr_stage(stage)) {
                                         always_run |= (1 << *tbl->logical_id);
                                         break;
@@ -650,7 +652,7 @@ double WalkPowerGraph::estimate_power_non_tofino() {
         }
         if (!log_it) LOG4("  None");
 
-        // Add in tables according to JBAY-2889 JIRA.
+        // JIRA-DOC: Add in tables according to JBAY-2889 JIRA.
         // The crux of the problem for JBAY-A0:
         // When the next MAU stage for both ingress/ghost and egress is match
         // dependent, if the MAU stage latency differs across threads, a missing
@@ -660,9 +662,9 @@ double WalkPowerGraph::estimate_power_non_tofino() {
         //      Any table enabled by either of those predication paths, under the
         //      above conditions, must be considered to always run for compiler power
         //      consumption calculation."
-        // This has not been fixed in B0, and it has *not* been fixed in CloudBreak yet! :(
-        // The following if is irrelevant within this function, but I'm hopeful this
-        // issue will be fixed for CloudBreak.
+        // TOF3-DOC: This has not been fixed in B0, and it has *not* been fixed in CloudBreak yet!
+        // TOF3-DOC: :( The following if is irrelevant within this function, but I'm hopeful this
+        // TOF3-DOC: issue will be fixed for CloudBreak.
         if (Device::currentDevice() != Device::TOFINO) {
             for (int s = 0; s < Device::numStages(); ++s) {
                 mau_dep_t next_i_dep = DEP_MATCH;  // last stage considers "next stage" as
@@ -783,7 +785,8 @@ void WalkPowerGraph::create_mau_power_log(const IR::Node *root) const {
     }
 }
 
-// TODO: P4C-3332 Add input pps load % value to json
+// TODO: Add input pps load % value to json
+// JIRA-DOC: P4C-3332
 void WalkPowerGraph::create_mau_power_json(const IR::Node *root) {
     auto logDir =
         BFNContext::get().getOutputDirectory("logs", root->to<IR::BFN::Pipe>()->canon_id());

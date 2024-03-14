@@ -63,7 +63,7 @@ struct MergeLoweredParserStates : public ParserTransform {
     void do_merge(IR::BFN::LoweredParserMatch* match, const IR::BFN::LoweredParserMatch* next);
 
     // do not merge loopback state for now, need to maitain loopback pointer TODO
-    // p4-tests/p4_16/compile_only/p4c-1601-neg.p4
+    // JIRA-DOC: p4-tests/p4_16/compile_only/p4c-1601-neg.p4
     bool is_loopback_state(cstring state);
 
     IR::Node* preorder(IR::BFN::LoweredParserMatch* match) override;

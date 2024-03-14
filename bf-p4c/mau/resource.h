@@ -26,7 +26,8 @@ struct TableResourceAlloc {
     InstructionMemory::Use              instr_mem;
     LayoutOption                        layout_option;
 
-    // only relevant to tofino 1/2/3
+    // only relevant to tofino 1/2
+    // TOF3-DOC: and tofino 3
     safe_vector<Tofino::IXBar::HashDistUse>     hash_dists;
 
     TableResourceAlloc *clone() const { return new TableResourceAlloc(*this); }

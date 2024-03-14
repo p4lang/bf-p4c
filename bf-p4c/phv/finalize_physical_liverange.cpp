@@ -437,9 +437,9 @@ void FinalizePhysicalLiverange::end_apply() {
 
     // Temporarily disabled (print warnings instead of BUG_CHECK),
     // because post-table-placement table-mutex pass seems to be incorrect.
-    // In barefoot_academy/p4c-2756.p4, it complains about
-    // table ipv6_lpm_0 reads ... stage 1, while table ipv6_host_0 writes ... stage 0
-    // but in P4 codes, they are mutex.
+    // JIRA-DOC: In barefoot_academy/p4c-2756.p4, it complains about
+    // JIRA-DOC: table ipv6_lpm_0 reads ... stage 1, while table ipv6_host_0 writes ... stage 0
+    // JIRA-DOC: but in P4 codes, they are mutex.
     // if (!ipv6_host.apply().hit) {
     //     ipv6_lpm.apply();
     // }

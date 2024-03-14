@@ -168,7 +168,7 @@ namespace BFN {
  *
  * Currently the support exists in PSA & V1Model. But as the pass is common to
  * all archs, in future if TNA needs this simply add 'optional' to tofino.p4
- * JIRAs - P4C-3592 / DRV-4743
+ * JIRA-DOC: JIRAs - P4C-3592 / DRV-4743
  *
  * BF-RT API Additions:
  * https://wiki.ith.intel.com/display/BXDHOME/BFRT+Optional+match+support

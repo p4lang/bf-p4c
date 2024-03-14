@@ -30,174 +30,27 @@
 #   <operand>    ::= <phv-location> | <field> | <constant>
 #                  | hash_dist <unit> [ <lo>..<hi> ]
 #                  | rng <unit> [ <lo>..<hi> ]
-#   Specific for Tofino 5:
-#   <metadata-select> ::= <constant>
-#                         | 'port_metadata' <constant>
-#                         | 'inband_metadata' <constant>
-#                         | 'timestamp' <constant>
-#                         | 'counter' <constant>
-#                         specifies source of a byte of metadata
-#                         'constant' -> 8b
-#                         'port_metadata' -> constant is 4b (index to port_metadata table)
-#                          port_metadata[15:14] is reserved for the following information:
-#                          5'h0, logical pipe ID (4b), logical port number (7b)
-#                         'inband_metadata' -> constant is 3b (index to MD8)
-#                         'timestamp' -> constant is 3b
-#                         'counter' -> constant is 3b (index of debug counter)
 #
-#   <hdr-id-name> ::= <constant> | <name>
 #
-#   <pov-select-val-type> ::= state | flags
 #
-#   <pov-select-val> ::= <pov-select-val-type> <constant>  # <constant> is 3 bits
 #
-#   <pov-select> ::= '[' [ <pov-select-val>
-#                        [, <pov-select-val>
-#                        [, <pov-select-val>
-#                        [, <pov-select-val> ] ] ] ] ']'
 #
-#   <register-slice> ::= <register> | <slice>
 #
-#   <other-source-type> ::=
-#       'constant' <constant> |   # <constant> is 8b, valid in parser, pseudo parser
-#       'none' |                  # valid in parser, pseudo parser
-#       'pov_flags' <constant> |  # <constant> is 3b, valid in parser, pseudo parser
-#       'pov_state' <constant> |  # <constant> is 3b, valid in parser, pseudo parser
-#       'checksum_and_error' |    # valid in parser
-#       'ghost' <constant> |      # <constant> is 3b, valid in parser
-#       'udf0' <constant> |       # <constant> is 3b, valid in parser
-#       'udf1' <constant> |       # <constant> is 3b, valid in parser
-#       'udf2' <constant> |       # <constant> is 3b, valid in parser
-#       'udf3' <constant> |       # <constant> is 3b, valid in parser
-#       'tm' <constant> |         # <constant> is 5b, valid in pseudo parser
-#       'bridge' <constant>       # <constant> is 6b, valid in pseudo parser
 #
-#   <other-source> ::= <register-slice>: <other-source-type>
 #
-#   <other8-sources> ::= { [ <other-source> [ , <other-source> [ , <other-source> [ , <other-source> ]]]] }
-#                       Only limited group of registers/slices can be used in each PHV builder group
-#                       and PHE source and there can not be duplicates.
-#                       e.g. B0 - B3 in first PHE source of PHV builder group 0
-#                            B4 - B7 in second PHE source of PHV builder group 0
-#                            B8 - B11 in first PHE source of PHV builder group 1
-#                            ...
-#                            H0(0..7), H0(8..15), H1(0..7), H1(8..15) in first PHE source
-#                                of PHV builder group 16
-#                            H2(0..7), H2(8..15), H3(0..7), H3(8..15) in second PHE source
-#                                of PHV builder group 16
-#                            H4(0..7), H4(8..15), H5(0..7), H5(8..15) in first PHE source
-#                                of PHV builder group 17
-#                            ...
-#                            W0(0..7), W0(8..15), W0(16..23), W0(24..31) in first PHE source
-#                                of PHV builder group 24
-#                            W1(0..7), W1(8..15), W1(16..23), W1(24..31) in second PHE source
-#                                of PHV builder group 24
-#                            W2(0..7), W2(8..15), W2(16..23), W2(24..31) in first PHE source
-#                                of PHV builder group 25
-#                            ...
 #
-#   <packet8-sources> ::= 'packet8' <hdr-id-name>
-#                            '[' <register> 'offset' <constant>
-#                                [, <register> 'offset' <constant>
-#                                [, <register> 'offset' <constant>
-#                                [, <register> 'offset' <constant>]]] ']'
-#                        <constant> is 8b
-#                        Only limited group of registers can be used in each PHV builder group
-#                        and PHE source and there can not be duplicates.
-#                        e.g. B0 - B3 in first PHE source of PHV builder group 0
-#                             B4 - B7 in second PHE source of PHV builder group 0
-#                             B8 - B11 in first PHE source of PHV builder group 1
-#                             ...
 #
-#   <packet16-sources> ::= 'packet16' <hdr-id-name>
-#                             '[' <register> 'msb_offset' <constant> ['swap']
-#                                 [, <register> 'msb_offset' <constant> ['swap']] ']'
-#                         <constant> is 8b
-#                         Only limited group of registers can be used in each PHV builder group
-#                         and PHE source and there can not be duplicates.
-#                         e.g. H0 - H1 in first PHE source of PHV builder group 16
-#                              H2 - H3 in second PHE source of PHV builder group 16
-#                              H4 - H5 in first PHE source of PHV builder group 17
-#                              ...
 #
-#   <packet32-source> ::= 'packet32' <hdr-id-name>
-#                             <register> 'msb_offset' <constant>
-#                             ['reverse' | 'reverse_16b_words']
-#                         specifies 1x PHE32 source, <constant> is 8b
-#                         only one of 'reverse' ({B3, B2, B1, B0} -> {B0, B1, B2, B3}) and
-#                         'reverse_16b_words' ({B3, B2, B1, B0} -> {B2, B3, B0, B1}) can be used
-#                         Only specific register can be used in each PHV builder group PHE source.
-#                         e.g. W0 in first PHE source of PHV builder group 24
-#                              W1 in second PHE source of PHV builder group 24
-#                              W2 in first PHE source of PHV builder group 25
-#                              ...
 #
-#   <phe8-source> ::= <packet8-sources> | <other8-sources>
 #
-#   <phe8-source-pair> ::= '[' <phe8-source> [ , <phe8-source> ] ']'
 #
-#   <phe16-source> ::= <packet16-sources> | <other8-sources>
 #
-#   <phe16-source-pair> ::= '[' <phe16-source> [ , <phe16-source> ] ']'
 #
-#   <phe32-source> ::= <packet32-source> | <other8-sources>
 #
-#   <phe32-source-pair> ::= '[' <phe32-source> [ , <phe32-source> ] ']'
 #
-#   <phe-source> ::= <phe8-source-pair> | <phe16-source-pair> | <phe32-source-pair>
-#                    specifies a PHE source pair
 #
-# <sub-state>        ::= 'state' '[' <range> ']'
-# <w2-mask-lshift>   ::= '(' '(' 'w2' '&' <constant> ')' '<<' <constant> ')'
-# <w2-mask-rshift>   ::= '(' '(' 'w2' '&' <constant> ')' '>>' <constant> ')'
 #
-# <ptr-simple-op>    ::= <constant> | 'w2' '+' <constant> | <sub-state> | <sub-state> '<<' '2'
-# <ptr-complex-op>   ::= <w2-mask-lshift> '+' '(' <constant> '<<' '2' ')' | <w2-mask-rshift> '+' '(' <constant> '<<' '2' ')' ['rounded4']
-#     rounded4 = rounds up the nearest multiple of 4 in the opcode 6.
-# <alu0-instruction> ::= 'noop' | 'ptr' '+=' <ptr-simple-op> | 'ptr' '+=' <ptr-complex-op>
-#     immXs = X-bit immediate signed constant
-#     immXu = X-bit immediate unsigned constant
-#     opcode 0: ptr += imm8s; special case imm8s == 0: nop
-#     opcode 1: ptr += w2[7:0] + imm8s
-#     opcode 2: ptr += state[MSB:LSB], MSB&LSB -> 2/4/8/16-bit state sub-field
-#     opcode 3: ptr += (state[MSB:LSB] << 2), MSB&LSB -> 2/4/8/16-bit state sub-field
-#     opcode 4: ptr += ((w2[7:0] & imm8u) << imm2u) + (imm2u << 2)
-#     opcode 5: ptr += ((w2[7:0] & imm8u) >> imm2u) + (imm2u << 2)
-#     opcode 6: ptr += ((w2[7:0] & imm8u) >> imm2u) + (imm2u << 2)
-#               if ((w2[7:0] & imm8u) >> imm2u) != 0, then + 4 - ((w2[7:0] & imm8u) >> imm2u)
 #
-# <state-simple-op>  ::= '>>=' | '<<=' | '+=' | '='
-# <state-comlex-base-op> ::= '+=' | '-='
-# <state-comlex-op>  ::= <w2-mask-lshift> '+' '(' <constant> '<<' '2' ')' | <w2-mask-rshift> '+' '(' <constant> '<<' '2' ')'
-# <alu1-instruction> ::= <sub-state> <state-simple-op> <constant> | <sub-state> <state-comlex-base-op> <state-complex-op> ['rounded4']
-#     rounded4 = rounds up the nearest multiple of 4 in the opcodes 6 and 7.
-#     immXs = X-bit immediate signed constant
-#     immXu = X-bit immediate unsigned constant
-#     opcode 0: state[MSB:LSB] >>= imm4u, MSB&LSB -> 2/4/8/16-bit state sub-field
-#     opcode 1: state[MSB:LSB] <<= imm4u, MSB&LSB -> 2/4/8/16-bit state sub-field
-#     opcode 2: state[MSB:LSB] += imm8s, MSB&LSB -> 2/4/8/16-bit state sub-field
-#     opcode 3: state[MSB:LSB] = imm8s, MSB&LSB -> 2/4/8/16-bit state sub-field
-#     opcode 4, shift_dir = 0: state[MSB:LSB] += ((w2[7:0] & mask_mode(imm4u)) << imm2u) + (imm2u << 2), MSB&LSB -> 8-bit state sub-field
-#     opcode 4, shift_dir = 1: state[MSB:LSB] += ((w2[7:0] & mask_mode(imm4u)) >> imm2u) + (imm2u << 2), MSB&LSB -> 8-bit state sub-field
-#     opcode 5, shift_dir = 0: state[MSB:LSB] -= ((w2[7:0] & mask_mode(imm4u)) << imm2u) + (imm2u << 2), MSB&LSB -> 8-bit state sub-field
-#     opcode 5, shift_dir = 1: state[MSB:LSB] -= ((w2[7:0] & mask_mode(imm4u)) >> imm2u) + (imm2u << 2), MSB&LSB -> 8-bit state sub-field
-#     opcode 6, shift_dir = 0: state[MSB:LSB] += ((w2[7:0] & mask_mode(imm4u)) << imm2u) + (imm2u << 2), MSB&LSB -> 8-bit state sub-field
-#                              if ((w2[7:0] & mask_mode(imm4u)) << imm2u) != 0, then + 4 - ((w2[7:0] & mask_mode(imm4u)) << imm2u)
-#                              if mask_mode == 0, then each bit is a half-nibble mask
-#                              if mask_mode == 1, then the mask is a full bit mask on the lower bits; upper bits are 0xF
-#     opcode 6, shift_dir = 1: state[MSB:LSB] += ((w2[7:0] & mask_mode(imm4u)) >> imm2u) + (imm2u << 2), MSB&LSB -> 8-bit state sub-field
-#                              if ((w2[7:0] & mask_mode(imm4u)) >> imm2u) != 0, then + 4 - ((w2[7:0] & mask_mode(imm4u)) >> imm2u)
-#                              if mask_mode == 0, then each bit is a half-nibble mask
-#                              if mask_mode == 1, then the mask is a full bit mask on the lower bits; upper bits are 0xF
-#     opcode 7, shift_dir = 0: state[MSB:LSB] -= ((w2[7:0] & mask_mode(imm4u)) << imm2u) + (imm2u << 2), MSB&LSB -> 8-bit state sub-field
-#                              if ((w2[7:0] & mask_mode(imm4u)) << imm2u) != 0, then + 4 - ((w2[7:0] & mask_mode(imm4u)) << imm2u)
-#                              if mask_mode == 0, then each bit is a half-nibble mask
-#                              if mask_mode == 1, then the mask is a full bit mask on the lower bits; upper bits are 0xF
-#     opcode 7, shift_dir = 1: state[MSB:LSB] -= ((w2[7:0] & mask_mode(imm4u)) >> imm2u) + (imm2u << 2), MSB&LSB -> 8-bit state sub-field
-#                              if ((w2[7:0] & mask_mode(imm4u)) >> imm2u) != 0, then + 4 - ((w2[7:0] & mask_mode(imm4u)) >> imm2u)
-#                              if mask_mode == 0, then each bit is a half-nibble mask
-#                              if mask_mode == 1, then the mask is a full bit mask on the lower bits; upper bits are 0xF
-# <modify-flags-src> ::= 'w0' | 'w1' | 'w2' | 'imm'
 phv [<thread>]:
     # Defines PHV alias names for registers.  <thread> is 'ingress', 'ghost' or
     # 'egress' and is optional.  If present, aliases are defined only for
@@ -224,9 +77,6 @@ phv [<thread>]:
 hdr:
     # Information related to hdr_ids (header names and compressed
     # header sequence and length encoding in bridge metadata)
-    # Specific for Tofino 5, shared among parser (parser ingress),
-    # metadata packer (deparser ingress), pseudo parser (parser egress),
-    # and deparser (deparser egress)
     map:
         # Mapping of hdr_ids to header names
         <name>: <constant>
@@ -246,7 +96,6 @@ hdr:
             # e.g. ipv6: { base_len: 40, num_comp_bits: 7, scale: 3 }  # (40B + N * 8B)
 parser [<thread>] [<port_use>, ...]:
     # Defines a parser.  <thread> must be 'ingress' or 'egress'
-    # For Tofino 5, parser egress is pseudo parser.
     # <port_use> can have numerical values, such as range, int, vector of range and int.
     # <port_use> can also have symbolic values, such as "ALL", "CPU", "PCIE", "UNUSED"
     # "CPU" and "PCIE" are symbolic names that the corresponding numeric values are device-specific.
@@ -338,11 +187,11 @@ parser [<thread>] [<port_use>, ...]:
                     # stop the header length counter, and use value as final increment amount (jbay only)
                 disable_partial_hdr_err: <constant>
                     # specifies whether the partial header error is enabled or not for
-                    # the current state.  Cloudbreak and JBay only.
+                    # the current state. Specific to:
+                    #           - JBay
                 partial_hdr_err_proc: <constant>
                     # specifies whether or not the best effort extraction (a.k.a. greedy extract)
                     # is performed when insufficient data is available in the input buffer.
-                    # Cloudbreak only.
             value_set <name> <size>:
                 handle: <int> # pvs handle
                 field_mapping:
@@ -378,7 +227,6 @@ parser [<thread>] [<port_use>, ...]:
         # (tm_status_phv.pipe_mask in tofino2)
     parse_depth_checks_disabled: true | false
         # Parse depth checks disabled
-    # Specific for Tofino 5 parser (parser ingress):
     states:
         <name>: <match-constant>
             # specifies match values for states (64b)
@@ -538,7 +386,6 @@ parser [<thread>] [<port_use>, ...]:
                     # The concrete header bytes which are used for the checksum
                     # are specified using a mask.
                     # One of the 4 masks is selected using the 'mask_sel' field.
-    # Specific for Tofino 5 pseudo parser (parser egress):
     pov_flags_pos: <constant>
         # specifies start position of POV flags in bridge metadata (6b)
     pov_state_pos: <constant>
@@ -558,35 +405,27 @@ stage <constant> <thread>:
             # depends on the table type
             stage <int>: <vector> | '[' <vector>, ... ']'
             - stage <int>: <vector>
-              # (Flatrock only) -- specify columns in specific stages that should be
-              # included in each row.
         stages: <vector> | '[' <vector>, ... ']'
-            # (Flatrock tcam only) -- flatrock tcams have only 1 column per stage (20 rows)
-            # so this takes the place of `column:` specifying which stages the row(s) should use
         bus: 0 | 1 | '[' 0 | 1, ... ']'
             # bus(es) to use.  If a list, must match the number of rows
         lhbus: 0 | 1 | <vector>
         rhbus: 0 | 1 | <vector>
-            # (Flatrock only) horizontal busses to use to the left and right of the table
         word: <vector>
             # for wide tables, specify which word of the wide word is in each row of the table
         vpns: <vector>
             # vpn values to use for rams
         dyanamic_config:
-            # (Flatrock only) dynamic config setup for table
             <int> : <match-constant>
             <int> : { <slice> : <match-constant> }
                 # defines the match for one specific dconfig bit.  Match may be a single
-                # match for the entire width (40 bits on flatrock) or matches against specific
+                # match for the entire width or matches against specific
                 # named slices of those PHVs.  Other bits are implicitly don't-care
         input_xbar [ <int> | <match-constant> ]:
             # Input xbar config for this table
-            # (Flatrock only) optional int or specifies a specific two-bit pattern from the
-            # dynamic_config that this input_xbar config applies for.
             <group-name>: <phv-location> | '[' <phv_location>, ... ']' |
                 { <int>: <phv_location> | <int>..<int>: <phv_location>,... }
-            [<type>] group <constant>: ...  # tofino 1/2/3 group names
-            <type> [<constant>|<size>]: ...  # tofino 5 group names
+            [<type>] group <constant>: ...  # tofino 1/2
+                # TOF5-DOC: also applies to Tofino 3
                 # One or more registers to be mapped into the specified ixbar group
                 # in order or at the locations specified.  Locations are bit offsets in
                 # the group (even for groups that are not bit-addressable
@@ -667,9 +506,7 @@ stage <constant> <thread>:
             random_seed: <constant>
                 # random seed from pragma for the table
             exact unit: <vector>
-                # xme unit(s) to use (tofino5)
             output unit: <int>
-                # physical mres output to use (tofino5)
         gateway:
             # gateway table on this table -- see below
         format: { <name>: <range>, <name>: <size> ... }
@@ -846,9 +683,7 @@ stage <constant> <thread>:
                     # hash bits used to select enable rams/lambs in the way
                 rams: '[' <ram>, ... ']'
                     # rams or lambs in the way.  Each is a vector of 1, 2, or 3 integers
-                    '[' <int> ']'                   # lamb unit (tofino5)
-                    '[' <row>,<col> ']'             # tofino1/2/3
-                    '[' <stage>,<row>,<col> ']'     # tofino5 stm
+                    '[' <row>,<col> ']'             # tofino1/2
             - '[' <int>,<int>,<int>, '[' <row>,<col> ']',... ']'
             # DEPRECATED description of one way of the table
             # initial 3 values are hash group, 10-bit slice from group, and
@@ -906,7 +741,6 @@ stage <constant> <thread>:
             # ternary indirection table to use with this table
             # if there's an indirection table, it should contain all the table refs
         indirect: <int> | <vector>
-            # (flatrock only) use local tind LAMB rams in the SCM block for ternary indirect
         indirect_bus: <int>
             # which indirect bus to use for ternary tables with no indirection table
         # common keys described above
@@ -1285,7 +1119,6 @@ stage <constant> <thread>:
         <int>: <int>  # Resolved incoming long branch tag ID to activation bit map
 deparser <thread>:
     # Defines a deparser.  <thread> must be 'ingress' or 'egress'
-    # For Tofino 5, deparser ingress is metadata packer.
     dictionary:
         # ordered list of phv locations to write out as the output deparser
         - <phv-location> : <bit-location>
@@ -1370,16 +1203,6 @@ deparser <thread>:
     capture_tx_ts: <phv-location> [ ':' <pov-bit> ]
     coal: <phv-location> [ ':' <pov-bit> ]
     ecos: <phv-location> [ ':' <pov-bit> ]
-    # Specific for Tofino 5 metadata packer (deparser ingress):
-    # Very little needed for trivial profile
-    #
-    # Data needed:
-    #   vld_vec
-    #   dflt_vec
-    #
-    # vld_vec: -- Do we need explicit config
-    # dflt_vec:-- Do we need explicit config
-    # New elements
     copy_to_cpu_cos: <phv-location> [ ':' <pov-bit> ] # or c2c_cos
     copy_to_cpu_qid: <phv-location> [ ':' <pov-bit> ] # or c2c_qid
     mirr_bitmap: <phv-location> [ ':' <pov-bit> ]
@@ -1390,13 +1213,6 @@ deparser <thread>:
     #  - mcid2 - Multicast Group ID 2
     #  - hash1 - Hash for L1 (is the the same as hash_lag_ecmp_mcast_<int>?)
     #  - hash2 - Hash for L2 (is the the same as hash_lag_ecmp_mcast_<int>?)
-    # Specific for Tofino 5 deparser (deparser egress):
-    # Trivial profile: no major changes needed.
-    #
-    # TBD for future profiles:
-    #  - mirror cfg
-    #  - content memory details
-    #  - checksum
     packet_body_offset:
         # TODO: Needed? Maybe just use a fixed header type for PBO?
         # Packet body offset

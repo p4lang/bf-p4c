@@ -53,8 +53,8 @@ void AddParserMetadata::addTofinoIngressParserEntryPoint(IR::BFN::Parser* parser
                   parser->name);
     }
 
-    // Initialize mirror_type.$valid to 1 to workaround ingress drop issue in
-    // tofino2 and tofino3.
+    // Initialize mirror_type.$valid to 1 to workaround ingress drop issue in tofino2.
+    // TOF3-DOC: Also tofino3.
     if (Device::currentDevice() == Device::JBAY
 #if HAVE_CLOUDBREAK
         || Device::currentDevice() == Device::CLOUDBREAK

@@ -53,7 +53,8 @@ std::ostream &operator<<(std::ostream &, TableOutputModifier);
 
 /* a memory storage 'unit' somewhere on the chip */
 struct MemUnit {
-    int                             stage = INT_MIN;  // current stage (only) for tofino1/2/3
+    int                             stage = INT_MIN;  // current stage (only) for tofino1/2
+                                                      // TOF3-DOC: tofino3 also
                 // can have negative stage numbers for tcams in egress
     int                             row = -1;
     int                             col;    // (lamb) unit when row == -1
@@ -97,7 +98,7 @@ class Table {
         bool                    home_row = false;       // is this a home row
         std::vector<MemUnit>    memunits;
         std::vector<int>        vpns, maprams;
-        // On Tofino5, memories are accessable across stages
+        // TOF5-DOC: On Tofino5, memories are accessable across stages
         Layout() = default;
         Layout(int l, int r) : lineno(l), row(r) {}
         friend std::ostream &operator<<(std::ostream &, const Layout &);
@@ -1122,7 +1123,8 @@ DECLARE_ABSTRACT_TABLE_TYPE(SRamMatchTable, MatchTable,         // exact, atcam,
     // This is to coordinate with the hash_function_id in the ways
     std::map<unsigned, unsigned> hash_fn_ids;
 
-    // helper function only used/instantiated on tofino1/2/3
+    // helper function only used/instantiated on tofino1/2
+    // TOF3-DOC: and tofino3
     template<class REGS>
     void write_attached_merge_regs(REGS &regs, int bus, int word, int word_group);
 
@@ -1733,7 +1735,8 @@ DECLARE_TABLE_TYPE(GatewayTable, Table, "gateway",
     unsigned input_use() const;
     bool needs_handle() const override { return true; }
     bool needs_next() const override { return true; }
-    bool is_branch() const;   // Tofino2/3 needs is_a_brnch set to use next_table
+    bool is_branch() const;   // Tofino2 needs is_a_brnch set to use next_table
+                              // TOF3-DOC: Also applies to Tofino3
     void verify_format();
     bool is_always_run() const override { return always_run; }
     virtual bool check_match_key(MatchKey &, const std::vector<MatchKey> &, bool);

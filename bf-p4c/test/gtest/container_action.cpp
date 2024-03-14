@@ -206,7 +206,8 @@ TEST_F(TofinoContainerAction, sanity) {
     ok();
 }
 
-// The following two tests are extracted from P4C-2761. Whether we can correctly synthesize
+// JIRA-DOC: The following two tests are extracted from P4C-2761.
+// Whether we can correctly synthesize
 // instructions for the action depends on the allocation of f4.
 
 class DepositFieldContigousMask : public TofinoContainerAction {
@@ -551,7 +552,7 @@ TEST_F(SlidesExamples, c6) {
     // to byte alignment on the action RAM
 }
 
-// Verification for P4C-2491.
+// JIRA-DOC: Verification for P4C-2491.
 // Test whether an action use multiple action parameters if
 // all action parameters are from the same meter.
 //
@@ -630,7 +631,7 @@ class Dark : public JBayContainerAction {
 };
 
 TEST_F(Dark, test1) {
-    // This one is extracted from P4C-2802
+    // JIRA-DOC: This one is extracted from P4C-2802
 
     alloc_dst(f1, "DB8", 0);
     alloc_src(f2, "DB8", 1);

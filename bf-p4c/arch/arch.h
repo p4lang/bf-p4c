@@ -37,7 +37,10 @@ namespace BFN {
 class Architecture : public Inspector {
  public:
     enum Arch_t {
-        TNA, T2NA, T3NA,
+        TNA, T2NA,
+#if HAVE_CLOUDBREAK
+        T3NA,
+#endif  /* HAVE_CLOUDBREAK */
 #if HAVE_FLATROCK
         T5NA,
 #endif
@@ -63,7 +66,9 @@ class Architecture : public Inspector {
     static Arch_t toArchEnum(cstring arch) {
         if (arch == "TNA" || arch == "tna") return Arch_t::TNA;
         else if (arch == "T2NA" || arch == "t2na") return Arch_t::T2NA;
+#if HAVE_CLOUDBREAK
         else if (arch == "T3NA" || arch == "t3na") return Arch_t::T3NA;
+#endif  /* HAVE_CLOUDBREAK */
 #if HAVE_FLATROCK
         else if (arch == "T5NA" || arch == "t5na") return Arch_t::T5NA;
 #endif
@@ -161,15 +166,15 @@ class TranslationLast : public PassManager {
     TranslationLast() { setName("TranslationLast"); }
 };
 
-/**
- * \ingroup ArchTranslation
- * \brief PassManager that governs the normalization of variations in the architectures.
- * @sa BFN::SimpleSwitchTranslation
- * @sa BFN::TnaArchTranslation
- * @sa BFN::T2naArchTranslation
- * @sa BFN::T5naArchTranslation
- * @sa BFN::PortableSwitchTranslation
- */
+/// \ingroup ArchTranslation
+/// \brief PassManager that governs the normalization of variations in the architectures.
+/// @sa BFN::SimpleSwitchTranslation
+/// @sa BFN::TnaArchTranslation
+/// @sa BFN::T2naArchTranslation
+#if HAVE_FLATROCK
+/// @sa BFN::T5naArchTranslation
+#endif  /* HAVE_FLATROCK */
+/// @sa BFN::PortableSwitchTranslation
 class ArchTranslation : public PassManager {
  public:
     ArchTranslation(P4::ReferenceMap* refMap, P4::TypeMap* typeMap, BFN_Options& options);
@@ -202,6 +207,7 @@ static const std::map<Architecture::Arch_t,
         { { DEPARSER, EGRESS }, 5 },
         { { MAU, GHOST }, 6 }
     } },
+#if HAVE_CLOUDBREAK
     { Architecture::T3NA, {
         { { PARSER, INGRESS }, 0 },
         { { MAU, INGRESS }, 1 },
@@ -211,6 +217,7 @@ static const std::map<Architecture::Arch_t,
         { { DEPARSER, EGRESS }, 5 },
         { { MAU, GHOST }, 6 }
     } }
+#endif  /* HAVE_CLOUDBREAK */
 #if HAVE_FLATROCK
     , { Architecture::T5NA, {
         { { PARSER, INGRESS }, 0 },

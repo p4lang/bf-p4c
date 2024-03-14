@@ -15,8 +15,8 @@ template<class C, class Pred> inline bool any_of(C c, Pred pred) {
 
 struct Memories {
     /* track memory allocations within a single stage */
-    // FIXME -- these constants likely all need to change for Flatrock, so they need
-    // to become virtual params of some kind.
+    // TOF5-DOC: FIXME -- these constants likely all need to change for Flatrock, so they need
+    // TOF5-DOC: to become virtual params of some kind.
     static constexpr int SRAM_ROWS = 8;
     static constexpr int SRAM_COLUMNS = 10;
     static constexpr int STASH_UNITS = 2;

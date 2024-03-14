@@ -925,7 +925,8 @@ Instruction *OutOP::pass1(Table *tbl_, Table::Actions::Action *act) {
 }  // end namespace StatefulAlu
 
 bool StatefulTable::p4c_5192_workaround(const Actions::Action *act) const {
-    // model problem identified in P4C-5192 -- when trying to output bits 96..127
+    // JIRA-DOC: model problem identified in P4C-5192 --
+    // when trying to output bits 96..127
     // of either memory or phv input in an SALU in 128-bit mode, the model asserts
     // Not clear if this is a hardware limitation or a model bug.
     // RMT_ASSERTS on lines 547 and 565 of model/src/shared/mau-stateful-alu.cpp

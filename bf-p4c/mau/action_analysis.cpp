@@ -852,7 +852,8 @@ bool ActionAnalysis::init_phv_alignment(const ActionParam &read, const op_type_t
                         are_allocated = true;
                         return;
                     }
-                    // Get all of the allocated bits for a slice (P4C-4811)
+                    // Get all of the allocated bits for a slice
+                    // JIRA-DOC: (P4C-4811)
                     auto alloc_bits = phv.bits_allocated(alloc.container(), field, tbl, &use);
                     // Get the bits that should be unallocated
                     auto resize_bits = alloc_bits.getslice(start_container_bit, resize_size);
@@ -1499,7 +1500,8 @@ bool ActionAnalysis::TotalAlignment::is_wrapped_shift(PHV::Container container, 
 
     // implicit_read_bits might not yet be determined.  Therefore at this point,
     // the direct_read_bits may not be the full container, but within the addition of the
-    // implicit_read_bits would be.  Noted in p4c-2598
+    // implicit_read_bits would be.
+    // JIRA-DOC: Noted in p4c-2598
     if (read_bits().popcount() == static_cast<int>(container.size()) ||
         df_src1_mask().popcount() == static_cast<int>(container.size())) {
         if (right_shift == 0) {
@@ -2821,7 +2823,7 @@ bool ActionAnalysis::ContainerAction::verify_possible(cstring &error_message,
     }
 
     if (!is_from_set() && sources_needed != operands()) {
-        // P4C-4757
+        // JIRA-DOC: P4C-4757
         // Some 2/3 operand instructions can have a source which is an uninitialized read. In this
         // case phv may allocate src/dst operands to the same PHV container slice
         // E.g.

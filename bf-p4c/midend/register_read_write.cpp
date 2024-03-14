@@ -23,7 +23,8 @@ bool RegisterReadWrite::CheckRegisterActions::preorder(
 
 /*
  * Check the number of register actions attached to registers. It cannot exceed 4.
- * This is a Tofino 1/2/3 HW restriction.
+ * This is a Tofino 1/2 HW restriction.
+ * TOF3-DOC: And Tofino 3.
  */
 void RegisterReadWrite::CheckRegisterActions::end_apply() {
     for (auto &item : all_register_actions) {
@@ -516,7 +517,8 @@ bool RegisterReadWrite::CollectRegisterReadsWrites::preorder(
             // things here as errors.  We should fix extract_maupipe to not craah (and flag
             // the error), or have an earlier pass check and give the error.  Maybe
             // CheckRegisterActions in this file (which is what ends up flagging an error
-            // in the test we have (p4c-4525) but might not cover all cases)
+            // in the test we have but might not cover all cases)
+            // JIRA-DOC: p4c-4525
             LOG1("no P4Action context, but there is a Declaration_Instance: " << regAct);
             collectRegReadWrite(call, regAct);
         }
@@ -527,7 +529,8 @@ bool RegisterReadWrite::CollectRegisterReadsWrites::preorder(
 
 /*
  * Check that all uses of a register within a single action use the same addressing.
- * This is a Tofino 1/2/3 HW restriction.
+ * This is a Tofino 1/2 HW restriction.
+ * TOF3-DOC: And Tofino 3.
  */
 void RegisterReadWrite::CollectRegisterReadsWrites::end_apply() {
 #if HAVE_FLATROCK

@@ -1853,7 +1853,8 @@ void CreateSaluInstruction::assignOutputAlus() {
                 }
 
                 // alu0/1 always use bits 31:0, alu2/3 - bits 63:32.
-                // See JBay/CloudBreak MAU Micro-Architecture 6.2.12.8 Alu-Output for details.
+                // See JBay MAU Micro-Architecture 6.2.12.8 Alu-Output for details.
+                // TOF3-DOC: Same section in CloudBreak MAU Micro-Architecture.
                 const unsigned BOUNDARY = 32;
                 std::vector<int> available_alus;
                 bool ls_bits = true;

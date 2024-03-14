@@ -78,7 +78,8 @@ class Stage_data {
 
     int pass1_logical_id = -1, pass1_tcam_id = -1;
 
-    // True egress accounting (4 buses) Tofino2/3 ONLY
+    // True egress accounting (4 buses) Tofino2
+    // TOF3-DOC: and Tofino3
     static std::map<int, std::pair<bool, int>> teop;
 
  protected:

@@ -784,7 +784,7 @@ bool DoInstructionSelection::equiv(const IR::Expression *a, const IR::Expression
 }
 
 void DoInstructionSelection::limitWidth(const IR::Expression *e) {
-    // P4C-2694
+    // JIRA-DOC: P4C-2694
     // Verify that the operation width is less than the maximum container width.
     // Required for instructions that can't be split without rewriting the
     // instruction.
@@ -923,7 +923,7 @@ const IR::Expression *DoInstructionSelection::postorder(IR::SubSat *e) {
     }
     limitWidth(e);
 
-    // P4C-1819
+    // JIRA-DOC: P4C-1819
     // Compiler generates an invalid instruction here for saturated unsigned
     // subtract with a constant value as src2 which is unsupported in
     // Tofino/JBAY.

@@ -9,7 +9,8 @@
  * larger than about 7600 bytes for a 400g interface or about 2200 bytes for a
  * 100g interface. Workaround: Do not drop packets at the ingress deparser,
  * instead mirror them to a disabled mirroring session to drop them by the
- * mirror block. This fix applies to Tofino 1, 2 and 3.
+ * mirror block. This fix applies to Tofino 1 and 2.
+ * TOF3-DOC: And Tofino 3.
  */
 #ifndef EXTENSIONS_BF_P4C_MIDEND_DROP_PACKET_WITH_MIRROR_ENGINE_H_
 #define EXTENSIONS_BF_P4C_MIDEND_DROP_PACKET_WITH_MIRROR_ENGINE_H_
@@ -72,7 +73,8 @@ class DropPacketWithMirrorEngine : public PassManager {
     DropPacketWithMirrorEngine(P4::ReferenceMap* refMap, P4::TypeMap* typeMap) {
         addPasses({
             new PassIf([]() {
-                // TOFINO1, 2 & 3 has the same hardware bug that need this workaround.
+                // TOFINO1, 2 has the same hardware bug that need this workaround.
+                // TOF3-DOC: And Tofino 3.
                 return Device::currentDevice() == Device::TOFINO
                     || Device::currentDevice() == Device::JBAY
 #if HAVE_CLOUDBREAK

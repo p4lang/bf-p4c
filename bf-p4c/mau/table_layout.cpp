@@ -910,8 +910,10 @@ bool DoTableLayout::can_be_hash_action(const IR::MAU::Table *tbl, std::string &r
     }
 
     /* this doesnt have to be a power of 2. This check is mostly
-     * to make the driver happy. Here's a JIRA for the driver to
-     * fix this constraint: https://barefootnetworks.atlassian.net/browse/DRV-2116 */
+     * to make the driver happy.
+     * JIRA-DOC: Here's a JIRA for the driver to
+     * JIRA-DOC: fix this constraint: https://barefootnetworks.atlassian.net/browse/DRV-2116
+     */
     if (entries != pow(2, tbl->layout.ixbar_width_bits)) {
         reason = "the size is not 2^(key bits)";
         return false;
@@ -1639,7 +1641,8 @@ bool CheckPlacementPriorities::preorder(const IR::MAU::Table *tbl) {
 }
 
 /**
- * TODO: P4C-2256: the placement_priorities could use a check for a cycle
+ * TODO: the placement_priorities could use a check for a cycle
+ * JIRA-DOC: P4C-2256
  */
 void CheckPlacementPriorities::end_apply() {
     if (run_once)

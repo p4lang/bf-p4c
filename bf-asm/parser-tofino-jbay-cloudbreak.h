@@ -25,7 +25,8 @@ enum {
 };
 
 /**
- * @brief Representation of the Tofino 1/2/3 parser in assembler
+ * @brief Representation of the Tofino 1/2 parser in assembler
+ * TOF3-DOC: and Tofino 3
  * @ingroup parde
  */
 class Parser : public BaseParser, public Contextable {

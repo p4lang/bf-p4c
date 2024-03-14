@@ -147,7 +147,8 @@ void CheckFieldCorruption::end_apply() {
         for (const auto &use : defuse.getAllUses(field.id)) {
             // Are the slices initialized in always-run actions?
             // This should not be needed, but is currently required because defuse
-            // analysis doesn't correctly handle ARA tables. (See: P4C-4331)
+            // analysis doesn't correctly handle ARA tables.
+            // JIRA-DOC: (See: P4C-4331)
             auto read = PHV::FieldUse(PHV::FieldUse::READ);
             const auto &allocs =
                 phv.get_alloc(use.second, PHV::AllocContext::of_unit(use.first), &read);

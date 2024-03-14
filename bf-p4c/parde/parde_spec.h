@@ -41,12 +41,14 @@
  * In backend, after transformation within the BFN::BackendConverter post-midend pass,
  * the Tofino parser is represented with the IR::BFN::Parser %IR node.
  * Within the LowerParser pass, the parser is transformed (lowered) into the representation
- * that is closer to how HW works. For Tofino 1/2/3, IR::BFN::LoweredParser is produced,
- * while for %Flatrock, IR::Flatrock::Parser and IR::Flatrock::PseudoParser are produced.
+ * that is closer to how HW works. For Tofino 1/2, IR::BFN::LoweredParser is produced,
+ * TOF3-DOC: Also applies to Tofino 3.
+ * TOF5-DOC: For %Flatrock, IR::Flatrock::Parser and IR::Flatrock::PseudoParser are produced.
  *
- * In assembler, the Tofino 1/2/3 parser is represented with the Parser class,
- * while %Flatrock is represented with the FlatrockParser class.
- * Specific differences of Tofino 1 vs 2 vs 3 are implemented using template specialization.
+ * In assembler, the Tofino 1/2 parser is represented with the Parser class,
+ * TOF3-DOC: Also applies to Tofino 3.
+ * TOF5-DOC: %Flatrock is represented with the FlatrockParser class.
+ * Specific differences of Tofino versions are implemented using template specialization.
  *
  * ## Frontend passes
  *
@@ -295,8 +297,9 @@
  *
  * # Deparser
  *
- * The deparser reassembles packets prior to storage in TM (Tofino 1-3) and prior to transmission
+ * The deparser reassembles packets prior to storage in TM (Tofino 1/2) and prior to transmission
  * via the MAC (all chips).
+ * TOF3-DOC: Also applies to Tofino 3.
  *
  * ## Target constants
  *
@@ -352,9 +355,10 @@
  *
  * Backend passes related to deparsing:
  *  - AddDeparserMetadata - Adds deparser metadata parameters.
- *  - AddMetadataPOV - Adds POV bits for metadata used by the deparser (Tofino 2/3/5). Tofino 1
+ *  - AddMetadataPOV - Adds POV bits for metadata used by the deparser (Tofino 2+). Tofino 1
  *                     uses the valid bit associated with each %PHV; Tofino 2+ use POV bits
- *                     instead. Tofino 5 requires POV bits for only a subset of metadata.
+ *                     instead.
+ *                     TOF5-DOC: Tofino 5 requires POV bits for only a subset of metadata.
  *  - BFN::AsmOutput - Outputs the deparser assembler. Uses DeparserAsmOutput and the passes it
  *                     invokes.
  *  - CollectClotInfo - Collects information for generating CLOTs.
@@ -366,7 +370,8 @@
  *                           pass generates emit and digest objects as part of this process.
  *  - GreedyClotAllocator - CLOT allocation. Enforces deparser CLOT rules during allocation.
  *  - InsertParserClotChecksums - Identifies CLOT fields used in deparser checksums to allow the
- *                                checksum to be calculated in the parser (Tofino 2/3).
+ *                                checksum to be calculated in the parser (Tofino 2).
+ *                                TOF3-DOC: (And Tofino 3).
  *  - LowerParser - Replaces high-level parser and deparser %IR that operate on fields with
  *                  low-level parser and deparser %IR that operate on %PHV containers.
  *  - \ref ResetInvalidatedChecksumHeaders - Reset fields that are used in deparser checksum
@@ -497,10 +502,18 @@ class PardeSpec {
     /// Max line rate per-port (Gbps)
     virtual unsigned lineRate() const = 0;
 
+#if HAVE_FLATROCK
     /// Metadata packer valid vector fields - as vector (Flatrock)
+#else
+    /// Unused
+#endif  /* HAVE_FLATROCK */
     virtual const std::vector<std::string>& mdpValidVecFields() const = 0;
 
+#if HAVE_FLATROCK
     /// Metadata packer valid vector fields - as set (Flatrock)
+#else
+    /// Unused
+#endif  /* HAVE_FLATROCK */
     virtual const std::unordered_set<std::string>& mdpValidVecFieldsSet() const = 0;
 };
 

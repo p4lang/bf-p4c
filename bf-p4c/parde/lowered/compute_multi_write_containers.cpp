@@ -8,8 +8,9 @@ PHV::Container ComputeMultiWriteContainers::offset_container(const PHV::Containe
     unsigned index = Device::phvSpec().physicalAddress(container, PhvSpec::PARSER);
     auto curr = Device::phvSpec().physicalAddressToContainer(index + stack_offset,
                                                              PhvSpec::PARSER);
-    // If we have an 8b container on JBay/Cloudbreak, point to the correct
+    // If we have an 8b container on JBay, point to the correct
     // half in the 16b parser container
+    // TOF3-DOC: Also applies to Cloudbreak.
     if ((Device::currentDevice() == Device::JBAY
 #if HAVE_CLOUDBREAK
          || Device::currentDevice() == Device::CLOUDBREAK

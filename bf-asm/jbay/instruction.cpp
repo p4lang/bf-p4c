@@ -2,7 +2,7 @@
  * WARNING -- this is included in an anonymous namespace, as VLIWInstruction is 
  * in that anonymous namespace */
 
-// This template works for JBay and Cloudbreak...
+// TOF3-DOC: This template works for JBay and Cloudbreak...
 template<typename REGS>
 void VLIWInstruction::write_regs_2(REGS &regs, Table *tbl, Table::Actions::Action *act) {
     if (act != tbl->stage->imem_addr_use[imem_thread(tbl->gress)][act->addr]) {
@@ -17,7 +17,7 @@ void VLIWInstruction::write_regs_2(REGS &regs, Table *tbl, Table::Actions::Actio
     BUG_CHECK(slot >= 0);
     unsigned off = slot % Phv::mau_groupsize();
     unsigned side = 0, group = 0;
-    switch(slot / Phv::mau_groupsize()) {
+    switch (slot / Phv::mau_groupsize()) {
         case 0: side = 0; group = 0; break;
         case 1: side = 0; group = 1; break;
         case 2: side = 1; group = 0; break;
@@ -46,13 +46,15 @@ void VLIWInstruction::write_regs_2(REGS &regs, Table *tbl, Table::Actions::Actio
         case 16:
             imem.imem_subword16[side][group][off][iaddr].imem_subword16_instr = bits;
             imem.imem_subword16[side][group][off][iaddr].imem_subword16_color = color;
-            imem.imem_subword16[side][group][off][iaddr].imem_subword16_parity = parity(bits) ^ color;
+            imem.imem_subword16[side][group][off][iaddr].imem_subword16_parity =
+                parity(bits) ^ color;
             break;
         case 32:
             BUG_CHECK(group == 0 || group == 1);
             imem.imem_subword32[side][group][off][iaddr].imem_subword32_instr = bits;
             imem.imem_subword32[side][group][off][iaddr].imem_subword32_color = color;
-            imem.imem_subword32[side][group][off][iaddr].imem_subword32_parity = parity(bits) ^ color;
+            imem.imem_subword32[side][group][off][iaddr].imem_subword32_parity =
+                parity(bits) ^ color;
             break;
         default:
             BUG(); }

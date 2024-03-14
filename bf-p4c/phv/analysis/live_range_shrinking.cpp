@@ -528,7 +528,7 @@ FindInitializationNode::getInitializationCandidates(
         // Find the first table where initialization is possible.
         // *ALEX* What if the first table found is control flow mutex
         // with dominator and uses of field f? Is this possible?
-        // (maybe issue for p4c-2678?)
+        // JIRA-DOC: (maybe issue for p4c-2678?)
         LOG_DEBUG3(TAB2 "Checking whether initialization is possible at table " << tbl->name);
         bool reachCondition = false;
         for (auto kv : g_units) {

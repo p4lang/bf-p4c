@@ -38,7 +38,7 @@ Visitor::profile_t MultipleApply::CheckStaticNextTable::init_apply(const IR::Nod
 }
 
 /**
- * This multiple apply optimization is rooted from JIRA tickets: P4C-2686, SWI-2941
+ * JIRA-DOC: This multiple apply optimization is rooted from JIRA tickets: P4C-2686, SWI-2941
  *
  * The program to support looks something like this:
  *

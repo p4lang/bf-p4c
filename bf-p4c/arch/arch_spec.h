@@ -20,7 +20,8 @@ struct IntrinsicParam {
 };
 
 /**
- * This class is the architecture model for tofino & flatrock devices.
+ * This class is the architecture model for tofino devices.
+ * TOF5-DOC: It also applies to Flatrock devices.
  * P4-16 architecture file exposes the user-configurable CSRs as
  * intrinsic metadata to P4 programmers. Different generation of
  * devies may have different set of CSRs, which is encapsulated in

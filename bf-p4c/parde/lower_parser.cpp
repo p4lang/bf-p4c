@@ -388,8 +388,8 @@ struct ReplaceDeparserIR : public DeparserTransform {
         // if (Device::currentDevice() == Device::FLATROCK && deparser->gress == INGRESS) {
         //     // FLATROCK does not have a real ingress deparser
         //     return deparser; }
-#endif
         // Flatrock: metadata packer is output as a deparser
+#endif
         return deparser->gress == INGRESS ? igLoweredDeparser : egLoweredDeparser;
     }
 

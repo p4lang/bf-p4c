@@ -117,9 +117,10 @@ void AddHardwareConstrainedFields::postorder(IR::BFN::Pipe *pipe) {
             IR::BFN::HardwareConstrainedField::INVALIDATE_FROM_ARCH);
 
         // field that are required to be initialized to zero based on requirement from architecture.
-        // ig_intr_md_for_dprsr.mirror_type must be init to zero to workaround ibuf hardware bug in
-        // P4C-4507. It is validated by default in parser, unless explicitly disabled by the pragma
+        // ig_intr_md_for_dprsr.mirror_type must be init to zero to workaround ibuf hardware bug.
+        // It is validated by default in parser, unless explicitly disabled by the pragma
         // @disable_reserved_i2e_drop_implementation.
+        // JIRA-DOC: See  P4C-4507.
         if (disable_reserved_i2e_drop_implementation) {
             name_to_field["ig_mirror_type"]->constraint_type.setbit(
                 IR::BFN::HardwareConstrainedField::INVALIDATE_FROM_ARCH);

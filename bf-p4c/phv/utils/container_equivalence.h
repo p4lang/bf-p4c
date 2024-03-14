@@ -85,7 +85,7 @@ class ContainerEquivalenceTracker {
  private:
     std::optional<PHV::Container> find_single(PHV::Container);
     ContainerClass get_class(PHV::Container c) {
-        return ContainerClass(alloc, c, wideArith || (isTofino2Or3 && c.is(PHV::Size::b8)));
+        return ContainerClass(alloc, c, wideArith || (restrictW0 && c.is(PHV::Size::b8)));
     }
 
     std::map<ContainerClass, PHV::Container> equivalenceClasses;
@@ -93,19 +93,21 @@ class ContainerEquivalenceTracker {
     const PHV::Allocation& alloc;
     bool wideArith = false;
     bool wideArithLow = false;
-    /// For Tofino 2/3 we need to keep track of parity of 8bit containers & treat W0 specially
-    /// - P4C-3033
+    /// For Tofino 2 we need to keep track of parity of 8bit containers & treat W0 specially
+    /// TOF3-DOC: Tofino 3 as well.
+    /// JIRA-DOC: - P4C-3033
     /// In Tofino 2, all extractions happen using 16b extracts. So a 16-bit parser extractor
     /// extracts over a pair of even and odd phv 8-bit containers to perform 8-bit extraction. If
     /// any of 8-bit containers in the pair are in CLEAR_ON_WRITE mode, then both containers will
     /// be cleared everytime an extraction happens. In order to avoid this corruption, if one
     /// container in the pair in in CLEAR_ON_WRITE mode, the other is not used in parser.
     /// Initialized in .cpp.
-    /// - P4C-4589
-    /// Due to a hardware issue on Tofino 2 (and 3) where PHV container W0 can unexpectedly be
+    /// JIRA-DOC: - P4C-4589
+    /// Due to a hardware limitation on Tofino 2 where PHV container W0 can unexpectedly be
     /// written to at the end of parser with value 0x0000000, W0 can never be set to clear on write,
     /// as this would corrupt the value of the field in this container.
-    bool isTofino2Or3;
+    /// TOF3-DOC: Tofino 3 as well.
+    bool restrictW0;
 };
 
 }  // namespace PHV

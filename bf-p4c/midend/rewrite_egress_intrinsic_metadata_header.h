@@ -91,7 +91,8 @@ class RewriteEgressIntrinsicMetadataHeader : public PassManager {
                       "rewritten egress_intrinsic_metadata_t not byte-aligned?");
 
             // JBay requires the egress intrinsic metadata to be padded to 4-byte aligned
-            // Minimum metadata lengh is 8B (see P4C-5114 / JBay EPB uarch sec 6.1).
+            // Minimum metadata lengh is 8B (JBay EPB uarch sec 6.1).
+            // JIRA-DOC: (see also P4C-5114).
             if (Device::currentDevice() == Device::JBAY) {
                 unsigned total_size_in_byte = total_size_in_bits / 8;
                 unsigned tofino2_pad = ((total_size_in_byte + 3) / 4) * 4 - total_size_in_byte;

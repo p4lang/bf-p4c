@@ -369,8 +369,9 @@ struct AllocateParserState : public ParserTransform {
 
             // FIXME: Should look at the actual extractions (could extract to half a 32b
             // container for JBay), but requires consistent and accurate analysis across all passes
-            // and assembler.  Changing here only causes a failure in P4C-2490 (failure
-            // introduced by HoistCommonMatchOperations).
+            // and assembler.
+            // JIRA-DOC: Changing here only causes a failure in P4C-2490 (failure
+            // JIRA-DOC: introduced by HoistCommonMatchOperations).
             //
             // Problem is that code currently calculates a constant number of extracts per
             // container, but JBay can extract only half of a 32b container if only some bits are

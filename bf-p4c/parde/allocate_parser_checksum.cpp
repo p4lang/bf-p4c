@@ -705,7 +705,7 @@ struct InsertParserClotChecksums : public PassManager {
 //          c            c'
 //          |            |
 //          d            d'
-// Ticket : P4C-2236
+// JIRA-DOC: Ticket : P4C-2236
 struct DuplicateStates : public ParserTransform {
     ordered_map<cstring,
         ordered_map<cstring, ordered_set<const IR::BFN::ParserState*>>> duplicate_path;
@@ -777,7 +777,8 @@ struct DuplicateStates : public ParserTransform {
                 duplicate_path[first->name][decl].insert(path_to_duplicate.begin(),
                                                          path_to_duplicate.end());
             }
-            // P4C-4158: Clearing this set is required or else the pass does not work properly when
+            // JIRA-DOC: P4C-4158:
+            // Clearing this set is required or else the pass does not work properly when
             // 1 checksum has 2 or more paths to duplicate.
             path_to_duplicate.clear();
         }

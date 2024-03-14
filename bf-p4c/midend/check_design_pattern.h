@@ -102,7 +102,7 @@ class CheckDirectExternsOnTables: public Modifier {
  * also specified on the table. Throw a compile time error if resources are
  * missing on the table. As otherwise, the appropriate control plane api's do
  * not get generated for that resource.
- * P4C-1994
+ * JIRA-DOC: P4C-1994
  */
 class CheckDirectResourceInvocation: public PassManager {
     ActionExterns directExterns;

@@ -757,8 +757,8 @@ bitvec TableFormat::bitvec_necessary(type_t type) const {
         else
             BUG("Unreachable");
     } else if ((type == VALID) && requires_valid_bit()) {
-        // Flatrock check required as the overhead_bits_necessary() call will otherwise allocate
-        // bits for valid in non flatrock backends
+        // TOF5-DOC: Flatrock check required as the overhead_bits_necessary() call will otherwise
+        // TOF5-DOC: allocate bits for valid in non flatrock backends
         rv.setrange(0, 1);  // Single valid bit
     }
     return rv;
@@ -1491,7 +1491,8 @@ void TableFormat::classify_match_bits() {
  *  It would be optimal to ghost off the 3 3 bit fields, and the 1 bit fields, as it would remove
  *  4 total PHV bytes to match on.
  *
- *  P4C-4958: Ghost bits selection now considers the mask specified with the @hash_mask
+ *  JIRA-DOC: P4C-4958:
+ *            Ghost bits selection now considers the mask specified with the @hash_mask
  *            annotation: bits that are masked off through the annotation are not selected
  *            to be part of ghost bits.
  */

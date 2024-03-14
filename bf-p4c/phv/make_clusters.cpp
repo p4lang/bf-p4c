@@ -769,7 +769,7 @@ void Clustering::CollectPlaceTogetherConstraints::pack_pov_bits() {
 //    of two fields into account. So a field may be allocated to the wrong bits
 //    that makes parser extraction impossible.
 // So we pack them into a slice list to force this constraint.
-// See P4C-2754 for more details.
+// JIRA-DOC: See P4C-2754 for more details.
 bool Clustering::CollectPlaceTogetherConstraints::preorder(const IR::BFN::ParserState* state) {
     if (state->gress == INGRESS) {
         return false;

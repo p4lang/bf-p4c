@@ -935,8 +935,10 @@ std::vector<const InputXbar::Input *> InputXbar::find_all(Phv::Slice sl, Group g
  */
 std::vector<const InputXbar::Input *>
 InputXbar::find_hash_inputs(Phv::Slice sl, HashTable ht) const {
-    /* code for tofino1/2/3 -- all hash tables take input from exact ixbar groups, with
-     * two hash tables per group (even in lower bits and odd in upper bits) */
+    /* code for tofino1/2 -- all hash tables take input from exact ixbar groups, with
+     * two hash tables per group (even in lower bits and odd in upper bits)
+     * TOF3-DOC: Also applies to tofino3
+     */
     BUG_CHECK(ht.type == HashTable::EXACT, "not an exact hash table: %s", ht.toString().c_str());
     auto rv = find_all(sl, Group(Group::EXACT, ht.index >= 0 ? ht.index/2 : -1));
     if (ht.index >= 0) {

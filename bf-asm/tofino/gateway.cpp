@@ -5,7 +5,8 @@
 
 #include "ternary_match.h"
 
-/* Tofino1/2/3 Gateway table support
+/* Tofino1/2 Gateway table support
+/* TOF3-DOC: Tofino3 also
  * GatewayTable uses the Table::Layout in a somewhat hacky way to track the gateway match
  * and payload blocks.  Layout may have either one or two entries.
  * layout[0] is the layout for the gateway match -- which row and search bus is being used
@@ -46,8 +47,9 @@ bool Target::Tofino::GatewayTable::check_match_key(MatchKey &key,
 void Target::Tofino::GatewayTable::pass1() {
     ::GatewayTable::pass1();
     /* in a gateway, the layout has one or two rows -- layout[0] specifies the gateway, and
-     * layout[1] specifies the payload. There will be no columns in either row.  On flatrock
-     * payloads are tied to physical tables, so there can be no layout[1] */
+     * layout[1] specifies the payload. There will be no columns in either row.
+     * TOF5-DOC: On flatrock payloads are tied to physical tables, so there can be no layout[1]
+     */
     if (layout.empty() || layout[0].row < 0)
         error(lineno, "No row specified in gateway");
     else if (!layout[0].bus.count(Layout::SEARCH_BUS) && (!match.empty() || !xor_match.empty()))

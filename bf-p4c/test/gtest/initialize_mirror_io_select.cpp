@@ -1,6 +1,7 @@
 /*
  * This test covers initialization of eg_intr_md_for_dprsr.mirror_io_select
- * on Tofino2 and Tofino3 targets if it's not explicitly set.
+ * on Tofino2 targets if it's not explicitly set.
+ * TOF3-DOC: Applies to Tofino3 targets as well.
  */
 
 #include "bf-p4c/midend/initialize_mirror_io_select.h"
@@ -74,8 +75,8 @@ Visitor *setup_passes() {
 
 #define RUN_CHECK(hdr, meta, block_marker, expected)                                            \
     do {                                                                                        \
-        auto blk = TestCode(hdr, InitializeMirrorIOSelectTest::tofino_egress_shell(), {meta}, block_marker,                   \
-                            {"-T", "initialize_mirror_io_select:3"});                           \
+        auto blk = TestCode(hdr, InitializeMirrorIOSelectTest::tofino_egress_shell(), {meta},   \
+                            block_marker, {"-T", "initialize_mirror_io_select:3"});             \
         blk.flags(Match::TrimWhiteSpace | Match::TrimAnnotations);                              \
         EXPECT_TRUE(blk.apply_pass(TestCode::Pass::FullFrontend));                              \
         EXPECT_TRUE(blk.apply_pass(InitializeMirrorIOSelectTest::setup_passes()));              \

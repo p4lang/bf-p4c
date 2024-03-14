@@ -6,7 +6,7 @@
 
 // Whilst the original PR consolidated code, moving it out of the back-end and
 // canonicalising the IR sooner, it caused ripples that caused issue to the PHV allocator.
-// See P4C-3379 & P4C-3158 for the regression is causes.
+// JIRA-DOC: See P4C-3379 & P4C-3158 for the regression is causes.
 // For now, we only partially implement the PR by setting `ENABLE_P4C3251 0`.
 #define ENABLE_P4C3251 0
 

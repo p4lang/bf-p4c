@@ -169,7 +169,8 @@ void P4Table::base_alpm_tbl_cfg(json::map &out, int size, const Table *table,
                 // Both alpm pre-classifier and atcam tables share the same
                 // table name. For driver to uniquely distinguish a
                 // pre-classifier from the atcam table during snapshot, we add a
-                // suffix to the p4 name - DRV-2626
+                // suffix to the p4 name
+                // JIRA-DOC: DRV-2626
                 name += "_pre_classifier";
             } else if (atype == P4Table::Atcam) {
                 alpm_cfg = &alpm->alpm_atcam_table_cfg;

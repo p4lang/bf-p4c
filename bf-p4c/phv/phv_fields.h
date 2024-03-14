@@ -140,8 +140,8 @@ class Field : public LiftLess<Field> {
     int             id = 0;
 
     /// Whether the Field is ingress or egress.
-    // FIXME -- for FLATROCK will probably have fields that are both ingress+egress, with
-    // the same allocation for both pipes
+    // TOF5-DOC: FIXME -- for FLATROCK will probably have fields that are both ingress+egress, with
+    // TOF5-DOC: the same allocation for both pipes
     gress_t         gress = INGRESS;
 
     /// @returns true if the Field is a ghost field.
@@ -291,9 +291,11 @@ class Field : public LiftLess<Field> {
 
     bool            deparsed_bottom_bits_i = false;    /// true when learning digest, no shifter
     bool            deparsed_top_bits_i = false;       /// true when the field must be in the top
-                                                       /// 16b of a container. flatrock constraint
-                                                       /// for intrinsic metadata that must be in
-                                                       /// bytes 3:2 of 32b containers
+                                                       /// 16b of a container.
+                                                       /// TOF5-DOC: flatrock constraint for
+                                                       /// TOF5-DOC: intrinsic metadata that must
+                                                       /// TOF5-DOC: be in bytes 3:2 of
+                                                       /// TOF5-DOC: 32b containers
     bool            exact_containers_i = false;        /// place in container exactly (no holes)
 
     bool            deparsed_to_tm_i = false;          /// true if field is read by TM
@@ -847,7 +849,8 @@ class Field : public LiftLess<Field> {
     /// (1) for field.size <= 8-bit, x = 8 - size;
     /// (2) for 8 < field.size <= 16, x = 16 - size;
     /// (3) for 16 < field.size, x = 7.
-    /// see https://jira.devtools.intel.com/browse/P4C-4469 for more of the hardware constraints.
+    /// JIRA-DOC: see https://jira.devtools.intel.com/browse/P4C-4469 for more of the
+    /// JIRA-DOC: hardware constraints.
     void setStartBitsToLowerBitsOfBottomByte();
 };
 

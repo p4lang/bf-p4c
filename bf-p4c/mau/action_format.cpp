@@ -382,7 +382,8 @@ bool RandomNumber::is_subset_of(const Parameter *ad) const {
         return false;
     if (size() != ad->size())
         return false;
-    // Random Number is not a subset of Random Padding!! P4C-4477
+    // Random Number is not a subset of Random Padding!!
+    // JIRA-DOC: P4C-4477
     if (ad->is<RandomPadding>())
         return false;
     auto rn = ad->to<RandomNumber>();

@@ -353,7 +353,7 @@ void output_jbay_field_dictionary_helper(int lineno,
     }
 }
 
-// Also used for outputting Cloudbreak field dictionaries.
+// TOF3-DOC: Also used for outputting Cloudbreak field dictionaries.
 template<class REGS, class POV_FMT, class POV, class DICT>
 void output_jbay_field_dictionary(int lineno, REGS &regs, POV_FMT &pov_layout,
                                   POV &pov, DICT &dict) {
@@ -422,7 +422,7 @@ void output_jbay_field_dictionary(int lineno, REGS &regs, POV_FMT &pov_layout,
     output_jbay_field_dictionary_helper(lineno, pov, dict, write_chunk, finish_chunk, write_clot);
 }
 
-// Also used for outputting Cloudbreak field dictionary slices.
+// TOF3-DOC: Also used for outputting Cloudbreak field dictionary slices.
 template<class CHUNKS, class CLOTS, class POV, class DICT>
 void output_jbay_field_dictionary_slice(int lineno, CHUNKS &chunk, CLOTS &clots, POV &pov,
                                         DICT &dict, json::vector& fd_gress,

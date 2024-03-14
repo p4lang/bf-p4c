@@ -12,8 +12,8 @@
 #include "lib/safe_vector.h"
 
 namespace Tofino {
-// Despite the namespace name, this code is shared for Tofino, JBay and Cloudbreak
-// tofino1/2/3
+// Despite the namespace name, this code is shared for Tofino and JBay (Tofino 1/2)
+// TOF3-DOC: It is also shared by Cloudbreak (Tofino 3)
 
 struct Memories : public ::Memories {
     /* track memory allocations within a single stage */
@@ -227,7 +227,8 @@ struct Memories : public ::Memories {
         // Linked gw/match table that uses the same result bus
         table_alloc *table_link = nullptr;
         // FIXME -- hack to avoid problems in payload calculation when the only reason we
-        // have a payload is to set the match address for P4C-2938
+        // have a payload is to set the match address
+        // JIRA-DOC: for P4C-2938
         bool payload_match_addr_only = false;
         table_alloc(const IR::MAU::Table *t, const ::IXBar::Use *mi, const TableFormat::Use *tf,
                     const InstructionMemory::Use *im, const ActionData::Format::Use *af,

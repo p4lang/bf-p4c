@@ -54,12 +54,13 @@ class Table : BFN::Unit, IAnnotated  {
     /**
      * If the gateway inhibits the match_table (gateway_row.second != NULL), then the gateway
      * can also run an action directly, via the payload.  All rows must be the same action on
-     * tofino1, but tofino2/3 allows different actions for different rows.  Tofino5 is odd
-     * in that it only allows 1 payload, but up to 4 can be simulated by using the gateway
-     * inhibit index and extracting that as an index into the map table.  This can only work
-     * if the match table (if any) can use the default for action/params, as there can only
-     * be one extract for either case (either extract the inhibit index or extract the match
-     * overhead)
+     * tofino1, but tofino2 allows different actions for different rows.
+     * TOF3-DOC: Tofino3 also allows different actions for different rows.
+     * TOF5-DOC: Tofino5 is odd in that it only allows 1 payload, but up to 4 can be simulated by
+     * TOF5-DOC: using the gateway inhibit index and extracting that as an index into the map
+     * TOF5-DOC: table.  This can only work if the match table (if any) can use the default for
+     * TOF5-DOC: action/params, as there can only be one extract for either case (either extract
+     * TOF5-DOC: the inhibit index or extract the match overhead)
      *
      * The gateway payload key value pair is:
      *     the key corresponds to gateway_row.second which inhibits the table.  These also

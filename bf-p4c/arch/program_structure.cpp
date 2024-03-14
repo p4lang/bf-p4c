@@ -48,8 +48,10 @@ void ProgramStructure::include(cstring filename, IR::Vector<IR::Node> *vector) {
 
     if (filename == "tna.p4")
         options.preprocessor_options += " -D__TARGET_TOFINO__=1";
+#if HAVE_FLATROCK
     else if (filename == "t5na.p4")
         options.preprocessor_options += " -D__TARGET_TOFINO__=5";
+#endif  /* HAVE_FLATROCK */
     if (FILE *file = options.preprocess()) {
         if (::errorCount() > 0) {
             ::error("Failed to preprocess architecture file %1%", options.file);

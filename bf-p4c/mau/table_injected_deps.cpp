@@ -649,7 +649,8 @@ TableFindInjectedDependencies
             },
             { new InjectControlExitDependencies(dg, ctrl_paths) }),
         new InjectDarkAntiDependencies(phv, dg, ctrl_paths),
-        // P4C-4393 : During Alt finalize table inject dependencies between overlayed fields
+        // JIRA-DOC: P4C-4393 :
+        // During Alt finalize table inject dependencies between overlayed fields
         new PassIf(
             [options, summary] {
                 return (options && options->alt_phv_alloc && summary

@@ -280,7 +280,8 @@ class InputXbar {
         const hash_column_t matrix[PARITY_GROUPS_DYN][HASH_MATRIX_WIDTH_DYN]) const {
             BUG_CHECK(ht.type == HashTable::EXACT, "not an exact hash table");
             return bitvec(matrix[ht.index][0].column_value); }
-    virtual void setup_match_key_cfg(const MatchSource *) {}  // noop for tofino1/2/3
+    virtual void setup_match_key_cfg(const MatchSource *) {}  // noop for tofino1/2
+                                                              // TOF3-DOC: noop for tof3 as well
 };
 
 inline std::ostream &operator<<(std::ostream &out, InputXbar::Group gr) {

@@ -851,8 +851,9 @@ add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_ARCH_SRCS}")
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "arch/t2na.cpp")
 if (ENABLE_FLATROCK)
   list (APPEND BF_P4C_BACKEND_ARCH_SRCS
-  arch/t5na.cpp
-  arch/tna/t5na_program_structure.cpp)
+    arch/t5na.cpp
+    arch/tna/t5na_program_structure.cpp
+  )
 endif ()
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "arch/t5na.cpp")
 

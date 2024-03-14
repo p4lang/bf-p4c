@@ -98,7 +98,8 @@ class Phv_Parde_Mau_Use : public Inspector, public TofinoWriteContext {
     /// A field must be allocated to a PHV if is_ignore_alloc() is false and
     /// (1) is referenced or
     /// (2) not referenced, but is ghost field (we should try to
-    ///     eliminated this case once P4C-3925 add ghost field writes to IR).
+    ///     eliminated this case once we add ghost field writes to IR).
+    ///     JIRA-DOC: see P4C-3925
     bool is_allocation_required(const PHV::Field *f) const;
 
     /// @returns true if @p is read by deparser for learning digest and subject to the

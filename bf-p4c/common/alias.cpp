@@ -113,7 +113,8 @@ IR::Node* ReplaceAllAliases::preorder(IR::Expression* expr) {
         return expr;
     // FIXME -- if the target doesn't exist, this is *probably* a HardwareConstrainedField that
     // didn't get identified as such.  We should figure out why that happened and fix it, but
-    // if we just ignore it things should work out ok, if sub-optimally.  See P4C-5248
+    // if we just ignore it things should work out ok, if sub-optimally.
+    // JIRA-DOC: See P4C-5248
     if (!fieldExpressions.count(replacementField->name)) return expr;
     // BUG_CHECK(fieldExpressions.count(replacementField->name),
     //         "Expression not found %1%", replacementField->name);

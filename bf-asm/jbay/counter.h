@@ -1,7 +1,7 @@
 #ifndef BF_ASM_JBAY_COUNTER_H_
 #define BF_ASM_JBAY_COUNTER_H_
 
-// common between jbay and cloudbreak
+// TOF3-DOC: common between jbay and cloudbreak
 template<typename REGS>
 void CounterTable::setup_teop_regs_2(REGS &regs, int stats_group_index) {
     BUG_CHECK(teop >= 0 && teop < 4);

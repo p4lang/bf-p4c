@@ -416,7 +416,7 @@ void ExactMatchTable::gen_tbl_cfg(json::vector &out) const {
                     auto stash_row = stash_rows[k * mem_units_per_word + j];
                     auto stash_col = stash_cols[k * mem_units_per_word + j];
                     auto stash_unit = stash_units[k * mem_units_per_word + j];
-                    // FIXME -- probably doesn't make sense for Tofino5
+                    // TOF5-DOC: FIXME -- probably doesn't make sense for Tofino5
                     MemUnit stash_memunit(stash_row, stash_col);
                     json::map stash_entry_per_unit;
                     stash_entry_per_unit["stash_entry_id"] = (4 * stash_row) + (2 * stash_unit) + i;

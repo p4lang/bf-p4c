@@ -299,7 +299,8 @@ class BaseLoweredParser : AbstractParser {
 }
 
 /**
- * @brief The lowered representation of a Tofino 1/2/3 parser in backend.
+ * @brief The lowered representation of a Tofino 1/2 parser in backend.
+ * TOF3-DOC: Also Tofino 3.
  * @ingroup parde
  *
  * This is the representation used after PHV allocation.

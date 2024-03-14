@@ -370,7 +370,7 @@ void CounterTable::gen_tbl_cfg(json::vector &out) const {
         add_alu_indexes(stage_tbl, "stats_alu_index");
     else
         add_alu_index(stage_tbl, "stats_alu_index");
-    // FIXME: Eliminated by DRV-1856
+    // JIRA-DOC: FIXME: Eliminated by DRV-1856
     tbl["enable_pfe"] = per_flow_enable;
     tbl["pfe_bit_position"] = per_flow_enable_bit();
     if (auto *f = lookup_field("bytes"))

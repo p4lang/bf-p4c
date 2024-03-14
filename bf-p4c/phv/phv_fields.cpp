@@ -2025,7 +2025,8 @@ class CollectPardeConstraints : public Inspector {
                     PHV::Field* resubmit_field = phv.field(resubmit_field_expr->field);
                     if (resubmit_field) {
                         resubmit_field->set_exact_containers(true);
-                        // XXX(yumin): P4C-1870, an edge case for resubmit fields,
+                        // JIRA-DOC: XXX(yumin): P4C-1870,
+                        // an edge case for resubmit fields,
                         // that if they are in a 8-byte-long
                         // resubmit field list, then they must take the whole container.
                         if (resubmit_field->metadata || total_bits == 64) {
@@ -2249,7 +2250,7 @@ bool CollectExtractedTogetherFields::preorder(const IR::BFN::ParserState* state)
 }
 
 /**
- *  This Inspector fixes: https://jira.devtools.intel.com/browse/P4C-2637
+ *  JIRA-DOC: This Inspector fixes: https://jira.devtools.intel.com/browse/P4C-2637
  *  If result of some arith ops goes into tempvar, then that tempvar can
  *  get allocated into wider container which makes the instruction alu
  *  work at different width than anticipated by the user. This poses

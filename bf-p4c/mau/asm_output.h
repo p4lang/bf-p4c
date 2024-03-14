@@ -201,8 +201,8 @@ class TableMatch {
     const IR::MAU::Table     *table = nullptr;
     const PhvInfo            &phv;
 
-    // TODO -- a bunch of this is tofino-specific and probably needs to change for flatrock, but
-    // something like it might still be needed or at least useful
+    // TOF5-DOC: TODO -- a bunch of this is tofino-specific and probably needs to change for
+    // TOF5-DOC: flatrock, but something like it might still be needed or at least useful
     // 'match_fields', 'proxy_hash'  and 'proxy_hash_fields' here are used only by
     // 'emit_table_format' while 'ghost_bits' and 'identity_hash' are used only by
     // 'emit_ixbar_hash_table' (called via emit_ixbar and emit_single_ixbar), so they

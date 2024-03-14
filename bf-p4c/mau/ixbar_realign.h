@@ -15,8 +15,9 @@ class IXBarVerify: public MauModifier {
     void verify_format(const IXBar::Use *);
     class GetCurrentUse;
     // Array of Map of Stage -> Input Xbar
-    // Tofino 1/2/3 only uses ixbar[0] for both ingress and egress.
-    // Tofino 5 uses ixbar[0] for ingress and ixbar[1] for egress.
+    // Tofino 1/2 only uses ixbar[0] for both ingress and egress.
+    // TOF3-DOC: Tofino 3 also only uses ixbar[0] for both ingress and egress.
+    // TOF5-DOC: Tofino 5 uses ixbar[0] for ingress and ixbar[1] for egress.
     std::map<int, std::unique_ptr<IXBar>> ixbar[2];
 
  public:

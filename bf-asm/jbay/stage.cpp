@@ -76,7 +76,7 @@ static json::map make_reg_vec(REGS &regs, REG &reg, const char *name,
     return rv;
 }
 
-/* common for JBay and Cloudbreak -- may need to replicate this id that changes */
+/* TOF3-DOC: common for JBay and Cloudbreak -- may need to replicate this id that changes */
 template<class REGS>
 void Stage::gen_mau_stage_extension(REGS &regs, json::map &extend) {
     extend["last_programmed_stage"] = Target::NUM_MAU_STAGES() - 1;

@@ -478,7 +478,8 @@ BFN_Options::BFN_Options() {
         "The default value of N is effectively equivalent to positive infinity.  "
         "Inclusive minimum value: 1 [one].");
 
-    // FIXME: P4C-5308/P4C-5309 - Temporarily allow manual aliasing of POV bits to address POV bit
+    // JIRA-DOC: P4C-5308/P4C-5309
+    // FIXME: Temporarily allow manual aliasing of POV bits to address POV bit
     // growth caused by varbit headers. Only a single bit is needed on Tofino 2 if the varbit is
     // allocated to a CLOT.
     registerOption("--allow-pov-aliasing", nullptr,

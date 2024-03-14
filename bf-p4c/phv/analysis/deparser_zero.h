@@ -10,7 +10,7 @@
 #include "bf-p4c/phv/pragma/pa_deparser_zero.h"
 #include "bf-p4c/phv/utils/utils.h"
 
-// BRIG-697. COMPILER-961.
+// JIRA-DOC: BRIG-697. COMPILER-961.
 
 /** This class is meant to identify fields suitable for the deparser zero optimization.
   * Deparser zero optimization optimizes packet headers that are not parsed but are added in a

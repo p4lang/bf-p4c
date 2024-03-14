@@ -42,7 +42,8 @@ class IXBarSpec {
     virtual int tcam_rows() const = 0;     //  pure virtual
     virtual int tcam_columns() const = 0;  //  pure virtual
 
-    /* --- Tofino[1, 2, 3] --- */
+    /* --- Tofino[1, 2] --- */
+    /* --- TOF3-DOC: And Tofino3 --- */
     virtual int byteGroups() const;
     virtual int exactBytesPerGroup() const;
     virtual int exactGroups() const;

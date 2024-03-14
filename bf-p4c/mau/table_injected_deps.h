@@ -205,7 +205,8 @@ class TableFindInjectedDependencies : public PassManager {
 // During alt-phv-alloc, the ALT_FINALIZE_TABLE round during table placement
 // needs to have additional dependencies injected between overlayed fields which
 // are disjoint. This ensures the tables are placed in the correct order to
-// not violate read / write dependencies (P4C-4393)
+// not violate read / write dependencies
+// JIRA-DOC: (P4C-4393)
 class InjectDepForAltPhvAlloc : public MauInspector {
     const PhvInfo &phv;
     DependencyGraph &dg;

@@ -872,7 +872,8 @@ BFRuntimeGenerator::addMatchTables(Util::JsonArray* tablesJson) const {
               dupKey.insert(keyName);
             }
 
-            // DRV-3112 - Make key fields not mandatory, this allows user to use a
+            // JIRA-DOC: DRV-3112
+            // Make key fields not mandatory, this allows user to use a
             // driver initialized default value (0).
             addKeyField(keyJson, mf.id(), keyName,
                         false /* mandatory */, *matchType,
@@ -880,7 +881,8 @@ BFRuntimeGenerator::addMatchTables(Util::JsonArray* tablesJson) const {
                         annotations);
         }
         if (needsPriority) {
-            // DRV-3112 - Make key fields not mandatory, this allows user to use a
+            // JIRA-DOC: DRV-3112
+            // Make key fields not mandatory, this allows user to use a
             // driver initialized default value (0).
             addKeyField(keyJson, TD_DATA_MATCH_PRIORITY, "$MATCH_PRIORITY",
                         false /* mandatory */, "Exact", makeTypeInt("uint32"));

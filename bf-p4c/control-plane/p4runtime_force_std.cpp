@@ -64,7 +64,8 @@ class P4RuntimeStdConverter {
           ::barefoot::P4Ids::SNAPSHOT_LIVENESS,
         };
 
-        // P4C-3127 : Some TNA specific externs may be required to be generated
+        // JIRA-DOC: P4C-3127 :
+        // Some TNA specific externs may be required to be generated
         // within the 'externs' block in p4info output. Add them to the list
         // below
         static const std::unordered_set<P4Id> allowedExterns = {

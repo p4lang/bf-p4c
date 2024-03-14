@@ -317,7 +317,8 @@ void ComputeDarkInitialization::createAlwaysRunTable(PHV::AllocSlice& alloc_sl) 
         LOG4("\t\t" << tbl->name << "  uid:" << tbl->get_uid());
 
         // *ALEX* Using dependency graph min_stage() instead of PhvInfo::minStage()
-        //        due to corner case hit in P4C-3522
+        //        due to corner case
+        //        JIRA-DOC: hit in P4C-3522
         auto minStg = dg.min_stage(tbl);
         prior_max_stage = std::max(prior_max_stage, minStg);
     }
@@ -476,7 +477,7 @@ void ComputeDarkInitialization::end_apply() {
     // the spilling part of dark overlays. The main reason is program
     // p4-tests/p4-programs/internal_p4_14/basic_ipv4/basic_ipv4.p4
     // which uses '--placement pragma' and '@pragma stage * 'for most tables
-    // P4C-3079 is filed to modify the program to not reuire these pragmas.
+    // JIRA-DOC: P4C-3079 is filed to modify the program to not reuire these pragmas.
     bool forcedPlacement = BackendOptions().forced_placement;
 
     for (auto& f : phv) {

@@ -138,8 +138,8 @@ struct InferWriteMode : public ParserTransform {
         auto c_field = example->curr->getWriteDest()->field;
         bool on_loop = std::any_of(example->prev.begin(), example->prev.end(),
                           [=](const IR::BFN::ParserPrimitive* p) { return p == example->curr; });
-        // On Tofino 1, we emit only warning unless the field is rewritten on all paths, for more
-        // details, see P4C-2293
+        // On Tofino 1, we emit only warning unless the field is rewritten on all paths.
+        // JIRA-DOC: for more details, see P4C-2293
         // FIXME: we probably need a better check and pragma-triggered supression
         auto diagType = Device::currentDevice() != Device::TOFINO || example->is_rewritten_always
             ? DiagnosticAction::Error : DiagnosticAction::Warn;
@@ -238,7 +238,7 @@ struct InferWriteMode : public ParserTransform {
     ///         then is_postdominated_by_extract = false
     ///
     /// This is mainly used to detect the cases where we allow unsafe rewrites on Tofino 1
-    /// (see P4C-2293).
+    /// JIRA-DOC: (see P4C-2293).
     bool is_postdominated_by_extract(const IR::BFN::ParserPrimitive* write,
                                      const ordered_set<const IR::BFN::ParserPrimitive*>& writes) {
         // Get states, parser, graph
@@ -254,7 +254,8 @@ struct InferWriteMode : public ParserTransform {
         // Check if the state is directly postdominated by the extracts
         if (graph.is_postdominated_by_set(state, states)) {
             // For Tofino 1 produce a warning as this is not translated correctly, but is still
-            // allowed (see P4C-2293).
+            // allowed
+            // JIRA-DOC: (see P4C-2293).
             if (Device::currentDevice() == Device::TOFINO)
                 ::warning(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
                           "Extract %1% in state %2% is postdominated by extracts of the same "
@@ -266,7 +267,8 @@ struct InferWriteMode : public ParserTransform {
         auto lb = graph.is_loopback_reassignment(state, states);
         if (lb.first && lb.second) {
             // For Tofino 1 produce a warning as this is not translated correctly, but is still
-            // allowed (see P4C-2293).
+            // allowed
+            // JIRA-DOC: (see P4C-2293).
             if (Device::currentDevice() == Device::TOFINO)
                 ::warning(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
                           "Extract %1% in state %2% is postdominated by extracts of the same field "

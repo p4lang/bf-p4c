@@ -370,10 +370,11 @@ void GatewayTable::pass1() {
      * generate matches just covering the bits it names in the match and other times it wants
      * to create the whole tcam value.  Need to fix the asm syntax to be sensible and fix the
      * compiler's output.
-     * Part of the issue is that in tofino1/2/3 we copy the word0/word1 bits directly to
+     * Part of the issue is that in tofino1/2 we copy the word0/word1 bits directly to
      * the tcam, so we need to treat unspecified bits as don't care.  Another part is that
      * integer constants used as matches get padded with 0 out to a mulitple of 64 bits,
      * and those should also be don't care where they don't get matched.
+     * TOF3-DOC: Tofino 3 also.
      */
     bitvec ignore(0, Target::GATEWAY_MATCH_BITS());
     int shift = -1;
@@ -473,7 +474,7 @@ bool GatewayTable::is_branch() const {
  * the hash bus?   Currently we assume that the input_xbar is declared to set up the
  * hash signals correctly so that we can just match them.  Should at least check it
  * somewhere, somehow. We do some checking in check_match_key above, but is that enough?
- * See P4C-2171
+ * JIRA-DOC: See P4C-2171
  */
 template<class REGS>
 static bool setup_vh_xbar(REGS &regs, Table *table, Table::Layout &row, int base,
@@ -652,7 +653,8 @@ void GatewayTable::write_regs_vt(REGS &regs) {
     for (auto &ixb : input_xbar) {
         // FIXME -- if there's no ixbar in the gateway, we should look for a group with
         // all the match/xor values across all the exact match groups in the stage and use
-        // that.  See P4C-2171
+        // that.
+        // JIRA-DOC: See P4C-2171
         ixb->write_regs(regs);
         if (!setup_vh_xbar(regs, this, row, 0, match, ixb->match_group()) ||
             !setup_vh_xbar(regs, this, row, 4, xor_match, ixb->match_group()))

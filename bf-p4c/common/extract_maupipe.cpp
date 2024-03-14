@@ -969,7 +969,8 @@ class FixP4Table : public Inspector {
         }
 
         // BEGIN: ALPM_OPT
-        // internal table property to implement alpm optimization (P4C-2282)
+        // internal table property to implement alpm optimization
+        // JIRA-DOC: (P4C-2282)
         // We choose to implement alpm in the midend as a transformation to
         // atcam and preclassifier tcam based on the intuition that the ALPM
         // extern definition in TNA is a library extern, not a primitive

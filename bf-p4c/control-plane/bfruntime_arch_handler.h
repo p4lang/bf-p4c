@@ -565,7 +565,8 @@ class SnapshotFieldFinder : public Inspector {
         // Setting visitDagOnce to false so IR nodes can be visited more than once. This is required
         // while dealing with header stacks where we have to loop for all elements in a stack.
         // Type_Stack is not a vector so we have a single node which needs to output 'n' values for
-        // a size 'n' stack. [P4C-4329]
+        // a size 'n' stack.
+        // JIRA-DOC: [P4C-4329]
         visitDagOnce = false;
     }
 
@@ -687,7 +688,8 @@ class BFRuntimeArchHandlerCommon : public P4::ControlPlaneAPI::P4RuntimeArchHand
     // the control plane as separate resources.
     // Note, in some cases like multiparser blocks, the parser names are always
     // arch names since the instantiations are always anonymous. In such cases
-    // we skip the control plane name  [ DRV-2939 ]
+    // we skip the control plane name
+    // JIRA-DOC: [ DRV-2939 ]
     // E.g.
     // P4:
     // IngressParsers(IgCPUParser(), IgNetworkParser()) ig_pipe0;
@@ -2156,7 +2158,8 @@ class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<
         // insufficient: the standard ValueSet message restricts the element
         // type to a simple binary string (P4Runtime v1.0 limitation).
         //
-        // Fix for P4C-3920. ValueSets created by open-source p4RuntimeSerializer.cpp need
+        // JIRA-DOC: Fix for P4C-3920.
+        // ValueSets created by open-source p4RuntimeSerializer.cpp need
         // to be deleted because it creates duplicates when dealing with multipipe programs.
         p4info->clear_value_sets();
 

@@ -91,7 +91,7 @@ void SRamMatchTable::verify_format(Target::Tofino) {
     group_info.resize(format->groups());
     unsigned fmt_width = (format->size + 127)/128;
     if (word_info.size() > fmt_width) {
-        // FIXME -- temp workaround for P4C-3436/P4C-3407
+        // JIRA-DOC: FIXME -- temp workaround for P4C-3436/P4C-3407
         warning(format->lineno, "Match group map wider than format, padding out format");
         format->size = word_info.size() * 128;
         fmt_width = word_info.size();
@@ -521,7 +521,8 @@ bool SRamMatchTable::parse_way(const value_t &v) {
     way.lineno = v.lineno;
     if (!CHECKTYPE2(v, tVEC, tMAP)) return true;  // supress added message
     if (v.type == tVEC) {
-        // DEPRECATED -- old style "raw" way for tofino1/2/3
+        // DEPRECATED -- old style "raw" way for tofino1/2
+        // TOF3-DOC: and tofino3
         if (v.vec.size < 3 || v[0].type != tINT || v[1].type != tINT || v[2].type != tINT ||
             v[0].i < 0 || v[1].i < 0 || v[2].i < 0 || v[0].i >= Target::EXACT_HASH_GROUPS() ||
             v[1].i >= EXACT_HASH_ADR_GROUPS || v[2].i >= (1 << EXACT_HASH_SELECT_BITS)) {
@@ -574,9 +575,10 @@ bool SRamMatchTable::parse_way(const value_t &v) {
         if (index_size) {
             // FIXME -- currently this code is assuming the index bits cover just the ram index
             // bits and the subword bits, and not any select bits.  Perhaps that is wrong an it
-            // should include the select bits.  Perhaps this code should just be deleted and this
-            // all dealt with in (Flatrock::)SRamMatchTable::verify_format.  subword_bits will
-            // be reset these anyways.
+            // should include the select bits.
+            // TOF5-DOC: Perhaps this code should just be deleted and this
+            // TOF5-DOC: all dealt with in (Flatrock::)SRamMatchTable::verify_format.  subword_bits
+            // TOF5-DOC: will be reset these anyways.
             if (way.rams.empty()) {
                 error(v.lineno, "no rams in way");
             } else {
@@ -1066,7 +1068,8 @@ template<class REGS> void SRamMatchTable::write_regs_vt(REGS &regs) {
                     BUG_CHECK(bit == match->size); }
                 if (Format::Field *version = format->field("version", i)) {
                     if (version->bit(0)/128U != word) continue;
-                    ///> P4C-1552: if no match, but a version/valid is, the vh_xbar needs to be
+                    ///> JIRA-DOC: P4C-1552:
+                    ///> if no match, but a version/valid is, the vh_xbar needs to be
                     ///> enabled.  This was preventing anything from running
                     using_match = true;
                     for (unsigned j = 0; j < version->size; ++j) {
@@ -1216,9 +1219,9 @@ void SRamMatchTable::add_field_to_pack_format(json::vector &field_list, int base
                                                const Table::Format::Field &field,
                                                const Table::Actions::Action *act) const {
     if (name != "match") {
-        // FIXME -- tofino always pads out the wordsize so basebit is always 0.  For flatrock
-        // that is not the case, but the computation from basebit seems broken, so we set it
-        // to 0 here to avoid problems
+        // FIXME -- tofino always pads out the wordsize so basebit is always 0.
+        // TOF5-DOC: For flatrock that is not the case, but the computation from basebit seems
+        // TOF5-DOC: broken, so we set it to 0 here to avoid problems
         basebit = 0;
         Table::add_field_to_pack_format(field_list, basebit, name, field, act);
         return; }

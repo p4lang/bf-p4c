@@ -478,8 +478,9 @@ void MauAsmOutput::emit_single_alias(std::ostream &out, cstring &sep,
         sep = ", ";
     } else {
         // Additional aliasing to map locally generated action param names to the p4
-        // equivalent. With changes in frontend due to P4C-3644 all action params
+        // equivalent. With changes in frontend, all action params
         // will become unique to fix issues with inlining and need this mapping.
+        // JIRA-DOC: see P4C-3644
         if (param->name() != found_arg_name) {
             out << ", " << found_arg_name << param_name_suffix
                 << ": " << param->name() << param_name_suffix;
@@ -1555,7 +1556,7 @@ class MauAsmOutput::EmitAction : public Inspector, public TofinoWriteContext {
         // This extra lo has to be printed out because the hash_dist has to understand this as
         // a range from deposit-field, even though the only thing that matters in this source
         // is the first lo, the range of the deposit-field is determined on the destination
-        // See p4c-2153
+        // JIRA-DOC: See p4c-2153
         else
             out << ".." << lo;
         out << ")";
@@ -1591,7 +1592,7 @@ class MauAsmOutput::EmitAction : public Inspector, public TofinoWriteContext {
         // This extra lo has to be printed out because the hash_dist has to understand this as
         // a range from deposit-field, even though the only thing that matters in this source
         // is the first lo, the range of the deposit-field is determined on the destination
-        // See p4c-2153
+        // JIRA-DOC: See p4c-2153
         else
             out << ".." << lo;
         out << ")";
@@ -2162,7 +2163,8 @@ void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
         // Similar check in table_placement.cpp -> initial_stage_and_entries()
         if (tbl->layout.alpm && tbl->layout.atcam) {
             // NOTE: Replace with commented code once driver support is in for
-            // Tofino2+ archs - Driver JIRA - DRV-4404
+            // Tofino2+ archs
+            // JIRA-DOC: Driver JIRA - DRV-4404
             // if (!disable_atomic_modify && BackendOptions().target == "tofino")
             if (!(disable_atomic_modify && BackendOptions().target == "tofino"))
                 out << ", disable_atomic_modify : true";
@@ -2461,7 +2463,7 @@ void MauAsmOutput::emit_atcam_match(std::ostream &out, indent_t indent,
 // validate each resource associated with the pragma as attached to the table
 // actions. A valid resource is directly output in the bfa as a context json
 // node syntax which the assembler plugs in to the match table context json
-// Associated JIRA - P4C-1528
+// JIRA-DOC: Associated JIRA - P4C-1528
 void MauAsmOutput::emit_indirect_res_context_json(std::ostream &,
         indent_t indent, const IR::MAU::Table *tbl,
         std::stringstream &context_json_entries) const {
@@ -2567,8 +2569,9 @@ void MauAsmOutput::emit_indirect_res_context_json(std::ostream &,
  * The assembler currently just appends them to the back of the table, and crashes if it cannot.
  *
  * This lead to an odd corner case where an action chain table had 7 actions and a gateway
- * attached, noted as P4C-2405.  Now, because the all 0th next table entry is unused, a gateway
+ * attached.  Now, because the all 0th next table entry is unused, a gateway
  * entry can populate that particular entry.  This runs a BUG_CHECK to guarantee this.
+ * JIRA-DOC: See P4C-2405.
  *
  * TODO: table_format.cpp must be updated for this to determine the next table requirements for
  * the combination of gateway and match table next table requirements.  Also just put both the
@@ -2642,7 +2645,7 @@ void MauAsmOutput::emit_table_hitmap(std::ostream &out, indent_t indent, const I
                 "%sTable % combined with a gateway has too many next tables",
                 tbl->srcInfo, tbl->externalName());
 
-            ///> Specifically currently for P4C-2405
+            ///> JIRA-DOC: Specifically currently for P4C-2405
             if (reserved_entry_0 && unique_gw_next_tables.size() > 0)
                 next_table_map[0] = *unique_gw_next_tables.begin();
         }
@@ -3256,7 +3259,8 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Counter *counter) {
     int per_row = CounterPerWord(counter);
     counter_format(out, counter->type, per_row);
     out << "}" << std::endl;
-    // FIXME: Eventually should not be necessary due to DRV-1856
+    // FIXME: Eventually should not be necessary
+    // JIRA-DOC: due to DRV-1856
     auto *ba = findContext<IR::MAU::BackendAttached>();
     if (ba && ba->pfe_location == IR::MAU::PfeLocation::OVERHEAD)
         out << indent << "per_flow_enable: " << "counter_pfe" << std::endl;
@@ -3348,7 +3352,8 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Meter *meter) {
         int hi = lo + ixbSpec.meterPrecolorSize() - 1;
         out << hd_use->unit << ", " << lo << ".." << hi << ")" << std::endl;
 
-        // FIXME: Eventually should not be necessary due to DRV-1856
+        // FIXME: Eventually should not be necessar
+        // JIRA-DOC: due to DRV-1856
         out << indent << "color_aware: true" << std::endl;
     }
 
@@ -3370,7 +3375,8 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Meter *meter) {
     if (bytecount_adjust != 0)
         out << indent << "bytecount_adjust: " << bytecount_adjust << std::endl;
     auto *ba = findContext<IR::MAU::BackendAttached>();
-    // FIXME: Eventually should not be necessary due to DRV-1856
+    // FIXME: Eventually should not be necessar
+    // JIRA-DOC: due to DRV-1856
     if (ba && ba->pfe_location == IR::MAU::PfeLocation::OVERHEAD)
         out << indent << "per_flow_enable: " << "meter_pfe" << std::endl;
     return false;

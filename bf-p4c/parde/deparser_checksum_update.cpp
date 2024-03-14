@@ -978,7 +978,8 @@ struct AbsorbNestedChecksum : public Transform {
                 if (!match) {
                     dest_to_delete_entries.erase(emitChecksum->dest->toString());
                     nestedVec->push_back(nestedCsum);
-                    // Nesting of checksum supported only from JbayB0 and Cloudbreak
+                    // Nesting of checksum supported only for JbayB0
+                    // TOF3-DOC: and Cloudbreak
                     if (Device::pardeSpec().numDeparserInvertChecksumUnits() == 0) {
                         print_error(emitChecksum, nestedCsum);
                     }
@@ -1077,7 +1078,8 @@ extractChecksumFromDeparser(const IR::BFN::TnaDeparser* deparser, IR::BFN::Pipe*
         AbsorbNestedChecksum absorbNestedChecksum(checksums,
                                        collectNestedChecksumInfo.dest_to_nested_csum);
         pipe->thread[gress].deparser = pipe->thread[gress].deparser->apply(absorbNestedChecksum);
-        // Only for JbayB0 and Cloudbreak
+        // Only for JbayB0
+        // TOF3-DOC: and Cloudbreak
         if (Device::pardeSpec().numDeparserInvertChecksumUnits()) {
             DeleteChecksumField deleteChecksumField(checksums);
             pipe->thread[gress].deparser = pipe->thread[gress].deparser->apply(deleteChecksumField);

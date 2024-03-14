@@ -956,7 +956,8 @@ const IR::Declaration_Instance *P4V1::StatefulAluConverter::convertExternInstanc
         LOG2("Creating apply function for RegisterAction " << ext->name);
         LOG6(ext);
         auto reg_index_width = 32;
-        // P4C-2771 : Frontend fix required before using correct index width
+        // JIRA-DOC: P4C-2771 :
+        // Frontend fix required before using correct index width
         // auto reg_index_width = info.reg->index_width();
         auto ratype = new IR::Type_Specialized(
             new IR::Type_Name("RegisterAction"),
@@ -1004,7 +1005,8 @@ const IR::Statement *P4V1::StatefulAluConverter::convertExternCall(
         target = info.reg;
         BUG_CHECK(info.reg, "Extern %s has no associated register", et);
         direct = info.reg->instance_count < 0;
-        // P4C-2771 : Frontend fix required before using correct index width
+        // JIRA-DOC: P4C-2771 :
+        // Frontend fix required before using correct index width
         // reg_index_width = info.reg->index_width();
     }
     if (!rtype) {
