@@ -21,7 +21,7 @@ bool ParserDominatorBuilder::preorder(const IR::BFN::ParserState* parser_state) 
     for (auto transition : parser_state->transitions)
         parser_graphs[parser_state->gress].add_edge(parser_state, transition->next, transition);
 
-    // TODO(ylavoie): Workaround for edge case caused by compiler generated state egress::$mirror
+    // TODO: Workaround for edge case caused by compiler generated state egress::$mirror
     // not having any transitions and therefore not leading to End of Parser (EOP, nullptr) when
     // compiling some P4_14 programs. This is most likely a bug, as all states in the parser should
     // have a path leading to EOP.

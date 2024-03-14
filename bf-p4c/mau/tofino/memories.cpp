@@ -4273,7 +4273,7 @@ bool Memories::allocate_idletime_in_top_or_bottom_half(SRAM_group* idletime_grou
         for (auto col : loc.second) {
             mapram_use[loc.first][col] = unique_id.build_name();
             mapram_inuse[loc.first] |= (1 << col);
-            row.col.push_back(col);  // XXX(zma) use col as bfas expects "column" for idletime
+            row.col.push_back(col);  // TODO use col as bfas expects "column" for idletime
             idletime_group->placed++;
         }
         alloc.row.push_back(row);

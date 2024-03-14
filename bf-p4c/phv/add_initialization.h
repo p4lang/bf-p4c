@@ -100,7 +100,7 @@ class ComputeDarkInitialization : public Inspector {
 
     // Calculate the minStage for the ARA table moving a slice between
     // normal/dark PHVs
-    // *ALEX* Ths will need to be updated with more detailed analysis when
+    //  Ths will need to be updated with more detailed analysis when
     //        the initialization injection stops using the dominator analysis
     int calcMinStage(const PHV::AllocSlice &sl_prev, const PHV::AllocSlice &sl_current,
                      int prior_max_stage, int post_min_stage, bool init_from_zero);
@@ -207,7 +207,7 @@ class ComputeDependencies : public Inspector {
 
 /** Mark all the tables which have actions containing initializations due to dark overlay. These
   * tables cannot be split into multiple stages during TablePlacement.
-  * XXX(Deep): Remove after implementing always_run mechanism on non-last stages.
+  * TODO: Remove after implementing always_run mechanism on non-last stages.
   */
 class MarkDarkInitTables : public Transform {
     const ComputeDependencies&  dep;

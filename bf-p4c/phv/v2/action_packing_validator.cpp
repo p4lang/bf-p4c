@@ -573,7 +573,7 @@ Result validate_slicelist_for_action(const PhvUse& uses,
             // skip when there is a source that its allocation is not decided that
             // (1) either it does not have decided container size,
             // (2) or its float_range is large than 0.
-            // XXX(yumin): although we can verify packing even if there are sources that
+            // TODO: although we can verify packing even if there are sources that
             // floating range is large than 0, by iterating combinations of them, we do not,
             // because the time complexity will become nonlinear.
             if (!src_alloc) {

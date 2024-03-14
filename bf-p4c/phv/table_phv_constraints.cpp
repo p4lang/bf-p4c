@@ -39,7 +39,7 @@ TernaryMatchKeyConstraints::calculateTernaryMatchKeyConstraints(const IR::MAU::T
     size_t totalMetadataBytesUsed = 0;
     size_t totalBitsUsed = 0;
 
-    // *ALEX*: Commenting *OFF* code used for constraining alignment
+    // : Commenting *OFF* code used for constraining alignment
     // of ternary match fields. The imposed alignment constraints may
     // lead to erroneous PHV allocation fails due to preventing packing
     // of 1bit or narrow fields into PHV containers

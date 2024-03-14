@@ -80,7 +80,7 @@ using RepackedHeaderTypes = ordered_map<cstring, const IR::Type_StructLike*>;
  *
  * @pre The Alias pass needs to be performed before this one to create
  *      IR::BFN::AliasMember IR nodes.
- *      XXX(hanw): We could figure out the mapping from def-use analysis instead.
+ *      TODO: We could figure out the mapping from def-use analysis instead.
  */
 class CollectIngressBridgedFields : public Inspector {
  private:
@@ -360,7 +360,7 @@ class CollectConstraints : public Inspector {
 };
 
 /**
- * @pre XXX(hanw): The Alias pass TODO why
+ * @pre TODO: The Alias pass TODO why
  */
 class GatherAlignmentConstraints : public PassManager {
  private:

@@ -427,7 +427,7 @@ void TableSummary::postorder(const IR::BFN::Pipe *pipe) {
     LOG7(pipe);
     const int criticalPathLength = deps.critical_path_length();
     const int deviceStages = Device::numStages();
-    // TODO(yumin): this variable is misleading as warnings like `cannot satisfy stage pragma`
+    // TODO: this variable is misleading as warnings like `cannot satisfy stage pragma`
     // will be stored in tablePlacementErrors. Those warnings should not stop table placement
     // when it is the last round of table placement or maybe even for previous rounds.
     // To avoid fitting exercises on master, we continue to use this variable for normal

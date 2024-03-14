@@ -156,8 +156,8 @@ class ValidToStkvalid : public Transform {
     // to the entire field.  Eg. extract(stk.$stkvalid, 0x4) instead of
     // extract(stk.$stkvalid[2:2], 0x1).
     //
-    // XXX(cole): This is because Brig doesn't currently support extracting
-    // constants to field slices in the parser.  As a result,
+    // TODO: This is because Brig doesn't currently support extracting
+    // constants to field slices in the parser (see BRIG-584).  As a result,
     // this removes the AliasSlice node and hence loses the aliasing
     // information.  However, as parser extracts aren't exposed to the control
     // plane, this should be fine.

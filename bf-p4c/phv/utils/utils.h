@@ -88,7 +88,7 @@ class ContainerGroup {
 
 using DarkInitMap = std::vector<DarkInitEntry>;
 
-// XXX(cole): Better way to structure Transactions to avoid this circular
+// TODO: Better way to structure Transactions to avoid this circular
 // dependency?
 class Transaction;
 
@@ -874,7 +874,7 @@ class AlignedCluster : public ClusterStats {
     const_iterator begin() const { return slices_i.begin(); }
     const_iterator end()   const { return slices_i.end(); }
 
-    // XXX(cole): Revisit the following stats/constraints getters.
+    // TODO: Revisit the following stats/constraints getters.
 
     /// @returns the number of slices in this container with the
     /// exact_containers constraint.
@@ -1242,7 +1242,7 @@ bool operator>=(PHV::Allocation::ContainerAllocStatus, PHV::Allocation::Containe
 
 }   // namespace PHV
 
-// XXX(cole): This should go in the public repo, in `p4c/lib/ordered_set.h`.
+// TODO: This should go in the public repo, in `p4c/lib/ordered_set.h`.
 template <typename T>
 std::ostream &operator<<(std::ostream &out, const ordered_set<T>& set) {
     out << "{ ";

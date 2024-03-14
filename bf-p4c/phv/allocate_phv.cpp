@@ -227,7 +227,7 @@ bool default_alloc_score_is_better(const AllocScore& left, const AllocScore& rig
             {n_prefer_bits, delta.general[n_prefer_bits], true},
             {n_overlay_bits, weighted_delta[n_overlay_bits], true},  // if !tofino
             {"container_type_score",
-             // XXX(yumin):
+             // TODO:
              // The code below simply wants to reproduce:
              // allocate_phv.cpp#L235 at 405005d67b1bb0e31c36cbb274518780bf86f1aa.
              container_type_score * int(weighted_delta[n_inc_containers] == 0), false},
@@ -323,7 +323,7 @@ bool less_fragment_alloc_score_is_better(const AllocScore& left, const AllocScor
             {n_prefer_bits, delta.general[n_prefer_bits], true},
             {n_wasted_pov_bits, delta.general[n_wasted_pov_bits], false},
             {n_wasted_bits, weighted_delta[n_wasted_bits], false},
-            // XXX(yumin): Starting with Tofino2, because of dark containers, we have to
+            // TODO: Starting with Tofino2, because of dark containers, we have to
             // promote the priority of overlay to almost the highest to encourage dark
             // overlay fields.
             {n_overlay_bits, weighted_delta[n_overlay_bits], true},
@@ -625,7 +625,7 @@ bool PHV::AllocUtils::can_physical_liverange_be_overlaid(
     BUG_CHECK(a.isPhysicalStageBased() && b.isPhysicalStageBased(),
               "physical liverange overlay should be checked "
               "only when both slices are physical stage based");
-    // TODO(yumin): need more thoughts on these constraints.
+    // TODO: need more thoughts on these constraints.
     const auto never_overlay = [](const PHV::Field* f) {
             return f->pov || f->deparsed_to_tm() || f->is_invalidate_from_arch();
     };
@@ -639,7 +639,7 @@ bool PHV::AllocUtils::can_physical_liverange_be_overlaid(
     const bool is_a_deparsed = a.getLatestLiveness().first == Device::numStages();
     const bool is_b_deparsed = b.getLatestLiveness().first == Device::numStages();
     const bool both_deparsed = is_a_deparsed && is_b_deparsed;
-    // XXX(yumin): The better and less constrainted checks are
+    // TODO: The better and less constrainted checks are
     // `may be checksummed together` and `may be deparsed together`,
     // instead of will be both be deparsed. But since it is very likely that
     // the less constrainted checks will not give us any benefits (because
@@ -698,7 +698,7 @@ std::list<PHV::SuperCluster*> PHV::AllocUtils::remove_singleton_metadata_sliceli
             rst.push_back(super_cluster);
             continue; }
         // The fieldslice is pov, or not metadata. Nor does supercluster is singleton.
-        // XXX(yumin): These comments are vague, I assume that it was trying to find
+        // TODO: These comments are vague, I assume that it was trying to find
         // super clusters that have
         // (1) only one slice list
         // (2) only one field in the slice list.
@@ -1705,7 +1705,7 @@ bool CoreAllocation::satisfies_constraints(
     ordered_set<PHV::AllocSlice> initSlices;
 
     for (auto& sl : byte_slices) {
-        // XXX(yumin): aligned fieldslice from the same field can be ignored
+        // TODO: aligned fieldslice from the same field can be ignored
         if (is_aligned_same_field_alloc(slice, sl)) {
             continue;
         }
@@ -1713,7 +1713,7 @@ bool CoreAllocation::satisfies_constraints(
     }
 
     for (auto& sl : initFields) {
-        // XXX(yumin): aligned fieldslice from the same field can be ignored
+        // TODO: aligned fieldslice from the same field can be ignored
         if (is_aligned_same_field_alloc(slice, sl)) {
             continue;
         }
@@ -1748,7 +1748,7 @@ bool CoreAllocation::satisfies_constraints(
     // discount slices that are going to be initialized through metadata initialization from being
     // considered uninitialized reads.
 
-    // TODO(vstill): what about checksums? are they extracted?
+    // TODO: what about checksums? are they extracted?
     // *TODO* Replacing here is_extracted() with is_extracted_from_packet()
     //        causes table placement fitting regressions. Revisit in the future.
     auto is_slice_extracted = [this](const PHV::AllocSlice &s) {
@@ -1885,7 +1885,7 @@ CoreAllocation::satisfies_constraints(const PHV::ContainerGroup& g, const PHV::S
     return true;
 }
 
-// ALEX : Check for overlapping liveranges between slices of non-overlapping bitranges
+// Check for overlapping liveranges between slices of non-overlapping bitranges
 bool CoreAllocation::hasCrossingLiveranges(std::vector<PHV::AllocSlice> candidate_slices,
                                            ordered_set<PHV::AllocSlice> alloc_slices) const {
     for (auto& cnd_slice : candidate_slices) {
@@ -1949,7 +1949,7 @@ bool CoreAllocation::checkDarkOverlay(const std::vector<PHV::AllocSlice>& candid
                 break;
             }
 
-            // *ALEX* TODO: Could add checks for liveranges if initializations
+            // TODO: Could add checks for liveranges if initializations
             //              may happen at different stages
 
             // Update bitvec
@@ -2161,11 +2161,11 @@ bool CoreAllocation::try_pack_slice_list(
                 const auto& slice_lists = super_cluster.slice_list(slice_and_pos.first);
                 if (slice_lists.size() > 1) {
                     // If a slice is in multiple slice lists, abort.
-                    // XXX(cole): This is overly constrained.
+                    // TODO: This is overly constrained.
                     LOG_DEBUG5(TAB1 "Failed: Conditional placement is in multiple slice lists");
                     return false;
                 } else if (slice_lists.size() == 0) {
-                    // XXX(yumin): this seems to be too conservative. We can craft a slice
+                    // TODO: this seems to be too conservative. We can craft a slice
                     // list to satisfy the condition constraint, as long as the slicelist
                     // is valid.
                     if (slice_list) {
@@ -2188,7 +2188,7 @@ bool CoreAllocation::try_pack_slice_list(
                                     "because different exact_containers: "<< fs1 << " " << fs2);
                         return false;
                     }
-                    // XXX(yumin): Even with above fix, this conditional constraint
+                    // TODO: Even with above fix, this conditional constraint
                     // slicelist allocation is still wrong. It overwrites previous
                     // slice_list found for one constraint, which does not make
                     // sense here. We need a further fix for this behavior.
@@ -2476,9 +2476,9 @@ bool CoreAllocation::try_dark_overlay(
             }
             new_overlay_container = true;
 
-            // XXX(ALEX) We should  populate InitNodes with darkInitNodes to later
+            // TODO We should  populate InitNodes with darkInitNodes to later
             // properly populate initActions
-            // TODO(ALEX)
+            // TODO
         }
     }
     return true;
@@ -2527,7 +2527,7 @@ bool CoreAllocation::check_metadata_and_dark_overlay(
         }
         // Disable metadata initialization if the container for metadata overlay is a mocha
         // or dark container.
-        // JIRA-DOC: XXX(Deep): P4C-1187
+        // JIRA-DOC: TODO: P4C-1187
         if (!is_mocha_or_dark && metadataOverlay && (!prioritizeARAinits || !darkOverlay)) {
             if (!try_metadata_overlay(c, allocedSlices, slice, initNodes, new_candidate_slices,
                 metaInitSlices, initActions, perContainerAlloc, alloced_slices, actual_cntr_state))
@@ -2712,7 +2712,7 @@ bool CoreAllocation::find_previous_allocation(
 
     LOG_DEBUG5("\nChecking if any of the slices hasn't been allocated already");
     for (auto& slice : slices) {
-        // XXX(cole): Looking up existing allocations is expensive in the
+        // TODO: Looking up existing allocations is expensive in the
         // current implementation.  Consider refactoring.
         auto alloc_slices = alloc.slices(slice.field(), slice.range());
         BUG_CHECK(alloc_slices.size() <= 1, "Fine slicing failed");
@@ -3046,7 +3046,7 @@ std::optional<PHV::Transaction> CoreAllocation::tryAllocSliceList(
             continue;
         }
 
-        // ALEX : Add special handling for dark overlays of Mocha containers
+        // Add special handling for dark overlays of Mocha containers
         //        - If the overlaying candidate slice liverange overlaps
         //          with the liverange of other existing slices in the container
         //          then do skip the dark overlay
@@ -3533,7 +3533,7 @@ std::vector<AllocAlignment> CoreAllocation::build_slicelist_alignment(
 
             // Return if the slice is part of another slice list but was previously
             // placed at a different start location.
-            // XXX(cole): We may need to be smarter about coordinating all
+            // TODO: We may need to be smarter about coordinating all
             // valid starting ranges for all slice lists.
             if (curr.cluster_alignment.count(&cluster) &&
                 curr.cluster_alignment.at(&cluster) != le_offset) {
@@ -3773,7 +3773,7 @@ std::optional<PHV::Transaction> CoreAllocation::try_alloc(
                 best_alloc = std::move(this_alloc);
                 best_score = score;
                 LOG_FEATURE("alloc_progress", 5, "Allocated Sorted SliceList with this alignment");
-                // XXX(yumin): currently we stop at the first valid alignmnt
+                // TODO: currently we stop at the first valid alignmnt
                 // and avoid search too much which might slow down compilation.
                 break;
             }
@@ -4826,7 +4826,7 @@ BruteForceAllocationStrategy::tryAllocationFailuresFirst(
         PHV::AllocUtils::remove_unref_clusters(utils_i.uses, cluster_groups_input);
 
     // remove singleton metadata slice list
-    // TODO(yumin): This was introduced because some metadata fields are placed
+    // TODO: This was introduced because some metadata fields are placed
     // in supercluster but it should not. If this does not happen anymore, we should
     // remove this.
     cluster_groups = PHV::AllocUtils::remove_singleton_metadata_slicelist(cluster_groups);
@@ -5059,7 +5059,7 @@ BruteForceAllocationStrategy::sortClusters(std::list<PHV::SuperCluster*>& cluste
         pounder_clusters.insert(super_cluster);
     }
 
-    // XXX(yumin): This part of the code is moved from a previous implementation of checking
+    // TODO: This part of the code is moved from a previous implementation of checking
     // whether a super cluster can be split or not. The implementation was incorrect,
     // but if we change this to a correct version, many regressions were triggered, because
     // the order of allocation is drastically changed and tests were fitting by pragmas.
@@ -5207,7 +5207,7 @@ BruteForceAllocationStrategy::sortClusters(std::list<PHV::SuperCluster*>& cluste
 /// To be valid for strided allocation, all fields within cluster
 /// must have same slicing.
 bool is_valid_stride_slicing(std::list<PHV::SuperCluster*>& slicing) {
-    // XXX(zma) somehow for the singleton case, the slicing iterator
+    // TODO somehow for the singleton case, the slicing iterator
     // does not slice further, manually break each slice into its own
     // supercluster here ... yuck!
     if (slicing.size() == 1)  {
@@ -5539,7 +5539,7 @@ BruteForceAllocationStrategy::tryVariousSlicing(
     std::vector<const PHV::SuperCluster::SliceList*> diagnosed_unallocatables;
     int MAX_SLICING_TRY = config_i.max_slicing;
 
-    /// XXX(zma) strided cluster can have many slices in the supercluster
+    /// TODO strided cluster can have many slices in the supercluster
     /// and the number of slicing can blow up (need a better way to stop
     /// than this crude heuristic).
     if (cluster_group->needsStridedAlloc() || BackendOptions().quick_phv_alloc)
@@ -5647,7 +5647,7 @@ BruteForceAllocationStrategy::tryVariousSlicing(
         alloc_history << "FAILED to allocate " << cluster_group << "\n";
         alloc_history << "when the things are like: " << "\n";
         alloc_history << rst.getTransactionSummary() << "\n";
-        // XXX(yumin): if a slice is unallocatable, then it must be unallocatable in
+        // TODO: if a slice is unallocatable, then it must be unallocatable in
         // all different slicings, so that diagnosed_unallocatables.size() must be
         // equal or larger to n_tried.
         if (int(diagnosed_unallocatables.size()) > n_tried) {
@@ -5704,7 +5704,7 @@ BruteForceAllocationStrategy::allocLoop(
         }
     }
 
-    // XXX(cole): There must be a better way to remove elements from a list
+    // TODO: There must be a better way to remove elements from a list
     // while iterating, but `it = clusters_i.erase(it)` skips elements.
     for (auto cluster_group : allocated)
         cluster_groups.remove(cluster_group);

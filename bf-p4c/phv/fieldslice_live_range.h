@@ -91,7 +91,7 @@ class LiveRangeInfo {
     ///            P 0 1 2  3 4 D
     ///        A   W L L R  D D D
     ///        B   D D W RW L L R
-    /// XXX(yumin): we do not need to use this function during PHV allocation because
+    /// TODO: we do not need to use this function during PHV allocation because
     /// AllocSlices already have the presice live range info already.
     /// This function is kept here for future overlay analysis before PHV allocation.
     bool can_overlay(const LiveRangeInfo& other) const;

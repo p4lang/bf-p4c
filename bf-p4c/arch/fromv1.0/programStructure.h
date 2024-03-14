@@ -27,7 +27,7 @@ namespace P4V1 {
 
 static const cstring COMPILER_META = "__bfp4c_compiler_generated_meta";
 
-// XXX(hanw) older definition of ProgramStructure used by 14-to-v1model conversion path
+// TODO older definition of ProgramStructure used by 14-to-v1model conversion path
 // to be removed
 // ** BEGIN **
 class TNA_ProgramStructure : public ProgramStructure {
@@ -1318,7 +1318,7 @@ class InsertChecksumError : public PassManager {
         }
     };
 
-    // XXX(zma) we probably don't want to insert statement into the "accept" state
+    // TODO we probably don't want to insert statement into the "accept" state
     // since this is a special state. Add a dummy state before "accept" if it is
     // a checksum verification end state.
     struct InsertBeforeAccept : public Transform {

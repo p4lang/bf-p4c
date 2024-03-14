@@ -33,7 +33,7 @@ class ImplicitParserInit : public IR::Expression {
         out << "ImplicitParserInit of " << field->id << ":" << field->name; }
 };
 
-/** Represent a parser error write. TODO(yumin): move to actual IR.
+/** Represent a parser error write. TODO: move to actual IR.
  */
 class WriteParserError : public IR::Expression {
  private:
@@ -64,7 +64,7 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
 
     VisitMode mode = VisitAll;
 
-    /// TODO(yumin): move them to IR and remove this hack.
+    /// TODO: move them to IR and remove this hack.
     /// These constant variables are fields with the bug that hardware behaviors are not
     /// correctly captured by our IR. For example, parser_err might be written in parser, but
     /// our IR does not have any node to represent it.

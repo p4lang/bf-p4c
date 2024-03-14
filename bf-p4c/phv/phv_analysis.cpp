@@ -146,7 +146,7 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             // Refresh defuse
             &defuse,
             // Analysis of operations on PHV fields.
-            // XXX(Deep): Combine with ActionPhvConstraints?
+            // TODO: Combine with ActionPhvConstraints?
             new PHV_Field_Operations(phv),
             // Mutually exclusive tables information
             &table_mutex,
@@ -259,7 +259,7 @@ Visitor* PHV_AnalysisPass::make_incremental_alloc_pass(
          // Refresh dependency graph for live range analysis
          new FindDependencyGraph(phv_i, deps_i, &options_i, "",
                                  "Just Before Incremental PHV allocation"),
-         // XXX(yumin): MemoizeMinStage will corrupt existing allocslice liverange, because
+         // TODO: MemoizeMinStage will corrupt existing allocslice liverange, because
          // deparser stage is marked as last stage + 1. DO NOT run it.
          &defuse_i,
          &table_mutex,

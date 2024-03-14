@@ -122,7 +122,7 @@ struct StartLen {
  * space it lives inside is safe. If you try to treat it as living in a space
  * which also has a very large size, you may encounter integer overflow.
  *
- * XXX(seth): There's no substitute for checking unsafe conversions before
+ * TODO: There's no substitute for checking unsafe conversions before
  * performing them, but we don't do that right now, so be cautious with very
  * large ranges, just as you would be with storing very large values into a
  * primitive type.
@@ -168,12 +168,12 @@ std::pair<int, int> rangeFromJSON(JSONLoader& json);
  * will canonicalize the empty range representation, so don't rely on it - just
  * call `empty()` to determine if a range is empty.
  *
- * XXX(seth): Currently, for backwards compatibility, it's possible to construct
+ * TODO: Currently, for backwards compatibility, it's possible to construct
  * ranges where `lo` is greater than `hi`. We should enforce that ranges are
  * consistent; we'll add the necessary checks after the existing code has been
  * audited.
  *
- * XXX(seth): We should also add checks to avoid integer overflow.
+ * TODO: We should also add checks to avoid integer overflow.
  */
 template <RangeUnit Unit, Endian Order>
 struct HalfOpenRange {
@@ -437,18 +437,18 @@ struct HalfOpenRange {
  * Use a closed range when you want to forbid the possibility of an empty range.
  * Using a closed range may also make certain algorithms easier to express.
  *
- * XXX(seth): ClosedRange's interface is very similar to HalfOpenRange, but they
+ * TODO: ClosedRange's interface is very similar to HalfOpenRange, but they
  * have almost totally different implementations, and the limitations of C++
  * templates make sharing the things they do have in common challenging. Most of
  * the benefit would have come from sharing documentation; as a compromise, most
  * of the methods in ClosedRange just reference HalfOpenRange's documentation.
  *
- * XXX(seth): Currently, for backwards compatibility, it's possible to construct
+ * TODO: Currently, for backwards compatibility, it's possible to construct
  * ranges where `lo` is greater than or equal to `hi`. We should enforce that
  * ranges are consistent; we'll add the necessary checks after the existing code
  * has been audited.
  *
- * XXX(seth): We should also add checks to avoid integer overflow.
+ * TODO: We should also add checks to avoid integer overflow.
  */
 template <RangeUnit Unit, Endian Order>
 struct ClosedRange {
@@ -666,7 +666,7 @@ struct ClosedRange {
  *   C.lower   ---          ----        (empty)     (empty)
  *   C.upper         --     (empty)          ----   (empty)
  *
- * XXX(cole): This could produce a bit vector.
+ * TODO: This could produce a bit vector.
  */
 template <RangeUnit Unit, Endian Order>
 std::pair<HalfOpenRange<Unit, Order>, HalfOpenRange<Unit, Order>>

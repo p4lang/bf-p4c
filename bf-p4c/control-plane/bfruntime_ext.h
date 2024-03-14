@@ -21,7 +21,7 @@ using namespace BFN::BFRT;
 /// supports both the "standard" P4Info message (the one used for v1model & PSA)
 /// and P4Info with Tofino-specific extensions (the one used for TNA and JNA
 /// programs).
-/// TODO(antonin): In theory the BF-RT info JSON generated for a PSA program
+/// TODO: In theory the BF-RT info JSON generated for a PSA program
 /// (standard P4Info) and the one generated for the translated version of the
 /// program (P4Info with Tofino extensions) should be exactly the same since
 /// there is no loss of information and the names should remain the
@@ -36,7 +36,7 @@ class BFRuntimeSchemaGenerator : public BFRuntimeGenerator {
     const Util::JsonObject* genSchema() const override;
 
  private:
-    // TODO(antonin): these values may need to be available to the BF-RT
+    // TODO: these values may need to be available to the BF-RT
     // implementation as well, if they want to expose them as enums.
 
     // To avoid potential clashes with P4 names, we prefix the names of "fixed"

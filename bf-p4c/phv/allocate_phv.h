@@ -157,7 +157,7 @@ struct AllocUtils {
     /// remove singleton metadata slice list. This was introduced because some metadata fields are
     /// placed in a slice list, but they do not need to be. Removing them from slice list allows
     /// allocator to try more possible starting positions.
-    /// TODO(yumin): we should fix this in make_clusters and remove this function.
+    /// TODO: we should fix this in make_clusters and remove this function.
     static std::list<PHV::SuperCluster*> remove_singleton_metadata_slicelist(
             const std::list<PHV::SuperCluster*>& cluster_groups);
 
@@ -361,7 +361,7 @@ class CoreAllocation {
     const PHV::AllocUtils& utils_i;
 
     // Table allocation information from the previous round.
-    // XXX(yumin): legacy, this might actually never be used at all because it is
+    // TODO: legacy, this might actually never be used at all because it is
     // initialized in value instead of references.
     const bool disableMetadataInit;
     // Enforce single gress parser groups
@@ -529,7 +529,7 @@ class CoreAllocation {
             std::vector<PHV::AllocSlice>& candidate_slices) const;
 
     /// @returns true if @p container_group and @p cluster_group satisfy constraints.
-    /// XXX(cole): figure out what, if any, constraints should go here.
+    /// TODO: figure out what, if any, constraints should go here.
     static bool satisfies_constraints(const PHV::ContainerGroup& container_group,
                                       const PHV::SuperCluster& cluster_group);
 
@@ -621,7 +621,7 @@ class CoreAllocation {
      *                        corresponding conditional constraint on the field slice.
      * @param score_ctx TODO
      */
-    /// XXX(yumin): there is an assumption that only fieldslice of the slice list, shows up
+    /// TODO: there is an assumption that only fieldslice of the slice list, shows up
     /// in the @p start_positions map (as there is no slice list passed as args).
     /// Better to remove this.
     std::optional<PHV::Transaction> tryAllocSliceList(
@@ -731,7 +731,7 @@ struct BruteForceStrategyConfig {
     // for best score.
     int max_slicing;
     // the number of alignments of slicelists generated.
-    // XXX(yumin): currently stopped at the first alloc-able alignment.
+    // TODO: currently stopped at the first alloc-able alignment.
     int max_sl_alignment;
     // unsupported devices for this config.
     std::optional<std::unordered_set<Device::Device_t>> unsupported_devices;
@@ -939,7 +939,7 @@ class AllocatePHV : public Visitor {
 
 /// IncrementalPHVAllocation incrementally allocates fields.
 /// Currently it only supports allocating temp vars created by table alloc.
-/// XXX(yumin): we need to check whether mutex and live range info for those fields
+/// TODO: we need to check whether mutex and live range info for those fields
 /// are correct or not.
 class IncrementalPHVAllocation : public Visitor {
     const PHV::AllocUtils& utils_i;

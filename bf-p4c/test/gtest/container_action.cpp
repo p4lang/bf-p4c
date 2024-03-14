@@ -548,7 +548,7 @@ TEST_F(SlidesExamples, c6) {
     add_op(f2, "bor", f2, "param2");
 
     nok();
-    // XXX(zma) this can be supported if compiler can pad zero param1 and param2
+    // TODO this can be supported if compiler can pad zero param1 and param2
     // to byte alignment on the action RAM
 }
 

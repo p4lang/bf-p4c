@@ -365,7 +365,7 @@ TxScore* GreedyTxScoreMaker::make(const Transaction& tx) const {
         }
 
         // n_deparser_read_digest_fields_bytes
-        // XXX(yumin): must use this uses.is_learning because it includes selector field.
+        // TODO: must use this uses.is_learning because it includes selector field.
         const bool has_learning = std::any_of(
             slices.begin(), slices.end(),
             [&](const AllocSlice& sl) { return kit_i.uses.is_learning(sl.field()); });
@@ -374,7 +374,7 @@ TxScore* GreedyTxScoreMaker::make(const Transaction& tx) const {
         }
     }
 
-    // TODO(yumin): we can know how many sram group and tcam group has left in that stage,
+    // TODO: we can know how many sram group and tcam group has left in that stage,
     // especially by comparing by the baseline ixbar usage.
     ordered_set<Container> range_match_double_bytes_container;
     TableIxbarContBytesMap new_table_ixbar_cont_bytes;
@@ -564,7 +564,7 @@ bool GreedyTxScore::better_than(const TxScore* other_score) const {
     // enough tphv container available.
     IF_NEQ_RETURN_IS_LESS(n_tphv_on_phv_bits, other->n_tphv_on_phv_bits);
 
-    // TODO(yumin): The priority of these two metric can be flexible.
+    // TODO: The priority of these two metric can be flexible.
     // For now we just set it to be the highest to avoid exceeding deparser limit.
     IF_NEQ_RETURN_IS_LESS(n_pov_deparser_read_bits, other->n_pov_deparser_read_bits);
     IF_NEQ_RETURN_IS_LESS(n_deparser_read_learning_bytes, other->n_deparser_read_learning_bytes);

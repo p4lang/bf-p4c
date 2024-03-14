@@ -78,7 +78,7 @@ static std::string escapeJson(const std::string& s) {
 
 static Util::JsonObject* transformAnnotation(const std::string& annotation) {
     auto* annotationJson = new Util::JsonObject();
-    // TODO(antonin): annotation string will need to be parsed so we can have it
+    // TODO: annotation string will need to be parsed so we can have it
     // in key/value format here.
     annotationJson->emplace("name", escapeJson(annotation));
     return annotationJson;

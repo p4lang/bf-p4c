@@ -25,7 +25,7 @@ const char *PragmaNoOverlay::help =
     "The gress value can be either ingress or egress. ";
 
 bool PragmaNoOverlay::preorder(const IR::MAU::Instruction* inst) {
-    // XXX(Deep): Until we handle concat operations in the backend properly (by adding metadata
+    // TODO: Until we handle concat operations in the backend properly (by adding metadata
     // fields with concat operations to a slice list, also containing padding fields that must be
     // initialized to 0), we have to disable overlay for any field used in concat operations (concat
     // operations that survive in the backend).
@@ -109,7 +109,7 @@ bool PragmaNoOverlay::preorder(const IR::BFN::Pipe* pipe) {
         }
     }
 
-    // XXX(zma) tmp workaround to disable bridged residual checksum fields from being
+    // TODO tmp workaround to disable bridged residual checksum fields from being
     // overlaid. Proper bridged metadata overlay requires mutex analysis on ingress and
     // coordination of ingress deparser and egress parser (TODO).
     for (auto& nf : phv_i.get_all_fields()) {

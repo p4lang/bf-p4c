@@ -104,12 +104,12 @@ void CheckTofinoPhvContainerTypes() {
     checkRange(c);
 
     EXPECT_ANY_THROW(PHV::Container("X1"));
-    EXPECT_ANY_THROW(PHV::Container("B"));  // XXX(seth)
+    EXPECT_ANY_THROW(PHV::Container("B"));  // TODO
     EXPECT_ANY_THROW(PHV::Container("W-1"));
 }
 
 // Test that the device provides the resources we expect.
-// XXX(cole): This test is specific to Tofino, but a similar test should be
+// TODO: This test is specific to Tofino, but a similar test should be
 // added once more JBay resources are defined.
 void CheckTofinoPhvContainerResources(int scale_factor = 1) {
     const auto &phvSpec = Device::phvSpec();

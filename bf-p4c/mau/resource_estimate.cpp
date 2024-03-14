@@ -881,7 +881,7 @@ void StageUseEstimate::calculate_attached_rams(const IR::MAU::Table *tbl,
             width = 1;
             per_word = ActionDataPerWord(&lo->layout, &width);
         } else if (at->is<IR::MAU::Selector>()) {
-            // TODO(cdodd)
+            // TODO
         } else if (at->is<IR::MAU::TernaryIndirect>()) {
             BUG("Ternary Indirect Data table exists before table placement occurs");
         } else if (auto *idle = at->to<IR::MAU::IdleTime>()) {
@@ -1340,7 +1340,7 @@ void StageUseEstimate::known_srams_needed(const IR::MAU::Table *tbl,
             // Because this is called before and after table placement
             per_word = ActionDataPerWord(&lo->layout, &width);
         } else if (at->is<IR::MAU::Selector>()) {
-            // TODO(cdodd)
+            // TODO
         } else if (at->is<IR::MAU::TernaryIndirect>()) {
             // Again, because this is called before and after table placement
             continue;

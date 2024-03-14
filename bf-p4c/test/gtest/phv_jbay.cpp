@@ -92,7 +92,7 @@ void CheckJBayPhvContainerTypes() {
     checkRange(c);
 
     EXPECT_ANY_THROW(PHV::Container("X1"));
-    EXPECT_ANY_THROW(PHV::Container("B"));  // XXX(seth)
+    EXPECT_ANY_THROW(PHV::Container("B"));  // TODO
     EXPECT_ANY_THROW(PHV::Container("W-1"));
     EXPECT_ANY_THROW(PHV::Container("MD1"));
     EXPECT_ANY_THROW(PHV::Container("MDB1"));

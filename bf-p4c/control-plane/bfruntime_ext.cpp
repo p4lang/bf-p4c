@@ -443,7 +443,7 @@ BFRuntimeSchemaGenerator::addActionSelectorGetMemberCommon(Util::JsonArray* tabl
 void
 BFRuntimeSchemaGenerator::addActionSelectorCommon(Util::JsonArray* tablesJson,
                 const ActionSelector& actionSelector) const {
-    // TODO(antonin): formalize ID allocation for selector tables
+    // TODO: formalize ID allocation for selector tables
     // repeat same annotations as for action table
     // the maximum number of groups is the table size for the selector table
     auto* tableJson = initTableJson(
@@ -606,7 +606,7 @@ BFRuntimeSchemaGenerator::genSchema() const {
     addActionProfs(tablesJson);
     addCounters(tablesJson);
     addMeters(tablesJson);
-    // TODO(antonin): handle "standard" (v1model / PSA) registers
+    // TODO: handle "standard" (v1model / PSA) registers
 
     auto* learnFiltersJson = new Util::JsonArray();
     json->emplace("learn_filters", learnFiltersJson);
@@ -1328,7 +1328,7 @@ BFRuntimeSchemaGenerator::addSnapshot(Util::JsonArray* tablesJson,
             addROSingleton(dataJson, tableContainerJson);
         }
         if (Device::currentDevice() == Device::JBAY) {
-            // TODO(antonin): This is likely not appropriate / sufficient for
+            // TODO: This is likely not appropriate / sufficient for
             // MPR. Maybe this should be a repeated field of table ids / names
             // instead...
             {

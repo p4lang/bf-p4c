@@ -109,7 +109,7 @@ std::vector<AllocSlice> update_alloc_slices_with_physical_liverange(
         if (deparsed_cannot_read_clot && clot.allocated_unmodified_undigested(field)) {
             info = liverange_db.default_liverange();
         } else if (strided_headers.get_strided_group(field)) {
-            // XXX(yumin): workaround for @donot_unroll pragma parser loop bug: defuse analysis
+            // TODO: workaround for @donot_unroll pragma parser loop bug: defuse analysis
             // (control flow visitor) cannot handle parser loop correctly.
             info = liverange_db.default_liverange();
         }
@@ -510,7 +510,7 @@ const AllocError* AllocatorBase::is_container_write_mode_ok(const Allocation& al
 const AllocError* AllocatorBase::is_container_solitary_ok(const Allocation& alloc,
                                                           const AllocSlice& candidate,
                                                           const Container& c) const {
-    // TODO(yumin): this is to allow allocating solitary fields that are NOT in one slice list.
+    // TODO: this is to allow allocating solitary fields that are NOT in one slice list.
     // This should not be necessary now with the new slicing iterator and also because
     // that we have eliminated the conditional constraints from action data.
     // We should try to remove this check before release.
@@ -529,7 +529,7 @@ const AllocError* AllocatorBase::is_container_solitary_ok(const Allocation& allo
     const auto& allocated = alloc.liverange_overlapped_slices(c, {candidate});
     std::vector<FieldSlice> allocated_live;
     for (auto& sl : allocated) {
-        // XXX(yumin): aligned fieldslice from the same field can be ignored
+        // TODO: aligned fieldslice from the same field can be ignored
         if (is_aligned_same_field_alloc(candidate, sl) ||
             sl.field()->is_padding() || sl.field()->is_ignore_alloc()) {
             continue;
@@ -573,7 +573,7 @@ const AllocError* AllocatorBase::is_container_bytes_ok(
             containers.insert(slice.container());
             allocated_bits += slice.width();
         }
-        // TODO(yumin): not necessary?
+        // TODO: not necessary?
         if (allocated_bits != f->size) allocated_bits += bits_allocated_this_tx.at(f);
         int unallocated_bits = f->size - allocated_bits;
         int container_bits = 0;
@@ -809,7 +809,7 @@ SomeContScopeAllocResult AllocatorBase::try_slices_to_container_group(
                     }
                 }
 
-                // XXX(yumin): we do not use is_packing in c_rst because only strict empty is
+                // TODO: we do not use is_packing in c_rst because only strict empty is
                 // allowed, for this container-level search optimization parameter.
                 if (ctx.search_config()->stop_first_succ_empty_normal_container) {
                     const auto container_status = alloc.getStatus(c);
@@ -890,7 +890,7 @@ std::optional<Transaction> AllocatorBase::try_hints(
                     continue;
                 }
                 hint_empty = false;
-                // XXX(yumin): we trust that copacker will respect ScAllocAlignment.
+                // TODO: we trust that copacker will respect ScAllocAlignment.
                 auto src_pack_rst = try_slices_adapter(ctx.with_t(ctx.t() + 1), hint_tx, fs_starts,
                                                        group, src_pack->container, alloc_metrics);
                 if (src_pack_rst.ok()) {
@@ -963,7 +963,7 @@ AllocResult AllocatorBase::try_wide_arith_slices_to_container_group(
         tx.commit(*hi_alloc.tx);
 
         // pick this pair of container if higher score.
-        // XXX(yumin): we ignore copack hints for wide_arith slices.
+        // TODO: we ignore copack hints for wide_arith slices.
         const auto* tx_score = ctx.score()->make(tx);
         if (!rst || tx_score->better_than(rst_score)) {
             LOG3(ctx.t_tabs() << "Container pair " << lo_cont << " and " << hi_cont
@@ -1144,7 +1144,7 @@ bool AllocatorBase::DfsListsAllocator::allocate(const ScoreContext& ctx,
             this_choice.commit(*required_hints_applied_tx);
 
             // apply optional hints for higher chance of successful allocation.
-            // TODO(yumin): we might consider to provide an option to try without copack hints.
+            // TODO: we might consider to provide an option to try without copack hints.
             auto optional_hints_applied_tx = base.try_hints(
                     this_start_ctx, this_choice, *ctx.cont_group(),
                     optional_hints, allocated_fs, hint_updated_alignment, alloc_metrics);
@@ -1601,10 +1601,10 @@ PHV::Transaction AllocatorBase::alloc_deparser_zero_cluster(
             if (kit_i.settings.physical_liverange_overlay) {
                 // candidate_slices = update_alloc_slices_with_physical_liverange(
                 //     kit_i.clot, kit_i.physical_liverange_db, candidate_slices);
-                // XXX(yumin): do not overlay with deparser-zero optimization slices, because
+                // TODO: do not overlay with deparser-zero optimization slices, because
                 // they rely on parser to init the container to zero and use them in deparser
                 // for emitting zeros.
-                // TODO(yumin): we can overlay them on Tofino2+ if we support the feature:
+                // TODO: we can overlay them on Tofino2+ if we support the feature:
                 // deparser output any one of 8 constant bytes in any slot of a field
                 // dictionary (the 8 constants can be programmed to any 8 8bit values).
                 const auto default_lr =
@@ -1644,7 +1644,7 @@ AllocResult AllocatorBase::alloc_stride(const ScoreContext& ctx,
     // find the best container group for this stride.
     for (const auto& group : groups_by_sizes.at(PHV::Size(leader.size()))) {
         LOG3(ctx.t_tabs() << " Trying container group: " << group);
-        // XXX(yumin): for each group, we will only try the first okay container stride,
+        // TODO: for each group, we will only try the first okay container stride,
         // (may go across to the next group because stride are not limited by mau groups).
         // pick a leader container, and try to allocate the stride starting from leader.
         auto leader_cond_ctx = ctx.with_t(ctx.t() + 1);

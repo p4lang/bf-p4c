@@ -577,7 +577,7 @@ static int get_meter_color(const IR::Argument* arg) {
 }
 
 /**
- * TODO(hanw): Pass ExternInstance* as a parameter, instead of srcInfo, name, type,
+ * TODO: Pass ExternInstance* as a parameter, instead of srcInfo, name, type,
  * substitution, annot.
  * Gated by use in AttachTables::DefineGlobalRefs::postorder(IR::GlobalRef *gref)
  */
@@ -698,7 +698,7 @@ static IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
                     *created_ap = ap;
                 }
             } else if (p->name == "size") {
-                // XXX(hanw): used to support the deprecated ActionSelector API.
+                // TODO: used to support the deprecated ActionSelector API.
                 // ActionSelector(bit<32> size, Hash<_> hash, SelectorMode_t mode);
                 // Remove once the deprecated API is removed from
                 auto ap = new IR::MAU::ActionData(srcInfo, IR::ID(name));
@@ -881,7 +881,7 @@ class FixP4Table : public Inspector {
     StatefulSelectors &stateful_selectors;
     DeclarationConversions &assoc_profiles;
 
-    // XXX(hanw): this function only needs one parameter. RefMap and typeMap
+    // TODO: this function only needs one parameter. RefMap and typeMap
     // are passed in as a temporary workaround to avoid larger refactor.
     void createAttachedTableFromTableProperty(P4::ExternInstance& instance,
             P4::ReferenceMap* refMap, P4::TypeMap* typeMap) {
@@ -896,7 +896,7 @@ class FixP4Table : public Inspector {
                 instance.annotations->getAnnotations(),
                 refMap, typeMap, stateful_selectors, &side_obj, tt);
 
-        // XXX(hanw): workaround to populate DeclarationConversions and StatefulSelectors.
+        // TODO: workaround to populate DeclarationConversions and StatefulSelectors.
         // The key to these maps should be ExternInstance, instead of Declaration_Instance,
         // but that require a larger refactor, which can be done later.
         {  // begin workaround

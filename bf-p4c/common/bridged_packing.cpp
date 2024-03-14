@@ -73,7 +73,7 @@ void CollectIngressBridgedFields::end_apply() {
     for (const auto& f : phv) {
         if (f.gress == EGRESS) continue;
         // Indicator does not need to be initialzed in mau.
-        // XXX(hanw): check if still required.
+        // TODO: check if still required.
         if (f.name.endsWith(BFN::BRIDGED_MD_INDICATOR)) continue;
 
         if (f.bridged && !bridged_to_orig.count(f.name)) {
@@ -894,7 +894,7 @@ void CollectConstraints::computeNoPackIfSpecialityRead(
 }
 
 // mark field used in digest as no_pack with all other bridged fields
-// XXX(hanw): Overly constrained.
+// TODO: Overly constrained.
 // This was part of the old flexible packing algorithm. I think it was
 // introduced to workaround PHV allocation issues with switch profile. In order
 // to remove this constraint, we need to improve the slicing algorithm. To
@@ -958,7 +958,7 @@ void CollectConstraints::end_apply() {
         }
     }
 
-    // XXX(hanw): Here a bit of heuristics is need to generate the
+    // TODO: Here a bit of heuristics is need to generate the
     // 'best' alignment constraint for a field. The reason is the
     // special 'bit-masked-set' and 'byte-rotate-merge' instruction
     // can alleviate the pressure on alignment requirement, but we
@@ -1566,7 +1566,7 @@ bool PackWithConstraintSolver::preorder(const IR::BFN::DigestFieldList* d) {
 
     LOG6("Packing " << d->type << " fieldlist " << d);
     std::vector<std::tuple<const IR::StructField*, const IR::BFN::FieldLVal*>> sources;
-    // XXX(HanW): mirror digest has 'session_id' in the first element, which is not
+    // TODO: mirror digest has 'session_id' in the first element, which is not
     // part of the mirror field list.
     auto digest = findContext<const IR::BFN::Digest>();
     if (!digest) return false;
@@ -1691,7 +1691,7 @@ void PackWithConstraintSolver::solve() {
                 packedFields.push_back(f);
         }
 
-        // XXX(hanw): note that the output is in reverse order.
+        // TODO: note that the output is in reverse order.
         std::reverse(packedFields.begin(), packedFields.end());
 
         IR::IndexedVector<IR::StructField> fields;
@@ -2374,7 +2374,7 @@ class PostMidEndLast : public PassManager {
 };
 
 /**
- * XXX(hanw): some code duplication with extract_mau_pipe, needs to refactor ParseTna to
+ * TODO: some code duplication with extract_mau_pipe, needs to refactor ParseTna to
  * provide a mechanism to iterate directly on TNA pipelines.
  */
 bool ExtractBridgeInfo::preorder(const IR::P4Program* program) {

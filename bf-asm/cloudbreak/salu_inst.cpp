@@ -20,7 +20,7 @@ MinMax::Decode cb_opMIN8("min8", CLOUDBREAK, 0), cb_opMAX8("max8", CLOUDBREAK, 1
                cb_opMIN16("min16", CLOUDBREAK, 2), cb_opMAX16("max16", CLOUDBREAK, 3);
 
 /*
- * TODO(Chris) I would like to look into reducing the redundancy in all the write_regs code
+ * TODO I would like to look into reducing the redundancy in all the write_regs code
  * between JBay and Cloudbreak here -- lots of stuff you had to do twice, which is painful
  * and error-prone.
  */

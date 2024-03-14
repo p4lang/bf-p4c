@@ -28,7 +28,7 @@ namespace BFN {
  * The first component is always a PathExpression, and the remaining components
  * are always Member expressions.
  *
- * XXX(seth): Perhaps it'd be nice to support indexing into header stacks as
+ * TODO: Perhaps it'd be nice to support indexing into header stacks as
  * well.
  */
 struct LinearPath {
@@ -44,14 +44,14 @@ struct LinearPath {
  * nodes, it must contain at least one such node, and its linearization must
  * start with a PathExpression.
  *
- * XXX(seth): Perhaps it'd be nice to support indexing into header stacks as
+ * TODO: Perhaps it'd be nice to support indexing into header stacks as
  * well.
  *
  * If the expression being visited is a valid path-like expression,
  * `PathLinearizer::linearPath` will contain the linearized version of the path.
  * If the expression is not path-like, `linearPath` will contain `std::nullopt`.
  *
- * XXX(hanw): this class is known to not work for header stacks.
+ * TODO: this class is known to not work for header stacks.
  */
 struct PathLinearizer : public Inspector {
     std::optional<LinearPath> linearPath;

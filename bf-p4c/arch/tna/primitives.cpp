@@ -195,7 +195,7 @@ convertClone(ProgramStructure *structure, const IR::Primitive *primitive, gress_
     // bit is zero, the egress parser expects the following bytes to be
     // bridged metadata rather than mirrored fields.
     //
-    // XXX(seth): Glass is able to reuse `mirror_type` for last three
+    // TODO: Glass is able to reuse `mirror_type` for last three
     // bits of this data, which eliminates the need for an extra PHV
     // container. We'll start doing that soon as well, but we need to
     // work out some issues with PHV allocation constraints first.
@@ -248,7 +248,7 @@ convertResubmit(ProgramStructure *structure, const IR::Primitive* primitive) {
     //   [  0    1       2          3         4       5     6    7 ]
     //     [               unused             ]      [resubmit_type]
     //
-    // XXX(hanw): reuse the PHV container for `resubmit_type`
+    // TODO: reuse the PHV container for `resubmit_type`
     unsigned resubmit_source = index;
     block->components.push_back(BFN::createSetMetadata("meta",
                 COMPILER_META, "resubmit_source", 8, resubmit_source));

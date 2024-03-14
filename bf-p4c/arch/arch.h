@@ -449,7 +449,7 @@ struct RestoreParams: public Transform {
 
 /**
  * \ingroup ArchTranslation
- * XXX(hanw): probably should be done before translation
+ * TODO: probably should be done before translation
  */
 class LoweringType : public Transform {
     std::map<cstring, unsigned> enum_encoding;

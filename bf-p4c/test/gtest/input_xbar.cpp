@@ -120,7 +120,7 @@ TEST_F(InputXbarAlloc, hello) {
 
     ASSERT_TRUE(rv);
 
-    // XXX(hanw): We can do better in this allocation to use the same group
+    // TODO: We can do better in this allocation to use the same group
     ASSERT_FALSE(alloced[0]->loc.group == alloced[1]->loc.group);
 }
 

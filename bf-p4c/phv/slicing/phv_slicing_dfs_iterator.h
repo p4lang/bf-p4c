@@ -224,7 +224,7 @@ class DfsItrContext : public IteratorInterface {
     /// pruning strategies
     /// return true if found any unsatisfactory case. This function will return true
     /// if any of the following pruning strategies returns true.
-    /// XXX(yumin): non-const because it may call invalidate();
+    /// TODO: non-const because it may call invalidate();
     bool dfs_prune(const ordered_set<SuperCluster*>& unchecked);
 
     /// dfs_prune_unwell_formed: return true if
@@ -266,7 +266,7 @@ class DfsItrContext : public IteratorInterface {
 
     /// return true if there exists packing that make it impossible to
     /// to synthesize actions.
-    /// XXX(yumin): non-const because it may call invalidate();
+    /// TODO: non-const because it may call invalidate();
     bool dfs_prune_invalid_packing(const SuperCluster* sc);
 
     /// collect_aftersplit_constraints returns AfterSplitConstraints on the fieldslice
@@ -278,7 +278,7 @@ class DfsItrContext : public IteratorInterface {
     /// collect additional implicit container size constraint and save them to @p decided_sz,
     /// if it can be expressed. Otherwise, if will only check whether the implicit container
     /// size constraint can be satisfied.
-    /// XXX(yumin): this function is created initially for the most common case of
+    /// TODO: this function is created initially for the most common case of
     /// egress::eg_intr_md.egress_port that has
     /// (1) ^bit[0..15]; (2) no_split; (3) deparsed_bottom_bits
     /// because of these three constraints, this field can only be allocated to 16-bit container.

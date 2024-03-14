@@ -14,7 +14,7 @@ AbstractElimUnusedInstructions::preorder(IR::BFN::Extract* extract) {
 
     // Do not eliminate extract that it is serialized from deparser so that its layout
     // might be change due to phv allcoation.
-    // TODO(yumin): again, the reason we can not do it now is because that we do not have
+    // TODO: again, the reason we can not do it now is because that we do not have
     // the `input buffer layout` stored with the parser state. Instead, we rely on all those
     // primitives and shift and range to determine what is on the buffer, which has already
     // created some troubles in ResolveComputed. Once we can do the input buffer layout

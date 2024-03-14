@@ -1260,7 +1260,7 @@ void DfsItrContext::iterate(const IterateCb& cb) {
     }
     to_be_split_i = *after_pre_split;
 
-    // XXX(yumin): this is temporarily disabled because although it is doing the right thing,
+    // TODO: this is temporarily disabled because although it is doing the right thing,
     // PHV allocation and Table Placement failed to fit several customer profile.
     // We should enable this when alt-phv-alloc is stable.
     // presplit by valid container range constraint that a field cannot be packed with adjacent
@@ -1283,12 +1283,12 @@ void DfsItrContext::iterate(const IterateCb& cb) {
 
     // true indicates that we had troubles in finding a solution. Try aggressively presplit
     // large fieldslice to 32-bit chunks first and then rerun dfs.
-    // XXX(yumin): this is a HACK to prevent extremely long compilation because
+    // TODO: this is a HACK to prevent extremely long compilation because
     // DFS was not effectively searching through critical slicing choices
     // that can produce a valid slicing.
     // An example is that when there are multiple bit<128> fields being searched for different
     // slicing between two critical choices, and the slicing of bit<128> fields does not matter.
-    // TODO(yumin): There should be a algorithmic way to prune those cases.
+    // TODO: There should be a algorithmic way to prune those cases.
     if (n_steps_since_last_solution > config_i.max_search_steps_per_solution) {
         LOG1("failed to find one valid solution within step limit. "
             "Retry with pre-splitting large fieldslice");
@@ -1359,7 +1359,7 @@ bool DfsItrContext::need_further_split(const SuperCluster::SliceList* sl) const 
     bool all_no_split = true;
     for (const int i : {8, 16, 32}) {
         if (i >= offset) {
-            // XXX(yumin): use offset here because metadata may have aligment at head.
+            // TODO: use offset here because metadata may have aligment at head.
             break;
         }
         if (!no_split[i]) {
@@ -1710,7 +1710,7 @@ bool DfsItrContext::dfs_prune_unsat_slicelist_max_size(
 // return true if constraints for a slice list cannot be *all* satisfied.
 bool DfsItrContext::dfs_prune_unsat_slicelist_constraints(
     const SplitDecision& decided_sz, const SuperCluster* sc) const {
-    // XXX(yumin): can be further improved by constraints that exact_container
+    // TODO: can be further improved by constraints that exact_container
     // slice lists starts with byte-boundary. But it maybe too complicated.
     for (auto* sl : sc->slice_lists()) {
         // apply on exact container slicelists only.

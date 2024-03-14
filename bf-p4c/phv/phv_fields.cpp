@@ -422,7 +422,7 @@ const PHV::Field *PhvInfo::field(const cstring& name_) const {
         return matches.begin()->second;
     }
 
-    // XXX(seth): The warning spew from POV bits prior to allocatePOV() being
+    // TODO: The warning spew from POV bits prior to allocatePOV() being
     // called is just too great. We need to improve how that's handled, but for
     // now, silence those warnings.
     if (!name.toString().endsWith(".$valid")) {
@@ -927,7 +927,7 @@ void PHV::Field::foreach_byte(
         if (!range.overlaps(slice.field_slice()))
             continue;
 
-        // XXX(cole): HACK: clients of foreach_byte assume that @fn is invoked
+        // TODO: HACK: clients of foreach_byte assume that @fn is invoked
         // exactly once for each byte of the field, which is violated if the
         // field is allocated in more than one place.  There was a time when
         // fields could be allocated to both PHV and TPHV (but this may not be
@@ -980,7 +980,7 @@ void PHV::Field::foreach_alloc(
         const PHV::FieldUse* use,
         std::function<void(const PHV::AllocSlice &)> fn,
         SliceMatch useTblRefs) const {
-    // XXX(Deep): Maintain all the candidate alloc slices here. I am going to filter later based on
+    // TODO: Maintain all the candidate alloc slices here. I am going to filter later based on
     // context and use on this vector during stage based allocation.
     auto apply_fn = [&] (const PHV::AllocSlice& slice) {
         LOG6("\tforeach_alloc slice: " << slice);
@@ -1024,9 +1024,9 @@ bool PHV::Field::is_tphv_candidate(const PhvUse& uses) const {
 
 bool PHV::FieldSlice::is_tphv_candidate(const PhvUse& uses) const {
     if (field_i->padding) return false;  // __pad_ fields are not considered as tphv.
-    // TODO(zma) derive these rather than hard-coding the name
+    // TODO derive these rather than hard-coding the name
     std::string f_name(field_i->name.c_str());
-    // XXX(zma) somehow phv allocation can't derive this one
+    // TODO somehow phv allocation can't derive this one
     if (f_name.find("$constant") != std::string::npos)
         return true;
     return !uses.is_used_mau(field_i, range_i) && !field_i->pov && !field_i->deparsed_to_tm() &&
@@ -1205,7 +1205,7 @@ bitvec PHV::FieldSlice::getStartBits(PHV::Size size) const {
     const int checksum_bit_in_byte = range_i.lo % 8;
     for (auto idx : field_i->getStartBits(size)) {
         int bit_idx = (idx + range_i.lo) % int(size);
-        // XXX(yumin): checksummed metadata can only start at byte boundary.
+        // TODO: checksummed metadata can only start at byte boundary.
         if (field_i->is_checksummed() && field_i->metadata && !field_i->alignment &&
             bit_idx % 8 != checksum_bit_in_byte) {
             continue;
@@ -1538,7 +1538,7 @@ struct ComputeFieldAlignments : public Inspector {
         // avoid placing the field too far to the *left* in the container. Both
         // of these limitations need to be converted into constraints for PHV
         // allocation.
-        // XXX(seth): Unfortunately we can't capture the "too far to the left"
+        // TODO: Unfortunately we can't capture the "too far to the left"
         // case with our current representation of valid container ranges.
         const nw_bitrange validContainerRange = FromTo(0, extractedBits.hi);
         fieldInfo->updateValidContainerRange(validContainerRange);
@@ -1706,7 +1706,7 @@ class AddIntrinsicConstraints : public Inspector {
 };
 
 /**
- * XXX(hanw): padding field in header must be parsed, but it is often unused in
+ * TODO: padding field in header must be parsed, but it is often unused in
  * MAU or deparser, is overlayed with other fields. For example, when a header
  * field is deparsed in a digest, compiler will generate a new padding field in
  * place of the original padding field in the digest field list.
@@ -1800,7 +1800,7 @@ class CollectPardeConstraints : public Inspector {
         f->set_parsed(true);
         LOG3("\tMarking " << f->name << " as parsed");
 
-        // TODO(zma): this constraint can be refined, if the multi-write
+        // TODO: this constraint can be refined, if the multi-write
         // happens before other writes, it can still be packed.
         if (prim->getWriteMode() == IR::BFN::ParserWriteMode::CLEAR_ON_WRITE) {
             // Keep POVs as simply solitary - compiler can handle it
@@ -1887,7 +1887,7 @@ class CollectPardeConstraints : public Inspector {
         auto* src_field = phv.field(emit->source->field);
         BUG_CHECK(src_field, "Deparser Emit with a non-PHV source: %1%",
                   cstring::to_cstring(emit));
-        // XXX(cole): These two constraints will be subsumed by deparser schema.
+        // TODO: These two constraints will be subsumed by deparser schema.
         src_field->set_deparsed(true);
         src_field->set_exact_containers(true);
         src_field->set_emitted(true);
@@ -2025,7 +2025,7 @@ class CollectPardeConstraints : public Inspector {
                     PHV::Field* resubmit_field = phv.field(resubmit_field_expr->field);
                     if (resubmit_field) {
                         resubmit_field->set_exact_containers(true);
-                        // JIRA-DOC: XXX(yumin): P4C-1870,
+                        // JIRA-DOC: TODO: P4C-1870,
                         // an edge case for resubmit fields,
                         // that if they are in a 8-byte-long
                         // resubmit field list, then they must take the whole container.
@@ -2047,7 +2047,7 @@ class CollectPardeConstraints : public Inspector {
 
         if (digest->name == "learning" || digest->name == "pktgen") {
             // Add byte-aligned constraint to metadata field in learning field_list
-            // TODO(yumin): This constraint can be relaxed to be no_pack in a same byte.
+            // TODO: This constraint can be relaxed to be no_pack in a same byte.
             for (auto fieldList : digest->fieldLists) {
                 for (auto fieldListEntry : fieldList->sources) {
                     auto fieldInfo = phv.field(fieldListEntry->field);
@@ -2115,7 +2115,7 @@ class CollectPardeConstraints : public Inspector {
             // mirror_field_list fields are marked as is_marshaled, so that
             // the phv allocation will make sure that the allocation field can be
             // serialized without leaving any padding within the field.
-            // XXX(yumin): One special case is that, on both gresses,
+            // TODO: One special case is that, on both gresses,
             // compiler_generated_meta.mirror_id must go to [H] and
             // compiler_generated_meta.mirror_source must go to [B].
             // This constraint is handled in the phv allocation.

@@ -5,7 +5,7 @@
 
 /// A RAII helper that indents when it's created and unindents by the same
 /// amount when it's destroyed.
-/// XXX(seth): This should live in indent.h.
+/// TODO: This should live in indent.h.
 struct AutoIndent {
     explicit AutoIndent(indent_t& indent, int indentBy = 1)
       : indent(indent), indentBy(indentBy) { indent += indentBy; }

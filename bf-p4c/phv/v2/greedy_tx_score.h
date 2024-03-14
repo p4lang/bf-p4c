@@ -36,7 +36,7 @@ struct Vision {
     /// be counted twice as in ingress and in egress.
     ordered_map<ContGress, KindSizeIndexedMap> cont_available;
 
-    // TODO(yumin): maybe a good idea to add learning quanta and pov bits limit here?
+    // TODO: maybe a good idea to add learning quanta and pov bits limit here?
     // ordered_map<gress_t, int> pov_bits_used;
     // ordered_map<gress_t, int> pov_bits_unallocated;
 

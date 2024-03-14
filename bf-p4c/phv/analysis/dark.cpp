@@ -110,7 +110,7 @@ void MarkDarkCandidates::end_apply() {
 
         // Ignore dark analysis is field is not a mocha candidate.
         // Dark fields can go into mocha and so are definitely mocha candidates.
-        // XXX(Deep): In the long run, we should move to using dark containers as a kind of spill
+        // TODO: In the long run, we should move to using dark containers as a kind of spill
         // space, where fields can be temporarily written into dark from normal/mocha containers in
         // stages where they are not used. The following requirement is overly restrictive, once we
         // enable such spill-oriented allocation.

@@ -776,7 +776,7 @@ class CreateMathUnit : public Inspector {
         if (!exp_shift) exp_shift = new IR::Constant(0);
         if (!output_scale) output_scale = new IR::Constant(0);
         if (!table) table = new IR::ExpressionListValue({});
-        /// XXX(hanw): remove when v1model is retired
+        /// TODO: remove when v1model is retired
         IR::Type* mutype;
         if (P4V1::use_v1model()) {
             auto *tuple_type = new IR::Type_Tuple;

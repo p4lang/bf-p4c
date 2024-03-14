@@ -64,7 +64,7 @@ bool Phv_Parde_Mau_Use::preorder(const IR::BFN::ParserChecksumWritePrimitive *e)
     BUG_CHECK(f, "Checksum write to non-PHV destination: %1%", e);
     extracted_i[thread][f->id] = true;
 
-    // TODO(vstill): something like extracted_from_checksum needed?
+    // TODO: something like extracted_from_checksum needed?
     return true;
 }
 

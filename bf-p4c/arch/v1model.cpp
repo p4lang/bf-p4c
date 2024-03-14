@@ -233,7 +233,7 @@ class LoadTargetArchitecture : public Inspector {
         }
     }
 
-    // XXX(hanw): Code to generate extra type declarations that we do not wish to publish yet.
+    // TODO: Code to generate extra type declarations that we do not wish to publish yet.
 
     /* header pktgen_generic_header_t {
         bit<3> _pad0;
@@ -361,7 +361,7 @@ class LoadTargetArchitecture : public Inspector {
         structure->include(tempPath, &structure->targetTypes);
         unlink(tempPath);
 
-        // XXX(hanw): add extra type declaration that are not ready to publish
+        // TODO: add extra type declaration that are not ready to publish
         structure->targetTypes.push_back(create_pktgen_generic_header_t());
         structure->targetTypes.push_back(create_math_unit());
 
@@ -794,7 +794,7 @@ class AnalyzeProgram : public Inspector {
                     IR::Type::Bits::get(Device::cloneSessionIdWidth())));
         cgm->fields.push_back(
             new IR::StructField("mirror_source", IR::Type::Bits::get(8)));
-        // XXX(hanw): we can probably remove these two fields.
+        // TODO: we can probably remove these two fields.
         cgm->fields.push_back(
             new IR::StructField("clone_src", IR::Type::Bits::get(4)));
         cgm->fields.push_back(
@@ -1246,7 +1246,7 @@ class ConstructSymbolTable : public Inspector {
             // bit is zero, the egress parser expects the following bytes to be
             // bridged metadata rather than mirrored fields.
             //
-            // XXX(seth): Glass is able to reuse `mirror_type` for last three
+            // TODO: Glass is able to reuse `mirror_type` for last three
             // bits of this data, which eliminates the need for an extra PHV
             // container. We'll start doing that soon as well, but we need to
             // work out some issues with PHV allocation constraints first.

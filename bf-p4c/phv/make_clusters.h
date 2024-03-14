@@ -193,7 +193,7 @@ class Clustering : public PassManager {
         bool preorder(const IR::MAU::Instruction* inst) override;
 
         /** Union all operands in the gateway.
-         * TODO(yumin): gateway operands can be in a same container,
+         * TODO: gateway operands can be in a same container,
          * and they are only required to be byte-aligned, not necessary in same MAU group.
          */
         bool preorder(const IR::MAU::Table *tbl) override;

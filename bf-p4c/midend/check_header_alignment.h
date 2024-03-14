@@ -35,11 +35,11 @@ class CheckPadAssignment final : public Inspector {
  * On Tofino, we can only parse and deparse byte-aligned headers, so
  * non-byte-aligned headers aren't useful.
  *
- * XXX(seth): We could theoretically allow non-byte-aligned headers if they're
+ * TODO: We could theoretically allow non-byte-aligned headers if they're
  * only used in the MAU, but for now I've avoided that since it seems less
  * confusing for the P4 programmer to have a simple and clear rule.
  *
- * XXX(hanw): We do not enforce this rule on headers that is used in Mirror
+ * TODO: We do not enforce this rule on headers that is used in Mirror
  * Resubmit, Digest, as the fields in these headers are going to be reordered.
  *
  * By default, all fields in the headers are candidates for reordering, except

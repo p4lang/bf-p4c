@@ -211,7 +211,7 @@ void PragmaContainerSize::check_and_add_no_split(PHV::Field* field) const {
             field->set_no_split(true);
             LOG3("Setting field " << field->name << " to no-split.");
         }
-        // XXX(yumin): not necessary.
+        // TODO: not necessary.
         if (static_cast<int>(container_size) == field->size) {
             field->set_solitary(PHV::SolitaryReason::PRAGMA_CONTAINER_SIZE);
             LOG3("Setting field " << field->name << " to no-pack.");

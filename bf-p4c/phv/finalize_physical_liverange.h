@@ -85,7 +85,7 @@ class FinalizePhysicalLiverange : public Inspector, TofinoWriteContext {
     void end_apply() override;
 
  public:
-    /// XXX(yumin): we need to set visitDagOnce to be false because there are some IR nodes
+    /// TODO: we need to set visitDagOnce to be false because there are some IR nodes
     /// that are copied instead of cloned. For example, we notice that the
     /// the *_partition_index:alpm expression is copied but they should be cloned.
     explicit FinalizePhysicalLiverange(PhvInfo& phv,

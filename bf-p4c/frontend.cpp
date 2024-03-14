@@ -87,7 +87,7 @@ const IR::P4Program* run_frontend() {
     if (options.arch == "tna" && options.langVersion == CompilerOptions::FrontendVersion::P4_14) {
         program = P4::parseP4File<P4V1::TnaConverter>(options);
     } else {
-        // XXX(hanw): used by 14-to-v1model path, to be removed
+        // TODO: used by 14-to-v1model path, to be removed
         P4V1::Converter::createProgramStructure = P4V1::TNA_ProgramStructure::create;
         program = P4::parseP4File<ConverterAllowingRecirculate>(options);
     }

@@ -425,7 +425,7 @@ bool ComputeLoweredDeparserIR::preorder(const IR::BFN::Deparser* deparser) {
             std::vector<Clot*> clotSources;
 
             LOG3("\temit fieldlist " << fieldList);
-            // XXX(hanw): filter out padding fields inside the field list which
+            // TODO: filter out padding fields inside the field list which
             // exist for alignment purpose, they should not be deparsed as it
             // would causes the same container to be emitted twice.
             auto fieldListNoPad = filterPaddingField(fieldList);

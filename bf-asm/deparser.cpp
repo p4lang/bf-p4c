@@ -220,7 +220,7 @@ Deparser::Digest::Digest(Deparser::Digest::Type *t, int l, VECTOR(pair_t) &data)
         } else if (l.value.type != tVEC) {
             layout[l.key.i].emplace_back(t->gress, DEPARSER_STAGE, l.value);
         } else {
-            // XXX(amresh) : Need an empty layout entry if no values are present to
+            // TODO : Need an empty layout entry if no values are present to
             // set the config registers correctly
             layout.emplace(l.key.i, std::vector<Phv::Ref>());
             for (auto &v : l.value.vec)

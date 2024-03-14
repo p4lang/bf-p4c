@@ -196,7 +196,7 @@ a1 must =32,
 a2 must =32,
 a3 must =32,
 ```
-(JED: if we re-define after-split constraints so that they are propagated through rotational
+(if we re-define after-split constraints so that they are propagated through rotational
 clusters, then the second and third pruning strategies are redundant with the first.)
 
 ### Pruning strategy: Conflicting after-split constraints
@@ -389,7 +389,7 @@ metadata lists cannot exceed the size of list normal fields(they are supposed to
 Also, for super-cluster slice-list constraint, the constraint becomes that normal slice lists must
 have the same size, and metadata list's virtual size cannot be larger than that size.
 
-(JED: Not sure I follow this section. Examples would help.)
+(Not sure I follow this section. Examples would help.)
 
 ### Enhanced after-split constraint
 Although it seems that metadata type complicates the problem, we can handle them by simply
@@ -496,7 +496,7 @@ before `f1` or 12 bits after `f1`. The good news is, for `f2` in the second exam
 where to split even in up-casting mode. The code implements this by giving the tailing field slice
 an after-split constraint.
 
-(JED: Not following this last point. An example would help.)
+(Not following this last point. An example would help.)
 
 ## Optimization: Search order
 A general optimization for a DFS algorithm is to schedule the search order at each step to

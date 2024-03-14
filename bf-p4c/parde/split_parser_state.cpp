@@ -475,7 +475,7 @@ struct AllocateParserState : public ParserTransform {
                             le_bitrange bits;
                             auto f = sa.phv.field(v->dest->field, &bits);
                             auto alloc_slices = sa.phv.get_alloc(f, &bits,
-                                    PHV::AllocContext::PARSER, &use);  // XXX(zma)
+                                    PHV::AllocContext::PARSER, &use);  // TODO
 
                             BUG_CHECK(alloc_slices.size() == 1,
                                 "extract allocator expects dest to be individual slice");

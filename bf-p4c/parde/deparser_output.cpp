@@ -313,7 +313,7 @@ struct OutputDigests : public Inspector {
             /* learning digest is a bit special here - the driver looks at the first
              * field of the digest to resolve the digest-ID and hence must be appended
              * to the list of digest fields.
-             * XXX(seth): Actually, this is more or less the same as mirroring. =) We
+             * TODO: Actually, this is more or less the same as mirroring. =) We
              * should use the same solution for both. For mirroring, we've
              * already placed the mirror ID in the field list much earlier in
              * the compilation process, and there is no need for any special

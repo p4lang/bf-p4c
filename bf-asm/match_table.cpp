@@ -630,7 +630,7 @@ void MatchTable::gen_hash_bits(const std::map<int, HashCol> &hash_table,
 
 void MatchTable::add_hash_functions(json::map &stage_tbl) const {
     json::vector &hash_functions = stage_tbl["hash_functions"] = json::vector();
-    // XXX(amresh): Hash functions are not generated for ALPM atcams as the
+    // TODO: Hash functions are not generated for ALPM atcams as the
     // partition index bits used in hash which is a compiler generated field and
     // should not be in 'match_key_fields'. The tests in p4factory are written
     // with match_spec to not include the partition index field. Glass also

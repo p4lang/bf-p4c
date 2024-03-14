@@ -156,7 +156,7 @@ update_flowgraph(const PHV::UnitSet& g_units,
         const IR::MAU::Table* f_t = u_pair.second->to<IR::MAU::Table>();
 
         // Adding new ARA flow edges
-        // *TODO* *ALEX* Identify dominated tables to skip addition of control flow edges
+        // *TODO*  Identify dominated tables to skip addition of control flow edges
         transact.addARAedge(grs, g_t, f_t);
         LOG5("\tAdding ARA edge to transaction ( " << grs << "): " <<
              g_t->name << " --> " << f_t->name);

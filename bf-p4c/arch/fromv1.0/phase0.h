@@ -29,7 +29,7 @@ namespace BFN {
  *  0 table's action is generated and substituted into the `__phase0` parser
  *  state.
  *
- * XXX(seth): There is a known issue with this pass: the parser it generates
+ * TODO: There is a known issue with this pass: the parser it generates
  * will be invalid if the P4 program uses a different name for the TNA M
  * parameter in the ingress parser than it uses in the ingress control. This
  * will get fixed with a followup PR.

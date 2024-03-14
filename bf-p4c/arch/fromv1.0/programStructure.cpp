@@ -15,7 +15,7 @@
 
 namespace P4V1 {
 
-// XXX(hanw): older definition of ProgramStructure used by 14-to-v1model conversion path
+// TODO: older definition of ProgramStructure used by 14-to-v1model conversion path
 // to be removed
 // ** BEGIN **
 
@@ -370,7 +370,7 @@ generate_tna_hash_block_statement(P4V1::TnaProgramStructure* structure,
     } else {
         BUG("Unhandled primitive %1%", prim->name); }
     auto flc_offset = num_ops - offset;
-    // XXX(hanw): workaround for a v1 typeCheck error when a P4-14 table shares
+    // TODO: workaround for a v1 typeCheck error when a P4-14 table shares
     // the same name with the field-list-calculation, typeChecker incorrect infers
     // the primitive parameter with the type of the table, instead of the type
     // of the field-list-calculation.
@@ -553,7 +553,7 @@ TnaProgramStructure::convertActionProfile(const IR::ActionProfile* action_profil
         auto ttype = IR::Type_Bits::get(flc->output_width);
         auto algorithm = createHashExtern(convertHashAlgorithms(flc->algorithm), ttype);
         args->push_back(new IR::Argument(algorithm));
-        // XXX(hanw): tna action_selector does not support specifying width
+        // TODO: tna action_selector does not support specifying width
         // auto width = new IR::Constant(IR::Type_Bits::get(32), flc->output_width);
         // args->push_back(new IR::Argument(width));
         if (action_selector->mode == "resilient") {
@@ -1092,7 +1092,7 @@ TnaProgramStructure::convertParser(const IR::V1Parser* parser,
                     sizeConstant = new IR::Constant(4);
                 }
                 auto annos = addNameAnnotation(value_set->name, value_set->annotations);
-                // XXX(hanw): work around for the semantic difference bwteen
+                // TODO: work around for the semantic difference bwteen
                 // P4-14 value_set and P4-16 value_set. In p4-14, a value_set
                 // can be global and share the same name in ingress add egress
                 // parser. In p4-16, a value_set is local to a parser and can
@@ -1425,7 +1425,7 @@ TnaProgramStructure::createMirrorState(gress_t gress, unsigned index,
     // bit is zero, the egress parser expects the following bytes to be
     // bridged metadata rather than mirrored fields.
     //
-    // XXX(seth): Glass is able to reuse `mirror_type` for last three
+    // TODO: Glass is able to reuse `mirror_type` for last three
     // bits of this data, which eliminates the need for an extra PHV
     // container. We'll start doing that soon as well, but we need to
     // work out some issues with PHV allocation constraints first.
@@ -1530,7 +1530,7 @@ TnaProgramStructure::createResubmitState(gress_t gress, unsigned index,
     //   [  0    1       2          3         4      5     6     7 ]
     //      [                 unused          ]     [resubmit_type]
     //
-    // XXX(hanw): PHV should be able to overlay this field
+    // TODO: PHV should be able to overlay this field
     // with resubmit_type.
     unsigned resubmit_source = index;
     statements->push_back(BFN::createSetMetadata("meta",

@@ -242,7 +242,7 @@ bool AllocSlice::isLiveAt(int stage, const FieldUse& use) const {
         // and must end with read. Also, no AllocSlice will have overlapped live range.
         const int actual_stage = use.isWrite() ? stage + 1 : stage;
         const int start = min_stage_i.second.isRead() ? min_stage_i.first : min_stage_i.first + 1;
-        // XXX(yumin): Unfortunately we will still have tail-write field slices (liverange ends with
+        // TODO: Unfortunately we will still have tail-write field slices (liverange ends with
         // a write), until we implement fieldslice-level defuse and deadcode-elim.
         // JIRA-DOC: Example case in P4C-4050:
         // ig_mg.hash is set in stage 6 in expresion `hash[31:0] = ipv6_hash.get(***);`,
@@ -297,12 +297,12 @@ bool AllocSlice::isReferenced(const AllocContext* ctxt, const FieldUse* use,
         return true;
     }
 
-    // TODO(yumin): it should be safe to remove this guard. Still keeping it here
+    // TODO: it should be safe to remove this guard. Still keeping it here
     // for backward compatibility.
     if (!is_physical_stage_based_i && Device::currentDevice() == Device::TOFINO) return true;
 
     switch (ctxt->type) {
-        // XXX(Yumin): ported from previous implementation.
+        // TODO: ported from previous implementation.
         // This suspicious condition:
         // min_stage_i.first == 0 && min_stage_i.second.isRead() represents a parser ref.
         // is from legacy codes, only need to check it when not physical-stage-based.

@@ -153,7 +153,7 @@ class JBayMauPowerSpec : public MauPowerSpec {
   double get_voltage_scaling_factor() const override {
     // The voltage the unit memory numbers are derived from.
     double measured_voltage = 0.750;  // in Volts
-    // TODO(mea): Pass in a voltage as command line argument, and sanity check.
+    // TODO: Pass in a voltage as command line argument, and sanity check.
     double user_voltage = 0.750;  // in Volts
     // Power consumption scales with difference in voltage from measured as:
     // (V_user / V_meas)^2

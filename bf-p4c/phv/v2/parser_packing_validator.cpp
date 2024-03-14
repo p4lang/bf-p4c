@@ -46,7 +46,7 @@ ParserPackingValidator::get_primitives(const FieldSlice& fs) const {
                     if (auto* dest = checksum->getWriteDest())
                         state_extracts_cache[{state, dest->field}].push_back(checksum);
                 }
-                // JIRA-DOC: TODO(vstill): P4C-4689: revisit zeroinit
+                // JIRA-DOC: TODO: P4C-4689: revisit zeroinit
             }
         }
 
@@ -60,14 +60,14 @@ ParserPackingValidator::get_primitives(const FieldSlice& fs) const {
 bool ParserPackingValidator::allow_clobber(const Field* f) const {
     if (f->is_ignore_alloc() || f->is_padding()) return true;
     const bool parser_def = parser_i.field_to_writes.count(f) || f->pov || f->isGhostField();
-    // TODO(yumin): parser_error?
+    // TODO: parser_error?
     return !parser_def && !parser_zero_init(f) && !f->is_invalidate_from_arch();
 }
 
-// XXX(yumin): strided header fields are handled in the same way as normal fields,
+// TODO: strided header fields are handled in the same way as normal fields,
 // but in the old allocator, strided header fields are skipped in these checks.
-// TODO(yumin): enable strict mode.
-// TODO(yumin): allow a and b to be packed together when
+// TODO: enable strict mode.
+// TODO: allow a and b to be packed together when
 // a is extracted by clear-on-write and b is okay to be 0 after the state.
 const AllocError* ParserPackingValidator::will_buf_extract_clobber_the_other(
     const FieldSlice& fs, const StateExtract& state_extract, const int cont_idx,
@@ -117,7 +117,7 @@ const AllocError* ParserPackingValidator::will_buf_extract_clobber_the_other(
                 }
             }
             if (!other_prim_has_packet_rval) {
-                // XXX(yumin): This if check is not required! Remove to always return an error
+                // TODO: This if check is not required! Remove to always return an error
                 // when we transition to strict mode.
                 if (!phv_i.must_alloc_same_container(fs, other_fs)) {
                     *err << "cannot pack " << fs << " with " << other_fs << " because in state "
@@ -131,7 +131,7 @@ const AllocError* ParserPackingValidator::will_buf_extract_clobber_the_other(
         }
     }
 
-    // XXX(yumin): THIS is not required! BUT there are some P4 tests in our CI
+    // TODO: THIS is not required! BUT there are some P4 tests in our CI
     // that are incorrect: the manual extraction they wrote will corrupt other
     // fields!
     // JIRA-DOC: Example:
@@ -227,7 +227,7 @@ const AllocError* ParserPackingValidator::will_a_extracts_clobber_b(
             if (auto* extract = prim->to<IR::BFN::Extract>()) {
                 StateExtract state_extract{state, extract};
                 // only extract from input buffer will clobber bits.
-                // TODO(vstill): what about checksum-residual-deposit? what about
+                // TODO: what about checksum-residual-deposit? what about
                 // clean-on-write from constant / checksums?
                 if (!extract->source->is<IR::BFN::PacketRVal>()) {
                     continue;

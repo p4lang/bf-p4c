@@ -320,7 +320,7 @@ class TransformTnatoT5na : public PassManager {
         const IR::Type_Name* currentMetaType = nullptr;
     };
 
-    // TODO(MK): Make this better
+    // TODO: Make this better
     class FixPortSizes : public Transform {
      public:
         IR::Node *postorder(IR::Type_Bits* tb) {

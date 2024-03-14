@@ -462,7 +462,7 @@ class WarnTernaryMatchFields : public MauInspector {
             }
         }
 
-        // TODO(zma) check if user has already included the header validity bits
+        // TODO check if user has already included the header validity bits
         // and if ternary match table is predicated by a header validty gateway
         // table so that we don't spew too many spurious warnings.
 

@@ -17,7 +17,7 @@
  *               larger.
  * Find(x):      O(log(n))
  *
- * XXX(cole): there are more sophisticated implementations that are more
+ * TODO: there are more sophisticated implementations that are more
  *            efficient.
  *
  * @param T the type of elements to form into sets.  Must be eligible for

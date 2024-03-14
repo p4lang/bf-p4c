@@ -262,7 +262,7 @@ std::optional<DarkLiveRange::ReadWritePair> DarkLiveRange::getFieldsLiveAtStage(
     const PHV::AllocSlice* writtenField = nullptr;
     bool found_dark_slice = false;
     for (auto& sl : fields) {
-        // *ALEX* Add hack to prevent dark overlaid fields being
+        //  Add hack to prevent dark overlaid fields being
         //        considered twice. This may need to be updated once
         //        we introduce spills from dark to other containers
         if (sl.container().is(PHV::Kind::dark)) {
@@ -278,7 +278,7 @@ std::optional<DarkLiveRange::ReadWritePair> DarkLiveRange::getFieldsLiveAtStage(
 
         if (livemap.hasAccess(sl.field(), stage, READ)) {
             if (readField != nullptr) {
-                // *ALEX* This will reject overlays with packed fields that have
+                //  This will reject overlays with packed fields that have
                 // READs in the same stage. We should add the capability
                 // to overlay with packed fields that have smae-stage READs
                 LOG_DEBUG4("Slices " << readField << " and " << sl << " both read in stage "
@@ -408,7 +408,7 @@ std::optional<DarkLiveRange::OrderedFieldSummary> DarkLiveRange::produceFieldsIn
     }
 
     // Handle case of fields that have only Parser references (local parser fields)
-    // JIRA-DOC: *ALEX* This should no longer be needed after p4c-1995 is merged into master
+    // JIRA-DOC: This should no longer be needed after p4c-1995 is merged into master
     lastField = nullptr;
     auto sItr = slices.end();
     OrderedFieldSummary rv2;
@@ -513,7 +513,7 @@ bool DarkLiveRange::isGroupDominatorEarlierThanFirstUseOfCurrentField(
     // initialization at the group dominator table. The check here makes sure that the group
     // dominator will occur earlier than the min stage for the current field, which effectively
     // implements the invariant above.
-    // XXX(Deep): This is too conservative. This check is necessary only if we actually need to
+    // TODO: This is too conservative. This check is necessary only if we actually need to
     // initialize the field.
     if (currentField.minStage.first == dg.min_stage(groupDominator) &&
             currentField.minStage.second == PHV::FieldUse(READ)) {
@@ -837,7 +837,6 @@ std::optional<PHV::DarkInitMap> DarkLiveRange::findInitializationNodes(
             return std::nullopt;
         }
 
-        // ALEX:
         while (ARAspill || groupDominator != nullptr) {
             // Check that the group dominator can be used to add the move instruction without
             // lengthening the dependence chain.
@@ -1050,7 +1049,7 @@ std::optional<PHV::DarkInitMap> DarkLiveRange::getInitPointsForTable(
     int cur_min_stage = currentField.get_min_stage(dg);
     BUG_CHECK(cur_min_stage >= 0, "Found invalid min_stage for slice %1%", currentField.field);
 
-    // ALEX: In the future we may want to use regular actions for spills to dark
+    // In the future we may want to use regular actions for spills to dark
     //       So we will need to add logic to determine useARA
 
     std::optional<PHV::DarkInitEntry*> darkFieldInit = std::nullopt;
@@ -1078,7 +1077,6 @@ std::optional<PHV::DarkInitMap> DarkLiveRange::getInitPointsForTable(
         if (srcSlice) {
             if (initMap.size() > 0) {
                 PHV::DarkInitEntry* lastSlice = &initMap[initMap.size() - 1];
-                // ALEX:
                 PHV::StageAndAccess newLatestStage =
                     std::make_pair(
                         (*darkFieldInit)->getDestinationSlice().getEarliestLiveness().first,
@@ -1115,7 +1113,7 @@ std::optional<PHV::DarkInitMap> DarkLiveRange::getInitPointsForTable(
             prevSlice = &initMap[initMap.size() - 1];
         } else {
             PHV::AllocSlice dest(lastField.field);
-            // ALEX: Here we can use the dominator t since moveLastFieldToDark==false
+            // Here we can use the dominator t since moveLastFieldToDark==false
             dest.setLiveness(lastField.minStage,
                              std::make_pair(dg.min_stage(t), PHV::FieldUse(READ)));
             PHV::DarkInitEntry noInitDark(dest);
@@ -1184,7 +1182,7 @@ std::optional<PHV::ActionSet> DarkLiveRange::getInitActions(
     const PHV::Field* f = field.field.field();
     for (const auto* act : tablesToActions.getActionsForTable(t)) {
         // If field is already written in this action, do not initialize here.
-        // *ALEX* This should be updated to be done at slice granularity
+        //  This should be updated to be done at slice granularity
         if (actionConstraints.written_in(field.field, act)) {
             LOG5("\tA. Field " << field.field << " already written in action " << act->name <<
                 " of table " << t->name);
@@ -1248,7 +1246,7 @@ std::optional<PHV::DarkInitEntry*> DarkLiveRange::getInitForLastFieldToDark(
         bool useARA) const {
     // Find out all the actions in table t, where we need to insert moves into the dark container.
     // DXm[a...b] = Xn[a...b]
-    // ALEX: Only need to do this for non ARA move-to-dark inits
+    // Only need to do this for non ARA move-to-dark inits
     std::optional<PHV::ActionSet> moveActions;
     if (!useARA) {
         moveActions = getInitActions(c, prvField, t, alloc);
@@ -1298,7 +1296,7 @@ std::optional<PHV::DarkInitEntry*> DarkLiveRange::getInitForLastFieldToDark(
             std::make_pair(maxDarkStage, PHV::FieldUse(READ)));
     LOG_DEBUG5(TAB4 "Created destination slice " << dstSlice);
 
-    // ALEX: Use actions only for non-ARA primitives
+    // Use actions only for non-ARA primitives
     if (useARA) {
         // Don't have an ARA table yet to add to the slice's units
         return new PHV::DarkInitEntry(dstSlice, srcSlice);
@@ -1326,7 +1324,7 @@ std::optional<PHV::DarkInitEntry*> DarkLiveRange::getInitForCurrentFieldWithZero
 
     // Find out all actions in table t, where we need to initialize @field to 0 in container @c.
     // c[a...b] = 0
-    // ALEX: Use initAction for non-ARA primitives
+    // Use initAction for non-ARA primitives
     std::optional<PHV::ActionSet> initActions;
     if (!useARA) {
         initActions = getInitActions(c, field, t, alloc);
@@ -1339,7 +1337,7 @@ std::optional<PHV::DarkInitEntry*> DarkLiveRange::getInitForCurrentFieldWithZero
                       dg.min_stage(t));
     dstSlice.setLiveness(std::make_pair(earlyLRstg, PHV::FieldUse(WRITE)), field.maxStage);
     LOG_DEBUG5(TAB4 "Created destination slice " << dstSlice);
-    // ALEX: Use initAction for non-ARA primitives
+    // Use initAction for non-ARA primitives
     if (useARA) {
         if (LOGGING(5)) {
             // Don't have an ARA table yet to add to the slice's units.
@@ -1430,7 +1428,7 @@ DarkLiveRange::generateARAzeroInit(
     // Handle padding fields
     if (field.field.field()->padding || onlyReadCandidates) {
         rv.setNop();
-        // *ALEX* This is not actually required for overlaid fields that are only read
+        //  This is not actually required for overlaid fields that are only read
         // rv.addPriorUnits(prvField->units);
         LOG_DEBUG3(TAB5 "Adding NOP initialization for non-written slice: " << rv);
         return rv;

@@ -16,7 +16,7 @@ namespace solver {
 using ContainerID = cstring;
 
 /// base class for all instructions.
-/// TODO(yumin): currenly instruction classes only print a readable string representation.
+/// TODO: currenly instruction classes only print a readable string representation.
 /// To print asm-compatible string, we need
 /// (1) distinguish inline const v.s. action data.
 /// (2) allow replacing action data with actual address.

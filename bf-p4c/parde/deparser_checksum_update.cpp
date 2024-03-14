@@ -502,7 +502,7 @@ struct GetChecksumPovBits : public Inspector {
                     csum->markAsUnconditional(uncondFieldList);
                 }
             }
-            // TODO(zma) If the condition bit dominates the header validity bit
+            // TODO If the condition bit dominates the header validity bit
             // in the parse graph, we can also safely ignore the condition.
         }
         return false;
@@ -597,7 +597,7 @@ struct SubstituteUpdateChecksums : public Transform {
             }
         }
 
-        // TODO(zma) if user specifies the update conditon, but never set it anywhere,
+        // TODO if user specifies the update conditon, but never set it anywhere,
         // we should treat it as if no condition is specified.
 
         return emitChecksums;

@@ -283,7 +283,7 @@ PHV::Allocation::slicesByLiveness(const PHV::Container c, const AllocSlice& sl) 
     PHV::Allocation::MutuallyLiveSlices rs;
     this->foreach_slice(c, [&] (const PHV::AllocSlice& slice) {
         bool mutex = phv_i->field_mutex()(slice.field()->id, sl.field()->id);
-        // *ALEX* Checking disjoint liveranges may be too conservative due to
+        // Checking disjoint liveranges may be too conservative due to
         // default [parser, deparser] liveranges
         // JIRA-DOC: See P4C-4467
         bool liverange_mutex = slice.isLiveRangeDisjoint(sl);
@@ -303,8 +303,7 @@ PHV::Allocation::byteSlicesByLiveness(const PHV::Container c, const AllocSlice& 
     this->foreach_slice(c, [&] (const AllocSlice& slice) {
         bool mutex = phv_i->field_mutex()(slice.field()->id, sl.field()->id);
         // *ALEX* Checking disjoint liveranges may be too conservative due to
-        // default [parser, deparser] liveranges
-        // JIRA-DOC: See P4C-4467
+        // default [parser, deparser] liveranges - See P4C-4467
         bool liverange_mutex = slice.isLiveRangeDisjoint(sl);
         // In TF2/3 extraction can be done at byte granularity compared
         // to container-granularity in TF1.
@@ -332,7 +331,7 @@ PHV::Allocation::MutuallyLiveSlices
 PHV::Allocation::slicesByLiveness(const PHV::Container c,
                                   std::vector<AllocSlice>& slices) const {
     PHV::Allocation::MutuallyLiveSlices rs;
-    // TODO(yumin): discrepancy with ^ slicesByLiveness function
+    // TODO: discrepancy with ^ slicesByLiveness function
     // liveRangeDisjoint not check in this function.
     this->foreach_slice(c, [&] (const AllocSlice& slice) {
         if (std::any_of(slices.begin(), slices.end(), [&](const AllocSlice& sl) {
@@ -851,7 +850,7 @@ void PHV::ConcreteAllocation::deallocate(const ordered_set<PHV::AllocSlice>& sli
         container_status_i[c].slices.erase(sl);
         field_status_i[sl.field()].erase(sl);
     }
-    // TODO(yumin): This is still not 100% correct because if we just removed deparsed
+    // TODO: This is still not 100% correct because if we just removed deparsed
     // slices of a container *c*, deparser group gress prop of all other containers in
     // the same deparser group might need to be cleared if c was the only one that has
     // deparsed slice.
@@ -1249,7 +1248,7 @@ void PHV::AlignedCluster::initialize_constraints() {
     hasDeparsedFields_i = false;
 
     for (auto& slice : slices_i) {
-        // XXX(cole): These constraints will be subsumed by deparser schema.
+        // TODO: These constraints will be subsumed by deparser schema.
         exact_containers_i += slice.field()->exact_containers() ? 1 : 0;
         max_width_i = std::max(max_width_i, slice.size());
         aggregate_size_i += slice.size();
@@ -1272,7 +1271,7 @@ void PHV::AlignedCluster::initialize_constraints() {
             alignment_i = s_alignment;
         }
 
-        // XXX(cole): This should probably live in the field object.
+        // TODO: This should probably live in the field object.
         if (slice.field()->deparsed())              num_constraints_i++;
         if (slice.field()->is_solitary())           num_constraints_i++;
         if (slice.field()->deparsed_bottom_bits())  num_constraints_i++;
@@ -1491,7 +1490,7 @@ PHV::RotationalCluster::RotationalCluster(ordered_set<PHV::AlignedCluster*> clus
     // Tally stats.
     kind_i = PHV::Kind::tagalong;
     for (auto* cluster : clusters_i) {
-        // XXX(cole): We'll need to update this for JBay.
+        // TODO: We'll need to update this for JBay.
         if (!cluster->okIn(kind_i))
             kind_i = PHV::Kind::normal;
         if (cluster->exact_containers())
@@ -1579,7 +1578,7 @@ PHV::SuperCluster::SuperCluster(
     // Tally stats.
     kind_i = PHV::Kind::tagalong;
     for (auto* cluster : clusters_i) {
-        // XXX(cole): We'll need to update this for JBay.
+        // TODO: We'll need to update this for JBay.
         if (!cluster->okIn(kind_i))
             kind_i = PHV::Kind::normal;
         if (cluster->exact_containers())
@@ -1780,16 +1779,16 @@ bool PHV::SuperCluster::is_deparser_zero_candidate() const {
 
 /// @returns true if all slices lists and slices are smaller than 32b and no
 /// slice list contains more than one slice per aligned cluster.
-/// XXX(cole): Also check that slice lists with exact_container requirements
+/// TODO: Also check that slice lists with exact_container requirements
 /// are all the same size.  We should check this ahead of time, though.
-/// XXX(cole): Also check that deparsed bottom bits fields are at the front of
+/// TODO: Also check that deparsed bottom bits fields are at the front of
 /// their slice lists.
 bool PHV::SuperCluster::is_well_formed(const SuperCluster* sc, PHV::Error* err) {
     err->set(PHV::ErrorCode::unknown);
     std::map<int, const PHV::SuperCluster::SliceList*> exact_list_sizes;
     int widest = 0;
     for (auto* list : sc->slice_lists()) {
-        // // TODO(yumin): marking solitary and isClearOnWrite for multiple-write field
+        // // TODO: marking solitary and isClearOnWrite for multiple-write field
         // // is the hack we use today. Seeing different fields with solitary constraints,
         // // in one slice list is pretty weird. Here we hack it to allow this case.
         // // check solitary constraints for all slice list.
@@ -1842,7 +1841,7 @@ bool PHV::SuperCluster::is_well_formed(const SuperCluster* sc, PHV::Error* err) 
                 return false;
             }
         }
-        // XXX(yumin): a slice list like below: actually requires > 8 bit container because
+        // TODO: a slice list like below: actually requires > 8 bit container because
         // 6(the alignment constraint) + 6 (the size of the field) = 12 > 8.
         // [ ingress::Cassa.Dairyland.Osterdock<6> ^6 ^bit[0..9] meta [0:5] ]
         if (auto alignment = list->front().alignment()) {
@@ -2046,7 +2045,7 @@ std::ostream &operator<<(std::ostream &out, const PHV::RotationalCluster* cl) {
     return out;
 }
 
-// TODO(cole): This could really stand to be improved.
+// TODO: This could really stand to be improved.
 std::ostream &operator<<(std::ostream &out, const PHV::SuperCluster& g) {
     // Print the slice lists.
     out << "SUPERCLUSTER Uid: " << g.uid << std::endl;

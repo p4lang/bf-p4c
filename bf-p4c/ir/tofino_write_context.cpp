@@ -83,10 +83,10 @@ bool TofinoWriteContext::isRead(bool root_value) {
     if (salu && current == salu->output_dst) {
         return false; }
 
-    // XXX(seth): This treats both the destination and the source of the extract
+    // TODO: This treats both the destination and the source of the extract
     // as read. This is a hack intended to capture the fact that parser writes
     // OR the destination PHV container with its existing contents.
-    // XXX(seth): We should remove this as soon as it's no longer needed; it
+    // TODO: We should remove this as soon as it's no longer needed; it
     // doesn't make sense.
     if (ctxt->node->is<IR::BFN::ParserLVal>() && ctxt->parent &&
         ctxt->parent->node->is<IR::BFN::Extract>())
@@ -101,12 +101,12 @@ bool TofinoWriteContext::isRead(bool root_value) {
         return true;
 
     // An Emit reads both the emitted field and the POV bit.
-    // XXX(seth): These should be represented as l-values as well.
+    // TODO: These should be represented as l-values as well.
     if (ctxt->node->is<IR::BFN::EmitField>())
         return true;
 
     // An EmitChecksum reads the POV bit and all checksummed fields.
-    // XXX(seth): These also.
+    // TODO: These also.
     if (ctxt->node->is<IR::BFN::EmitChecksum>())
         return true;
 

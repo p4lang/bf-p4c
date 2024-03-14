@@ -20,7 +20,7 @@ bool IxbarFriendlyPacking::may_create_container_conflict(
     const FieldSlice& a, const FieldSlice& b, const FieldDefUse& defuse,
     const DependencyGraph& deps, const TablesMutuallyExclusive& table_mutex, int n_stages,
     const MauBacktracker* mau) {
-    // TODO(yumin): change to field-slice level check when we support it in defuse.
+    // TODO: change to field-slice level check when we support it in defuse.
     if (a.field() == b.field()) return false;
     for (const auto& a_def : defuse.getAllDefs(a.field()->id)) {
         if (!a_def.first->is<IR::MAU::Table>()) continue;
@@ -309,7 +309,7 @@ IxbarFriendlyPacking::make_table_key_candidates(const std::list<SuperCluster*>& 
         }
     }
 
-    // TODO(yumin):
+    // TODO:
     // we only support whole field packing for now. Even if we can pack
     // a slice of the field, because we need to update alignment of the whole field,
     // we need to run AllocVerifier on all related super clusters. It is possible

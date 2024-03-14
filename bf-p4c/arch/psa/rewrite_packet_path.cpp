@@ -11,7 +11,7 @@ namespace BFN {
 
 namespace PSA {
 
-// TODO(hanw): write an analysis to find how many field list to generate for resubmit
+// TODO: write an analysis to find how many field list to generate for resubmit
 // insert the assignment to idx to each path in the if statement.
 // write a converter to insert idx to if statement after each iftrue.
 // use a stack and visitor framework

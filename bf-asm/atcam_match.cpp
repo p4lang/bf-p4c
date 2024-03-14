@@ -41,7 +41,7 @@ void AlgTcamMatchTable::setup(VECTOR(pair_t) &data) {
     common_sram_checks();
 }
 
-// XXX(Amresh): This could probably be rewritten in a simpler way. Below
+// TODO: This could probably be rewritten in a simpler way. Below
 // function checks the ways extracted from assembly for atcam and assumes the
 // way no's are not sorted with column priority. Therefore the code sorts the
 // first ram column and sets the column priority based on this column. Then this

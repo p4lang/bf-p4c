@@ -7,7 +7,7 @@
 #include "lib/cstring.h"
 
 /// This is the file in which we will document all PHV constraints.
-/// XXX(Deep): Integrate all constraints into this class format.
+/// TODO: Integrate all constraints into this class format.
 
 namespace PHV {
 

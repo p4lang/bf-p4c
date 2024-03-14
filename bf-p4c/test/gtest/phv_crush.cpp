@@ -115,7 +115,7 @@ TEST_F(TofinoPhvCrush, sliceSuperCluster) {
 }
 
 TEST_F(TofinoPhvCrush, clusterAlignment) {
-    // XXX(cole): This just tests the first bit of the valid bits, not all
+    // TODO: This just tests the first bit of the valid bits, not all
     // valid bits.
     using FieldData = struct {
         int field_size;

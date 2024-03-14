@@ -70,10 +70,10 @@ void CollectMochaCandidates::end_apply() {
         // If field size is not in byte multiples, we must perform extra analysis to determine if
         // the exact containers requirement for the mocha candidate field can be satisfied. For now,
         // we ignore those fields for mocha allocation.
-        // XXX(Deep): Add analysis to determine if the exact_containers requirement can be satisfied
+        // TODO: Add analysis to determine if the exact_containers requirement can be satisfied
         // for nonbyte-aligned packet fields.
         //
-        // XXX(hanw): commented out, does this constraint make any sense?
+        // TODO: commented out, does this constraint make any sense?
         // Whether the program analysis 'think' a field is mocha candidate is
         // orthogonal to whether a mocha field can be allocated to a mocha
         // container. Filter out valid candidate during program analysis seems

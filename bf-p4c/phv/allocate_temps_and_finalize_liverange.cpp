@@ -145,7 +145,7 @@ AllocateTempsAndFinalizeLiverange::AllocateTempsAndFinalizeLiverange(
                     ::error("Failed to allocated temp vars: %1%", rst.err.str());
                 }
             }),
-            // XXX(yumin): even if temp var allocation does not introduce
+            // TODO: even if temp var allocation does not introduce
             // a container conflict, the table layout does not have the
             // correct action data as this temp var was not allocated during last TP.
             // So we need to redo table placement.

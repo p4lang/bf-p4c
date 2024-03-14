@@ -616,7 +616,7 @@ void Parser::output(json::map& ctxt_json) {
 }
 
 // output context.json format prior to multiple parser support
-// XXX(hanw): remove after multi-parser support is fully-tested.
+// TODO: remove after multi-parser support is fully-tested.
 void Parser::output_legacy(json::map& ctxt_json) {
     if (all.empty()) return;
     for (auto st : all) st->pass2(this);

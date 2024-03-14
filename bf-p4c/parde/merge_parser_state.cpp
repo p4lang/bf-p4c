@@ -94,9 +94,9 @@ class ComputeMergeableState : public ParserInspector {
         if (is_merge_point(next_state))
             return;
 
-        // grg: removed check that prevented merging with a state containing a select
+        // removed check that prevented merging with a state containing a select
 
-        // TODO(zma) more thoughts can be given to this
+        // TODO more thoughts can be given to this
         for (auto stmt : next_state->statements) {
             if (stmt->is<IR::BFN::ParserCounterLoadPkt>())
                 return;

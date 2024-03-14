@@ -277,7 +277,7 @@ class RewriteTypeArguments : public Transform {
  * \ingroup SimplifyEmitArgs
  * \brief Top level PassManager that governs simplification of headers and emits.
  *
- * XXX(hanw): We can probably simplify this pass manager by combining
+ * TODO: We can probably simplify this pass manager by combining
  * the following four passes into fewer passes.
  */
 class SimplifyEmitArgs : public PassManager {

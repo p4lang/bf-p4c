@@ -91,12 +91,12 @@ std::ostream& operator<<(std::ostream& out, const IR::BFN::Phase0* p0) {
     // initialize the phase 0 data before the bits assigned to fields are given
     // their user-provided values. Having this available gives us a little more
     // flexibility when packing phase 0 fields.
-    // XXX(seth): The above isn't actually implemented, but it's planned. Right
+    // TODO: The above isn't actually implemented, but it's planned. Right
     // now, the driver acts as if this is always set to zero.
     out << indent << "constant_value: 0" << std::endl;
 
     // Write out the actions block with the param order
-    // XXX(amresh): This is a fake action block output in assembly to allow
+    // TODO: This is a fake action block output in assembly to allow
     // generating context json as expected by driver. No instructions are
     // generated as,
     // 1. phase0 does not do any actual ALU operations

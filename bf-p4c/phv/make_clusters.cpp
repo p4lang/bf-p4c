@@ -344,7 +344,7 @@ void Clustering::MakeAlignedClusters::end_apply() {
     // Create AlignedClusters from sets.
     for (auto& cluster_set : union_find_i) {
         // Create AlignedClusters, distinguishing between PHV/TPHV requirements.
-        // XXX(cole): Need to account for all kinds of PHV for JBay.
+        // TODO: Need to account for all kinds of PHV for JBay.
         bool tphv_candidate = std::all_of(
             cluster_set.begin(), cluster_set.end(),
             [&](const PHV::FieldSlice& slice) { return slice.is_tphv_candidate(uses_i); });
@@ -567,7 +567,7 @@ void Clustering::CollectPlaceTogetherConstraints::pack_pa_byte_pack_and_update_a
 void Clustering::CollectPlaceTogetherConstraints::pack_pa_container_sized_metadata() {
     for (const auto& kv : self.pa_container_sizes_i.field_to_layout()) {
         const auto* field = kv.first;
-        // XXX(yumin): don't need to put fields smaller than 8 bits into slicelist
+        // TODO: don't need to put fields smaller than 8 bits into slicelist
         // because they won't be split anyway.
         if (field->size <= 8) {
             continue;
@@ -581,7 +581,7 @@ void Clustering::CollectPlaceTogetherConstraints::pack_pa_container_sized_metada
 }
 
 void Clustering::CollectPlaceTogetherConstraints::pack_constrained_metadata() {
-    // XXX(cole): This is a temporary hack to try to encourage slices of
+    // TODO: This is a temporary hack to try to encourage slices of
     // metadata fields with alignment constraints to be placed together.
     for (auto& kv : self.fields_to_slices_i) {
         if (!self.uses_i.is_referenced(kv.first)) continue;
@@ -602,7 +602,7 @@ void Clustering::CollectPlaceTogetherConstraints::pack_constrained_metadata() {
             kv.first->written_in_force_immediate_table() || actions_i.hasSpecialityReads(kv.first)
             || kv.first->same_container_group() || kv.first->no_holes();
 
-        // XXX(cole): Bridged metadata is treated as a header, except in the
+        // TODO: Bridged metadata is treated as a header, except in the
         // egress pipeline, where it's treated as metadata.  We need to take
         // care here not to add those fields to slice lists here, because they
         // will already have been added when traversing headers.
@@ -800,7 +800,7 @@ bool Clustering::CollectPlaceTogetherConstraints::preorder(const IR::BFN::Parser
             const int sz = PHV::SuperCluster::slice_list_total_bits(*accumulator);
             const bool has_ec = PHV::SuperCluster::slice_list_has_exact_containers(*accumulator);
             if (sz % 8 != 0 && has_ec) {
-                // XXX(yumin): alternatively, we can add some dummy_padding fields.
+                // TODO: alternatively, we can add some dummy_padding fields.
                 // but conservatively, we do not do it here.
                 LOG3(
                     "CANNOT build bridged extracted together "
@@ -1263,7 +1263,7 @@ void Clustering::MakeSuperClusters::end_apply() {
     // copy cluster_set, we add to it
     for (auto cluster_set : cluster_union_find) {
         // Collect slice lists that induced this grouping.
-        // XXX(cole): Caching would be much more efficient.
+        // TODO: Caching would be much more efficient.
         ordered_set<PHV::SuperCluster::SliceList*> these_lists;
         ordered_set<PHV::FieldSlice> slices_in_these_lists;
         for (auto* rotational_cluster : cluster_set)
@@ -1289,7 +1289,7 @@ void Clustering::MakeSuperClusters::end_apply() {
                     }
 
         // side-effect: cluster_set and these_lists might changes, and also global phvInfo.
-        // XXX(yumin): new dummy padding fields might be added to PhvInfo.
+        // TODO: new dummy padding fields might be added to PhvInfo.
         // They will not be deleted unless rerun collect fields. So if this pass will be
         // run multiple times, e.g., in table placement first alloc, we need to ignore
         // dummy fields added in all previous runs.
@@ -1366,9 +1366,9 @@ void Clustering::MakeSuperClusters::addPaddingForMarshaledFields(
             // If a slice has bridged field, then it's padding is handled by bridged metadata
             // packing now. Adding extract padding here will make parse_bridged state wrong
             // because we do not adjust bridged metadata state.
-            // TODO(yumin): in a long term, we need a way to deal with those marshaled fields,
+            // TODO: in a long term, we need a way to deal with those marshaled fields,
             // bridged/mirrored/resubmited uniformly.
-            // XXX(yumin): as of SDE 9.3, we already have flexible packing for ^. However, for
+            // TODO: as of SDE 9.3, we already have flexible packing for ^. However, for
             // those profiles that has not updated to use fleixble packing, we still need this
             // function so that the field list they deparsed is byte-sized.
             if (has_bridged) {
@@ -1448,13 +1448,13 @@ std::optional<cstring> Clustering::ValidateClusters::validate_exact_container_li
                 has_exact_containers |= fs.field()->exact_containers();
                 has_non_exact_containers |= !fs.field()->exact_containers();
             }
-            // XXX(yumin): it may be fine to mix exact or non_exact containers fields,
+            // TODO: it may be fine to mix exact or non_exact containers fields,
             // e.g. checksum destination on egress can be an example of this.
             // However, We need to investigate further on how it will impact phv allocation.
             if (has_non_exact_containers && has_exact_containers) {
                 LOG1("mixed with exact_containers and non_exact_containers slices: " << sl);
             }
-            // XXX(yumin): it's okay for padding fields to be not byte-sized.
+            // TODO: it's okay for padding fields to be not byte-sized.
             if (has_exact_containers && is_used && !has_padding) {
                 int sz = PHV::SuperCluster::slice_list_total_bits(*sl);
                 if (sz % 8 != 0) {

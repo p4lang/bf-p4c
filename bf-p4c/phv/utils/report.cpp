@@ -5,7 +5,7 @@
 using ContainerAllocStatus = PHV::Allocation::ContainerAllocStatus;
 
 void PHV::AllocationReport::collectStatus() {
-    // TODO(yumin): code duplication of available_spots()
+    // TODO: code duplication of available_spots()
     // Compute status.
     for (const auto &kv : alloc) {
         PHV::Container c = kv.first;

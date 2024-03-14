@@ -63,7 +63,7 @@ inline std::vector<Context> all_contexts(Kind kind) {
  * `tagalong < normal`, because tagalong containers don't support reads/writes in the MAU, whereas
  * normal containers do.
  */
-// XXX(Jed): This was previously a partial order. Turned into a total order so that things behave
+// TODO: This was previously a partial order. Turned into a total order so that things behave
 // properly when Kind is used as a key in std::map or an element in std::set. It's hard to search
 // for all the places where this operator is used, so I'm not confident that this won't break
 // anything.
@@ -76,7 +76,7 @@ inline std::vector<Context> all_contexts(Kind kind) {
 inline bool operator<(Kind left, Kind right) {
     // Unfortunately, using the all_contexts map to define this inequality causes a massive slowdown
     // (>2x) in compilation times.
-    // XXX(Deep): Figure out a way to use the all_contexts map to define this inequality.
+    // TODO: Figure out a way to use the all_contexts map to define this inequality.
 
     return (size_t) left < (size_t) right;
 }

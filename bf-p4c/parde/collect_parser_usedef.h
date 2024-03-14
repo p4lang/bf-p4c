@@ -368,8 +368,8 @@ struct CollectParserUseDef : PassManager {
             return ParserInspector::init_apply(root);
         }
 
-        // XXX(zma) what if extract gets dead code eliminated?
-        // XXX(zma) this won't work if the extract is out of order
+        // TODO what if extract gets dead code eliminated?
+        // TODO this won't work if the extract is out of order
         bool preorder(const IR::BFN::Extract* extract) override {
             auto state = findContext<IR::BFN::ParserState>();
             le_bitrange bits;

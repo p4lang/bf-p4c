@@ -34,7 +34,7 @@ class FindInitializationNode : public Inspector {
 
     /// Actions where we cannot initialize metadata because they use hash distributions (and
     // therefore, cannot have a bitmasked-set operation in them).
-    // XXX(Deep): For now, disable initialization at all such actions (and tables that contain those
+    // TODO: For now, disable initialization at all such actions (and tables that contain those
     // actions). In the longer term, change this to recognize when a bitmasked-set operation/action
     // data is necessary to realize the initialization operation.
     ordered_set<const IR::MAU::Action*>     doNotInitActions;
@@ -134,7 +134,7 @@ class FindInitializationNode : public Inspector {
     /// @returns true if the fields can be initialized, and false if they cannot. @p fields may be
     /// mutated to remove all but one mutual exclusive field (only the field with the largest live
     /// range will remain).
-    /// *ALEX* Description is inacurrate (obsolete?)
+    ///  Description is inacurrate (obsolete?)
     bool filterOutMutexFields(
             std::vector<const PHV::Field*>& fields,
             const ordered_map<int, std::pair<int, int>>& livemap) const;

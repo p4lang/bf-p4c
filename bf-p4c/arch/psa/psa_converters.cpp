@@ -369,7 +369,7 @@ const IR::Node* EgressControlConverter::postorder(IR::P4Control *node) {
     tnaParams.emplace("eg_intr_md_for_oport", param->name);
     paramList->push_back(param);
 
-    /// XXX(hanw) following three parameters are added and should be removed after
+    /// TODO following three parameters are added and should be removed after
     /// the defuse analysis is moved to the midend and bridge metadata is implemented.
 
     // add ig_intr_md_from_prsr

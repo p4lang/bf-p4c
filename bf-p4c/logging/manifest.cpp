@@ -232,7 +232,7 @@ void Manifest::serializePipes(Writer& writer) {
     writer.Key("pipes");
     writer.StartArray();  // for each pipe
     for (auto &pipeOutput : m_pipeOutputs) {
-        // XXX(yumin): have to add this check for a ghost thread profile.
+        // TODO: have to add this check for a ghost thread profile.
         // JIRA-DOC: P4C-3327
         if (m_pipes.count(pipeOutput.first)) {
             writer.StartObject();

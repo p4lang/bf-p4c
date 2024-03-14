@@ -366,11 +366,11 @@ bool FieldDefUse::preorder(const IR::MAU::Action *act) {
 }
 
 bool FieldDefUse::preorder(const IR::MAU::Primitive* prim) {
-    // XXX(yumin): consider h.f1 = h.f1 + 1; When we visit it,
+    // TODO: consider h.f1 = h.f1 + 1; When we visit it,
     // we should first visit the source on the RHS, as how hardware does.
     // The h.f1 on RHS is an use of previous def, and the one on LHS is a
     // write that clears the previous defs from this point.
-    // TODO(yumin): The long-term fix for this is to change the order of visiting when
+    // TODO: The long-term fix for this is to change the order of visiting when
     // visiting IR::MAU::Primitive to the evaluation order defined in spec,
     // to make control flow visit correct.
     LOG6("FieldDefUse preorder Primitive : " << prim << IndentCtl::indent);

@@ -166,7 +166,7 @@ IR::Node* RemovePushInitialization::preorder(IR::MAU::Action* act) {
             std::stringstream msg;
             for (auto idx : kv.second)
                 msg << idx << " ";
-            // XXX(cole): This should really be P4C_UNIMPLEMENTED.
+            // TODO: This should really be P4C_UNIMPLEMENTED.
             ::warning("Header stack elements must be initialized in the action in which "
                               "they are pushed.  %1% is pushed but indices %3%are not "
                               "initialized in action %2%",
@@ -240,7 +240,7 @@ IR::Node* ValidToStkvalid::postorder(IR::BFN::Extract* extract) {
     // Replace the slice with $stkvalid, and shift the value being assigned to
     // the offset of the destination bit.
     //
-    // XXX(cole): This discards aliasing information, because it replaces the
+    // TODO: This discards aliasing information, because it replaces the
     // stkvalid slice (which is aliased to $valid) with the entirety of
     // $stkvalid, which is not.
     extract->dest = new IR::BFN::FieldLVal(member);

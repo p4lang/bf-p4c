@@ -39,7 +39,7 @@
 
 int DefaultNext::id_counter = 0;
 
-// TODO(zma) not sure how the tEOP buses are shared, punt it for another day
+// TODO not sure how the tEOP buses are shared, punt it for another day
 static int teop = 0;
 
 namespace {
@@ -53,14 +53,14 @@ cstring keyAnnotationName(const IR::MAU::TableKey* table_key, cstring table_name
         // and pdgen use "$valid".
         if (annName.endsWith("$valid$"))
             annName = annName.substr(0, annName.size() - 1);
-        // XXX(cole): This is a hack to remove slices from key annName annotations,
+        // TODO: This is a hack to remove slices from key annName annotations,
         // eg. "foo.bar[3:0]" becomes "foo.bar".
-        // XXX(hanw): The hack is here because frontend uses @name annotation to keep
+        // TODO: The hack is here because frontend uses @name annotation to keep
         // the original name of the table key and annotation does not keep the
         // IR structure of a slice. The original name of the table key must be
         // kept in case an optimization renames the table key name (not sure if
         // there is optimization that does this).
-        // XXX(amreshk): For a slice with mask, skip the hack as the entire expression is output in
+        // TODO: For a slice with mask, skip the hack as the entire expression is output in
         // bf-rt so it must be in sync with the context.json. This is however based on driver
         // requirements and subject to change.
         auto [key, mask] = get_key_and_mask(annName);
@@ -72,7 +72,7 @@ cstring keyAnnotationName(const IR::MAU::TableKey* table_key, cstring table_name
             if (sm.size() == 3) {
                 auto newAnnName = s.substr(0, sm.position(0));
                 if (!table_name.isNullOrEmpty())
-                    // XXX(cole): It would be nice to report srcInfo here.
+                    // TODO: It would be nice to report srcInfo here.
                     ::warning(BFN::ErrorType::WARN_SUBSTITUTION,
                               "%1%: Table key name not supported. "
                               "Replacing \"%2%\" with \"%3%\".", table_name, annName, newAnnName);
@@ -354,7 +354,7 @@ class MauAsmOutput::EmitAttached : public Inspector {
     bool preorder(const IR::MAU::TernaryIndirect *) override;
     bool preorder(const IR::MAU::ActionData *) override;
     bool preorder(const IR::MAU::StatefulAlu *) override;
-    // XXX(zma) bfas does not recognize idletime as a table type,
+    // TODO bfas does not recognize idletime as a table type,
     // therefore we're emitting idletime inlined, see MauAsmOutput::emit_idletime
     bool preorder(const IR::MAU::IdleTime *) override { return false; }
     bool preorder(const IR::Attached *att) override {
@@ -3090,7 +3090,7 @@ void MauAsmOutput::emit_table_indir(std::ostream &out, indent_t indent,
     for (auto back_at : tbl->attached) {
         auto at_mem = back_at->attached;
         if (at_mem->is<IR::MAU::TernaryIndirect>()) continue;
-        if (at_mem->is<IR::MAU::IdleTime>()) continue;  // XXX(zma) idletime is inlined
+        if (at_mem->is<IR::MAU::IdleTime>()) continue;  // TODO idletime is inlined
         if (at_mem->is<IR::MAU::StatefulAlu>() && back_at->use == IR::MAU::StatefulUse::NO_USE)
             continue;  // synthetic salu for driver to write to selector; not used directly
         for (auto id : find_attached_ids(tbl, at_mem)) {

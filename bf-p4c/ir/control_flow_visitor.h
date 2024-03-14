@@ -19,7 +19,7 @@ class ControlFlowVisitor : public ::ControlFlowVisitor, virtual public P4::Resol
      * yet been implemented. So some visitors need to also filter Tables (and visit them
      * repeatedly with visitDagOne = false or visitAgain) or they'll fail.
      *
-     * XXX(cole): If IR::BFN::ParserPrimitive nodes are not specifically
+     * TODO: If IR::BFN::ParserPrimitive nodes are not specifically
      * excluded from join points, then they (and their children) will be
      * visited out of control flow order.
      *

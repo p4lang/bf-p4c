@@ -192,7 +192,7 @@ const IR::Node* AddPaddingFields::preorder(IR::StructExpression *st) {
 
     LOG3(" start modifying ");
     IR::IndexedVector<IR::NamedExpression> components;
-    // XXX(hanw): TypeChecking algorithm on IR::StructExpression
+    // TODO: TypeChecking algorithm on IR::StructExpression
     // does not annotate the expression with the original IR::Type_Header.
     // Instead, it creates another IR::Type_Header instance with the same name
     // as the original header type, but without the annotation on the fields.

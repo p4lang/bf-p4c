@@ -196,7 +196,7 @@ TypeSpecParser TypeSpecParser::make(const p4configv1::P4Info& p4info,
             if (fieldNames && int(fieldNames->size()) > fNameIdx) {
                 fName = (*fieldNames)[fNameIdx++];
             } else {
-                // TODO(antonin): we do not really have better names for now, do
+                // TODO: we do not really have better names for now, do
                 // we need to add support for annotations of tuple members in
                 // P4Info?
                 fName = "f" + std::to_string(id);
@@ -204,13 +204,13 @@ TypeSpecParser TypeSpecParser::make(const p4configv1::P4Info& p4info,
             addField(id++, fName, member);
         }
     } else if (typeSpec.has_bitstring() || typeSpec.has_serializable_enum()) {
-        // TODO(antonin): same as above, we need a way to pass name
+        // TODO: same as above, we need a way to pass name
         // annotations
         std::string fName;
         if (fieldNames && fieldNames->size() > 0) {
             fName = (*fieldNames)[0];
         } else {
-            // TODO(antonin): we do not really have better names for now, do
+            // TODO: we do not really have better names for now, do
             // we need to add support for annotations of tuple members in
             // P4Info?
             fName = "f1";
@@ -241,7 +241,7 @@ std::optional<BFRuntimeGenerator::Counter>
 BFRuntimeGenerator::Counter::from(const p4configv1::Counter& counterInstance) {
     const auto& pre = counterInstance.preamble();
     auto id = makeBFRuntimeId(pre.id(), p4configv1::P4Ids::COUNTER);
-    // TODO(antonin): this works because the enum values are the same for
+    // TODO: this works because the enum values are the same for
     // Counter::Unit and for CounterSpec::Unit, but this may not be very
     // future-proof.
     auto unit = static_cast<Unit>(counterInstance.spec().unit());
@@ -261,11 +261,11 @@ std::optional<BFRuntimeGenerator::Meter>
 BFRuntimeGenerator::Meter::from(const p4configv1::Meter& meterInstance) {
     const auto& pre = meterInstance.preamble();
     auto id = makeBFRuntimeId(pre.id(), p4configv1::P4Ids::METER);
-    // TODO(antonin): this works because the enum values are the same for
+    // TODO: this works because the enum values are the same for
     // Meter::Unit and for MeterSpec::Unit, but this may not be very
     // future-proof.
     auto unit = static_cast<Unit>(meterInstance.spec().unit());
-    // TODO(antonin): the standard Meter message in P4Info doesn't have the
+    // TODO: the standard Meter message in P4Info doesn't have the
     // notion of color-awareness any more since according to PSA it is a
     // property of the "execute" method and not of the extern instance
     // itself. This means it may be tricky to support color-aware meters for
@@ -1013,7 +1013,7 @@ BFRuntimeGenerator::genSchema() const {
     addActionProfs(tablesJson);
     addCounters(tablesJson);
     addMeters(tablesJson);
-    // TODO(antonin): handle "standard" (v1model / PSA) registers
+    // TODO: handle "standard" (v1model / PSA) registers
 
     auto* learnFiltersJson = new Util::JsonArray();
     json->emplace("learn_filters", learnFiltersJson);

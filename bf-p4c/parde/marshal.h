@@ -14,7 +14,7 @@ struct MarshaledFrom {
     cstring field_name;
     /// Here the `pre` and `post` is in network order, which means, on the wire
     /// the oreder is [pre_padding, field, post_padding].
-    /// XXX(yumin): currently, we do not have post_padding. When we create padding for
+    /// TODO: currently, we do not have post_padding. When we create padding for
     /// those marshalable fields, we append paddings before the field.
     size_t pre_padding;
     // size_t post_padding;

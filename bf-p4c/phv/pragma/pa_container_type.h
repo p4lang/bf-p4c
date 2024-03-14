@@ -9,7 +9,7 @@
 /** Specifies the type of container to which a field should be allocated.
   * Syntax is: `@pragma pa_container_type <gress> <fieldname> <container_type>`
   * container_type can be any PHV::Kind, except tagalong containers.
-  * XXX(Deep): Support specifying tagalong containers as a container kind.
+  * TODO: Support specifying tagalong containers as a container kind.
  */
 class PragmaContainerType : public Inspector {
     PhvInfo& phv_i;

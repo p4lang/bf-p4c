@@ -58,7 +58,7 @@ void ActionSourceTracker::add_sources(const IR::MAU::Action* act,
             if (read.type == ActionParam::PHV) {
                 le_bitrange read_range;
                 auto* f_read = phv.field(read.expr, &read_range);
-                // XXX(yumin): There are some unsupported cases in ActionAnalysis
+                // TODO: There are some unsupported cases in ActionAnalysis
                 // see issue983-bmv2.p4 for example.
                 if (read_range.size() != dest_range.size()) {
                     LOG1("skip incorrect (size-mismatch) source range: " << read.expr);

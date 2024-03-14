@@ -22,7 +22,7 @@
   */
 class MetadataLiveRange : public Inspector {
  public:
-    // XXX(Deep): Should we expose a way of changing the DEP_DIST using a command line flag, as
+    // TODO: Should we expose a way of changing the DEP_DIST using a command line flag, as
     // glass does?
     static constexpr int DEP_DIST = 2;
     /// Name of the ingress parser state, where the compiler adds all the implicit initializations

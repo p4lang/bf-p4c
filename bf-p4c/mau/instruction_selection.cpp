@@ -657,7 +657,7 @@ class DoInstructionSelection::SplitInstructions : public Transform {
 // table "ingress_assign_const_to_phv_0" vs "ingress_assign_const_to_phv_1". Ultimately the
 // metadata PHV selected should be the same because of overlay.
 
-/* TODO(wuc): potential optimization:
+/* TODO: potential optimization:
  * consider a IR tree like this:
  *                (TableSeq a)
  *                  /     \
@@ -1111,11 +1111,11 @@ static const IR::MAU::Instruction *fillInstDest(const IR::Expression *in,
 }
 
 static bool isDepositMask(long) {
-    /* TODO(cdodd) */
+    /* TODO */
     return false;
 }
 static const IR::MAU::Primitive *makeDepositField(IR::MAU::Primitive *prim, long) {
-    /* TODO(cdodd) */
+    /* TODO */
     return prim;
 }
 

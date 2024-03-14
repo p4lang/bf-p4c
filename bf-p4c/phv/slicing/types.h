@@ -47,7 +47,7 @@ struct IteratorConfig {
 
     /// smartly backtrack to the frame that made the invalid packing decision, by leveraging the
     /// invalid packing info from packing validator.
-    /// TODO(yumin): prefer to enable but still alt-phv-alloc only because of regression.
+    /// TODO: prefer to enable but still alt-phv-alloc only because of regression.
     bool smart_backtracking_mode = false;
 
     /// Misc improvements that are almost *necessary* for slicing but cannot be enabled
@@ -55,7 +55,7 @@ struct IteratorConfig {
     /// (1) when choosing the next slice list, prefer the one what the size of its head
     ///     byte has been decided, for exact containers only.
     /// (2) split out the tail if the size of the tail byte have been decided, recursively.
-    /// TODO(yumin): prefer to enable but still alt-phv-alloc only because of regression.
+    /// TODO: prefer to enable but still alt-phv-alloc only because of regression.
     bool smart_slicing = true;
 
     /// Do not examine split decisions rejected by previous slicings

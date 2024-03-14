@@ -173,7 +173,7 @@ struct PhvKit {
     /// remove singleton metadata slice list. This was introduced because some metadata fields are
     /// placed in a slice list, but they do not need to be. Removing them from slice list allows
     /// allocator to try more possible starting positions.
-    /// TODO(yumin): we should fix this in make_clusters and remove this function.
+    /// TODO: we should fix this in make_clusters and remove this function.
     static std::list<PHV::SuperCluster*> remove_singleton_metadata_slicelist(
             const std::list<PHV::SuperCluster*>& cluster_groups);
 

@@ -160,7 +160,7 @@ class RemoveInstanceRef : public Transform {
  * headers and replace them with references to the header's `$valid` POV bit
  * field.
  *
- * XXX(seth): It would be nicer to deal with this in terms of the
+ * TODO: It would be nicer to deal with this in terms of the
  * frontend/midend IR, because then we could rerun type checking and resolve
  * references to make sure everything is still correct. Doing it here feels a
  * bit hacky by comparison. This is considerably simpler, though, so it makes

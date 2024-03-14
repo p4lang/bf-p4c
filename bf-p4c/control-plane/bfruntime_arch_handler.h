@@ -247,7 +247,7 @@ struct ActionSelector {
     const cstring name;  // The fully qualified external name of this action selector.
     const std::optional<cstring> actionProfileName;  // If not known, we will generate
                                                        // an action profile instance.
-    const int64_t size;  // TODO(hanw): size does not make sense with new ActionSelector P4 extern
+    const int64_t size;  // TODO: size does not make sense with new ActionSelector P4 extern
     const int64_t maxGroupSize;
     const int64_t numGroups;
     const IR::IAnnotated *annotations;  // If non-null, any annotations applied to this action
@@ -635,7 +635,7 @@ class SnapshotFieldFinder : public Inspector {
     bool preorder(const IR::Type_Varbits *type) override {
         Log::TempIndent indent;
         LOG4("SnapshotFinder preorder Type_Varbits: " << type << indent);
-        // TODO(antonin): unsure whether anything needs to be done / can be done
+        // TODO: unsure whether anything needs to be done / can be done
         // for VL fields.
         (void)type;
         return false;
@@ -896,7 +896,7 @@ class BFRuntimeArchHandlerCommon : public P4::ControlPlaneAPI::P4RuntimeArchHand
             addRegister(symbols, p4info, *directRegister, blockPrefix);
         }
 
-        // TODO(antonin): idle timeout may change for TNA in the future and we
+        // TODO: idle timeout may change for TNA in the future and we
         // may need to rely on P4Info table specific extensions.
         if (supportsTimeout) {
             table->set_idle_timeout_behavior(p4configv1::Table::NOTIFY_CONTROL);
@@ -1144,7 +1144,7 @@ class BFRuntimeArchHandlerCommon : public P4::ControlPlaneAPI::P4RuntimeArchHand
         auto action_selector = getExternInstanceFromPropertyByTypeName(
             table, implementationString, "ActionSelector", refMap, typeMap);
         if (!action_selector) return std::nullopt;
-        // TODO(hanw): remove legacy code
+        // TODO: remove legacy code
         // used to support deprecated ActionSelector constructor.
         if (action_selector->substitution.lookupByName("size")) {
             auto size = action_selector->substitution.lookupByName("size")->expression;
@@ -1425,7 +1425,7 @@ class BFRuntimeArchHandlerCommon : public P4::ControlPlaneAPI::P4RuntimeArchHand
     }
 
     /// calls @p function on every extern method applied to the extern @p object
-    // TODO(Antonin): for some reason we sometimes get multiple calls on the
+    // TODO: for some reason we sometimes get multiple calls on the
     // same extern method (but different IR node), and I haven't found out why
     // or when this happens.
     template <typename Func>

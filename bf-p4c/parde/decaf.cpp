@@ -583,7 +583,7 @@ std::vector<const IR::MAU::Table*>
 ComputeValuesAtDeparser::get_next_tables(const IR::MAU::Table* curr_table,
                                 const ordered_map<const IR::MAU::Table*,
                                 ordered_set<const Assign*>>& table_to_assigns) {
-    // XXX(zma) assumes only 2 tables; in general need to get the next tables
+    // TODO assumes only 2 tables; in general need to get the next tables
     // from table graph.
 
     BUG_CHECK(table_to_assigns.size() <= 2, "more than 2 tables?");
@@ -677,7 +677,7 @@ bool ComputeValuesAtDeparser::compute_all_reachable_values_at_deparser(
         }
     }
 
-    // TODO(zma) For more than 2 tables, we need to propagate the values based on
+    // TODO For more than 2 tables, we need to propagate the values based on
     // the lattice order of table dependency, which is non-trivial. As first
     // cut, limit to 2 tables (sufficient for the tunnel encap/decap use case).
     // We also assume the tables are independently predicated which is an overly
@@ -1082,7 +1082,7 @@ SynthesizePovEncoder::create_match_action(const FieldGroup& group) {
     if (vld_bits.size() + ctl_bits.size() > 32) {
         P4C_UNIMPLEMENTED(
               "decaf POV encoder can only accommodate match up to 32-bit currently");
-        // TODO(zma) for match wider than 32-bit, we need a type wider than "unsigned"
+        // TODO for match wider than 32-bit, we need a type wider than "unsigned"
     }
 
     auto all_version_bits = version_map.get_all_version_bits();
@@ -1090,15 +1090,15 @@ SynthesizePovEncoder::create_match_action(const FieldGroup& group) {
     if (all_version_bits.size() > 32) {
         P4C_UNIMPLEMENTED(
               "decaf POV encoder can only accommodate up to 32 unique version bits currently");
-        // TODO(zma) for more than 32-bit, we need a type wider than "unsigned"
+        // TODO for more than 32-bit, we need a type wider than "unsigned"
     }
 
     ordered_map<unsigned, ordered_set<const IR::TempVar*>> match_to_versions;
 
-    // TODO(zma) prune possible vld sets
+    // TODO prune possible vld sets
     auto vld_bits_all_onsets = enumerate_all_subsets(vld_bits);
 
-    // TODO(zma) prune possible ctl sets
+    // TODO prune possible ctl sets
     auto ctl_bits_all_onsets = enumerate_all_subsets(ctl_bits);
 
     for (auto& vld_bits_onset : vld_bits_all_onsets) {

@@ -171,7 +171,7 @@ IR::Node* ImplementDeparserZero::preorder(IR::BFN::Extract* extract) {
     auto* f = phv.field(fieldLVal->field);
     if (!f) return extract;
     // For now, ignore CLOT fields in the deparser zero optimization.
-    // XXX(Deep): Move deparser zero before CLOT allocation so that we save some bandwidth for
+    // TODO: Move deparser zero before CLOT allocation so that we save some bandwidth for
     // CLOTs.
     if (clots.fully_allocated(f)) return extract;
     if (candidateFields.count(f)) return nullptr;

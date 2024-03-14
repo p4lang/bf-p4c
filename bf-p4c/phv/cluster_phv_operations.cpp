@@ -106,7 +106,7 @@ void PHV_Field_Operations::processSaluInst(const IR::MAU::Instruction* inst) {
     //    search bus.  If the input is provided from hash, there is no such
     //    constraint.
     //
-    //    XXX(cole): This last constraint is not implemented!
+    // TODO: This last constraint is not implemented!
 
     auto* statefulAlu = findContext<IR::MAU::StatefulAlu>();
     BUG_CHECK(statefulAlu, "Found an SALU instruction not in a Stateful ALU IR node: %1%", inst);
@@ -179,7 +179,7 @@ void PHV_Field_Operations::processSaluInst(const IR::MAU::Instruction* inst) {
             // placed in a larger container, it must start at a position that
             // corresponds to one of the two SALU operand slots in the IXBAR.
             //
-            // XXX(cole) [ ARTIFICIAL CONSTRAINT ]: We require that the first
+            // TODO [ ARTIFICIAL CONSTRAINT ]: We require that the first
             // operand be allocated in a place that can be loaded into the
             // first SALU operand slot, and the second be allocated such that
             // it can be loaded into the second slot.  However, they could be
@@ -348,7 +348,7 @@ void PHV_Field_Operations::processInst(const IR::MAU::Instruction* inst) {
                             << " as 'no split' for its use in "
                                "instruction "
                             << inst->name << ".");
-            // TODO(cole): Unify no_split and no_split_at.
+            // TODO: Unify no_split and no_split_at.
             if (field_bits.size() == field->size)
                 field->set_no_split(true);
             else
@@ -407,15 +407,15 @@ void PHV_Field_Operations::processInst(const IR::MAU::Instruction* inst) {
         //                                   ^^ - X is incorrect
 
         // Discussion (keep until resolved)
-        // XXX/TODO(glen): Need to restrict packing for regular arithmetic ops.
+        // XXX/TODO: Need to restrict packing for regular arithmetic ops.
         //
-        // XXX(mike):
+        // TODO:
         // Until we add a "don't pack the lower order bits" constraint, we'll
         // have to rely on validate allocation to catch bad packings that hit
         // this corner case.  Unfortunately, it's too restrictive to not pack
         // any sources of non-bitwise instructions.
         //
-        // XXX(cole): In some circumstances, it may be possible to pack these
+        // TODO: In some circumstances, it may be possible to pack these
         // fields in the same container if enough padding is left between them.
 
         if (dst == field) {
@@ -427,12 +427,12 @@ void PHV_Field_Operations::processInst(const IR::MAU::Instruction* inst) {
                 }
 
                 if (
-                    // TODO(vhavel): Fields fitting perfectly into a container could also be
+                    // TODO: Fields fitting perfectly into a container could also be
                     // aligned into msb part of a larger container. Unfortunately, that
                     // introduces new packing possibilities which currently lead to
                     // regressions in a few profiles, while the benefit isn't significant.
                     Device::phvSpec().containerSizes().count((PHV::Size)field->size) == 0
-                    // TODO(vhavel): fallback to solitary constrain until we implement mechanism
+                    // TODO: fallback to solitary constrain until we implement mechanism
                     // to set per-fieldslice valid container range.
                     && field_bits.hi == field->size - 1
                     && inst->operands.at(0)->equiv(*src1)
@@ -472,7 +472,7 @@ void PHV_Field_Operations::processInst(const IR::MAU::Instruction* inst) {
 
     // Currently, because of limitations in the compiler, all operands of a non-set operation must
     // be aligned at bit 0 in the container, if one of the operands is a stateful ALU output.
-    // XXX(Deep): Add implementation for a particular slice to be in the bottom bits of its
+    // TODO: Add implementation for a particular slice to be in the bottom bits of its
     // container.
     for (int idx = 0; idx < int(inst->operands.size()); ++idx) {
         le_bitrange field_bits;

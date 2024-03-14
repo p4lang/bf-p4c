@@ -2185,14 +2185,14 @@ void Table::Actions::gen_tbl_cfg(json::vector &actions_cfg) const {
           error(act.lineno, "Action %s must be allowed to be hit and/or default action.",
                   act.name.c_str());
         action_cfg["allowed_as_hit_action"] = act.hit_allowed;
-        // XXX(amresh): allowed_as_default_action info is directly passed through assembly
+        // TODO: allowed_as_default_action info is directly passed through assembly
         // This will be 'false' for following conditions:
         // 1. Action requires hardware in hit path i.e. hash distribution or
         // random number generator
         // 2. There is a default action declared constant in program which
         // implies all other actions cannot be set to default
         action_cfg["allowed_as_default_action"] = act.default_allowed;
-        // XXX(amresh): "disallowed_as_default_action" is not used by driver.
+        // TODO: "disallowed_as_default_action" is not used by driver.
         // Keeping it here as debugging info. Will be set to "none",
         // "has_const_default", "has_hash_dist". Once rng support is added
         // to the compiler this must reflect "has_rng" or similar string.
@@ -2202,7 +2202,7 @@ void Table::Actions::gen_tbl_cfg(json::vector &actions_cfg) const {
         action_cfg["is_compiler_added_action"] = false;
         action_cfg["constant_default_action"] = act.is_constant;
 
-        // XXX(amresh): These will be set to 'true' & "" for a keyless table to
+        // TODO: These will be set to 'true' & "" for a keyless table to
         // allow any action to be set as default by the control plane
         // Exception is TernaryIndirectTables which dont have params list as they are on the main
         // TernaryMatchTable, hence check for match_table to query params list

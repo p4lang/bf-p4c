@@ -278,7 +278,7 @@ bool FindInitializationNode::mayViolatePackConflict(
                             " are in the same stage, and therefore there is a pack conflict.");
                 return true;
             }
-            // *ALEX* Why do we need to check dependency graph when we
+            //  Why do we need to check dependency graph when we
             // *have table placement information?
             if (dg.min_stage(initTable) == dg.min_stage(t) && !tableMutex(initTable, t)) {
                 LOG_FEATURE("alloc_progress", 5, TAB2 "Initialization table " << initTable->name
@@ -455,7 +455,7 @@ FindInitializationNode::getInitializationCandidates(
         // to avoid adding too many initializations for the field).
         LOG_DEBUG4(TAB2 "Group dominator at an earlier stage (" << allowedStage << ") than "
                    "allowed stage (" << lastAllowedStage << ")");
-        // *ALEX* What is it about having more than 3 strict dominators?
+        //  What is it about having more than 3 strict dominators?
         if (fStrictDominators.size() > 3) return std::nullopt;
         auto all_f_table_uses = getTableUsesForField(f, true /* uses */, true /* defs */);
         bool dominatorsIncreaseCriticalPath = std::any_of(
@@ -526,7 +526,7 @@ FindInitializationNode::getInitializationCandidates(
 
     for (const auto* tbl : candidateTables) {
         // Find the first table where initialization is possible.
-        // *ALEX* What if the first table found is control flow mutex
+        //  What if the first table found is control flow mutex
         // with dominator and uses of field f? Is this possible?
         // JIRA-DOC: (maybe issue for p4c-2678?)
         LOG_DEBUG3(TAB2 "Checking whether initialization is possible at table " << tbl->name);
@@ -560,7 +560,7 @@ inline bool liveRangesOverlap(
     return false;
 }
 
-// *ALEX* Used to be named identifyFieldsToInitialize but name was misleading
+//  Used to be named identifyFieldsToInitialize but name was misleading
 bool FindInitializationNode::filterOutMutexFields(
         std::vector<const PHV::Field*>& fields,
         const ordered_map<int, std::pair<int, int>>& livemap) const {
@@ -680,9 +680,9 @@ FindInitializationNode::findInitializationNodes(
         for (auto& slice : field_to_slices.at(f)) {
             LOG_DEBUG5(TAB1 "Checking slice " << slice << "  dark_init_stage=" << dark_init_stage);
             auto metaInitPoints = alloc.getInitPoints(slice);
-            // ALEX: This is only accounting for the metadata init
+            // This is only accounting for the metadata init
             // points. Lets account for dark initialization points also.
-            // *ALEX*: We are still missing the AlwaysRunAction inits.
+            // : We are still missing the AlwaysRunAction inits.
             PHV::ActionSet darkInitPoints;
             if (slice.hasInitPrimitive()) {
                 LOG_DEBUG5(TAB2 "... is marked darkInit:" << fieldIsDarkInit.count(f->id));
@@ -920,7 +920,7 @@ FindInitializationNode::findInitializationNodes(
         // Calculate the stage where the previously used field was last used. Initialization can be
         // done in any stage between that identified stage and the stage in which the group
         // dominator is.
-        // XXX(Deep): Could we push initialization from group dominator downwards to further shrink
+        // TODO: Could we push initialization from group dominator downwards to further shrink
         // the live ranges?
         int lastUsedStage = -1;
         bool lastUsedStageWritesField = false;

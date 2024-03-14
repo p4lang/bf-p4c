@@ -33,7 +33,7 @@ struct CollectBridgedFields : public Inspector,
 
     ordered_set<FieldRef> mayReadUninitialized[2];
     ordered_set<FieldRef> mayWrite[2];
-    ordered_set<FieldRef> mustWrite[2];  // XXX(seth): Not much use testing this...
+    ordered_set<FieldRef> mustWrite[2];  // TODO: Not much use testing this...
 
     ordered_map<FieldRef, BridgedFieldInfo> fieldInfo;
     std::set<FieldRef> fieldsToBridge;  // using set here to avoid pathological case with

@@ -331,7 +331,7 @@ bool TrivialAllocator::allocate(const std::list<PHV::SuperCluster *> &clusters,
     alloc_metrics.start_clock();
     kit_i.parser_packing_validator->set_trivial_alloc(true);
 
-    // XXX(yumin): it seems okay to ignore strided headers in trivial allocator for now.
+    // TODO: it seems okay to ignore strided headers in trivial allocator for now.
     // but we should add support for them in the future, to check whether they can be
     // allocated or not.
     // create strided clusters
@@ -344,7 +344,7 @@ bool TrivialAllocator::allocate(const std::list<PHV::SuperCluster *> &clusters,
     PhvStatus phv_status;
     bool ok = true;
     for (auto* unsliced_sc : clusters) {
-        // TODO(yumin): we can integrate pre_slice into this allocation progress by
+        // TODO: we can integrate pre_slice into this allocation progress by
         // taking copy of phv status and handle errors correctly. This will save us
         // some time because the validation process inside pre_slice are basically calling
         // slice_and_allocate_sc.

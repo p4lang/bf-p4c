@@ -1493,8 +1493,8 @@ void Parser::write_config(Target::Tofino::parser_regs &regs, json::map &ctxt_jso
     handle_narrow_to_wide_constraint(this, regs);
 
     if (error_count == 0 && options.gen_json) {
-        /// XXX(hanw) remove after 8.7 release
-        /// XXX(amresh) Needs fix to simple test harness for parsers node
+        /// TODO remove after 8.7 release
+        /// TODO Needs fix to simple test harness for parsers node
         /// support
         if (single_parser) {
             if (gress == INGRESS) {
@@ -1525,7 +1525,7 @@ void Parser::write_config(Target::Tofino::parser_regs &regs, json::map &ctxt_jso
         }
     }
 
-    /// XXX(hanw) remove after 8.7 release
+    /// TODO remove after 8.7 release
     if (single_parser) {
         for (int i = 0; i < 18; i++) {
             if (gress == INGRESS) {

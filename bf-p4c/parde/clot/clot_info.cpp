@@ -541,9 +541,9 @@ bool ClotInfo::is_modified(const PHV::Field* field) const {
 
     // Recursively check if the field is aliased with a modified field.
     if (field_aliases_.count(field)) {
-        // XXX(Jed): Treat all aliases as modified for now. For some reason, uses.is_written_mau()
+        // TODO: Treat all aliases as modified for now. For some reason, uses.is_written_mau()
         // is returning false for aliases that are written by MAU.
-#ifdef __XXX_JED_ALIASES_NOT_WORKING
+#ifdef __XXX_ALIASES_NOT_WORKING
         for (auto alias : *(field_aliases_.at(field))) {
             if (is_modified(alias)) {
                 return is_modified_[field] = true;

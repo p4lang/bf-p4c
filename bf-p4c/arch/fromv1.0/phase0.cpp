@@ -372,7 +372,7 @@ struct FindPhase0Table : public Inspector {
             auto* source = assignment->right;
 
             // The action should write to metadata fields only.
-            // XXX(seth): Ideally we'd also verify that it only writes to fields
+            // TODO: Ideally we'd also verify that it only writes to fields
             // that the parser doesn't already write to.
             PathLinearizer path;
             dest->apply(path);
@@ -482,7 +482,7 @@ struct FindPhase0Table : public Inspector {
 
             // Align the field so that its LSB lines up with a byte boundary,
             // which (usually) reproduces the behavior of the PHV allocator.
-            // XXX(hanw): replace impl with @flexible annotation
+            // TODO: replace impl with @flexible annotation
             const int fieldSize = param->type->width_bits();
             const int alignment = getAlignment(fieldSize);
             bool is_pad_field   = param->getAnnotation("padding");
@@ -767,7 +767,7 @@ UpdatePhase0NodeInParser::canPackDataIntoPhase0(
 
         // Align the field so that its LSB lines up with a byte boundary,
         // which (usually) reproduces the behavior of the PHV allocator.
-        // XXX(amresh): Once phase0 node is properly supported in the
+        // TODO: Once phase0 node is properly supported in the
         // backend, we won't need this (or any padding), so we should remove
         // it at that point.
         if (param->annotations->getSingle("padding"))

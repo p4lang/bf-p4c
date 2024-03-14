@@ -139,7 +139,7 @@ IR::BFN::LoweredParserChecksum* ComputeLoweredParserIR::lowerParserChecksum(
     if (dest) {
         auto f = phv.field(dest->field);
         PHV::FieldUse use(PHV::FieldUse::WRITE);
-        slices = phv.get_alloc(f, nullptr, PHV::AllocContext::PARSER, &use);  // XXX(zma)
+        slices = phv.get_alloc(f, nullptr, PHV::AllocContext::PARSER, &use);  // TODO
         BUG_CHECK(slices.size() == 1,
                   "checksum error %1% is somehow allocated to "
                   "multiple containers?",

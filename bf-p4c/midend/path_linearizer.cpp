@@ -64,7 +64,7 @@ bool PathLinearizer::preorder(const IR::HeaderOrMetadata*) {
 }
 
 void PathLinearizer::postorder(const IR::ArrayIndex *array) {
-    // XXX(hanw): currently dropped the index for array,
+    // TODO: currently dropped the index for array,
     // this is not correct, and should be fixed after 8.5
     if (array->left->is<IR::Member>())
         if (linearPath) linearPath->components.push_back(array->left->to<IR::Member>());

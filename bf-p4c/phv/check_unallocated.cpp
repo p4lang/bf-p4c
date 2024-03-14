@@ -12,7 +12,7 @@ CheckForUnallocatedTemps::CheckForUnallocatedTemps(const PhvInfo& phv, PhvUse& u
             new PassIf([this]() { return !unallocated_fields.empty(); },
                     {
                         phv_alloc->make_incremental_alloc_pass(unallocated_fields),
-                        // XXX(yumin): even if temp var allocation does not introduce
+                        // TODO: even if temp var allocation does not introduce
                         // a container conflict, the table layout does not have the
                         // correct action data as this temp var was not allocated during last TP.
                         // So we need to redo table placement.
@@ -29,7 +29,7 @@ void CheckForUnallocatedTemps::collect_unallocated_fields() {
 
         if (clot.fully_allocated(&field)) continue;
 
-        // XXX(hanw): padding does not need phv allocation
+        // TODO: padding does not need phv allocation
         if (field.is_ignore_alloc()) continue;
         if (field.is_avoid_alloc()) continue;
 

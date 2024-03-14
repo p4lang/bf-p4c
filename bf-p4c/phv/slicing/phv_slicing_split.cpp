@@ -7,7 +7,7 @@
 #include "bf-p4c/phv/utils/utils.h"
 #include "lib/log.h"
 
-// XXX(yumin): These codes are ported from the old implementation without any changes.
+// TODO: These codes are ported from the old implementation without any changes.
 // We should refactor and simplify them later.
 
 namespace PHV {
@@ -271,7 +271,7 @@ std::optional<std::list<SuperCluster*>> split(const SuperCluster* sc,
                 slice_list_lo = new PHV::SuperCluster::SliceList();
                 LOG6("    ...(" << offset << ") starting new slice list");
 
-                // XXX(cole): next_split++ fails to resolve to
+                // TODO: next_split++ fails to resolve to
                 // next_split.operator++().  Not sure why.
                 next_split.operator++();
             } else if (offset < *next_split && *next_split < offset + slice.size()) {
@@ -323,7 +323,7 @@ std::optional<std::list<SuperCluster*>> split(const SuperCluster* sc,
                 slice_lists.insert(slice_list_lo);
                 slice_list_lo = new PHV::SuperCluster::SliceList();
                 LOG6("    ...(" << offset << ") starting new slice list");
-                // XXX(cole): next_split++ fails to resolve to
+                // TODO: next_split++ fails to resolve to
                 // next_split.operator++().  Not sure why.
                 next_split.operator++();
                 offset += new_slices.first.size();

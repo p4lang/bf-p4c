@@ -128,7 +128,7 @@ bool PardePhvConstraints::preorder(const IR::BFN::Digest* digest) {
                 }
                 continue;
             }
-            // XXX(Deep): We do not have the ability to impose the right constraints on non byte
+            // TODO: We do not have the ability to impose the right constraints on non byte
             // aligned fields of size greater than 32b. Maybe, the answer is to replace that single
             // field with multiple slices of the field and impose the constraints on those slices?
             ::warning("Cannot yet impose constraints on non byte aligned field, %1% greater than "

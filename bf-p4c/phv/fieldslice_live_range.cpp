@@ -357,7 +357,7 @@ void FieldSliceLiveRangeDB::DBSetter::update_live_range_info(const PHV::FieldSli
         if (use_range.first == -1 && def_range.second == -1) {
             return;
         }
-        // TODO(yumin): we need to handle this case more carefully. For example,
+        // TODO: we need to handle this case more carefully. For example,
         // There could be a table that has a dominating write of this read in control flow
         // but because of ignore_table_dependency pragma, the write table is placed after
         // the read table. Then we need to find write of the read earlier in the pipeline.
@@ -386,7 +386,7 @@ void FieldSliceLiveRangeDB::DBSetter::end_apply() {
     // collect all field slice and identify the max stage used by a table.
     // Note that because defuse analysis is still based on
     // whole fields instead of slices, it is okay to use the whole field.
-    // TODO(yumin):
+    // TODO:
     //   (1) use MakeSlices info from make_clsuters.
     //   (2) update defuse pass to use slice-level read/write analysis.
     ordered_set<PHV::FieldSlice> fs_set;
@@ -482,7 +482,7 @@ void FieldSliceLiveRangeDB::DBSetter::end_apply() {
         // set (w) for tailing writes (write without read)
         for (const FieldDefUse::locpair& def : defuse->getAllDefs(fs.field()->id)) {
             const auto& uses_of_def = defuse->getUses(def);
-            // TODO(yumin): There is a bug in field_defuse and IR::BFN::GhostParser that because
+            // TODO: There is a bug in field_defuse and IR::BFN::GhostParser that because
             // ghost parser write all ghost metadata in one expression, later uses of
             // ghost metadata are paired with this def. For example, in many ghost tests,
             // although ghost::gh_intr_md.pipe_id has no read, and only one def, if you invoke

@@ -134,7 +134,7 @@ bool CoPacker::ok_to_pack(const FieldSliceAllocStartMap& existing, const FieldSl
         bool has_solitary = false;
         ordered_set<const PHV::Field*> all_fields{new_fs.field()};
         has_solitary |= new_fs.field()->is_solitary();
-        /// XXX(yumin): do not need to filter out padding fields because they can
+        /// TODO: do not need to filter out padding fields because they can
         /// never be referenced in actions.
         for (const auto& fs_index : existing) {
             const auto* f = fs_index.first.field();
@@ -162,7 +162,7 @@ const CoPackHint* CoPacker::gen_bitwise_copack(const Allocation& allocated_tx,
     for (const auto& dest_sources : writes) {
         const auto& dest = dest_sources.first;
         const auto& sources = dest_sources.second;
-        // TODO(yumin): copack do not support conditionally-set for now,
+        // TODO: copack do not support conditionally-set for now,
         // which is treated as bitwise with 3 sources.
         if (sources.size() == 3) {
             continue;
@@ -282,7 +282,7 @@ CoPacker::CoPackHintOrErr CoPacker::gen_move_copack(const Allocation& allocated_
     }
     LOG5("gen move copack for " << action);
     // NOTE: we do not generate hints that leverage byte-rotate-merge: it is too complicated.
-    // So, the returned hints are not *required* in any case. TODO(yumin): we can make some
+    // So, the returned hints are not *required* in any case. TODO: we can make some
     // of them required if byte-rotate-merge is not possible.
     // Algorithm: use deposit-field and bitmasked set to synthesize the move.
     // If there were unaligned allocated source slices, save the shift offset and container.
@@ -396,7 +396,7 @@ CoPacker::CoPackHintOrErr CoPacker::gen_move_copack(const Allocation& allocated_
     // We have learned everthing we need about allocated slices, and now we will try to
     // pack unallocated slices. For now, we will just generate the simplest one:
     // try to pack all fields to the aligned source, unless we found packing violation.
-    // TODO(yumin): could we generate errors when allocation failed?
+    // TODO: could we generate errors when allocation failed?
     // auto* err = new AllocError(ErrorCode::INVALID_ALLOC_FOUND_BY_COPACKER);
     for (const auto& dest_sources : writes) {
         const auto& dest = dest_sources.first;

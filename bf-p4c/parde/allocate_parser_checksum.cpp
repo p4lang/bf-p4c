@@ -174,7 +174,7 @@ struct ParserChecksumAllocator : public Visitor {
 
     #define OF_TYPE(a, b, T) (a->is<T>() && b->is<T>())
 
-    // XXX(zma) boilerplates due to IR's lack of support of "deep" comparision
+    // TODO boilerplates due to IR's lack of support of "deep" comparision
 
     bool is_equiv_src(const IR::BFN::ParserChecksumPrimitive* a,
                       const IR::BFN::ParserChecksumPrimitive* b) {

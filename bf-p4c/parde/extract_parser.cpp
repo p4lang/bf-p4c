@@ -1027,7 +1027,7 @@ struct RewriteParserStatements : public Transform {
             if (method->path->name == "extract_greedy") {
                 return rewriteExtractGreedyCall(statement);
             } else if (method->path->name == "verify") {
-                // XXX(zma) allow this to go through to enable more testing
+                // TODO allow this to go through to enable more testing
                 ::warning("Parser \"verify\" is currently unsupported %s", statement->srcInfo);
                 return nullptr;
             }
@@ -1872,7 +1872,7 @@ void ExtractParser::end_apply() {
     Logging::FileLog::close(parserLog);
 }
 
-/// XXX(hanw): This pass must be applied to IR::BFN::Pipe. It modifies the
+/// TODO: This pass must be applied to IR::BFN::Pipe. It modifies the
 /// ingress and egress parser to insert parser state that deals with tofino
 /// intrinsic metadata and resubmit/mirror metadata. It does not have to be
 /// in the backend though. The compiler should be able to insert placeholder

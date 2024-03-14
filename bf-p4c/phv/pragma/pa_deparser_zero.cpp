@@ -66,7 +66,7 @@ bool PragmaDeparserZero::preorder(const IR::BFN::Pipe* pipe) {
         LOG1("    Marking pragma " << pragma_name << " for header " << header_name);
         if (!headerFields.count(header_name))
             continue;
-        // TODO(yumin): BUG HERE.
+        // TODO: BUG HERE.
         // This pass is simply reading from pragma annotations attached before. However,
         // when alias is involved, the previous annotations could be wrong.
         // For example, when a header field is marked not parsed before but its alias source is,

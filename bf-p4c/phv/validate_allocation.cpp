@@ -87,7 +87,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
             continue;
         }
 
-        // XXX(hanw): paddings do not require phv allocation.
+        // TODO: paddings do not require phv allocation.
         ERROR_CHECK(!field.is_unallocated() || !no_clots_allocated || field.is_ignore_alloc() ||
                         field.is_avoid_alloc(),
                     "No PHV or CLOT allocation for referenced field %1%",
@@ -96,7 +96,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
         ERROR_CHECK(!field.bridged || field.deparsed() || field.gress == EGRESS,
                     "Ingress field is bridged, but not deparsed: %1%", cstring::to_cstring(field));
 
-        // TODO(zma) add clot validation
+        // TODO add clot validation
         if (!no_clots_allocated)
             continue;
 
@@ -137,7 +137,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
         }
 
         for (auto& slice : field.get_alloc()) {
-            // XXX(seth): For fields which are parsed or deparsed, this can
+            // TODO: For fields which are parsed or deparsed, this can
             // never work, but there are some odd situations in which it could
             // in theory be useful (e.g. we can rotate containers in the MAU in
             // some scenarios, so we could allocate the field to both the top
@@ -208,7 +208,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
         }
 
         // Verify that all bits in the field are allocated.
-        // XXX(seth): Long term it would be ideal to only allocate the bits we
+        // TODO: Long term it would be ideal to only allocate the bits we
         // actually need, but this will help us find bugs in the short term.
         bitvec allBitsInField(0, field.size);
         ERROR_WARN_(field.padding || allocatedBits == allBitsInField,
@@ -391,7 +391,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
         });
     });
 
-    // XXX(seth): There are some additional deparser constraints that we aren't
+    // TODO: There are some additional deparser constraints that we aren't
     // checking yet. Some known examples:
     //   - Special fields used by the deparser hardware (e.g. egress_spec) must
     //     not be in TPHV.
@@ -430,7 +430,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
                 if (!phv.isDarkMutex(f1, f2)) return false; } }
         return true;
     };
-    // TODO(yumin): there should be more conditions. pa_no_overlay and aliasingHeader?
+    // TODO: there should be more conditions. pa_no_overlay and aliasingHeader?
     /*auto allCanBeOverlaid = [&](const ordered_set<const PHV::Field*> fields) {
         for (const auto* f : fields) {
             if (f->pov || f->deparsed_to_tm() || f->is_invalidate_from_arch()) {
@@ -465,7 +465,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
         std::set<const PHV::Field*> fields;
         for (auto& slice : slices) fields.insert(slice.field());
 
-        // XXX(cole): Some of the deparser constraints, such as field ordering
+        // TODO: Some of the deparser constraints, such as field ordering
         // within a container, are still too difficult to check in the presence
         // of overlaid fields.  Hopefully we can make this more precise in the
         // future.  For now, skip those checks if fields are overlaid.
@@ -526,7 +526,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
                         if (slice == slice2) continue;
                         bitvec slice2Bits(slice2.container_slice().lo, slice2.width());
                         if (!slice2Bits.intersects(sliceBits)) continue;
-                        // TODO(yumin):
+                        // TODO:
                         // Constraints of overlay are still vague, need more thoughts.
                         // ERROR_CHECK(
                         //     allCanBeOverlaid({slice.field(), slice2.field()}),
@@ -570,7 +570,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
             }
         }
 
-        // XXX(cole): Checking that deparsed fields adjacent in the
+        // TODO: Checking that deparsed fields adjacent in the
         // container are adjacent in the deparser is still too complex to
         // check directly, because the check is really over adjacent
         // *valid* fields in the deparser, which we don't have a good way
@@ -668,7 +668,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
             return;
         }
 
-        // XXX(hanw) extract to metadata is only possible with bridged
+        // TODO extract to metadata is only possible with bridged
         // metadata. Do we really need to check for container alignment
         // for metadata field?
         if (!field->isPacketField())

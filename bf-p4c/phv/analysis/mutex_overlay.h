@@ -145,7 +145,7 @@ class ExcludePragmaNoOverlayFields : public Inspector {
  *
  * @param rv holds field IDs of fields that cannot be overlaid.
  *
- * XXX(cole): This analysis could be improved to determine whether an
+ * TODO: This analysis could be improved to determine whether an
  * `add_header` instruction is unreachable for certain classes of packets,
  * potentially making BuildParserOverlay more precise.
  *

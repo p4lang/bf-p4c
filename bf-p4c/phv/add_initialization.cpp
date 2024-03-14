@@ -316,7 +316,7 @@ void ComputeDarkInitialization::createAlwaysRunTable(PHV::AllocSlice& alloc_sl) 
         prior_tables.insert(tbl->get_uid());
         LOG4("\t\t" << tbl->name << "  uid:" << tbl->get_uid());
 
-        // *ALEX* Using dependency graph min_stage() instead of PhvInfo::minStage()
+        // Using dependency graph min_stage() instead of PhvInfo::minStage()
         //        due to corner case
         //        JIRA-DOC: hit in P4C-3522
         auto minStg = dg.min_stage(tbl);
@@ -473,7 +473,7 @@ void ComputeDarkInitialization::createAlwaysRunTable(PHV::AllocSlice& alloc_sl) 
 
 
 void ComputeDarkInitialization::end_apply() {
-    // *XXX* ALEX: Use forced_placement to revert back to using regular tables for
+    // *XXX* Use forced_placement to revert back to using regular tables for
     // the spilling part of dark overlays. The main reason is program
     // p4-tests/p4-programs/internal_p4_14/basic_ipv4/basic_ipv4.p4
     // which uses '--placement pragma' and '@pragma stage * 'for most tables
@@ -831,7 +831,7 @@ void ComputeDependencies::addDepsForSetsOfAllocSlices(
         bool checkBitsOverlap) {
     static PHV::FieldUse READ(PHV::FieldUse::READ);
     static PHV::FieldUse WRITE(PHV::FieldUse::WRITE);
-    // XXX(Deep): Handle the case where:
+    // TODO: Handle the case where:
     // C1[0] <-- f1 {1, 2}
     // C1[1] <-- f2 {1, 3}
     // C1 <-- f3 {3, 7}

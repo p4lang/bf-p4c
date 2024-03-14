@@ -146,7 +146,7 @@ class AnalyzeProgram : public Inspector {
             new IR::StructField("mirror_id", IR::Type::Bits::get(10)));
         cgm->fields.push_back(
             new IR::StructField("packet_path", IR::Type::Bits::get(8)));
-        // TODO(hanw): Map clone_src + clone_digest_id to packet_path
+        // TODO: Map clone_src + clone_digest_id to packet_path
         cgm->fields.push_back(
             new IR::StructField("clone_src", IR::Type::Bits::get(4)));
         cgm->fields.push_back(

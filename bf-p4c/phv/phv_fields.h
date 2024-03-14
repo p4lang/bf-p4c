@@ -145,7 +145,7 @@ class Field : public LiftLess<Field> {
     gress_t         gress = INGRESS;
 
     /// @returns true if the Field is a ghost field.
-    /// XXX(Deep): Right now, ghost fields are marked as ingress fields, so we use string comparison
+    /// TODO: Right now, ghost fields are marked as ingress fields, so we use string comparison
     /// for this method. Ideally, we should use the gress member directly and not have a separate
     /// ghost field.
     bool isGhostField() const {
@@ -359,7 +359,7 @@ class Field : public LiftLess<Field> {
      *  Marshaled fields differ from deparsed fields (i.e. the `deparsed_i` constraint) in that they
      *  are not emitted on the wire.
      *
-     *  XXX(yumin): Currently, only mirrored field lists are marked as marshaled, but the same
+     *  TODO: Currently, only mirrored field lists are marked as marshaled, but the same
      *  mechanism can be used for learning, recirculation, and bridged metadata.
      **/
     bool            is_marshaled_i = false;
@@ -793,7 +793,7 @@ class Field : public LiftLess<Field> {
      * And so the field must be placed in what are considered the "upper" bits
      * of the container.
      *
-     * XXX(cole): This range always starts at 0, which is an invariant that
+     * TODO: This range always starts at 0, which is an invariant that
      * other parts of the compiler rely on.
      */
     nw_bitrange validContainerRange() const {
@@ -825,7 +825,7 @@ class Field : public LiftLess<Field> {
     /// Marks the valid starting bit positions (little Endian) for this field.
     /// Valid bit positions may vary depending on container size.
 
-    // TODO(cole): This is currently only used for SALU operands.  However,
+    // TODO: This is currently only used for SALU operands.  However,
     // it's general enough to support bit-in-byte alignment requirements
     // (alignment_i), valid container range requirements, and deparsed_to_tm.
     std::map<PHV::Size, bitvec> startBitsByContainerSize_i;
@@ -962,7 +962,7 @@ class FieldSlice : public AbstractField, public LiftCompare<FieldSlice> {
 
     /// Kind of field of this slice.
     FieldKind kind() const {
-        // XXX(cole): PHV::Field::metadata and PHV::Field::pov should be
+        // TODO: PHV::Field::metadata and PHV::Field::pov should be
         // replaced by FieldKind.
         if (field_i->pov)
             return FieldKind::pov;

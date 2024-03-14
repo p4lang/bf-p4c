@@ -1202,7 +1202,7 @@ TYPED_TEST(TofinoHalfOpenRange, MaxSizedRanges) {
     // We can't support bit order changes for large ranges in general, because
     // they can overflow, but life is a little easier if we allow reasonable bit
     // order changes for ZeroToMax.
-    // XXX(seth): Once we start validating ranges when we create them, this will
+    // TODO: Once we start validating ranges when we create them, this will
     // feel a bit safer...
     {
         constexpr auto oppositeOrder = RangeType::order == Endian::Network
@@ -1398,7 +1398,7 @@ TYPED_TEST(TofinoClosedRange, MaxSizedRanges) {
     // We can't support bit order changes for large ranges in general, because
     // they can overflow, but life is a little easier if we allow reasonable bit
     // order changes for ZeroToMax.
-    // XXX(seth): Once we start validating ranges when we create them, this will
+    // TODO: Once we start validating ranges when we create them, this will
     // feel a bit safer...
     {
         constexpr auto oppositeOrder = RangeType::order == Endian::Network

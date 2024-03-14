@@ -44,7 +44,7 @@ void ExtractSimplifier::add(const IR::BFN::ExtractPhv* extract) {
         return;
     }
 
-    // TODO(zma) we should have single slice at this point
+    // TODO we should have single slice at this point
 
     for (const auto& slice : slices)
         BUG_CHECK(bool(slice.container()), "Parser extracts into invalid PHV container: %1%",

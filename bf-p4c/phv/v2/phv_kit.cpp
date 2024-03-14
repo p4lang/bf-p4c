@@ -113,7 +113,7 @@ bool PhvKit::can_physical_liverange_be_overlaid(const PHV::AllocSlice& a,
     BUG_CHECK(a.isPhysicalStageBased() && b.isPhysicalStageBased(),
               "physical liverange overlay should be checked "
               "only when both slices are physical stage based");
-    // TODO(yumin): need more thoughts on these constraints.
+    // TODO: need more thoughts on these constraints.
     // (1) is_invalidate_from_arch might be needed only for tofino1.
     const auto never_overlay = [](const PHV::Field* f) {
         return f->pov || f->deparsed_to_tm() || f->is_invalidate_from_arch();
@@ -127,7 +127,7 @@ bool PhvKit::can_physical_liverange_be_overlaid(const PHV::AllocSlice& a,
     const bool is_a_deparsed = a.getLatestLiveness().first == Device::numStages();
     const bool is_b_deparsed = b.getLatestLiveness().first == Device::numStages();
     const bool both_deparsed = is_a_deparsed && is_b_deparsed;
-    // XXX(yumin): The better and less constrainted checks are
+    // TODO: The better and less constrainted checks are
     // `may be checksummed together` and `may be deparsed together`,
     // instead of will be both be deparsed. But since it is very likely that
     // the less constrainted checks will not give us any benefits (because
@@ -202,7 +202,7 @@ std::list<PHV::SuperCluster*> PhvKit::remove_singleton_metadata_slicelist(
             continue;
         }
         // The fieldslice is pov, or not metadata. Nor does supercluster is singleton.
-        // XXX(yumin): These comments are vague, I assume that it was trying to find
+        // TODO: These comments are vague, I assume that it was trying to find
         // super clusters that have
         // (1) only one slice list
         // (2) only one field in the slice list.

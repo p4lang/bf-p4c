@@ -55,13 +55,13 @@ class RenameParam : public Modifier {
 };
 
 Modifier::profile_t NormalizeParams::init_apply(const IR::Node* root) {
-    // TODO(cole): Get architecture-supplied types and corresponding
+    // TODO: Get architecture-supplied types and corresponding
     // user-supplied instantiations.
     return Modifier::init_apply(root);
 }
 
 bool NormalizeParams::preorder(IR::P4Parser*) {
-    // TODO(cole): For any architecture parameter names that don't match the
+    // TODO: For any architecture parameter names that don't match the
     // user-supplied parameter names, (a) check whether any other instances
     // happen to use the architecture parameter name (and if so, rename them),
     // and then (b) rename the user-supplied parameter name to use the
@@ -70,7 +70,7 @@ bool NormalizeParams::preorder(IR::P4Parser*) {
 }
 
 bool NormalizeParams::preorder(IR::P4Control*) {
-    // TODO(cole): For any architecture parameter names that don't match the
+    // TODO: For any architecture parameter names that don't match the
     // user-supplied parameter names, (a) check whether any other instances
     // happen to use the architecture parameter name (and if so, rename them),
     // and then (b) rename the user-supplied parameter name to use the

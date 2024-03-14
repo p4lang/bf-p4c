@@ -2345,7 +2345,7 @@ bool TablePlacement::can_split(const IR::MAU::Table *tbl, const IR::MAU::Attache
 }
 
 bool TablePlacement::initial_stage_and_entries(Placed *rv, int &furthest_stage) {
-    // TODO(yumin): In the second round of table placement, where we ignore container conflicts,
+    // TODO: In the second round of table placement, where we ignore container conflicts,
     // we probably should not ignore container conflicts that are unavoidable because of PARDE
     // constraints. However, this feature is causing some regressions because in PHV metadata
     // initialization, we might add initializations that would introduce container conflicts

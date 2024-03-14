@@ -54,7 +54,7 @@ bitvec compute_dest_live_bv(const PhvUse& uses, const PHV::Allocation& alloc,
     for (const auto& slice : container_state) {
         const auto* field = slice.field();
         if (!uses.is_referenced(field) || field->padding) continue;
-        // TODO(yumin): for physical-stage-based liverange, we can actually only do precise
+        // TODO: for physical-stage-based liverange, we can actually only do precise
         // live range checks for non-mutex slices of (@p stage, write), instead of slices that
         // live at least at @p stage. The precise check can allows us to overwrite fields
         // that their last read is at @p stage.
@@ -708,7 +708,7 @@ ActionPhvConstraints::get_slices_in_same_byte(const PHV::FieldSlice& slice) cons
             rv.insert(PHV::FieldSlice(f, StartLen(0, f->size)));
         } else if (limit.overlaps(f_limit)) {
             LOG7("      Field " << f->name << " overlaps with " << slice);
-            // XXX(Deep): Need to handle this case.
+            // TODO: Need to handle this case.
         }
     }
     return rv;
@@ -763,7 +763,7 @@ ActionPhvConstraints::NumContainers ActionPhvConstraints::num_container_sources(
     // unallocated slices, grouped by field
     ordered_map<const PHV::Field*, ordered_set<PHV::FieldSlice>> unalloc_slices;
     int num_unallocated = 0;
-    // XXX(yumin): these num_double_* were introduced in
+    // TODO: these num_double_* were introduced in
     // https://github.com/barefootnetworks/bf-p4c-compilers/pull/3559/files
     // to capture a cornor case: slices alive at the same time in a container
     // written by same source, the source should count as two sources.
@@ -839,7 +839,7 @@ ActionPhvConstraints::NumContainers ActionPhvConstraints::num_container_sources(
             // (1) no_split: they will end up in one container.
             // (2) no_holes: used in special instructions like funnel-shift
             //     and wide_arithmetic ops, we can treat them as sourcing
-            //     from one container. XXX(yumin): need to verify this.
+            //     from one container. TODO: need to verify this.
             ++num_unallocated;
         } else {
             for (const auto& slice : kv.second) {
@@ -849,7 +849,7 @@ ActionPhvConstraints::NumContainers ActionPhvConstraints::num_container_sources(
         }
     }
 
-    // XXX(yumin): not sure why we add num_double_unallocated to this?
+    // TODO: not sure why we add num_double_unallocated to this?
     const int total_allocated = source_containers.size() + num_double_allocated;
     const int total_unallocated = num_unallocated + num_double_unallocated;
 
@@ -1372,7 +1372,7 @@ bool ActionPhvConstraints::pack_slices_together(
 
                 // Add any source slices found in @slices, which are the proposed packing.
                 for (auto &packed_slice : container_state)
-                    // XXX(cole): Should this be overlaps() or contains()?
+                    // TODO: Should this be overlaps() or contains()?
                     if (packed_slice.field() == fieldRead &&
                             packed_slice.field_slice().overlaps(rangeRead))
                         per_source_slices.insert(packed_slice);
@@ -1823,7 +1823,7 @@ bool ActionPhvConstraints::check_and_generate_constraints_for_move_with_unalloca
 
     // If sources.num_allocated == 2 and sources.num_unallocated > 0, then all unallocated
     // fields have to be packed together with one of the allocated fields
-    // XXX(deep): What's the best way to choose which allocated slice to pack with
+    // TODO: What's the best way to choose which allocated slice to pack with
     if (sources.num_allocated == 2 && sources.num_unallocated > 0)
         if (!pack_slices_together(alloc, container_state, copacking_constraints, action, false))
             return false;
@@ -1992,7 +1992,7 @@ PHV::ActionSet ActionPhvConstraints::make_writing_action_set(
                 set_of_actions.insert(action);
             }
         }
-        //// XXX(yumin): not sure whether the two below were duplicated, keep them
+        //// TODO: not sure whether the two below were duplicated, keep them
         //// both here to be defensive.
         // add metaInit actions of this candidate set and previously allocated slices.
         for (const auto* dark_init : slice.getInitPoints()) {
@@ -2282,7 +2282,7 @@ CanPackErrorCode ActionPhvConstraints::check_and_generate_rotational_alignment_c
                         if (!source) continue;
                         if (!sources.count(*source)) sources.insert(*source);
                     }
-                    // TODO(yumin): bug here, it should be are_adjacent_field_slices(sources).
+                    // TODO: bug here, it should be are_adjacent_field_slices(sources).
                     if (are_adjacent_field_slices(container_state)) {
                         continue;
                     }
@@ -2341,7 +2341,7 @@ CanPackErrorCode ActionPhvConstraints::check_and_generate_rotational_alignment_c
                 }
             }
         } else if (prop.num_sources == 2) {
-            // TODO(cole): If must_be_aligned and one of the fields to be
+            // TODO: If must_be_aligned and one of the fields to be
             // packed is in the UnionFind data structure (i.e. is a source), then
             // fail: It's impossible for a source to be aligned and also packed in
             // the same container as its destination (unless it's the same field).
@@ -2479,7 +2479,7 @@ CanPackReturnType ActionPhvConstraints::check_and_generate_conditional_constrain
 
             // Conservatively reject this packing if an operand is required to be aligned at two
             // different positions.
-            // XXX(Deep): Possible optimization could be that allocating some other field
+            // TODO: Possible optimization could be that allocating some other field
             // differently would resolve the multiple requirements for this field's alignment.
             int bitPosition = -1;
             if (req_alignment.size() > 1) {
@@ -2634,7 +2634,7 @@ CanPackReturnType ActionPhvConstraints::can_pack(
     }
     LOG4("after check bitwise_or_move copacking constraint " << copack_constraints.size());
 
-    // TODO(yumin): we use solver to check move-based actions as a safe net to ensure
+    // TODO: we use solver to check move-based actions as a safe net to ensure
     // we don't create invalid packing.
     auto ara_move_err = check_ara_move_constraints(
             alloc, container_state, c, initActions);
@@ -2677,7 +2677,7 @@ CanPackReturnType ActionPhvConstraints::can_pack(
         return std::make_tuple(err, std::nullopt);
     }
 
-    // XXX(cole): If there are conditional constraints---i.e. if these slices
+    // TODO: If there are conditional constraints---i.e. if these slices
     // can only be packed if some unallocated source operands are packed in the
     // right way---then compute a valid bit position for each source operand.
     // Note that this is overly conservative: It requires source operands to be
@@ -2733,7 +2733,7 @@ CanPackErrorV2 ActionPhvConstraints::can_pack_v2(
         return {CanPackErrorCode::NO_ERROR, ""};
     }
 
-    /// TODO(yumin): checks inherited from legacy code does not have detailed error message.
+    /// TODO: checks inherited from legacy code does not have detailed error message.
     /// For example, pack_conflicts_present, stateful_destinations_constraints_violated and ...
 
     if (LOGGING(6)) constraint_tracker.print_field_ordering(candidates);
@@ -2758,7 +2758,7 @@ CanPackErrorV2 ActionPhvConstraints::can_pack_v2(
         return {CanPackErrorCode::STATEFUL_DEST_CONSTRAINT, ""};
     LOG6("No stateful destinations constraints violated");
 
-    // TODO(yumin): we should be able to remove this part by simply disable bit-masked-set
+    // TODO: we should be able to remove this part by simply disable bit-masked-set
     // instruction if slice has speciality read.
     // check speciality read and bitmask set not in same container.
     if (check_speciality_read_and_bitmask(container_state, {})) {
@@ -3069,7 +3069,7 @@ ActionPhvConstraints::verify_two_container_alignment(
                     continue;
                 }
 
-                // XXX(cole): We might be able to handle slices of the same
+                // TODO: We might be able to handle slices of the same
                 // field in different containers in the future.  Needs more
                 // thought.
                 BUG_CHECK(src_slice->container() == slice.container(),
@@ -3672,7 +3672,7 @@ void ActionPhvConstraints::throw_too_many_sources_error(
                 // Start = -1 indicates that the source does not belong to a slice list and
                 // therefore, could potentially have multiple possible alignments within its
                 // container.
-                // XXX(Deep): Potentially improve this by considering bit in byte alignments for
+                // TODO: Potentially improve this by considering bit in byte alignments for
                 // fields.
                 if (start == -1) continue;
                 ss << " @ bits " << start << "-" << (start + slice.size() - 1);
@@ -4222,7 +4222,7 @@ CanPackErrorCode ActionPhvConstraints::check_ara_move_constraints(
         LOG5("dest live bits bitvec after ARA: " << dest_live);
         solver->set_container_spec(c.toString(), c.size(), dest_live);
         for (const auto& slice : container_state) {
-            // TODO(yumin): It seems that we are adding dark init for pure padding fields.
+            // TODO: It seems that we are adding dark init for pure padding fields.
             // We should fix it in darkInit and change this to a bug check?.
             if (!uses.is_referenced(slice.field()) || slice.field()->padding) {
                 continue;
@@ -4347,7 +4347,7 @@ CanPackErrorV2 ActionPhvConstraints::check_move_constraints(
         } else {
             const auto src_phv = getSourcePHVSlice(alloc, slices, dest_slice, action, stage);
             if (!src_phv) {
-                // TODO(yumin): do not add unallocated assignment if src_phv can be
+                // TODO: do not add unallocated assignment if src_phv can be
                 // overlaid with dest because of disjoint live range.
                 // We will need to add physical live range as a dep of action constraints,
                 // and potentially the function that checks overlay.
@@ -4388,7 +4388,7 @@ CanPackErrorV2 ActionPhvConstraints::check_move_constraints(
         for (const auto& slice : container_state) {
             // There can be dark slices in container state even if c is a normal container,
             // because of the current implementation of container_states. Those slice
-            // should be just ignored. TODO(yumin): split them out to dark solver?
+            // should be just ignored. TODO: split them out to dark solver?
             if (slice.container() != c) {
                 continue;
             }

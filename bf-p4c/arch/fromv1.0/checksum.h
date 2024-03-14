@@ -287,7 +287,7 @@ class InsertParserChecksums : public Inspector {
         auto destfield = mc->arguments->at(2)->expression;
 
         // check if any of the fields or dest belong to extracts
-        // TODO(zma) verify on ingress only?
+        // TODO verify on ingress only?
 
         const IR::Declaration* decl = nullptr;
 
@@ -640,7 +640,7 @@ class InsertChecksumError : public PassManager {
         }
 
         bool preorder(const IR::BFN::TnaParser* parser) override {
-            // XXX(zma) verify on ingress only
+            // TODO verify on ingress only
             if (parser->thread != INGRESS)
                 return false;
 
@@ -652,7 +652,7 @@ class InsertChecksumError : public PassManager {
         }
     };
 
-    // XXX(zma) we probably don't want to insert statement into the "accept" state
+    // TODO we probably don't want to insert statement into the "accept" state
     // since this is a special state. Add a dummy state before "accept" if it is
     // a checksum verification end state.
     struct InsertBeforeAccept : public Transform {

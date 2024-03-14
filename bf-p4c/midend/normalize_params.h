@@ -44,7 +44,7 @@
  * same names as any of the architecture params, this pass raises an error, as
  * those names are reserved.
  */
-// XXX(cole): Rather than producing an error, it would be better to rewrite the
+// TODO: Rather than producing an error, it would be better to rewrite the
 // conflicting user-supplied instance names.
 class NormalizeParams : public Modifier {
     /// Maps (original) parameter node pointers for each block to the names
