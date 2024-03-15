@@ -639,6 +639,15 @@ struct ResolveNegativeExtract : public PassManager {
 
         explicit AdjustShift(const CollectNegativeExtractStates& cg) : collectNegative(cg) { }
 
+        std::map<const IR::BFN::ParserState *, std::pair<IR::BFN::ParserState *, int>>
+            duplicated_states;
+
+        profile_t init_apply(const IR::Node *node) override {
+            auto rv = ParserModifier::init_apply(node);
+            duplicated_states.clear();
+            return rv;
+        }
+
         bool preorder(IR::BFN::Transition* transition) override {
             auto state = findContext<IR::BFN::ParserState>();
             auto orig_transition = getOriginal()->to<IR::BFN::Transition>();
@@ -677,15 +686,33 @@ struct ResolveNegativeExtract : public PassManager {
                 LOG5("Duplicating transition from state " << state->name << " with match value "
                                                           << orig_transition->value << " to state "
                                                           << orig_state->name);
-                auto duplicated_state = new IR::BFN::ParserState(
-                    orig_state->p4States, orig_state->name + "$dup", orig_state->gress);
-                transition->next = duplicated_state;
-                for (auto tr : orig_state->transitions) {
-                    auto new_trans = new IR::BFN::Transition(tr->srcInfo,
-                        tr->value, tr->shift + state_shift, tr->next);
+
+                IR::BFN::ParserState* duplicated_state = nullptr;
+                if (duplicated_states.count(orig_state)) {
+                    int prev_state_shift;
+                    std::tie(duplicated_state, prev_state_shift) = duplicated_states[orig_state];
+                    BUG_CHECK(state_shift == prev_state_shift,
+                              "New state shift %1% does not match previous "
+                              "value %2% for duplicated state %3%",
+                              state_shift, prev_state_shift, state->name);
+                } else {
+                  duplicated_state = new IR::BFN::ParserState(
+                      orig_state->p4States, orig_state->name + "$dup",
+                      orig_state->gress);
+                  for (auto tr : orig_state->transitions) {
+                    auto new_trans = new IR::BFN::Transition(
+                        tr->srcInfo, tr->value, tr->shift + state_shift,
+                        tr->next);
                     duplicated_state->transitions.push_back(new_trans);
+                  }
+                  for (const auto stmt : orig_state->statements) {
+                      duplicated_state->statements.push_back(stmt->clone());
+                  }
+                  duplicated_states.emplace(orig_state,
+                                            std::make_pair(duplicated_state, state_shift));
                 }
-                duplicated_state->statements = orig_state->statements;
+
+                transition->next = duplicated_state;
             }
 
             return true;
