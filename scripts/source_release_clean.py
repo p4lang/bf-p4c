@@ -5,10 +5,13 @@
 #
 
 import argparse
+import glob
 import os
+import re
 import shutil
 import subprocess
 import sys
+import tempfile
 
 from pathlib import Path
 
@@ -182,8 +185,21 @@ DOC_STRINGS = ['.*\<\(JIRA\|TOF[35]\)-DOC:.*']
 
 for path in SRC_DIRS:
     for del_str in DOC_STRINGS:
-        sed_delete(path, del_str)
+        sed_delete(path, del_str, True)
 
+
+# =======================================================
+# Clean p4 include headers
+# =======================================================
+
+P4_INCLUDE_FILTER = ['CLOUDBREAK_ONLY', 'FLATROCK_ONLY']
+P4_INCLUDE_DIRS = ['bf-p4c/p4include']
+
+p4_include_re = r'/\<\(' + '\|'.join(P4_INCLUDE_FILTER) + r'\)\>/d'
+
+for path in P4_INCLUDE_DIRS:
+    for inc in glob.glob(path + '/*.p4'):
+        subprocess.run(['sed', '-i', p4_include_re, inc])
 
 # =======================================================
 # cmake updates
@@ -194,9 +210,204 @@ print("Cleaning cmake files")
 targets = UNRELEASED_TARGETS + [
         'lower_flatrock', 't5na', 't5na_program_structure'
     ]
-for target in targets:
-    sed_re = r's/.*[ /]' + target + r'\.\(cpp\|h\|def\).*//'
-    for src_dir in SRC_DIRS:
-        for path in sorted(Path(src_dir).rglob('CMakeLists.txt')):
-            print('Processing', path.as_posix())
+for src_dir in SRC_DIRS:
+    for path in sorted(Path(src_dir).rglob('CMakeLists.txt')):
+        print('Processing', path.as_posix())
+        for target in targets:
+            sed_re = r's/.*[ /]' + target + r'\.\(cpp\|h\|def\).*//'
             subprocess.run(['sed', '-i', sed_re, path.as_posix()])
+
+
+# Read the CMakeLists.txt files and filter out various enables
+FILTER_CMAKE = {'ENABLE_CLOUDBREAK', 'ENABLE_FLATROCK', 'CLOSED_SOURCE'}
+IF_RE = re.compile(r'^\s*if\s*\((.*)\)')
+ELSEIF_RE = re.compile(r'^\s*elseif\s*\((.*)\)')
+ELSE_RE = re.compile(r'^\s*else\s*\((.*)\)')
+ENDIF_RE = re.compile(r'^\s*endif\s*\((.*)\)')
+NOT_RE = re.compile(r'(?i)\bNOT\s+(\w+)')
+SET_RE = re.compile(r'^\s*set\s*\(\s*(\w+)')
+
+class IfContext():
+    '''
+    If statement context tracking for use in cmake clean-up
+    '''
+    def __init__(self, filtering, if_emitted, skip_rest):
+        # Params:
+        #  - filtering  = currently in an element being filtered
+        #  - if_emitted = emitted an if / need the endif
+        #  - skip_rest  = skip remaining branches
+        self.filtering = filtering
+        self.if_emitted = if_emitted
+        self.skip_rest = skip_rest
+
+
+def clean_cmake_ifs(path):
+    '''
+    Clean up cmake files by removing if statement branches
+    
+    '''
+    dst_fp = tempfile.NamedTemporaryFile(mode='w', delete=False)
+    with open(path) as src:
+        # If statement context:
+        # List:
+        #  - Last element is the current (inner-most) if statement
+        #  - Element 0 is the outer-most if statement
+        #  - Empty list means that we are not currently in an if staement
+        #
+        # List elements: IfContext objects
+        if_stack = []
+        line_no = 1
+        changed = False
+        for line in src:
+            line_adj = line.rstrip()
+
+            # Suboptimal to blindly run all 4 regular expressions
+            # But this script is not used frequently and doesn't need to be
+            # highly optimized
+            m_if = IF_RE.match(line_adj)
+            m_elseif = ELSEIF_RE.match(line_adj)
+            m_else = ELSE_RE.match(line_adj)
+            m_endif = ENDIF_RE.match(line_adj)
+            m_set = SET_RE.match(line_adj)
+
+            # DEBUG:
+            # if m_if or m_elseif or m_else or m_endif:
+            #     print('--', line_adj)
+
+            # Verify that we have a context for elseif/else/endif
+            if m_elseif or m_else or m_endif:
+                if len(if_stack) == 0:
+                    if m_elseif:
+                        keyword = 'elseif'
+                    elif m_else:
+                        keyword = 'else'
+                    else:
+                        keyword = 'endif'
+                    print('ERROR: {} without an if in {}:{}'.format(
+                        keyword, path, line_no))
+                    print('Skipping processing of file')
+                    return
+
+            exp = ""
+            inv = False
+            if m_if or m_elseif:
+                if m_if:
+                    exp = m_if.group(1)
+                else:
+                    exp = m_elseif.group(1)
+
+                m_not = NOT_RE.match(exp)
+                if m_not:
+                    inv = True
+                    exp = m_not.group(1)
+            exp = exp.strip()
+
+            if m_if:
+                if len(if_stack) > 0 and if_stack[-1].filtering:
+                    if_stack.append(IfContext(True, False, True))
+                    changed = True
+                else:
+                    if exp in FILTER_CMAKE:
+                        # Starting an if statement with one of the filter terms
+                        if inv:
+                            # NOT filter term: skip the if statement but keep the block
+                            # End after this as this condition is true
+                            if_stack.append(IfContext(False, False, True))
+                        else:
+                            # filter term: skip the if statement and block
+                            if_stack.append(IfContext(True, False, False))
+                            changed = True
+                    else:
+                        # Starting an if with something _other_ than a filter term
+                        # Keep the if statement
+                        if_stack.append(IfContext(False, True, False))
+                        dst_fp.write(line)
+            elif m_elseif:
+                if if_stack[-1].skip_rest:
+                    if_stack[-1].filtering = True
+                    changed = True
+                else:
+                    if exp in FILTER_CMAKE:
+                        # Starting an if statement with one of the filter terms
+                        if inv:
+                            # NOT filter term: skip the if statement but keep the block
+                            # End after this as this condition is true
+                            if if_stack[-1].if_emitted:
+                                # Already emitted an if -> convert to else
+                                dst_fp.write('else')
+                            if_stack[-1].filtering = False
+                            if_stack[-1].skip_rest = True
+                        else:
+                            # filter term: skip the if statement and block
+                            if_stack[-1].filtering = True
+                            changed = True
+                    else:
+                        # Continuing an if with something _other_ than a filter term
+                        # Keep the if statement
+                        if not if_stack[-1].if_emitted:
+                            # Haven't emited an if -> convert to if
+                            line = re.sub(r'\belseif\b', 'if', line)
+                            if_stack[-1].if_emitted = True
+                        if_stack[-1].filtering = False
+                        dst_fp.write(line)
+            elif m_else:
+                if if_stack[-1].skip_rest:
+                    if_stack[-1].filtering = True
+                    changed = True
+                else:
+                    if if_stack[-1].if_emitted:
+                        dst_fp.write(line)
+                    if_stack[-1].filtering = False
+            elif m_endif:
+                if if_stack[-1].if_emitted:
+                    dst_fp.write(line)
+                if_stack.pop()
+            else:
+                if len(if_stack) == 0 or not if_stack[-1].filtering:
+                    if m_set and m_set.group(1).strip() in FILTER_CMAKE:
+                        pass
+                    else:
+                        dst_fp.write(line)
+
+            line_no += 1
+
+        dst_fp.close
+        if changed:
+            os.rename(dst_fp.name, path)
+        else:
+            os.unlink(dst_fp.name)
+
+
+EXTRA_CMAKE_FILES = ['CMakeLists.txt']
+for path in EXTRA_CMAKE_FILES:
+    print('Filtering content of', path)
+    clean_cmake_ifs(path)
+
+for src_dir in SRC_DIRS:
+    for path in sorted(Path(src_dir).rglob('CMakeLists.txt')):
+        print('Filtering content of', path.as_posix())
+        clean_cmake_ifs(path)
+
+
+# =======================================================
+# Miscellaneous clean steps
+# =======================================================
+
+SED_EXTRA = {
+        'bf-asm/cmake/config.h.in': '/flatrock\|cloudbreak/Id',
+        'bf-asm/test/runtests': [
+            '/STF3/d',
+            '/tofino3/d',
+        ],
+        'bf-asm/instruction.cpp': [
+            's/tofino123/tofino12/g',
+            's/jb_cb_/jb_/g',
+        ],
+        }
+
+for path, cmds in SED_EXTRA.items():
+    if type(cmds) is not list:
+        cmds = [cmds]
+    for cmd in cmds:
+        print("Running sed '{}' on {}".format(cmd, path))
+        subprocess.run(['sed', '-i', cmd, path])

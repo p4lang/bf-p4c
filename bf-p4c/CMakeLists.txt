@@ -408,16 +408,18 @@ set (BF_P4C_BACKEND_MAU_TOFINO_SRCS
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_MAU_TOFINO_SRCS}")
 
-set (BF_P4C_BACKEND_MAU_FLATROCK_SRCS
-  mau/flatrock/action_data_bus.cpp
-  mau/flatrock/asm_output.cpp
-  mau/flatrock/input_xbar.cpp
-  mau/flatrock/mau_spec.cpp
-  mau/flatrock/memories.cpp
-  mau/flatrock/table_format.cpp
-  mau/flatrock/table_layout.cpp
-  )
-add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_MAU_FLATROCK_SRCS}")
+if (ENABLE_FLATROCK)
+  set (BF_P4C_BACKEND_MAU_FLATROCK_SRCS
+    mau/flatrock/action_data_bus.cpp
+    mau/flatrock/asm_output.cpp
+    mau/flatrock/input_xbar.cpp
+    mau/flatrock/mau_spec.cpp
+    mau/flatrock/memories.cpp
+    mau/flatrock/table_format.cpp
+    mau/flatrock/table_layout.cpp
+    )
+  add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_MAU_FLATROCK_SRCS}")
+endif (ENABLE_FLATROCK)
 
 set (BF_P4C_BACKEND_MAU_HDRS
   mau/action_analysis.h
@@ -488,15 +490,17 @@ set (BF_P4C_BACKEND_MAU_TOFINO_HDRS
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_MAU_TOFINO_HDRS}")
 
-set (BF_P4C_BACKEND_MAU_FLATROCK_HDRS
-  mau/flatrock/action_data_bus.h
-  mau/flatrock/asm_output.h
-  mau/flatrock/input_xbar.h
-  mau/flatrock/memories.h
-  mau/flatrock/table_format.h
-  mau/flatrock/table_layout.h
-  )
-add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_MAU_FLATROCK_HDRS}")
+if (ENABLE_FLATROCK)
+  set (BF_P4C_BACKEND_MAU_FLATROCK_HDRS
+    mau/flatrock/action_data_bus.h
+    mau/flatrock/asm_output.h
+    mau/flatrock/input_xbar.h
+    mau/flatrock/memories.h
+    mau/flatrock/table_format.h
+    mau/flatrock/table_layout.h
+    )
+  add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_MAU_FLATROCK_HDRS}")
+endif (ENABLE_FLATROCK)
 
 set (BF_P4C_BACKEND_PARDE_SRCS
   parde/add_metadata_pov.cpp
@@ -1154,23 +1158,25 @@ else()
 endif()
 
 
-if (NOT ENABLE_CLOUDBREAK)
-  if (NOT DEFINED EXCLUDE_HEADERS)
-    set (EXCLUDE_HEADERS "tofino3|t3na")
-  else()
-    set (EXCLUDE_HEADERS
-      "${EXCLUDE_HEADERS}|tofino3|t3na")
-  endif (NOT DEFINED EXCLUDE_HEADERS)
-endif (NOT ENABLE_CLOUDBREAK)
+if (CLOSED_SOURCE)
+  if (NOT ENABLE_CLOUDBREAK)
+    if (NOT DEFINED EXCLUDE_HEADERS)
+      set (EXCLUDE_HEADERS "tofino3|t3na")
+    else()
+      set (EXCLUDE_HEADERS
+        "${EXCLUDE_HEADERS}|tofino3|t3na")
+    endif (NOT DEFINED EXCLUDE_HEADERS)
+  endif (NOT ENABLE_CLOUDBREAK)
 
-if (NOT ENABLE_FLATROCK)
-  if (NOT DEFINED EXCLUDE_HEADERS)
-    set (EXCLUDE_HEADERS "tofino5|t5na")
-  else()
-    set (EXCLUDE_HEADERS
-      "${EXCLUDE_HEADERS}|tofino5|t5na")
-  endif (NOT DEFINED EXCLUDE_HEADERS)
-endif (NOT ENABLE_FLATROCK)
+  if (NOT ENABLE_FLATROCK)
+    if (NOT DEFINED EXCLUDE_HEADERS)
+      set (EXCLUDE_HEADERS "tofino5|t5na")
+    else()
+      set (EXCLUDE_HEADERS
+        "${EXCLUDE_HEADERS}|tofino5|t5na")
+    endif (NOT DEFINED EXCLUDE_HEADERS)
+  endif (NOT ENABLE_FLATROCK)
+endif (CLOSED_SOURCE)
 
 install (TARGETS p4c-barefoot
   RUNTIME DESTINATION ${P4C_RUNTIME_OUTPUT_DIRECTORY})
@@ -1376,12 +1382,14 @@ install (FILES ${CMAKE_BINARY_DIR}/p4c/p4c_src/schema_versions
   DESTINATION share/p4c/p4c_src)
 
 set(SED_RELEASE_FILTERS "-e ''")
-if(NOT ENABLE_CLOUDBREAK)
-  list(APPEND SED_RELEASE_FILTERS "-e '/\\<CLOUDBREAK_ONLY\\>/d'")
-endif()
-if(NOT ENABLE_FLATROCK)
-  list(APPEND SED_RELEASE_FILTERS "-e '/\\<FLATROCK_ONLY\\>/d'")
-endif()
+  if (CLOSED_SOURCE)
+  if(NOT ENABLE_CLOUDBREAK)
+    list(APPEND SED_RELEASE_FILTERS "-e '/\\<CLOUDBREAK_ONLY\\>/d'")
+  endif()
+  if(NOT ENABLE_FLATROCK)
+    list(APPEND SED_RELEASE_FILTERS "-e '/\\<FLATROCK_ONLY\\>/d'")
+  endif()
+endif (CLOSED_SOURCE)
 
 # hack to get around the fact that the test scripts expect the backend
 # binary to be in the top level directory. This should go away when we
@@ -1484,14 +1492,37 @@ if (ENABLE_GTESTS)
   file(READ   "${BFN_P4INCLUDE_DIR}/tofino2_arch.p4"      TOFINO2_ARCH)
   file(GENERATE OUTPUT "${P4C_BINARY_DIR}/p4headers_tofino2.p4"
       CONTENT "${TOFINO2_SPECS}${TOFINO2_ARCH}")
-  file(READ   "${BFN_P4INCLUDE_DIR}/tofino3_specs.p4"     TOFINO3_SPECS)
-  file(READ   "${BFN_P4INCLUDE_DIR}/tofino3_arch.p4"      TOFINO3_ARCH)
-  file(GENERATE OUTPUT "${P4C_BINARY_DIR}/p4headers_tofino3.p4"
-      CONTENT "${TOFINO3_SPECS}${TOFINO3_ARCH}")
-  file(READ   "${BFN_P4INCLUDE_DIR}/tofino5.p4"           TOFINO5_SPECS)
-  file(READ   "${BFN_P4INCLUDE_DIR}/tofino5arch.p4"       TOFINO5_ARCH)
-  file(GENERATE OUTPUT "${P4C_BINARY_DIR}/p4headers_tofino5.p4"
-      CONTENT "${TOFINO5_SPECS}${TOFINO5_ARCH}")
+  set (HEADERS_H_EXTRA_COMMANDS "")
+  set (HEADERS_CPP_EXTRA_COMMANDS "")
+  set (HEADERS_CPP_EXTRA_DEPENDS "")
+  if (ENABLE_CLOUDBREAK)
+    file(READ   "${BFN_P4INCLUDE_DIR}/tofino3_specs.p4"     TOFINO3_SPECS)
+    file(READ   "${BFN_P4INCLUDE_DIR}/tofino3_arch.p4"      TOFINO3_ARCH)
+    file(GENERATE OUTPUT "${P4C_BINARY_DIR}/p4headers_tofino3.p4"
+        CONTENT "${TOFINO3_SPECS}${TOFINO3_ARCH}")
+    set (HEADERS_H_EXTRA_COMMANDS "${HEADERS_H_EXTRA_COMMANDS \
+        COMMAND ${CMAKE_COMMAND} -E echo \"    std::string tofino3arch_p4;\"     >> \"${P4HEADERS_H}\"")
+    set (HEADERS_CPP_EXTRA_COMMANDS "${HEADERS_CPP_EXTRA_COMMANDS \
+        COMMAND ${CMAKE_C_COMPILER} -E -x c \"${P4C_BINARY_DIR}/p4headers_tofino3.p4\" ${I_P4INCLUDE} >> \"${P4HEADERS_CPP}\"")
+    set (HEADERS_CPP_EXTRA_COMMANDS "${HEADERS_CPP_EXTRA_COMMANDS \
+        COMMAND ${CMAKE_COMMAND} -E echo \"    )\\\"}, std::string{R\\\"(\"                               >> \"${P4HEADERS_CPP}\"")
+    set (HEADERS_CPP_EXTRA_DEPENDS "${HEADERS_CPP_EXTRA_DEPENDS \
+              ${P4C_BINARY_DIR}/p4headers_tofino3.p4")
+  endif (ENABLE_CLOUDBREAK)
+  if (ENABLE_FLATROCK)
+    file(READ   "${BFN_P4INCLUDE_DIR}/tofino5.p4"           TOFINO5_SPECS)
+    file(READ   "${BFN_P4INCLUDE_DIR}/tofino5arch.p4"       TOFINO5_ARCH)
+    file(GENERATE OUTPUT "${P4C_BINARY_DIR}/p4headers_tofino5.p4"
+        CONTENT "${TOFINO5_SPECS}${TOFINO5_ARCH}")
+    set (HEADERS_H_EXTRA_COMMANDS "${HEADERS_H_EXTRA_COMMANDS \
+        COMMAND ${CMAKE_COMMAND} -E echo \"    std::string tofino5arch_p4;\"     >> \"${P4HEADERS_H}\"")
+    set (HEADERS_CPP_EXTRA_COMMANDS "${HEADERS_CPP_EXTRA_COMMANDS \
+        COMMAND ${CMAKE_C_COMPILER} -E -x c \"${P4C_BINARY_DIR}/p4headers_tofino5.p4\" ${I_P4INCLUDE} >> \"${P4HEADERS_CPP}\"")
+    set (HEADERS_CPP_EXTRA_COMMANDS "${HEADERS_CPP_EXTRA_COMMANDS \
+        COMMAND ${CMAKE_COMMAND} -E echo \"    )\\\"}, std::string{R\\\"(\"                               >> \"${P4HEADERS_CPP}\"")
+    set (HEADERS_CPP_EXTRA_DEPENDS "${HEADERS_CPP_EXTRA_DEPENDS \
+              ${P4C_BINARY_DIR}/p4headers_tofino5.p4")
+  endif (ENABLE_FLATROCK)
   add_custom_command (OUTPUT "${P4HEADERS_H}"
       COMMAND ${CMAKE_COMMAND} -E echo "// auto generated file, do not edit" >  "${P4HEADERS_H}"
       COMMAND ${CMAKE_COMMAND} -E echo "#ifndef P4HEADERS_H_"                >> "${P4HEADERS_H}"
@@ -1501,8 +1532,7 @@ if (ENABLE_GTESTS)
       COMMAND ${CMAKE_COMMAND} -E echo "struct P4Headers {"                  >> "${P4HEADERS_H}"
       COMMAND ${CMAKE_COMMAND} -E echo "    std::string tofino1arch_p4;"     >> "${P4HEADERS_H}"
       COMMAND ${CMAKE_COMMAND} -E echo "    std::string tofino2arch_p4;"     >> "${P4HEADERS_H}"
-      COMMAND ${CMAKE_COMMAND} -E echo "    std::string tofino3arch_p4;"     >> "${P4HEADERS_H}"
-      COMMAND ${CMAKE_COMMAND} -E echo "    std::string tofino5arch_p4;"     >> "${P4HEADERS_H}"
+      ${HEADERS_H_EXTRA_COMMANDS} # Expands to some subset of:
       COMMAND ${CMAKE_COMMAND} -E echo "    std::string v1model_2018_p4;"    >> "${P4HEADERS_H}"
       COMMAND ${CMAKE_COMMAND} -E echo "    std::string v1model_2020_p4;"    >> "${P4HEADERS_H}"
       COMMAND ${CMAKE_COMMAND} -E echo "};"                                  >> "${P4HEADERS_H}"
@@ -1522,10 +1552,7 @@ if (ENABLE_GTESTS)
       COMMAND ${CMAKE_COMMAND} -E echo "    )\"}, std::string{R\"("                               >> "${P4HEADERS_CPP}"
       COMMAND ${CMAKE_C_COMPILER} -E -x c "${P4C_BINARY_DIR}/p4headers_tofino2.p4" ${I_P4INCLUDE} >> "${P4HEADERS_CPP}"
       COMMAND ${CMAKE_COMMAND} -E echo "    )\"}, std::string{R\"("                               >> "${P4HEADERS_CPP}"
-      COMMAND ${CMAKE_C_COMPILER} -E -x c "${P4C_BINARY_DIR}/p4headers_tofino3.p4" ${I_P4INCLUDE} >> "${P4HEADERS_CPP}"
-      COMMAND ${CMAKE_COMMAND} -E echo "    )\"}, std::string{R\"("                               >> "${P4HEADERS_CPP}"
-      COMMAND ${CMAKE_C_COMPILER} -E -x c "${P4C_BINARY_DIR}/p4headers_tofino5.p4" ${I_P4INCLUDE} >> "${P4HEADERS_CPP}"
-      COMMAND ${CMAKE_COMMAND} -E echo "    )\"}, std::string{R\"("                               >> "${P4HEADERS_CPP}"
+      ${HEADERS_CPP_EXTRA_COMMANDS} # Expands to some subset of:
       COMMAND ${CMAKE_C_COMPILER} -E -x c -DV1MODEL_VERSION=20180101
                                        "${P4C_SOURCE_DIR}/p4include/v1model.p4" ${I_P4INCLUDE}    >> "${P4HEADERS_CPP}"
       COMMAND ${CMAKE_COMMAND} -E echo "    )\"}, std::string{R\"("                               >> "${P4HEADERS_CPP}"
@@ -1537,8 +1564,7 @@ if (ENABLE_GTESTS)
       COMMAND ${CMAKE_COMMAND} -E echo "}  // namespace Test"                                     >> "${P4HEADERS_CPP}"
       DEPENDS "${P4C_BINARY_DIR}/p4headers_tofino1.p4"
               "${P4C_BINARY_DIR}/p4headers_tofino2.p4"
-              "${P4C_BINARY_DIR}/p4headers_tofino3.p4"
-              "${P4C_BINARY_DIR}/p4headers_tofino5.p4"
+              ${HEADERS_CPP_EXTRA_DEPENDS}
               "${P4C_SOURCE_DIR}/p4include/v1model.p4"
       COMMENT "Stringify P4 headers -> ${P4HEADERS_CPP}"
       VERBATIM)
@@ -1553,8 +1579,9 @@ if (ENABLE_GTESTS)
 
   set (GTEST_BF_P4C_SOURCES
     # Currently all gtests need to be built directly into the gtestp4c binary.
-    # TODO To use libraries, the whole_archive hack is needed. See the example.tar.gz
-    #      projet in Jira P4C-2940 and target_link_test_libs.cmake for implementation.
+    # TODO To use libraries, the whole_archive hack is needed.
+    #      JIRA-DOC: See the example.tar.gz projet in Jira P4C-2940 and
+    #      JIRA-DOC: target_link_test_libs.cmake for implementation.
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/test_bf_gtest_helpers.cpp
 
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/action_analysis.cpp

@@ -9,9 +9,18 @@ endif()
 
 project (BFN_P4C)
 
+# Variable to help code cleanup script
+#
+# Protect anything that should not be released as open source by enclosing in
+#   if (CLOSED_SOURCE) ... endif (CLOSED_SOURCE)
+# Other if statements may also be filtered by clean-up script
+set(CLOSED_SOURCE TRUE)
+
 OPTION(ENABLE_STATIC_LIBS OFF)
-OPTION(ENABLE_CLOUDBREAK "Enable Cloudbreak" OFF)
-OPTION(ENABLE_FLATROCK "Enable Flatrock" OFF)
+if (CLOSED_SOURCE)
+  OPTION(ENABLE_CLOUDBREAK "Enable Cloudbreak" OFF)
+  OPTION(ENABLE_FLATROCK "Enable Flatrock" OFF)
+endif (CLOSED_SOURCE)
 OPTION(ENABLE_BAREFOOT_INTERNAL "Enable Barefoot Internal" ON)
 OPTION(ENABLE_TESTING "Enable generation of ctests" ON)
 OPTION(ENABLE_GTESTS "Enable building and running GTest unit tests" ON)
