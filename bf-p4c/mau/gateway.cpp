@@ -811,6 +811,9 @@ bool CollectGatewayFields::compute_offsets() {
                   return a->first.size() > b->first.size(); });
     // track where each container byte is located on the gateway input
     std::map<std::pair<PHV::Container, int>, std::set<int>>       alloc_bytes;
+    std::map<std::pair<std::pair<PHV::Container, int>, int>, std::pair<PHV::Container, int>>
+        xor_pairs;
+
     PHV::FieldUse use_read(PHV::FieldUse::READ);
 
     for (auto &i : this->info) {
@@ -819,16 +822,41 @@ bool CollectGatewayFields::compute_offsets() {
         for (auto &xor_with : info.xor_with) {
             auto &with = this->info[xor_with];
             int shift = field.range().lo - xor_with.range().lo;
+
+            // Collect all the bytes corresponding to the field
+            std::vector<std::pair<PHV::Container, int>> field_bytes;
+            field.foreach_byte(tbl, &use_read, [&](const PHV::AllocSlice &sl) {
+                field_bytes.push_back(sl.container_byte());
+            });
+
+            // Walk through the bytes being xored
+            int field_byte_idx = 0;
             xor_with.foreach_byte(tbl, &use_read, [&](const PHV::AllocSlice &sl) {
                 auto alloc_byte = sl.container_byte();
-                auto bit = bytes * 8U + sl.container_slice().lo % 8U;
+                auto field_byte = field_bytes[field_byte_idx];
+                bool duplicate = false;
+                if (alloc_bytes.count(alloc_byte)) {
+                    for (int byte : alloc_bytes[alloc_byte]) {
+                        auto source = std::make_pair(alloc_byte, byte);
+                        if (xor_pairs.count(source) && xor_pairs[source] == field_byte) {
+                            duplicate = true;
+                            break;
+                        }
+                    }
+                }
+                auto bit = (duplicate ? *alloc_bytes.at(alloc_byte).begin() : bytes) * 8U +
+                           sl.container_slice().lo % 8U;
                 with.offsets.emplace_back(bit, sl.field_slice());
                 info.xor_offsets.emplace_back(bit, sl.field_slice().shiftedByBits(shift));
-                LOG5("  " << "byte " << (bit/8) << " " <<
+                LOG5("  " << (duplicate ? "duplicate " : "") << "byte " << (bit/8) << " " <<
                      field << "(" << info.xor_offsets.back().second << ") xor " << xor_with <<
                      ' ' << sl << " (" << with.offsets.back().second << ")");
-                alloc_bytes[alloc_byte].insert(bytes);
-                ++bytes;
+                if (!duplicate) {
+                    alloc_bytes[alloc_byte].insert(bytes);
+                    auto source = std::make_pair(alloc_byte, bytes);
+                    xor_pairs[source] = field_byte;
+                    ++bytes; }
+                ++field_byte_idx;
             }); } }
     // we collect slices that could be allocated to either bytes or bits here, then
     // allocate the largest ones to the bytes and then try to pack any remaining ones

@@ -439,6 +439,11 @@ if (TEST_ALT_PHV_ALLOC)
         "tofino2 supports up to 20 stages, using 29"
 	extensions/p4_tests/p4_16/customer/arista/obfuscated-p416_baremetal_tofino2.p4
     )
+
+    p4c_add_xfail_reason("tofino2"
+        "table allocation .alt-phv-alloc enabled. failed to allocate tables for pipe 'DefeatFlows'"
+	extensions/p4_tests/p4_16/customer/lts/p4c-5323.p4
+    )
 endif (TEST_ALT_PHV_ALLOC)
 
 if (NOT TEST_ALT_PHV_ALLOC)
