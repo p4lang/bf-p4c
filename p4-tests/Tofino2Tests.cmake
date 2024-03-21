@@ -8,7 +8,7 @@ packet_test_setup_check("jbay")
 # set (P16_JNA_INCLUDE_PATTERNS "include.*(t2na).p4" "main")
 set (P16_TOFINO_VARIANTS_EXCLUDE "tna_32q_multiprogram")
 ## P4-16 Programs
-set(__p4_16_path "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/p4_16_programs")
+set(__p4_16_path "${CMAKE_CURRENT_SOURCE_DIR}/internal/p4-programs/p4_16_programs")
 file (GLOB __p4_16_tests RELATIVE ${__p4_16_path} "${__p4_16_path}/tna_*")
 list(REMOVE_ITEM __p4_16_tests ${P16_TOFINO_VARIANTS_EXCLUDE})
 

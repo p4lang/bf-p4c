@@ -5,10 +5,10 @@ bfnhome="/bfn/bf-p4c-compilers"
 # If running in jarvis container, set bfnhome to /mnt and patch test.json
 if [[ $PWD == *"mnt"* ]]; then
     bfnhome="/mnt"
-    sed -i 's/bfn\/bf-p4c-compilers/mnt/g' $bfnhome/p4-tests/p4_16/customer/extreme/npb-master-ptf/tests/test.json
-    sed -i 's/bfn\/bf-p4c-compilers/mnt/g' $bfnhome/p4-tests/p4_16/customer/extreme/npb-multi-prog/tests/test.json
-    sed -i 's/bfn\/bf-p4c-compilers/mnt/g' $bfnhome/p4-tests/p4_16/customer/extreme/npb-folded-pipe/tests/test.json
-    sed -i 's/bfn\/bf-p4c-compilers/mnt/g' $bfnhome/p4-tests/p4_16/customer/extreme/p4c-5244/tests/test.json
+    sed -i 's/bfn\/bf-p4c-compilers/mnt/g' $bfnhome/p4-tests/p4_16/internal/customer/extreme/npb-master-ptf/tests/test.json
+    sed -i 's/bfn\/bf-p4c-compilers/mnt/g' $bfnhome/p4-tests/p4_16/internal/customer/extreme/npb-multi-prog/tests/test.json
+    sed -i 's/bfn\/bf-p4c-compilers/mnt/g' $bfnhome/p4-tests/p4_16/internal/customer/extreme/npb-folded-pipe/tests/test.json
+    sed -i 's/bfn\/bf-p4c-compilers/mnt/g' $bfnhome/p4-tests/p4_16/internal/customer/extreme/p4c-5244/tests/test.json
 fi
 
 # Remove scapy for python3
@@ -47,9 +47,9 @@ cd $bfnhome/build/p4c && ctest -R "^tofino2/.*(npb-master-ptf|npb-multi-prog|npb
 
 # If running in jarvis container, reset test.json patch
 if [[ $PWD == *"mnt"* ]]; then
-    sed -i 's/mnt/bfn\/bf-p4c-compilers/g' $bfnhome/p4-tests/p4_16/customer/extreme/npb-master-ptf/tests/test.json
-    sed -i 's/mnt/bfn\/bf-p4c-compilers/g' $bfnhome/p4-tests/p4_16/customer/extreme/npb-multi-prog/tests/test.json
-    sed -i 's/mnt/bfn\/bf-p4c-compilers/g' $bfnhome/p4-tests/p4_16/customer/extreme/npb-folded-pipe/tests/test.json
-    sed -i 's/mnt/bfn\/bf-p4c-compilers/g' $bfnhome/p4-tests/p4_16/customer/extreme/p4c-5244/tests/test.json
+    sed -i 's/mnt/bfn\/bf-p4c-compilers/g' $bfnhome/p4-tests/p4_16/internal/customer/extreme/npb-master-ptf/tests/test.json
+    sed -i 's/mnt/bfn\/bf-p4c-compilers/g' $bfnhome/p4-tests/p4_16/internal/customer/extreme/npb-multi-prog/tests/test.json
+    sed -i 's/mnt/bfn\/bf-p4c-compilers/g' $bfnhome/p4-tests/p4_16/internal/customer/extreme/npb-folded-pipe/tests/test.json
+    sed -i 's/mnt/bfn\/bf-p4c-compilers/g' $bfnhome/p4-tests/p4_16/internal/customer/extreme/p4c-5244/tests/test.json
     bfnhome="/bfn/bf-p4c-compilers"
 fi

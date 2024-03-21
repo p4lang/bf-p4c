@@ -17,7 +17,7 @@ OPTION(ENABLE_STF2PTF "Run STF tests as PTF" OFF)
 OPTION(TEST_ALT_PHV_ALLOC "Enable the alternative PHV allocator in ctest-based tests" OFF)
 
 if (ENABLE_TEST_ISOLATION)
-    set (P4C_RUNTEST ${CMAKE_CURRENT_SOURCE_DIR}/runtest-isolated)
+    set (P4C_RUNTEST ${CMAKE_CURRENT_SOURCE_DIR}/internal/runtest-isolated)
 else()
     set (P4C_RUNTEST ${CMAKE_CURRENT_SOURCE_DIR}/runtest)
 endif()
@@ -83,10 +83,10 @@ if (ENABLE_TESTING)
   # add jbay tests and xfails with reasons
   include(JBayTests.cmake)
   if (ENABLE_CLOUDBREAK)
-    include(CloudbreakTests.cmake)
+    include(internal/CloudbreakTests.cmake)
   endif()
   if (ENABLE_FLATROCK)
-    include(FlatrockTests.cmake)
+    include(internal/FlatrockTests.cmake)
   endif()
 
   # We have additional test inputs that are used to test the other
@@ -103,7 +103,7 @@ if (ENABLE_TESTING)
   include (BMV2Tests.cmake)
 
   # Test code generation (check assembler output)
-  include (CodeGenTests.cmake)
+  include (internal/CodeGenTests.cmake)
 
   if (ENABLE_STF2PTF)
     # test STF lexing and parsing by running the stf2ptf_pd generator on

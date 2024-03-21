@@ -578,5 +578,5 @@
             "symbol_type": "Parameter_Type_Extern"
         }
     ],
-    "source_root": "/workspaces/bf-p4c2/p4-tests/p4-programs/p4_16_programs/tna_operations"
+    "source_root": "/workspaces/bf-p4c2/p4-tests/internal/p4-programs/p4_16_programs/tna_operations"
 }

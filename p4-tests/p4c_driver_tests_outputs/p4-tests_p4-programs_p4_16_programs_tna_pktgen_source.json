@@ -5,119 +5,15 @@
             "references": [
                 {
                     "file": "tna_pktgen.p4",
-                    "line": 321,
-                    "column": 9
-                },
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 326,
-                    "column": 9
-                },
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 342,
-                    "column": 20
-                }
-            ],
-            "symbol_name": "Ing.port_down_app_ctr",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 319,
-                "column": 61
-            },
-            "symbol_type": "Declaration_Instance_Type_Specialized"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 347,
-                    "column": 9
-                },
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 352,
-                    "column": 9
-                },
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 376,
-                    "column": 20
-                }
-            ],
-            "symbol_name": "Ing.recirc_app_ctr",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 345,
-                "column": 61
-            },
-            "symbol_type": "Declaration_Instance_Type_Specialized"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 410,
-                    "column": 9
-                },
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 415,
-                    "column": 9
-                },
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 428,
-                    "column": 20
-                }
-            ],
-            "symbol_name": "Ing.recirc_ctr",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 408,
-                "column": 61
-            },
-            "symbol_type": "Declaration_Instance_Type_Specialized"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 295,
-                    "column": 9
-                },
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 300,
-                    "column": 9
-                },
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 316,
-                    "column": 20
-                }
-            ],
-            "symbol_name": "Ing.timer_app_ctr",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 293,
-                "column": 61
-            },
-            "symbol_type": "Declaration_Instance_Type_Specialized"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 510,
+                    "line": 149,
                     "column": 8
                 }
             ],
             "symbol_name": "pipe",
             "declaration": {
                 "file": "tna_pktgen.p4",
-                "line": 509,
-                "column": 62
+                "line": 147,
+                "column": 33
             },
             "symbol_type": "Declaration_Instance_Type_Specialized"
         },
@@ -125,19 +21,55 @@
             "references": [
                 {
                     "file": "tna_pktgen.p4",
-                    "line": 338,
+                    "line": 106,
+                    "column": 26
+                },
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 108,
+                    "column": 32
+                },
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 121,
+                    "column": 26
+                },
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 123,
+                    "column": 32
+                },
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 133,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.drop",
+            "declaration": {
+                "file": "tna_pktgen.p4",
+                "line": 87,
+                "column": 12
+            },
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 105,
                     "column": 13
                 },
                 {
                     "file": "tna_pktgen.p4",
-                    "line": 340,
-                    "column": 32
+                    "line": 120,
+                    "column": 13
                 }
             ],
-            "symbol_name": "Ing.count_port_down_app_and_drop",
+            "symbol_name": "SwitchIngress.match",
             "declaration": {
                 "file": "tna_pktgen.p4",
-                "line": 325,
+                "line": 91,
                 "column": 12
             },
             "symbol_type": "P4Action"
@@ -146,15 +78,15 @@
             "references": [
                 {
                     "file": "tna_pktgen.p4",
-                    "line": 337,
-                    "column": 13
+                    "line": 137,
+                    "column": 37
                 }
             ],
-            "symbol_name": "Ing.count_port_down_app_and_fwd",
+            "symbol_name": "tna_pktgen137",
             "declaration": {
                 "file": "tna_pktgen.p4",
-                "line": 320,
-                "column": 12
+                "line": 137,
+                "column": 37
             },
             "symbol_type": "P4Action"
         },
@@ -162,194 +94,14 @@
             "references": [
                 {
                     "file": "tna_pktgen.p4",
-                    "line": 424,
-                    "column": 13
-                },
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 426,
-                    "column": 32
-                }
-            ],
-            "symbol_name": "Ing.count_recirc_and_drop",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 414,
-                "column": 12
-            },
-            "symbol_type": "P4Action"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 423,
+                    "line": 131,
                     "column": 13
                 }
             ],
-            "symbol_name": "Ing.count_recirc_and_fwd",
+            "symbol_name": "SwitchIngress.p",
             "declaration": {
                 "file": "tna_pktgen.p4",
-                "line": 409,
-                "column": 12
-            },
-            "symbol_type": "P4Action"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 372,
-                    "column": 13
-                },
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 374,
-                    "column": 32
-                }
-            ],
-            "symbol_name": "Ing.count_recirc_app_and_drop",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 351,
-                "column": 12
-            },
-            "symbol_type": "P4Action"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 371,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "Ing.count_recirc_app_and_fwd",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 346,
-                "column": 12
-            },
-            "symbol_type": "P4Action"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 312,
-                    "column": 13
-                },
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 314,
-                    "column": 32
-                }
-            ],
-            "symbol_name": "Ing.count_timer_app_and_drop",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 299,
-                "column": 12
-            },
-            "symbol_type": "P4Action"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 311,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "Ing.count_timer_app_and_fwd",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 294,
-                "column": 12
-            },
-            "symbol_type": "P4Action"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 457,
-                    "column": 13
-                },
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 459,
-                    "column": 32
-                }
-            ],
-            "symbol_name": "Ing.drop",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 289,
-                "column": 12
-            },
-            "symbol_type": "P4Action"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 452,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "Ing.fwd",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 290,
-                "column": 12
-            },
-            "symbol_type": "P4Action"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 453,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "Ing.fwd_recirc",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 431,
-                "column": 12
-            },
-            "symbol_type": "P4Action"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 480,
-                    "column": 34
-                }
-            ],
-            "symbol_name": "tna_pktgen480",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 480,
-                "column": 34
-            },
-            "symbol_type": "P4Action"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 477,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "Ing.t_handle_external_packet",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 447,
+                "line": 111,
                 "column": 11
             },
             "symbol_type": "P4Table"
@@ -358,458 +110,50 @@
             "references": [
                 {
                     "file": "tna_pktgen.p4",
-                    "line": 467,
+                    "line": 129,
                     "column": 13
                 }
             ],
-            "symbol_name": "Ing.t_port_down_app",
+            "symbol_name": "SwitchIngress.t",
             "declaration": {
                 "file": "tna_pktgen.p4",
-                "line": 329,
-                "column": 11
-            },
-            "symbol_type": "P4Table"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 475,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "Ing.t_recirc",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 418,
-                "column": 11
-            },
-            "symbol_type": "P4Table"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 469,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "Ing.t_recirc_app",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 355,
-                "column": 11
-            },
-            "symbol_type": "P4Table"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 465,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "Ing.t_timer_app",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 303,
+                "line": 96,
                 "column": 11
             },
             "symbol_type": "P4Table"
         },
         {
             "references": [],
-            "symbol_name": "tbl_tna_pktgen480",
+            "symbol_name": "tbl_drop",
             "declaration": {
                 "file": "tna_pktgen.p4",
-                "line": 480,
-                "column": 34
+                "line": 133,
+                "column": 13
             },
             "symbol_type": "P4Table"
         },
         {
             "references": [],
-            "symbol_name": "IDprsr.dprsr_md.mirror_type",
+            "symbol_name": "tbl_tna_pktgen137",
             "declaration": {
                 "file": "tna_pktgen.p4",
-                "line": 228,
-                "column": 61
+                "line": 137,
+                "column": 37
             },
-            "symbol_type": "Parameter_Type_Struct"
+            "symbol_type": "P4Table"
         },
         {
             "references": [
                 {
                     "file": "tna_pktgen.p4",
-                    "line": 239,
-                    "column": 18
-                }
-            ],
-            "symbol_name": "IDprsr.hdr.ethernet",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 226,
-                "column": 30
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 238,
-                    "column": 18
-                }
-            ],
-            "symbol_name": "IDprsr.hdr.recirc_tag",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 226,
-                "column": 30
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 238,
-                    "column": 9
-                },
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 239,
-                    "column": 9
-                }
-            ],
-            "symbol_name": "IDprsr.pkt",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 225,
-                "column": 27
-            },
-            "symbol_type": "Parameter_Type_Extern"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 219,
-                    "column": 24
-                }
-            ],
-            "symbol_name": "IPrsr.hdr.ethernet",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 159,
-                "column": 26
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 197,
-                    "column": 24
-                }
-            ],
-            "symbol_name": "IPrsr.hdr.port_down",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 159,
-                "column": 26
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 201,
-                    "column": 24
-                }
-            ],
-            "symbol_name": "IPrsr.hdr.recirc",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 159,
-                "column": 26
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 215,
-                    "column": 24
-                }
-            ],
-            "symbol_name": "IPrsr.hdr.recirc_tag",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 159,
-                "column": 26
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 193,
-                    "column": 24
-                }
-            ],
-            "symbol_name": "IPrsr.hdr.timer",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 159,
-                "column": 26
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 170,
-                    "column": 24
-                }
-            ],
-            "symbol_name": "IPrsr.intr_md",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 161,
-                "column": 47
-            },
-            "symbol_type": "Parameter_Type_Header"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 187,
-                    "column": 27
-                }
-            ],
-            "symbol_name": "IPrsr.intr_md.ingress_port",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 161,
-                "column": 47
-            },
-            "symbol_type": "Parameter_Type_Header"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 171,
-                    "column": 9
-                }
-            ],
-            "symbol_name": "IPrsr.md.port_md",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 160,
-                "column": 33
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 170,
-                    "column": 9
-                },
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 175,
-                    "column": 27
-                },
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 187,
-                    "column": 49
-                },
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 193,
-                    "column": 9
-                },
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 197,
-                    "column": 9
-                },
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 201,
-                    "column": 9
-                },
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 215,
-                    "column": 9
-                },
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 219,
-                    "column": 9
-                }
-            ],
-            "symbol_name": "IPrsr.packet",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 158,
-                "column": 24
-            },
-            "symbol_type": "Parameter_Type_Extern"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 323,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "Ing.count_port_down_app_and_fwd.dst_port",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 320,
-                "column": 49
-            },
-            "symbol_type": "Parameter_Type_Bits"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 412,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "Ing.count_recirc_and_fwd.dst_port",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 409,
-                "column": 42
-            },
-            "symbol_type": "Parameter_Type_Bits"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 349,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "Ing.count_recirc_app_and_fwd.dst_port",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 346,
-                "column": 46
-            },
-            "symbol_type": "Parameter_Type_Bits"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 297,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "Ing.count_timer_app_and_fwd.dst_port",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 294,
-                "column": 45
-            },
-            "symbol_type": "Parameter_Type_Bits"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 290,
-                    "column": 68
-                }
-            ],
-            "symbol_name": "Ing.fwd.dst_port",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 290,
-                "column": 25
-            },
-            "symbol_type": "Parameter_Type_Bits"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 432,
-                    "column": 40
-                }
-            ],
-            "symbol_name": "Ing.fwd_recirc.dst_port",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 431,
-                "column": 32
-            },
-            "symbol_type": "Parameter_Type_Bits"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 434,
-                    "column": 30
-                }
-            ],
-            "symbol_name": "Ing.fwd_recirc.tag",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 431,
-                "column": 50
-            },
-            "symbol_type": "Parameter_Type_Bits"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 449,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "Ing.hdr.ethernet.dmac",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 245,
-                "column": 23
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 466,
+                    "line": 130,
                     "column": 20
                 }
             ],
-            "symbol_name": "Ing.hdr.port_down",
+            "symbol_name": "SwitchIngress.hdr.port_down",
             "declaration": {
                 "file": "tna_pktgen.p4",
-                "line": 245,
+                "line": 80,
                 "column": 23
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -818,344 +162,158 @@
             "references": [
                 {
                     "file": "tna_pktgen.p4",
-                    "line": 322,
+                    "line": 114,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.hdr.port_down.app_id",
+            "declaration": {
+                "file": "tna_pktgen.p4",
+                "line": 80,
+                "column": 23
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 116,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.hdr.port_down.packet_id",
+            "declaration": {
+                "file": "tna_pktgen.p4",
+                "line": 80,
+                "column": 23
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 113,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.hdr.port_down.pipe_id",
+            "declaration": {
+                "file": "tna_pktgen.p4",
+                "line": 80,
+                "column": 23
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 115,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.hdr.port_down.port_num",
+            "declaration": {
+                "file": "tna_pktgen.p4",
+                "line": 80,
+                "column": 23
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 128,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.hdr.timer",
+            "declaration": {
+                "file": "tna_pktgen.p4",
+                "line": 80,
+                "column": 23
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 99,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.hdr.timer.app_id",
+            "declaration": {
+                "file": "tna_pktgen.p4",
+                "line": 80,
+                "column": 23
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 100,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.hdr.timer.batch_id",
+            "declaration": {
+                "file": "tna_pktgen.p4",
+                "line": 80,
+                "column": 23
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 101,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.hdr.timer.packet_id",
+            "declaration": {
+                "file": "tna_pktgen.p4",
+                "line": 80,
+                "column": 23
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 98,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.hdr.timer.pipe_id",
+            "declaration": {
+                "file": "tna_pktgen.p4",
+                "line": 80,
+                "column": 23
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 88,
                     "column": 9
                 }
             ],
-            "symbol_name": "Ing.hdr.port_down.$valid",
+            "symbol_name": "SwitchIngress.ig_intr_dprsr_md.drop_ctl",
             "declaration": {
                 "file": "tna_pktgen.p4",
-                "line": 245,
-                "column": 23
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 332,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "Ing.hdr.port_down.app_id",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 245,
-                "column": 23
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 334,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "Ing.hdr.port_down.packet_id",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 245,
-                "column": 23
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 331,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "Ing.hdr.port_down.pipe_id",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 245,
-                "column": 23
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 333,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "Ing.hdr.port_down.port_num",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 245,
-                "column": 23
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 468,
-                    "column": 20
-                }
-            ],
-            "symbol_name": "Ing.hdr.recirc",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 245,
-                "column": 23
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 348,
-                    "column": 9
-                }
-            ],
-            "symbol_name": "Ing.hdr.recirc.$valid",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 245,
-                "column": 23
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 365,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "Ing.hdr.recirc.app_id",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 245,
-                "column": 23
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 366,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "Ing.hdr.recirc.key",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 245,
-                "column": 23
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 367,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "Ing.hdr.recirc.packet_id",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 245,
-                "column": 23
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 364,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "Ing.hdr.recirc.pipe_id",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 245,
-                "column": 23
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 474,
-                    "column": 20
-                }
-            ],
-            "symbol_name": "Ing.hdr.recirc_tag",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 245,
-                "column": 23
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 411,
-                    "column": 9
-                },
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 433,
-                    "column": 9
-                }
-            ],
-            "symbol_name": "Ing.hdr.recirc_tag.$valid",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 245,
-                "column": 23
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 420,
-                    "column": 13
-                },
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 434,
-                    "column": 9
-                }
-            ],
-            "symbol_name": "Ing.hdr.recirc_tag.tag",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 245,
-                "column": 23
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 464,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "Ing.hdr.timer",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 245,
-                "column": 23
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 296,
-                    "column": 9
-                }
-            ],
-            "symbol_name": "Ing.hdr.timer.$valid",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 245,
-                "column": 23
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 306,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "Ing.hdr.timer.app_id",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 245,
-                "column": 23
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 307,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "Ing.hdr.timer.batch_id",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 245,
-                "column": 23
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 308,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "Ing.hdr.timer.packet_id",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 245,
-                "column": 23
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 305,
-                    "column": 13
-                }
-            ],
-            "symbol_name": "Ing.hdr.timer.pipe_id",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 245,
-                "column": 23
-            },
-            "symbol_type": "Parameter_Type_Struct"
-        },
-        {
-            "references": [
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 289,
-                    "column": 21
-                }
-            ],
-            "symbol_name": "Ing.intr_dprsr_md.drop_ctl",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 249,
+                "line": 84,
                 "column": 57
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -1164,14 +322,35 @@
             "references": [
                 {
                     "file": "tna_pktgen.p4",
-                    "line": 480,
+                    "line": 102,
+                    "column": 13
+                },
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 117,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.ig_intr_md.ingress_port",
+            "declaration": {
+                "file": "tna_pktgen.p4",
+                "line": 82,
+                "column": 41
+            },
+            "symbol_type": "Parameter_Type_Header"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 137,
                     "column": 9
                 }
             ],
-            "symbol_name": "Ing.intr_tm_md.bypass_egress",
+            "symbol_name": "SwitchIngress.ig_intr_tm_md.bypass_egress",
             "declaration": {
                 "file": "tna_pktgen.p4",
-                "line": 250,
+                "line": 85,
                 "column": 51
             },
             "symbol_type": "Parameter_Type_Struct"
@@ -1180,29 +359,182 @@
             "references": [
                 {
                     "file": "tna_pktgen.p4",
-                    "line": 290,
-                    "column": 37
-                },
-                {
-                    "file": "tna_pktgen.p4",
-                    "line": 432,
+                    "line": 92,
                     "column": 9
                 }
             ],
-            "symbol_name": "Ing.intr_tm_md.ucast_egress_port",
+            "symbol_name": "SwitchIngress.ig_intr_tm_md.ucast_egress_port",
             "declaration": {
                 "file": "tna_pktgen.p4",
-                "line": 250,
+                "line": 85,
                 "column": 51
             },
             "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 92,
+                    "column": 43
+                }
+            ],
+            "symbol_name": "SwitchIngress.match.port",
+            "declaration": {
+                "file": "tna_pktgen.p4",
+                "line": 91,
+                "column": 27
+            },
+            "symbol_type": "Parameter_Type_Bits"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 74,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.port_down",
+            "declaration": {
+                "file": "tna_pktgen.p4",
+                "line": 69,
+                "column": 23
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 74,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.timer",
+            "declaration": {
+                "file": "tna_pktgen.p4",
+                "line": 69,
+                "column": 23
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [],
+            "symbol_name": "SwitchIngressDeparser.ig_intr_dprsr_md.mirror_type",
+            "declaration": {
+                "file": "tna_pktgen.p4",
+                "line": 71,
+                "column": 54
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 74,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.pkt",
+            "declaration": {
+                "file": "tna_pktgen.p4",
+                "line": 68,
+                "column": 20
+            },
+            "symbol_type": "Parameter_Type_Extern"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 61,
+                    "column": 24
+                }
+            ],
+            "symbol_name": "SwitchIngressParser.hdr.port_down",
+            "declaration": {
+                "file": "tna_pktgen.p4",
+                "line": 39,
+                "column": 20
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 56,
+                    "column": 24
+                }
+            ],
+            "symbol_name": "SwitchIngressParser.hdr.timer",
+            "declaration": {
+                "file": "tna_pktgen.p4",
+                "line": 39,
+                "column": 20
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 44,
+                    "column": 24
+                }
+            ],
+            "symbol_name": "SwitchIngressParser.ig_intr_md",
+            "declaration": {
+                "file": "tna_pktgen.p4",
+                "line": 41,
+                "column": 41
+            },
+            "symbol_type": "Parameter_Type_Header"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 44,
+                    "column": 9
+                },
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 45,
+                    "column": 9
+                },
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 47,
+                    "column": 51
+                },
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 56,
+                    "column": 9
+                },
+                {
+                    "file": "tna_pktgen.p4",
+                    "line": 61,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngressParser.packet",
+            "declaration": {
+                "file": "tna_pktgen.p4",
+                "line": 38,
+                "column": 18
+            },
+            "symbol_type": "Parameter_Type_Extern"
         },
         {
             "references": [],
             "symbol_name": "cond-1",
             "declaration": {
                 "file": "tna_pktgen.p4",
-                "line": 464,
+                "line": 128,
                 "column": 9
             },
             "symbol_type": "IfStatement"
@@ -1212,7 +544,7 @@
             "symbol_name": "cond-2",
             "declaration": {
                 "file": "tna_pktgen.p4",
-                "line": 466,
+                "line": 130,
                 "column": 16
             },
             "symbol_type": "IfStatement"
@@ -1222,8 +554,8 @@
             "symbol_name": "cond-3",
             "declaration": {
                 "file": "tna_pktgen.p4",
-                "line": 468,
-                "column": 16
+                "line": 128,
+                "column": 9
             },
             "symbol_type": "IfStatement"
         },
@@ -1232,51 +564,11 @@
             "symbol_name": "cond-4",
             "declaration": {
                 "file": "tna_pktgen.p4",
-                "line": 474,
-                "column": 16
-            },
-            "symbol_type": "IfStatement"
-        },
-        {
-            "references": [],
-            "symbol_name": "cond-5",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 464,
-                "column": 9
-            },
-            "symbol_type": "IfStatement"
-        },
-        {
-            "references": [],
-            "symbol_name": "cond-6",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 466,
-                "column": 16
-            },
-            "symbol_type": "IfStatement"
-        },
-        {
-            "references": [],
-            "symbol_name": "cond-7",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 468,
-                "column": 16
-            },
-            "symbol_type": "IfStatement"
-        },
-        {
-            "references": [],
-            "symbol_name": "cond-8",
-            "declaration": {
-                "file": "tna_pktgen.p4",
-                "line": 474,
+                "line": 130,
                 "column": 16
             },
             "symbol_type": "IfStatement"
         }
     ],
-    "source_root": "/mnt/p4-tests/p4-programs/p4_16_programs/tna_pktgen"
+    "source_root": "/mnt/p4-tests/internal/p4-programs/p4_16_programs/tna_pktgen"
 }

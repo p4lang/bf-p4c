@@ -105,7 +105,7 @@ function(bfn_add_p4factory_tests tag device arch label test_list)
   # and they have the ptf tests in a separate directory
   foreach(__t IN LISTS ${test_list})
     file (RELATIVE_PATH p4test ${P4C_SOURCE_DIR} ${__t})
-    string (REPLACE "p4-programs/programs" "p4-programs/ptf-tests" ptfpath ${__t})
+    string (REPLACE "internal/p4-programs/programs" "internal/p4-programs/ptf-tests" ptfpath ${__t})
     get_filename_component (ptfdir ${ptfpath} DIRECTORY)
     p4c_add_ptf_test_with_ptfdir (${tag} ${p4test} ${__t} "${testExtraArgs} -pd -${device} -arch ${arch} ${ptf_extra_args}" ${ptfdir})
     set_property(TEST "${tag}/${p4test}" PROPERTY ENVIRONMENT "")

@@ -17,7 +17,7 @@ READLINK_COMMAND=$(which greadlink || which readlink)
 
 LOAD_MEASUREMENT___COMMAND=true ### make this command do nothing by default
 if [ -n "$P4C_DO_RUN_LOAD_MEASUREMENT" ] && ! echo $P4C_DO_RUN_LOAD_MEASUREMENT | grep --extended-regexp --ignore-case --quiet '(^0$|disable|false|no|off)'; then
-  LOAD_MEASUREMENT___COMMAND="$(realpath $(dirname $0))"/measure_and_report_the_system_load.py
+  LOAD_MEASUREMENT___COMMAND="$(realpath $(dirname $0))"/internal/measure_and_report_the_system_load.py
 fi
 
 
@@ -919,7 +919,7 @@ if $run_pd ; then
     configure_and_build $p4builddir "$config_args" $testout
     popd > /dev/null  # $testout
 
-    run $(dirname $0)/gen_pd_conf.py $gen_conf_args
+    run $(dirname $0)/internal/gen_pd_conf.py $gen_conf_args
 
     PTF_RUNNER=$(findbin HARLYN_PTF_DRIVER_WRAPPER)
     echo "Test dir: ${ptftestdir}"

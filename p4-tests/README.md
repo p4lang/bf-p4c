@@ -150,7 +150,7 @@ that were invoked (for starting model, switchd, ...) and also paths to
     Where `<prog_config_file>` is the .conf file generated for this run.
     It can be manually generated using:
     ```bash
-    ./p4-tests/gen_pd_conf.py --name <prog_name> --testdir $P4C_OUTPUT --device <tofino|tofino2>
+    ./p4-tests/internal/gen_pd_conf.py --name <prog_name> --testdir $P4C_OUTPUT --device <tofino|tofino2>
     ```
 
 Any extra argument that you pass to ptf_runner.py will be forwarded to PTF. In

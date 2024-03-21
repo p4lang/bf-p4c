@@ -117,7 +117,7 @@ if (PTF_REQUIREMENTS_MET)
 # DRV-2380
   p4c_add_xfail_reason("tofino"
     "TTransportException"
-    extensions/p4_tests/p4-programs/programs/perf_test_alpm/perf_test_alpm.p4
+    extensions/p4_tests/internal/p4-programs/programs/perf_test_alpm/perf_test_alpm.p4
     )
 
   p4c_add_xfail_reason("tofino"
@@ -195,12 +195,12 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "error.*tofino supports up to 12 stages|error.*table allocation.*failed"
-  extensions/p4_tests/p4_16/compile_only/p4c-3417.p4
+  extensions/p4_tests/p4_16/internal/p4c-3417.p4
 )
 
 p4c_add_xfail_reason("tofino"
   "error.*tofino supports up to 12 stages"
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1797-1.p4
+  extensions/p4_tests/p4_16/internal/customer/extreme/p4c-1797-1.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -211,7 +211,7 @@ p4c_add_xfail_reason("tofino"
 # P4C-1400, P4C-1123
 p4c_add_xfail_reason("tofino"
   "NameError: name 'step' is not defined"
-  extensions/p4_tests/p4-programs/internal_p4_14/mau_test/mau_test.p4
+  extensions/p4_tests/internal/p4-programs/internal_p4_14/mau_test/mau_test.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -294,7 +294,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue2330.p4
   testdata/p4_16_samples/issue-2123-3-bmv2.p4
   testdata/p4_16_samples/issue-2123-2-bmv2.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1672-1.p4
+  extensions/p4_tests/p4_16/internal/customer/extreme/p4c-1672-1.p4
   testdata/p4_16_samples/issue512.p4
   testdata/p4_16_samples/psa-dpdk-errorcode-1.p4
   testdata/p4_16_samples/hdr_stacks2345.p4
@@ -310,7 +310,7 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "This action requires hash, which can only be done through the hit pathway"
-  extensions/p4_tests/p4_14/compile_only/test_config_101_switch_msdc.p4
+  extensions/p4_tests/p4_14/internal/test_config_101_switch_msdc.p4
   testdata/p4_14_samples/acl1.p4
 )
 
@@ -398,7 +398,7 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "Cannot unify type"
-  extensions/p4_tests/p4_16/fabric-psa/fabric.p4
+  extensions/p4_tests/p4_16/internal/fabric-psa/fabric.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -502,7 +502,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/photostats_0.p4
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/sidestepped_0.p4
   testdata/p4_14_samples/action_inline.p4
-  extensions/p4_tests/p4_16/compile_only/p4c-2336.p4
+  extensions/p4_tests/p4_16/internal/p4c-2336.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -567,14 +567,14 @@ p4c_add_xfail_reason("tofino"
 # Expected failure, negative test.
 p4c_add_xfail_reason("tofino"
   "Operands of arithmetic operations cannot be greater than 64 bits"
-  extensions/p4_tests/p4_16/customer/jeju/p4c-1067-neg.p4
+  extensions/p4_tests/p4_16/internal/customer/jeju/p4c-1067-neg.p4
 )
 
 # P4C-1067
 # Expected failure, negative test.
 p4c_add_xfail_reason("tofino"
   "Operand field bit .* of wide arithmetic operation cannot have even and odd container placement constraints"
-  extensions/p4_tests/p4_16/customer/jeju/p4c-1067-neg2.p4
+  extensions/p4_tests/p4_16/internal/customer/jeju/p4c-1067-neg2.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -628,7 +628,7 @@ p4c_add_xfail_reason("tofino"
 # Negative test
 p4c_add_xfail_reason("tofino"
   "Unsupported unconditional .*.emit"
-  extensions/p4_tests/p4_16/compile_only/brig-neg-1259.p4
+  extensions/p4_tests/p4_16/internal/brig-neg-1259.p4
 )
 
 # Negative test. >66 bytes of ternary match key fields used.
@@ -641,7 +641,7 @@ p4c_add_xfail_reason("tofino"
 # are not allowed for ATCAM tables.
 p4c_add_xfail_reason("tofino"
   "error.*The ability to split directly addressed counters/meters/stateful resources across multiple logical tables of an algorithmic tcam match table is not currently supported.*"
-  extensions/p4_tests/p4_16/compile_only/p4c-1601-neg.p4
+  extensions/p4_tests/p4_16/internal/p4c-1601-neg.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -652,7 +652,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error.*This program violates action constraints imposed by Tofino.|ACTION_CANNOT_BE_SYNTHESIZED"
   # Negative tests for violation of action constraints.
-  extensions/p4_tests/p4_16/customer/kaloom/p4c-1299.p4
+  extensions/p4_tests/p4_16/internal/customer/kaloom/p4c-1299.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -661,7 +661,7 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/compile_only/action_conflict_1.p4
   extensions/p4_tests/p4_14/compile_only/action_conflict_3.p4
   extensions/p4_tests/p4_14/compile_only/action_conflict_7.p4
-  extensions/p4_tests/p4_16/customer/noviflow/p4c-1288.p4
+  extensions/p4_tests/p4_16/internal/customer/noviflow/p4c-1288.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -684,7 +684,7 @@ p4c_add_xfail_reason("tofino"
 # P4C-1451 -- requires action splitting to avoid the error
 p4c_add_xfail_reason("tofino"
   "Action Data Argument .* cannot be used in a hash generation expression"
-  extensions/p4_tests/p4_14/customer/barefoot_academy/p4c-1451.p4
+  extensions/p4_tests/p4_14/internal/customer/barefoot_academy/p4c-1451.p4
 )
 
 # P4C-1371
@@ -842,7 +842,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Varbit field size expression evaluates to non byte-aligned value"
   # unbounded varbit expr
-  extensions/p4_tests/p4_16/compile_only/p4c-1478-neg.p4
+  extensions/p4_tests/p4_16/internal/p4c-1478-neg.p4
   testdata/p4_16_samples/issue447-2-bmv2.p4
   testdata/p4_16_samples/issue447-3-bmv2.p4
   testdata/p4_16_samples/issue447-4-bmv2.p4
@@ -865,12 +865,12 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "Unsupported unconditional .*.emit"
-  extensions/p4_tests/p4_16/customer/noviflow/p4c-1588-neg.p4
+  extensions/p4_tests/p4_16/internal/customer/noviflow/p4c-1588-neg.p4
   )
 
 p4c_add_xfail_reason("tofino"
   "error: Use of uninitialized parser value"
-  extensions/p4_tests/p4_16/compile_only/p4c-1561-neg.p4
+  extensions/p4_tests/p4_16/internal/p4c-1561-neg.p4
   # unable to resolve "lookahead" expression in resolve_parser_values.cpp
   testdata/p4_16_samples/issue1409-bmv2.p4
   testdata/p4_14_samples/issue2196.p4
@@ -908,7 +908,7 @@ p4c_add_xfail_reason("tofino"
 # Requires Pipe prefix support to avoid duplicate names
 p4c_add_xfail_reason("tofino"
   "error: Found .* duplicate name.* in the P4Info"
-  extensions/p4_tests/p4_16/compile_only/brig-814-2.p4
+  extensions/p4_tests/p4_16/internal/brig-814-2.p4
   extensions/p4_tests/p4_16/compile_only/multiple_apply2.p4
 )
 
@@ -938,7 +938,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/runtime-index-bmv2.p4
   testdata/p4_16_samples/runtime-index-2-bmv2.p4
   testdata/p4_16_samples/predication_issue_2.p4
-  extensions/p4_tests/p4_16/compile_only/p4c-2056.p4
+  extensions/p4_tests/p4_16/internal/p4c-2056.p4
   testdata/p4_16_samples/issue2726-bmv2.p4
   testdata/p4_16_samples/issue1989-bmv2.p4
   # p4c update 2021-12-06
@@ -958,7 +958,7 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "error: Exceeded hardware limit for deparser field dictionary entries"
-  extensions/p4_tests/p4_16/compile_only/p4c-1757-neg.p4
+  extensions/p4_tests/p4_16/internal/p4c-1757-neg.p4
 )
 
 if (NOT TEST_ALT_PHV_ALLOC)
@@ -970,27 +970,27 @@ endif()
 
 p4c_add_xfail_reason("tofino"
   "Cannot cast implicitly type"
-  extensions/p4_tests/p4_16/compile_only/brig-305.p4
+  extensions/p4_tests/p4_16/internal/brig-305.p4
 )
 
 # Expected failures due to program error
 p4c_add_xfail_reason("tofino"
   "Dynamic hashes must have the same field list and sets of algorithm for each get call"
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1492.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1587-a.p4
+  extensions/p4_tests/p4_16/internal/customer/extreme/p4c-1492.p4
+  extensions/p4_tests/p4_16/internal/customer/extreme/p4c-1587-a.p4
 )
 
 # P4C-1862
 p4c_add_xfail_reason("tofino"
   "InvalidTableOperation"
-  extensions/p4_tests/p4-programs/internal_p4_14/ecc/ecc.p4
+  extensions/p4_tests/internal/p4-programs/internal_p4_14/ecc/ecc.p4
 )
 
 # P4C-2091
 # Expected failure (negative test)
 p4c_add_xfail_reason("tofino"
   "error.*PHV allocation was not successful|ACTION_CANNOT_BE_SYNTHESIZED|NO_SLICING_FOUND"
-  extensions/p4_tests/p4_16/compile_only/p4c-2091.p4
+  extensions/p4_tests/p4_16/internal/p4c-2091.p4
 )
 
 # P4C-2123
@@ -1006,15 +1006,15 @@ p4c_add_xfail_reason("tofino"
 # Negative tests to test slice list creation
 p4c_add_xfail_reason("tofino"
   "you can introduce padding fields"
-  extensions/p4_tests/p4_16/compile_only/p4c-2025.p4
-  extensions/p4_tests/p4_16/compile_only/p4c-1892.p4
+  extensions/p4_tests/p4_16/internal/p4c-2025.p4
+  extensions/p4_tests/p4_16/internal/p4c-1892.p4
   # parde physical adjacency constraint violated by mau phv_no_pack constraint
 )
 
 p4c_add_xfail_reason("tofino"
   "Checksum destination field .* is not byte-aligned in the header. Checksum engine is unable to update a field if it is not byte-aligned"
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/checksum_align.p4
-  extensions/p4_tests/p4_14/compile_only/p4c-1162.p4
+  extensions/p4_tests/p4_14/internal/p4c-1162.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1044,13 +1044,13 @@ p4c_add_xfail_reason("tofino"
 # keeping it in regression for compile_only
 p4c_add_xfail_reason("tofino"
   "TypeError: %d format: a number is required, not NoneType"
-  extensions/p4_tests/p4-programs/internal_p4_14/power/power.p4
+  extensions/p4_tests/internal/p4-programs/internal_p4_14/power/power.p4
 )
 
 p4c_add_xfail_reason("tofino"
   "Assignment to a header field in the deparser is only allowed when the source is checksum update, mirror, resubmit or learning digest"
-  extensions/p4_tests/p4_16/compile_only/p4c-1858_neg.p4
-  extensions/p4_tests/p4_16/compile_only/p4c-1867.p4
+  extensions/p4_tests/p4_16/internal/p4c-1858_neg.p4
+  extensions/p4_tests/p4_16/internal/p4c-1867.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1123,12 +1123,12 @@ p4c_add_xfail_reason("tofino"
 # P4C-2694 - saturating arithmetic exceeding container width
 p4c_add_xfail_reason("tofino"
   "Saturating arithmetic operators may not exceed maximum PHV container width"
-  extensions/p4_tests/p4_16/compile_only/p4c-2694.p4
+  extensions/p4_tests/p4_16/internal/p4c-2694.p4
 )
 
 p4c_add_xfail_reason("tofino"
   "table.*is applied in multiple places"
-  extensions/p4_tests/p4_16/customer/ruijie/p4c-2350-1.p4
+  extensions/p4_tests/p4_16/internal/customer/ruijie/p4c-2350-1.p4
 )
 
 # P4C-2783
@@ -1140,7 +1140,7 @@ p4c_add_xfail_reason("tofino"
 # Negative test, expected xfail
 p4c_add_xfail_reason("tofino"
   "error: table .*: Number of partitions are specified for table .* but the partition index .* is not found"
-  extensions/p4_tests/p4_16/compile_only/p4c-2035-name-neg.p4
+  extensions/p4_tests/p4_16/internal/p4c-2035-name-neg.p4
   extensions/p4_tests/p4_16/compile_only/atcam_match_wide1-neg.p4
 )
 
@@ -1178,7 +1178,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Flexible packing bug found"
   # P4C-3042
-  extensions/p4_tests/p4_16/compile_only/p4c-3042.p4
+  extensions/p4_tests/p4_16/internal/p4c-3042.p4
 )
 
 # p4c dd7c0eb1
@@ -1221,7 +1221,7 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "warning: .*: Padding fields do not need to be explicitly set.* Tofino does not support action data/constant with rotated PHV source at the same time|ACTION_CANNOT_BE_SYNTHESIZED|PHV allocation creates an invalid container action within a Tofino ALU"
-  extensions/p4_tests/p4_16/compile_only/p4c-3453.p4
+  extensions/p4_tests/p4_16/internal/p4c-3453.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1259,12 +1259,12 @@ p4c_add_xfail_reason("tofino"
 # P4C-3402
 p4c_add_xfail_reason("tofino"
   "error: Two or more assignments of .* inside the register action .* are not mutually exclusive and thus cannot be implemented in Tofino Stateful ALU."
-  extensions/p4_tests/p4_16/compile_only/p4c-3402.p4
+  extensions/p4_tests/p4_16/internal/p4c-3402.p4
 )
 
 p4c_add_xfail_reason("tofino"
   "error: You can only have more than one binary operator in a statement"
-  extensions/p4_tests/p4_16/compile_only/p4c-3402-err.p4
+  extensions/p4_tests/p4_16/internal/p4c-3402-err.p4
 )
 
 # P4C-3803 - Update open source psa.p4 to use type instead of enum for
@@ -1289,11 +1289,11 @@ p4c_add_xfail_reason("tofino"
 # P4C-3765
 p4c_add_xfail_reason("tofino"
   "error: Value used in select statement needs to be set from input packet"
-  extensions/p4_tests/p4_16/compile_only/p4c-3765-fail.p4
+  extensions/p4_tests/p4_16/internal/p4c-3765-fail.p4
 )
 p4c_add_xfail_reason("tofino"
   "error: Unable to resolve extraction source. This is likely due to the source having no absolute offset from the state"
-  extensions/p4_tests/p4_16/compile_only/p4c-2752.p4
+  extensions/p4_tests/p4_16/internal/p4c-2752.p4
 )
 
 
@@ -1303,7 +1303,7 @@ if (NOT TEST_ALT_PHV_ALLOC)
       "error: Size of learning quanta is [0-9]+ bytes, greater than the maximum allowed 48 bytes.
 Compiler will improve allocation of learning fields in future releases.
 Temporary fix: try to apply @pa_container_size pragma to small fields allocated to large container in. Here are possible useful progmas you can try: .*"
-      extensions/p4_tests/p4_16/compile_only/p4c-3914.p4
+      extensions/p4_tests/p4_16/internal/p4c-3914.p4
     )
 endif()
 
@@ -1398,7 +1398,7 @@ p4c_add_xfail_reason("tofino"
 )
 p4c_add_xfail_reason("tofino"
   "Compiler Bug: Overwriting definitions"
-  extensions/p4_tests/p4_14/customer/surfnet/p4c-1429.p4
+  extensions/p4_tests/p4_14/internal/customer/surfnet/p4c-1429.p4
 )
 p4c_add_xfail_reason("tofino"
   "mismatch from expected"
@@ -1444,7 +1444,7 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "not enough operands for .* instruction"
-  extensions/p4_tests/p4_14/compile_only/p4c-4090.p4
+  extensions/p4_tests/p4_14/internal/p4c-4090.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1495,7 +1495,7 @@ p4c_add_xfail_reason("tofino"
 # P4C-3220
 p4c_add_xfail_reason("tofino"
   "error: Incompatible outputs in RegisterAction: mem_lo and mem_hi"
-  extensions/p4_tests/p4_16/compile_only/p4c-3220_1.p4
+  extensions/p4_tests/p4_16/internal/p4c-3220_1.p4
 )
 
 # p4c update 2022-06-02
@@ -1604,13 +1604,13 @@ if (TEST_ALT_PHV_ALLOC)
     # PHV fitting
     p4c_add_xfail_reason("tofino"
       "error: PHV fitting failed, [0-9]* clusters cannot be allocated."
-      extensions/p4_tests/p4_14/customer/ruijie/p4c-2250.p4
+      extensions/p4_tests/p4_14/internal/customer/ruijie/p4c-2250.p4
       switch_ent_dc_general # To be removed when switch-14 profiles are removed
     )
 
     p4c_add_xfail_reason("tofino"
       "ActionAnalysis did not split up container by container"
-      extensions/p4_tests/p4_16/customer/arista/obfuscated-nat_vxlan.p4
+      extensions/p4_tests/p4_16/internal/customer/arista/obfuscated-nat_vxlan.p4
     )
 endif (TEST_ALT_PHV_ALLOC)
 
@@ -1631,7 +1631,7 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "google.protobuf.text_format.ParseError: .*:3 : Message type \"p4.config.v1.Table\" has no field named \"has_initial_entries\""
   extensions/p4_tests/p4_16/ptf/static_entries.p4
-  extensions/p4_tests/p4_16/ptf/p4c-5298.p4
+  extensions/p4_tests/p4_16/internal/ptf/p4c-5298.p4
 )
 
 # P4C-5307 - varbit extraction -> fixed-length extraction incorrect for constant lenghts

@@ -153,7 +153,7 @@ p4c_add_xfail_reason("tofino2"
 
 p4c_add_xfail_reason("tofino2"
   "Destination of saturation add was allocated to bigger container than the field itself.*"
-  extensions/p4_tests/p4_16/compile_only/p4c-3172-xfail.p4
+  extensions/p4_tests/p4_16/internal/p4c-3172-xfail.p4
 )
 
 # These tests fail at runtime with the driver
@@ -169,7 +169,7 @@ p4c_add_xfail_reason("tofino2"
 # updating p4runtime.  Can use PYTHONPATH=/mnt/build/_deps/p4runtime-src/py:$PYTHONPATH
 p4c_add_xfail_reason("tofino2"
   "google.protobuf.text_format.ParseError: .*:3 : Message type \"p4.config.v1.Table\" has no field named \"has_initial_entries\""
-  extensions/p4_tests/p4_16/ptf/p4c-5298.p4
+  extensions/p4_tests/p4_16/internal/ptf/p4c-5298.p4
 )
 endif() # PTF_REQUIREMENTS_MET
 
@@ -209,7 +209,7 @@ p4c_add_xfail_reason("tofino2"
 
 p4c_add_xfail_reason("tofino2"
   "Varbit field size expression evaluates to non byte-aligned value"
-  extensions/p4_tests/p4_16/compile_only/p4c-1478-neg.p4
+  extensions/p4_tests/p4_16/internal/p4c-1478-neg.p4
   )
 
 # Expected failure
@@ -227,14 +227,14 @@ p4c_add_xfail_reason("tofino2"
 # Not being tracked by JBay regression yet
 p4c_add_xfail_reason("tofino2"
   "Field key is not a member of header pktgen_recirc_header_t"
-  extensions/p4_tests/p4-programs/programs/stful/stful.p4
+  extensions/p4_tests/internal/p4-programs/programs/stful/stful.p4
 )
 
 p4c_add_xfail_reason("tofino2"
   "This program violates action constraints imposed by Tofino2"
   # P4C-3155
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1323-c2.p4
-  extensions/p4_tests/p4_16/customer/extreme/p4c-1680-2.p4
+  extensions/p4_tests/p4_16/internal/customer/extreme/p4c-1323-c2.p4
+  extensions/p4_tests/p4_16/internal/customer/extreme/p4c-1680-2.p4
 )
 
 p4c_add_xfail_reason("tofino2"
@@ -256,13 +256,13 @@ p4c_add_xfail_reason("tofino2"
 # Expected failure (negative test)
 p4c_add_xfail_reason("tofino2"
   "error.*PHV allocation was not successful|Trivial allocator has found unsatisfiable constraints"
-  extensions/p4_tests/p4_16/compile_only/p4c-2091.p4
+  extensions/p4_tests/p4_16/internal/p4c-2091.p4
 )
 
 # Negative tests to test slice list creation
 p4c_add_xfail_reason("tofino2"
   "you can introduce padding fields"
-  extensions/p4_tests/p4_16/compile_only/p4c-1892.p4
+  extensions/p4_tests/p4_16/internal/p4c-1892.p4
 )
 
 if (NOT TEST_ALT_PHV_ALLOC)
@@ -307,7 +307,7 @@ p4c_add_xfail_reason("tofino2"
 # P4C-2694 - saturating arithmetic exceeding container width
 p4c_add_xfail_reason("tofino2"
   "Saturating arithmetic operators may not exceed maximum PHV container width"
-  extensions/p4_tests/p4_16/compile_only/p4c-2694.p4
+  extensions/p4_tests/p4_16/internal/p4c-2694.p4
 )
 
 # P4C-2886
@@ -336,7 +336,7 @@ p4c_add_xfail_reason("tofino2"
 
 p4c_add_xfail_reason("tofino2"
   "Could not place table .* table .* could not fit|The ability to split directly addressed counters/meters/stateful resources across multiple logical tables of an algorithmic tcam match table is not currently supported"
-  extensions/p4_tests/p4_16/compile_only/p4c-1601-neg.p4
+  extensions/p4_tests/p4_16/internal/p4c-1601-neg.p4
 )
 
 p4c_add_xfail_reason("tofino2"
@@ -354,12 +354,12 @@ p4c_add_xfail_reason("tofino2"
 # to make it pass.  If that is removed, this failure will occur.
 #p4c_add_xfail_reason("tofino2"
 #  "Compiler Bug.*: Inconsistent tables added on merging program paths"
-#  extensions/p4_tests/p4_16/customer/keysight/keysight-tf2.p4
+#  extensions/p4_tests/p4_16/internal/customer/keysight/keysight-tf2.p4
 #)
 
 p4c_add_xfail_reason("tofino2"
   "warning: .*: Padding fields do not need to be explicitly set.* Tofino2 does not support action data/constant with rotated PHV source at the same time|Trivial allocator has found unsatisfiable constraints|PHV allocation creates an invalid container action within a Tofino ALU"
-  extensions/p4_tests/p4_16/compile_only/p4c-3453.p4
+  extensions/p4_tests/p4_16/internal/p4c-3453.p4
 )
 
 p4c_add_xfail_reason("tofino2"
@@ -370,24 +370,24 @@ p4c_add_xfail_reason("tofino2"
 p4c_add_xfail_reason("tofino2"
   "Ran out of parser match registers for .*"
   # P4C-3473
-  extensions/p4_tests/p4_16/customer/extreme/p4c-3473-a2.p4
+  extensions/p4_tests/p4_16/internal/customer/extreme/p4c-3473-a2.p4
 )
 
 # This is really expected to fail (with this particular error message)
 p4c_add_xfail_reason("tofino2"
    "error: Inferred incompatible container alignments for field egress::eg_md.field:[\r\n\t ]*.*p4c-3431.p4.77.: alignment = 6 .*[\r\n\t ]*.*eg_md.field = parse_1_md.field.*[\r\n\t ]*.*[\r\n\t ]*Previously inferred alignments:[\r\n\t ]*.*p4c-3431.p4.68.: alignment = 0 .*[\r\n\t ]*.*eg_md.field = hdr.field"
-   extensions/p4_tests/p4_16/compile_only/p4c-3431.p4
+   extensions/p4_tests/p4_16/internal/p4c-3431.p4
 )
 
 # P4C-3402
 p4c_add_xfail_reason("tofino2"
   "error: Two or more assignments of .* inside the register action .* are not mutually exclusive and thus cannot be implemented in Tofino Stateful ALU."
-  extensions/p4_tests/p4_16/compile_only/p4c-3402.p4
+  extensions/p4_tests/p4_16/internal/p4c-3402.p4
 )
 
 p4c_add_xfail_reason("tofino2"
   "error: You can only have more than one binary operator in a statement"
-  extensions/p4_tests/p4_16/compile_only/p4c-3402-err.p4
+  extensions/p4_tests/p4_16/internal/p4c-3402-err.p4
 )
 
 # pd scripts have problems with tofino2?
@@ -402,7 +402,7 @@ if (NOT TEST_ALT_PHV_ALLOC)
       "error: Size of learning quanta is [0-9]+ bytes, greater than the maximum allowed 48 bytes.
 Compiler will improve allocation of learning fields in future releases.
 Temporary fix: try to apply @pa_container_size pragma to small fields allocated to large container in. Here are possible useful progmas you can try: .*"
-      extensions/p4_tests/p4_16/compile_only/p4c-3914.p4
+      extensions/p4_tests/p4_16/internal/p4c-3914.p4
     )
 endif()
 
@@ -421,7 +421,7 @@ p4c_add_xfail_reason("tofino2"
 # P4C-3220
 p4c_add_xfail_reason("tofino2"
   "error: Incompatible outputs in RegisterAction: mem_lo and mem_hi"
-  extensions/p4_tests/p4_16/compile_only/p4c-3220_1.p4
+  extensions/p4_tests/p4_16/internal/p4c-3220_1.p4
 )
 
 # P4C-5307 - varbit extraction -> fixed-length extraction incorrect for constant lenghts
@@ -437,12 +437,12 @@ if (TEST_ALT_PHV_ALLOC)
 # add fails here
     p4c_add_xfail_reason("tofino2"
         "tofino2 supports up to 20 stages, using 29"
-	extensions/p4_tests/p4_16/customer/arista/obfuscated-p416_baremetal_tofino2.p4
+	extensions/p4_tests/p4_16/internal/customer/arista/obfuscated-p416_baremetal_tofino2.p4
     )
 
     p4c_add_xfail_reason("tofino2"
         "table allocation .alt-phv-alloc enabled. failed to allocate tables for pipe 'DefeatFlows'"
-	extensions/p4_tests/p4_16/customer/lts/p4c-5323.p4
+	extensions/p4_tests/p4_16/internal/customer/lts/p4c-5323.p4
     )
 endif (TEST_ALT_PHV_ALLOC)
 
@@ -450,13 +450,13 @@ if (NOT TEST_ALT_PHV_ALLOC)
     # Failure only with traditional compilation.
     p4c_add_xfail_reason("tofino2"
         "PHV allocation was not successful"
-        extensions/p4_tests/p4_16/customer/kaloom/p4c-5223-leaf-tof2.p4
+        extensions/p4_tests/p4_16/internal/customer/kaloom/p4c-5223-leaf-tof2.p4
     )                        
 
     # Failed after P4C-4507
     p4c_add_xfail_reason("tofino2"
       "tofino2 supports up to 20 stages, using|error: table allocation .* 20 stages. Allocation state: ALT_FINALIZE_TABLE"
-      extensions/p4_tests/p4_16/compile_only/p4c-3175.p4
+      extensions/p4_tests/p4_16/internal/p4c-3175.p4
     )
 endif()
 

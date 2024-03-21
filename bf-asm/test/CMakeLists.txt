@@ -11,7 +11,7 @@ MESSAGE("-- Adding bf-asm test suite")
 include(../../p4-tests/TestUtils.cmake)
 
 if (ENABLE_TEST_ISOLATION)
-  get_filename_component(P4C_RUNTEST ../../p4-tests/runtest-isolated REALPATH)
+  get_filename_component(P4C_RUNTEST ../../p4-tests/internal/runtest-isolated REALPATH)
 else()
   get_filename_component(P4C_RUNTEST ../../p4-tests/runtest REALPATH)
 endif()

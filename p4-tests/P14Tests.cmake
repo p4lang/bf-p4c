@@ -3,50 +3,50 @@
 # FIXME -- longer contain the string 'p4_14' they get compiled as p4_16, which fails.
 set (P14_XFAIL_TESTS
   extensions/p4_tests/p4_14/compile_only/02-FlexCounterActionProfile.p4
-  extensions/p4_tests/p4-programs/programs/alpm_test/alpm_test.p4
-  extensions/p4_tests/p4-programs/programs/basic_ipv4/basic_ipv4.p4
-  extensions/p4_tests/p4-programs/programs/basic_switching/basic_switching.p4
-  extensions/p4_tests/p4-programs/programs/chksum/chksum.p4
-  extensions/p4_tests/p4-programs/programs/default_entry/default_entry.p4
-  extensions/p4_tests/p4-programs/programs/deparse_zero/deparse_zero.p4
-  extensions/p4_tests/p4-programs/programs/dkm/dkm.p4
-  extensions/p4_tests/p4-programs/programs/drivers_test/drivers_test.p4
-  extensions/p4_tests/p4-programs/programs/emulation/emulation.p4
-  extensions/p4_tests/p4-programs/programs/exm_direct_1/exm_direct_1.p4
-  extensions/p4_tests/p4-programs/programs/exm_indirect_1/exm_indirect_1.p4
-  extensions/p4_tests/p4-programs/programs/exm_smoke_test/exm_smoke_test.p4
-  extensions/p4_tests/p4-programs/programs/fast_reconfig/fast_reconfig.p4
-  extensions/p4_tests/p4-programs/programs/fifo/fifo_pair.p4
-  extensions/p4_tests/p4-programs/programs/ha/ha.p4
-  extensions/p4_tests/p4-programs/programs/hash_driven/hash_driven.p4
-  extensions/p4_tests/p4-programs/programs/iterator/iterator.p4
-  extensions/p4_tests/p4-programs/programs/ipv4_checksum/ipv4_checksum.p4
-  extensions/p4_tests/p4-programs/programs/knet_mgr_test/knet_mgr_test.p4
-  extensions/p4_tests/p4-programs/programs/mau_test/mau_test.p4
-  extensions/p4_tests/p4-programs/programs/meters/meters.p4
-  extensions/p4_tests/p4-programs/programs/mirror_test/mirror_test.p4
-  extensions/p4_tests/p4-programs/programs/multicast_test/multicast_test.p4
-  extensions/p4_tests/p4-programs/programs/multi_device/multi_device.p4
-  extensions/p4_tests/p4-programs/programs/opcode_test/opcode_test.p4
-  extensions/p4_tests/p4-programs/programs/parser_error/parser_error.p4
-  extensions/p4_tests/p4-programs/programs/parser_intr_md/parser_intr_md.p4
-  extensions/p4_tests/p4-programs/programs/pcie_pkt_test/pcie_pkt_test.p4
-  extensions/p4_tests/p4-programs/programs/perf_test/perf_test.p4
-  extensions/p4_tests/p4-programs/programs/perf_test_alpm/perf_test_alpm.p4
-  extensions/p4_tests/p4-programs/programs/pgrs/pgrs.p4
-  extensions/p4_tests/p4-programs/programs/pvs/pvs.p4
-  extensions/p4_tests/p4-programs/programs/resubmit/resubmit.p4
-  extensions/p4_tests/p4-programs/programs/smoke_large_tbls/smoke_large_tbls.p4
-  extensions/p4_tests/p4-programs/programs/stful/stful.p4
+  extensions/p4_tests/internal/p4-programs/programs/alpm_test/alpm_test.p4
+  extensions/p4_tests/internal/p4-programs/programs/basic_ipv4/basic_ipv4.p4
+  extensions/p4_tests/internal/p4-programs/programs/basic_switching/basic_switching.p4
+  extensions/p4_tests/internal/p4-programs/programs/chksum/chksum.p4
+  extensions/p4_tests/internal/p4-programs/programs/default_entry/default_entry.p4
+  extensions/p4_tests/internal/p4-programs/programs/deparse_zero/deparse_zero.p4
+  extensions/p4_tests/internal/p4-programs/programs/dkm/dkm.p4
+  extensions/p4_tests/internal/p4-programs/programs/drivers_test/drivers_test.p4
+  extensions/p4_tests/internal/p4-programs/programs/emulation/emulation.p4
+  extensions/p4_tests/internal/p4-programs/programs/exm_direct_1/exm_direct_1.p4
+  extensions/p4_tests/internal/p4-programs/programs/exm_indirect_1/exm_indirect_1.p4
+  extensions/p4_tests/internal/p4-programs/programs/exm_smoke_test/exm_smoke_test.p4
+  extensions/p4_tests/internal/p4-programs/programs/fast_reconfig/fast_reconfig.p4
+  extensions/p4_tests/internal/p4-programs/programs/fifo/fifo_pair.p4
+  extensions/p4_tests/internal/p4-programs/programs/ha/ha.p4
+  extensions/p4_tests/internal/p4-programs/programs/hash_driven/hash_driven.p4
+  extensions/p4_tests/internal/p4-programs/programs/iterator/iterator.p4
+  extensions/p4_tests/internal/p4-programs/programs/ipv4_checksum/ipv4_checksum.p4
+  extensions/p4_tests/internal/p4-programs/programs/knet_mgr_test/knet_mgr_test.p4
+  extensions/p4_tests/internal/p4-programs/programs/mau_test/mau_test.p4
+  extensions/p4_tests/internal/p4-programs/programs/meters/meters.p4
+  extensions/p4_tests/internal/p4-programs/programs/mirror_test/mirror_test.p4
+  extensions/p4_tests/internal/p4-programs/programs/multicast_test/multicast_test.p4
+  extensions/p4_tests/internal/p4-programs/programs/multi_device/multi_device.p4
+  extensions/p4_tests/internal/p4-programs/programs/opcode_test/opcode_test.p4
+  extensions/p4_tests/internal/p4-programs/programs/parser_error/parser_error.p4
+  extensions/p4_tests/internal/p4-programs/programs/parser_intr_md/parser_intr_md.p4
+  extensions/p4_tests/internal/p4-programs/programs/pcie_pkt_test/pcie_pkt_test.p4
+  extensions/p4_tests/internal/p4-programs/programs/perf_test/perf_test.p4
+  extensions/p4_tests/internal/p4-programs/programs/perf_test_alpm/perf_test_alpm.p4
+  extensions/p4_tests/internal/p4-programs/programs/pgrs/pgrs.p4
+  extensions/p4_tests/internal/p4-programs/programs/pvs/pvs.p4
+  extensions/p4_tests/internal/p4-programs/programs/resubmit/resubmit.p4
+  extensions/p4_tests/internal/p4-programs/programs/smoke_large_tbls/smoke_large_tbls.p4
+  extensions/p4_tests/internal/p4-programs/programs/stful/stful.p4
   extensions/p4_tests/p4_14/compile_only/shared_names.p4
   extensions/p4_tests/p4_14/stf/hash_calculation_16.p4
   extensions/p4_tests/p4_14/stf/hash_calculation_32.p4
   extensions/p4_tests/p4_14/switch/p4src/switch.p4
   # proprietary algorithms for hash
-  extensions/p4_tests/p4-programs/programs/dyn_hash/dyn_hash.p4
-  extensions/p4_tests/p4-programs/programs/exm_direct/exm_direct.p4
+  extensions/p4_tests/internal/p4-programs/programs/dyn_hash/dyn_hash.p4
+  extensions/p4_tests/internal/p4-programs/programs/exm_direct/exm_direct.p4
   # hash_test.p4(171): error: set_p: parameter p must be bound
-  extensions/p4_tests/p4-programs/programs/hash_test/hash_test.p4
+  extensions/p4_tests/internal/p4-programs/programs/hash_test/hash_test.p4
   # tofino hash function extensions not supported with p4test
   extensions/p4_tests/p4_14/compile_only/brig-540-2.p4
   # some declarations not supported with p4test
@@ -69,7 +69,7 @@ set (P14_XFAIL_TESTS
 
 # p4-tests has all the includes at the same level with the programs.
 set (BFN_EXCLUDE_PATTERNS "tofino\\.p4" ".*netcache.*")
-set (BFN_TESTS "${CMAKE_CURRENT_SOURCE_DIR}/p4-programs/programs/*/*.p4")
+set (BFN_TESTS "${CMAKE_CURRENT_SOURCE_DIR}/internal/p4-programs/programs/*/*.p4")
 bfn_find_tests ("${BFN_TESTS}" BFN_TESTS_LIST EXCLUDE "${BFN_EXCLUDE_PATTERNS}")
 
 set (P14_TEST_SUITES
