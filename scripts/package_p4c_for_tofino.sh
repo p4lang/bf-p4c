@@ -122,7 +122,7 @@ if $pgo ; then
     build_p4c "-fprofile-generate"
 
     # Collect profiles by running a representative workload.
-    ./scripts/pgo_train.sh $builddir
+    ./scripts/internal/pgo_train.sh $builddir
 
     # Use the collected profiles to apply PGO.
     # TODO: With GCC 10 and newer, consider to also use -fprofile-partial-training
