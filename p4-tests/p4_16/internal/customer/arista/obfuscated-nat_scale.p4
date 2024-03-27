@@ -1160,6 +1160,10 @@ struct Cranbury {
     bit<10> Perkasie;
 }
 
+struct Powelton {
+    bit<2> Annette;
+}
+
 struct Kinde {
     Bennet    Hillside;
     Lovewell  Wanamassa;

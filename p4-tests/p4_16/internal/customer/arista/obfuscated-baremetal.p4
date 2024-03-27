@@ -1046,6 +1046,10 @@ struct Boonsboro {
     bit<10> Richlawn;
 }
 
+struct Aguilar {
+    bit<2> Paicines;
+}
+
 struct WebbCity {
     Soledad   Covert;
     Nenana    Ekwok;

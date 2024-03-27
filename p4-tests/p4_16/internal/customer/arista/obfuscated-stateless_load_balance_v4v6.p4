@@ -1059,6 +1059,10 @@ struct Crump {
     bit<10> Toano;
 }
 
+struct Clintwood {
+    bit<2> Thalia;
+}
+
 struct Jayton {
     Piqua     Millstone;
     Madera    Lookeba;

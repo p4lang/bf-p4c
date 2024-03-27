@@ -1039,6 +1039,10 @@ struct Humeston {
     bit<10> Tryon;
 }
 
+struct Pinebluff {
+    bit<2> Fentress;
+}
+
 struct Orting {
     Soledad   SanRemo;
     Nenana    Thawville;

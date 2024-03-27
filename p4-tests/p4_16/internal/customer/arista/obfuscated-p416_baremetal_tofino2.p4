@@ -1128,6 +1128,10 @@ struct Twain {
     bit<10> Swansboro;
 }
 
+struct Wenona {
+    bit<2> Hibernia;
+}
+
 struct HighRock {
     Heppner   WebbCity;
     Eastwood  Covert;
@@ -1208,6 +1212,7 @@ struct HighRock {
     Madawaska    Monrovia;
     McBride      Rienzi;
     Alamosa      Ambler;
+    Montross     Tarlton;
     Powderly     Olmitz;
     Algoa        Baker;
     Lowes        Glenoma;
@@ -1585,6 +1590,16 @@ control Mattapex(inout Frederika Lefor, inout HighRock Starkey, in ingress_intri
         Vanoss();
         Kapowsin();
     }
+    @name(".VanHorn") action VanHorn() {
+        Starkey.Wyndmoor.LaLuz = (bit<3>)3w7;
+        Starkey.Jayton.Murphy = (bit<1>)1w1;
+        Starkey.Covert.Palmhurst = Lefor.Parkway.Palmhurst;
+        Starkey.Covert.Comfrey = Lefor.Parkway.Comfrey;
+        Starkey.Covert.Clyde = Lefor.Parkway.Clyde;
+        Starkey.Covert.Clarion = Lefor.Parkway.Clarion;
+        Crown();
+        Vanoss();
+    }
     @name(".Luning") action Luning() {
         Starkey.Wyndmoor.LaLuz = (bit<3>)3w0;
         Starkey.Longwood.Westboro = Lefor.Palouse[0].Westboro;
@@ -1696,6 +1711,7 @@ control Mattapex(inout Frederika Lefor, inout HighRock Starkey, in ingress_intri
             Potosi();
             Mulvane();
             Haslet();
+            VanHorn();
             Boring();
             @defaultonly Nucla();
         }
@@ -1809,6 +1825,27 @@ control Mattapex(inout Frederika Lefor, inout HighRock Starkey, in ingress_intri
     apply {
         switch (Bernard.apply().action_run) {
             Potosi: {
+                if (Lefor.Monrovia.isValid() == true) {
+                    switch (Natalia.apply().action_run) {
+                        Judson: {
+                        }
+                        default: {
+                            FairOaks.apply();
+                        }
+                    }
+
+                } else {
+                    switch (Sunman.apply().action_run) {
+                        Judson: {
+                        }
+                        default: {
+                            FairOaks.apply();
+                        }
+                    }
+
+                }
+            }
+            VanHorn: {
                 if (Lefor.Monrovia.isValid() == true) {
                     switch (Natalia.apply().action_run) {
                         Judson: {
@@ -9389,6 +9426,28 @@ parser Millett(packet_in Thistle, out Frederika Lefor, out HighRock Starkey, out
             default: Picayune;
         }
     }
+    state Trooper {
+        Starkey.Covert.RockPort = (bit<3>)3w2;
+        Thistle.extract<Riner>(Lefor.RichBar);
+        Thistle.extract<Kalida>(Lefor.Harding);
+        Starkey.Covert.Palmhurst = Lefor.RichBar.Palmhurst;
+        Starkey.Covert.Comfrey = Lefor.RichBar.Comfrey;
+        Starkey.Covert.Cisco = Lefor.Harding.Cisco;
+        transition select(Lefor.Harding.Cisco) {
+            16w0x800: Pettigrew;
+            default: accept;
+        }
+    }
+    state Yorkville {
+        Thistle.extract<Montross>(Lefor.Tarlton);
+        Starkey.Covert.Ipava = Lefor.Tarlton.Glenmora[31:24];
+        Starkey.Covert.Higginson = Lefor.Tarlton.Glenmora[23:8];
+        Starkey.Covert.Oriskany = Lefor.Tarlton.Glenmora[7:0];
+        transition select(Lefor.Ambler.Knierim) {
+            16w0x6558: Trooper;
+            default: accept;
+        }
+    }
     state Hartford {
         transition select((Thistle.lookahead<bit<4>>())[3:0]) {
             4w0x6: Zeeland;
@@ -9398,6 +9457,7 @@ parser Millett(packet_in Thistle, out Frederika Lefor, out HighRock Starkey, out
     state Quamba {
         Thistle.extract<Alamosa>(Lefor.Ambler);
         transition select(Lefor.Ambler.Elderon, Lefor.Ambler.Knierim) {
+            (16w0x2000, 16w0 &&& 16w0): Yorkville;
             (16w0, 16w0x800): Bendavis;
             (16w0, 16w0x86dd): Hartford;
             default: accept;
@@ -9867,6 +9927,13 @@ control Devore(inout Frederika Lefor, inout HighRock Starkey, in ingress_intrins
         Lefor.Lauada.setInvalid();
         Sidnaw();
     }
+    @name(".Winner") action Winner() {
+        Lefor.Parkway.setInvalid();
+        Lefor.Wagener.setInvalid();
+        Lefor.Monrovia.setInvalid();
+        Lefor.Ambler.setInvalid();
+        Lefor.Tarlton.setInvalid();
+    }
     @name(".Corry") action Corry() {
     }
     @disable_atomic_modify(1) @name(".Eckman") table Eckman {
@@ -9877,6 +9944,7 @@ control Devore(inout Frederika Lefor, inout HighRock Starkey, in ingress_intrins
             Grovetown();
             Robins();
             Medulla();
+            Winner();
             @defaultonly Corry();
         }
         key = {
@@ -9902,6 +9970,8 @@ control Devore(inout Frederika Lefor, inout HighRock Starkey, in ingress_intrins
                         (3w1, true, false) : Robins();
 
                         (3w1, false, true) : Medulla();
+
+                        (3w7, true, false) : Winner();
 
         }
 
@@ -10103,6 +10173,7 @@ control Ellinger(packet_out Thistle, inout Frederika Lefor, in HighRock Starkey,
         Thistle.emit<Madawaska>(Lefor.Monrovia);
         Thistle.emit<McBride>(Lefor.Rienzi);
         Thistle.emit<Alamosa>(Lefor.Ambler);
+        Thistle.emit<Montross>(Lefor.Tarlton);
         Thistle.emit<Powderly>(Lefor.Olmitz);
         Thistle.emit<Algoa>(Lefor.Baker);
         Thistle.emit<Lowes>(Lefor.Glenoma);
@@ -10540,6 +10611,7 @@ control Manistee(packet_out Thistle, inout Frederika Lefor, in HighRock Starkey,
             Thistle.emit<Madawaska>(Lefor.Monrovia);
             Thistle.emit<McBride>(Lefor.Rienzi);
             Thistle.emit<Alamosa>(Lefor.Ambler);
+            Thistle.emit<Montross>(Lefor.Tarlton);
             Thistle.emit<Powderly>(Lefor.Olmitz);
             Thistle.emit<Lowes>(Lefor.Glenoma);
             Thistle.emit<Kapalua>(Lefor.Wabbaseka);
@@ -10872,6 +10944,7 @@ control Beaufort(packet_out Thistle, inout Frederika Lefor, in HighRock Starkey,
         Thistle.emit<Madawaska>(Lefor.Monrovia);
         Thistle.emit<McBride>(Lefor.Rienzi);
         Thistle.emit<Alamosa>(Lefor.Ambler);
+        Thistle.emit<Montross>(Lefor.Tarlton);
         Thistle.emit<Powderly>(Lefor.Olmitz);
         Thistle.emit<Algoa>(Lefor.Baker);
         Thistle.emit<Lowes>(Lefor.Glenoma);

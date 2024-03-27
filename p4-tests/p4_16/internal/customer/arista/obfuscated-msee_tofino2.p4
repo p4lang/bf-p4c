@@ -1,5 +1,5 @@
 // /usr/bin/p4c-bleeding/bin/p4c-bfn  -DPROFILE_MSEE_TOFINO2=1 -Ibf_arista_switch_msee_tofino2/includes -I/usr/share/p4c-bleeding/p4include -DTOFINO2=1 -DSTRIPUSER=1 --verbose 1 -g -Xp4c='--set-max-power 65.0 --create-graphs --Wdisable=uninitialized_out_param --Wdisable=unused --Wdisable=table-placement --Wdisable=invalid'    --target tofino2-t2na --o bf_arista_switch_msee_tofino2 --bf-rt-schema bf_arista_switch_msee_tofino2/context/bf-rt.json
-// p4c 9.13.1 (SHA: e558d01)
+// p4c 9.13.2 (SHA: 1baf055)
 
 #include <core.p4>
 #include <tofino2_specs.p4>
@@ -1785,7 +1785,7 @@ control Nixon(inout Wanamassa Westoak, inout Talco Lefor, in ingress_intrinsic_m
         requires_versioning = false;
         const default_action = NoAction();
     }
-    @disable_atomic_modify(1) @stage(0) @name(".Owanka") table Owanka {
+    @disable_atomic_modify(1) @name(".Owanka") table Owanka {
         actions = {
             Cheyenne();
             Pacifica();
@@ -1798,7 +1798,7 @@ control Nixon(inout Wanamassa Westoak, inout Talco Lefor, in ingress_intrinsic_m
         default_action = Judson();
         size = 16384;
     }
-    @disable_atomic_modify(1) @stage(0) @name(".Natalia") table Natalia {
+    @disable_atomic_modify(1) @name(".Natalia") table Natalia {
         actions = {
             Cheyenne();
             Pacifica();
@@ -1811,7 +1811,7 @@ control Nixon(inout Wanamassa Westoak, inout Talco Lefor, in ingress_intrinsic_m
         default_action = Judson();
         size = 16384;
     }
-    @disable_atomic_modify(1) @stage(1) @name(".Sunman") table Sunman {
+    @disable_atomic_modify(1) @name(".Sunman") table Sunman {
         actions = {
             Campo();
             SanPablo();
@@ -1859,10 +1859,11 @@ control Nixon(inout Wanamassa Westoak, inout Talco Lefor, in ingress_intrinsic_m
             @defaultonly Decherd();
         }
         key = {
+            Westoak.Flaherty.Dowell    : exact @name("Flaherty.Dowell") ;
             Westoak.Parkway[0].Westboro: exact @name("Parkway[0].Westboro") ;
         }
         const default_action = Decherd();
-        size = 4096;
+        size = 8192;
     }
     apply {
         switch (Bucklin.apply().action_run) {
@@ -1909,7 +1910,9 @@ control Nixon(inout Wanamassa Westoak, inout Talco Lefor, in ingress_intrinsic_m
                 }
             }
             default: {
-                Bernard.apply();
+                if (Westoak.Flaherty.Dowell == 1w0) {
+                    Bernard.apply();
+                }
                 if (Westoak.Parkway[0].isValid() && Westoak.Parkway[0].Westboro != 12w0) {
                     switch (Baranof.apply().action_run) {
                         Robstown: {
@@ -2032,14 +2035,14 @@ control Absecon(inout Wanamassa Westoak, inout Talco Lefor, in ingress_intrinsic
         Newtonia = Pioche.get<tuple<bit<9>, bit<12>>>({ Lefor.Moultrie.Avondale, Westoak.Parkway[0].Westboro });
         Lefor.Millstone.Mausdale = Flynn.execute((bit<32>)Newtonia);
     }
-    @disable_atomic_modify(1) @stage(2) @name(".Beatrice") table Beatrice {
+    @disable_atomic_modify(1) @name(".Beatrice") table Beatrice {
         actions = {
             Florahome();
         }
         default_action = Florahome();
         size = 1;
     }
-    @disable_atomic_modify(1) @stage(1) @name(".Morrow") table Morrow {
+    @disable_atomic_modify(1) @name(".Morrow") table Morrow {
         actions = {
             Algonquin();
         }
@@ -2099,7 +2102,7 @@ control Elkton(inout Wanamassa Westoak, inout Talco Lefor, in ingress_intrinsic_
     @name(".Horatio") action Horatio() {
         Lefor.HighRock.RioPecos = (bit<1>)1w1;
     }
-    @disable_atomic_modify(1) @stage(1) @name(".Rives") table Rives {
+    @disable_atomic_modify(1) @name(".Rives") table Rives {
         actions = {
             Shasta();
             Weathers();
@@ -5808,11 +5811,11 @@ control Indrio(inout Wanamassa Westoak, inout Talco Lefor, in ingress_intrinsic_
         size = 32768;
         const default_action = Yantis(16w0);
     }
-    @name(".CityView") action CityView(bit<10> Hitchland, bit<12> Westboro, bit<32> Pilar, bit<32> Loris, bit<32> OakCity, bit<32> Terrell, bit<2> Buckfield, bit<5> Guadalupe, bit<1> Towaoc) {
+    @name(".CityView") action CityView(bit<10> Hitchland, bit<12> Westboro, bit<32> Pilar, bit<32> Loris, bit<32> OakCity, bit<32> Terrell, bit<2> Buckfield, bit<5> Guadalupe, bit<1> Towaoc, bit<8> LaPuente) {
         Westoak.Sespe.Loris = Loris;
         Westoak.Sespe.Pilar = Pilar;
     }
-    @name(".Kinards") action Kinards(bit<10> Hitchland, bit<12> Westboro, bit<32> Pilar, bit<32> Loris, bit<32> OakCity, bit<32> Terrell, bit<2> Buckfield, bit<5> Guadalupe, bit<1> Towaoc) {
+    @name(".Kinards") action Kinards(bit<10> Hitchland, bit<12> Westboro, bit<32> Pilar, bit<32> Loris, bit<32> OakCity, bit<32> Terrell, bit<2> Buckfield, bit<5> Guadalupe, bit<1> Towaoc, bit<8> LaPuente) {
         Westoak.Farson.Mayday = OakCity;
         Westoak.Farson.Randall = Terrell;
         Westoak.Rienzi.Powderly = 2w3 ++ OakCity[13:0];
@@ -5821,6 +5824,7 @@ control Indrio(inout Wanamassa Westoak, inout Talco Lefor, in ingress_intrinsic_
         Westoak.Farson.Buckfield = Buckfield;
         Westoak.Farson.Guadalupe = Guadalupe;
         Westoak.Farson.Sutherlin[5:5] = Towaoc;
+        Westoak.Dunnegan.Merrill = LaPuente;
     }
     @use_hash_action(1) @disable_atomic_modify(1) @name(".Winfall") table Winfall {
         actions = {
@@ -5829,7 +5833,7 @@ control Indrio(inout Wanamassa Westoak, inout Talco Lefor, in ingress_intrinsic_
         key = {
             Lefor.Hillside.Correo: exact @name("Hillside.Correo") ;
         }
-        const default_action = CityView(10w0, 12w0, 32w0, 32w0, 32w0, 32w0, 2w0, 5w0, 1w0);
+        const default_action = CityView(10w0, 12w0, 32w0, 32w0, 32w0, 32w0, 2w0, 5w0, 1w0, 8w0);
         size = 8192;
     }
     @use_hash_action(1) @disable_atomic_modify(1) @name(".Haslet") table Haslet {
@@ -5839,7 +5843,7 @@ control Indrio(inout Wanamassa Westoak, inout Talco Lefor, in ingress_intrinsic_
         key = {
             Lefor.Hillside.Correo: exact @name("Hillside.Correo") ;
         }
-        const default_action = Kinards(10w0, 12w0, 32w0, 32w0, 32w0, 32w0, 2w0, 5w0, 1w0);
+        const default_action = Kinards(10w0, 12w0, 32w0, 32w0, 32w0, 32w0, 2w0, 5w0, 1w0, 8w0);
         size = 8192;
     }
     @name(".Dunnville") action Dunnville(bit<32> Sunrise, bit<32> Wolsey, bit<32> Cogar, bit<8> Moquah, bit<16> Welcome) {
@@ -6038,7 +6042,7 @@ control Toxey(inout Wanamassa Westoak, inout Talco Lefor, in egress_intrinsic_me
     @name(".Isleta") action Isleta() {
         Lamoni.count();
     }
-    @disable_atomic_modify(1) @ternary(1) @name(".Gallion") table Gallion {
+    @ternary(1) @disable_atomic_modify(1) @name(".Gallion") table Gallion {
         actions = {
             Isleta();
             @defaultonly NoAction();
@@ -6979,7 +6983,7 @@ control Kirkwood(inout Wanamassa Westoak, inout Talco Lefor, in ingress_intrinsi
     @name(".Woodville") action Woodville() {
         Stratton(32w1);
     }
-    @idletime_precision(1) @force_immediate(1) @disable_atomic_modify(1) @stage(1) @name(".Stanwood") table Stanwood {
+    @idletime_precision(1) @force_immediate(1) @disable_atomic_modify(1) @name(".Stanwood") table Stanwood {
         actions = {
             Penalosa();
             Beaman();
@@ -14880,10 +14884,15 @@ parser Shawville(packet_in Kinsley, out Wanamassa Westoak, out Talco Lefor, out 
         Kinsley.extract<Cornell>(Westoak.Flaherty);
         transition Caguas;
     }
+    state Dixfield {
+        Westoak.Flaherty.Dowell = (bit<1>)1w1;
+        transition Caguas;
+    }
     state Goessel {
         Lefor.Ekwok.Brave = (bit<1>)1w1;
         Kinsley.extract<Altus>(Westoak.Eunice);
         transition select(Westoak.Eunice.Merrill) {
+            8w0x5: Dixfield;
             8w0x3: Caguas;
             8w0x4: Caguas;
             default: accept;
@@ -15557,7 +15566,7 @@ control Simla(inout Wanamassa Westoak, inout Talco Lefor, in ingress_intrinsic_m
     @name(".Tennessee") action Tennessee() {
         Lefor.HighRock.Lecompte = (bit<1>)1w1;
     }
-    @force_immediate(1) @ways(4) @disable_atomic_modify(1) @pack(2) @name(".Brazil") table Brazil {
+    @force_immediate(1) @ways(4) @disable_atomic_modify(1) @name(".Brazil") table Brazil {
         actions = {
             Vincent();
             Stratton();

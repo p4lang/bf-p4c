@@ -1149,6 +1149,10 @@ struct WebbCity {
     bit<10> Lamboglia;
 }
 
+struct Denby {
+    bit<2> Veguita;
+}
+
 struct Wyndmoor {
     Gasport   Picabo;
     Morstein  Circle;
@@ -1822,7 +1826,8 @@ control Vanoss(inout Almota Virgilina, inout Wyndmoor Dwight, in ingress_intrins
             @defaultonly Natalia();
         }
         key = {
-            Virgilina.Ambler[0].Newfane: exact @name("Ambler[0].Newfane") ;
+            Virgilina.Mayflower.Glendevey: exact @name("Mayflower.Glendevey") ;
+            Virgilina.Ambler[0].Newfane  : exact @name("Ambler[0].Newfane") ;
         }
         const default_action = Natalia();
         size = 4096;
@@ -1851,7 +1856,9 @@ control Vanoss(inout Almota Virgilina, inout Wyndmoor Dwight, in ingress_intrins
                 }
             }
             default: {
-                FairOaks.apply();
+                if (Virgilina.Mayflower.Glendevey == 1w0) {
+                    FairOaks.apply();
+                }
                 if (Virgilina.Ambler[0].isValid() && Virgilina.Ambler[0].Newfane != 12w0) {
                     switch (Yulee.apply().action_run) {
                         Indios: {

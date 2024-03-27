@@ -1162,6 +1162,10 @@ struct Harding {
     bit<10> Ruffin;
 }
 
+struct Iraan {
+    bit<2> Verdigris;
+}
+
 struct Rochert {
     Lovewell Swanlake;
     Rudolph  Geistown;

@@ -441,6 +441,11 @@ if (TEST_ALT_PHV_ALLOC)
     )
 
     p4c_add_xfail_reason("tofino2"
+	"Illegal call of the pp_unique_id function on table"
+	extensions/p4_tests/p4_16/internal/customer/arista/obfuscated-msee_tofino2.p4
+    )
+
+    p4c_add_xfail_reason("tofino2"
         "table allocation .alt-phv-alloc enabled. failed to allocate tables for pipe 'DefeatFlows'"
 	extensions/p4_tests/p4_16/internal/customer/lts/p4c-5323.p4
     )

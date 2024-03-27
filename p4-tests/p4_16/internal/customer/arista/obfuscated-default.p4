@@ -1155,6 +1155,10 @@ struct Nooksack {
     bit<10> Goodrich;
 }
 
+struct Palmdale {
+    bit<2> Calumet;
+}
+
 struct Cranbury {
     LakeLure  Neponset;
     Hematite  Bronwood;

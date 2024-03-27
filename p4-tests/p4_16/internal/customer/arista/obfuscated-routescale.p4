@@ -1025,6 +1025,10 @@ struct Basco {
     bit<10> Dushore;
 }
 
+struct Shanghai {
+    bit<2> Iroquois;
+}
+
 struct Bratt {
     Lakehills Tabler;
     Onycha    Hearne;

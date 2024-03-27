@@ -1119,6 +1119,10 @@ struct Peoria {
     bit<10> Cistern;
 }
 
+struct Grottoes {
+    bit<2> Dresser;
+}
+
 struct Sunbury {
     RockPort  Casnovia;
     Panaca    Sedan;

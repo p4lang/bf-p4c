@@ -1184,6 +1184,10 @@ struct Bronwood {
     bit<10> BigRun;
 }
 
+struct Smithland {
+    bit<2> Hackamore;
+}
+
 struct Wanamassa {
     Bennet    Peoria;
     Lovewell  Frederika;

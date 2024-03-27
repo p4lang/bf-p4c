@@ -1033,6 +1033,10 @@ struct Lindsborg {
     bit<10> Hiwassee;
 }
 
+struct Padroni {
+    bit<2> Ashley;
+}
+
 struct Talco {
     Randall   Terral;
     Westhoff  HighRock;

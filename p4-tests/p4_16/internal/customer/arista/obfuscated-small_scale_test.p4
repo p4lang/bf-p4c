@@ -977,6 +977,10 @@ struct Westville {
     bit<10> Cortland;
 }
 
+struct Elsinore {
+    bit<2> Caguas;
+}
+
 struct Sequim {
     Guadalupe Hallwood;
     Lakehills Empire;

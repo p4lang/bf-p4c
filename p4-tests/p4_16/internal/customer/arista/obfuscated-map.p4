@@ -25,7 +25,6 @@
 @pa_alias("ingress" , "Lindy.Hookdale.Topanga" , "Brady.Neponset.Yerington")
 @pa_alias("ingress" , "Lindy.Hookdale.Allison" , "Brady.Neponset.Belmore")
 @pa_alias("ingress" , "Lindy.Hookdale.Spearman" , "Brady.Neponset.Baudette")
-@pa_alias("ingress" , "Lindy.Hookdale.Chevak" , "Brady.Neponset.Ekron")
 @pa_alias("ingress" , "Lindy.Hookdale.Eldred" , "Brady.Eldred")
 @pa_alias("ingress" , "Lindy.Hookdale.Maryhill" , "Brady.Basco.LasVegas")
 @pa_alias("ingress" , "Lindy.Hookdale.Levittown" , "Brady.Basco.Gotham")
@@ -56,7 +55,6 @@
 @pa_alias("egress" , "Lindy.Hookdale.Topanga" , "Brady.Neponset.Yerington")
 @pa_alias("egress" , "Lindy.Hookdale.Allison" , "Brady.Neponset.Belmore")
 @pa_alias("egress" , "Lindy.Hookdale.Spearman" , "Brady.Neponset.Baudette")
-@pa_alias("egress" , "Lindy.Hookdale.Chevak" , "Brady.Neponset.Ekron")
 @pa_alias("egress" , "Lindy.Hookdale.Mendocino" , "Brady.Yorkshire.SourLake")
 @pa_alias("egress" , "Lindy.Hookdale.Eldred" , "Brady.Eldred")
 @pa_alias("egress" , "Lindy.Hookdale.Maryhill" , "Brady.Basco.LasVegas")
@@ -264,8 +262,6 @@ header Calcasieu {
     bit<1>  Allison;
     @flexible 
     bit<2>  Spearman;
-    @flexible 
-    bit<1>  Chevak;
     @flexible 
     bit<1>  Mendocino;
     @flexible 
@@ -1005,6 +1001,10 @@ struct WebbCity {
     bit<10> Ellicott;
 }
 
+struct Newberg {
+    bit<2> ElMirage;
+}
+
 struct Wyndmoor {
     Chatmoss  Picabo;
     Waubun    Circle;
@@ -1077,6 +1077,8 @@ struct Wyndmoor {
     Level        Olmitz;
     Teigen       Baker;
     Thayne       Glenoma;
+    Thayne       Amboy;
+    Thayne       Wiota;
     Dunstable    Thurmond;
     Mackville    Lauada;
     Weyauwega    RichBar;
@@ -1592,9 +1594,15 @@ control Flippen(packet_out Starkey, inout Lemont Lindy, in Wyndmoor Brady, in in
     @name(".Cadwell") Digest<Vichy>() Cadwell;
     @name(".Boring") Mirror() Boring;
     @name(".Nucla") Digest<Bowden>() Nucla;
-    @name(".Virgilina") Checksum() Virgilina;
+    @name(".Minneota") Checksum() Minneota;
+    @name(".Whitetail") Checksum() Whitetail;
     apply {
-        Lindy.Glenoma.Parkland = Virgilina.update<tuple<bit<32>, bit<32>, bit<128>, bit<128>, bit<16>>>({ Lindy.Wagener.Pilar, Lindy.Wagener.Loris, Lindy.Monrovia.Pilar, Lindy.Monrovia.Loris, Brady.Neponset.Udall }, false);
+        {
+            Lindy.Wiota.Parkland = Minneota.update<tuple<bit<32>, bit<32>, bit<128>, bit<128>, bit<16>>>({ Lindy.Wagener.Pilar, Lindy.Wagener.Loris, Lindy.Monrovia.Pilar, Lindy.Monrovia.Loris, Brady.Neponset.Udall }, true);
+        }
+        {
+            Lindy.Amboy.Parkland = Whitetail.update<tuple<bit<32>, bit<32>, bit<128>, bit<128>, bit<16>>>({ Lindy.Wagener.Pilar, Lindy.Wagener.Loris, Lindy.Monrovia.Pilar, Lindy.Monrovia.Loris, Brady.Neponset.Udall }, false);
+        }
         {
             if (Skillman.mirror_type == 3w1) {
                 Willard Tillson;
@@ -1623,6 +1631,10 @@ control Flippen(packet_out Starkey, inout Lemont Lindy, in Wyndmoor Brady, in in
         Starkey.emit<Level>(Lindy.Olmitz);
         Starkey.emit<Teigen>(Lindy.Baker);
         Starkey.emit<Thayne>(Lindy.Glenoma);
+        {
+            Starkey.emit<Thayne>(Lindy.Wiota);
+            Starkey.emit<Thayne>(Lindy.Amboy);
+        }
         {
             Starkey.emit<Snowflake>(Lindy.Donnelly);
             Starkey.emit<Dunstable>(Lindy.Thurmond);
@@ -4721,29 +4733,40 @@ control Daguao(inout Lemont Lindy, inout Wyndmoor Brady, in ingress_intrinsic_me
     }
 }
 
-control Canton(inout Lemont Lindy, inout Wyndmoor Brady, in egress_intrinsic_metadata_t PeaRidge, in egress_intrinsic_metadata_from_parser_t Centre, inout egress_intrinsic_metadata_for_deparser_t Pocopson, inout egress_intrinsic_metadata_for_output_port_t Barnwell) {
-    @name(".Hodges") action Hodges(bit<16> Udall) {
-        Lindy.Glenoma.Parkland = Udall;
+control Paoli(inout Lemont Lindy, inout Wyndmoor Brady, in ingress_intrinsic_metadata_t Courtdale, in ingress_intrinsic_metadata_from_parser_t Emden, inout ingress_intrinsic_metadata_for_deparser_t Skillman, inout ingress_intrinsic_metadata_for_tm_t Swifton) {
+    @name(".Tatum") action Tatum() {
+        Lindy.Glenoma.setInvalid();
+        Lindy.Wiota.setValid();
     }
-    @disable_atomic_modify(1) @name(".Rendon") table Rendon {
+    @name(".Croft") action Croft() {
+        Lindy.Glenoma.setInvalid();
+        Lindy.Amboy.setValid();
+    }
+    @hidden @disable_atomic_modify(1) @name(".Oxnard") table Oxnard {
         actions = {
-            Hodges();
+            Tatum();
+            Croft();
             @defaultonly NoAction();
         }
         key = {
-            Brady.Neponset.Belmore  : exact @name("Neponset.Belmore") ;
-            Brady.Neponset.Yerington: exact @name("Neponset.Yerington") ;
-            Brady.Neponset.Ekron    : exact @name("Neponset.Ekron") ;
-            Lindy.Olmitz.isValid()  : exact @name("Olmitz") ;
-            Lindy.Glenoma.isValid() : exact @name("Glenoma") ;
-            Lindy.Glenoma.Parkland  : ternary @name("Glenoma.Parkland") ;
+            Lindy.Glenoma.isValid(): ternary @name("Glenoma") ;
+            Brady.Neponset.Ekron   : ternary @name("Neponset.Ekron") ;
+            Lindy.Olmitz.isValid() : ternary @name("Olmitz") ;
         }
-        size = 4;
-        requires_versioning = false;
+        size = 2;
         const default_action = NoAction();
+        const entries = {
+                        (true, 1w0, true) : Tatum();
+
+                        (true, default, false) : Croft();
+
+        }
+
     }
     apply {
-        Rendon.apply();
+        if (Brady.Neponset.Belmore == 1w1 || Brady.Neponset.Yerington == 1w1) {
+            Oxnard.apply();
+        }
     }
 }
 
@@ -5084,6 +5107,7 @@ control Cleator(inout Lemont Lindy, inout Wyndmoor Brady, in egress_intrinsic_me
     @name(".LaFayette") DelRey() LaFayette;
     @name(".Carrizozo") Stovall() Carrizozo;
     @name(".Munday") Skiatook() Munday;
+    @name(".McKibben") Paoli() McKibben;
     @name(".Hecker") Waiehu() Hecker;
     @name(".Holcut") Daguao() Holcut;
     @name(".FarrWest") Perryton() FarrWest;
@@ -5198,6 +5222,7 @@ control Cleator(inout Lemont Lindy, inout Wyndmoor Brady, in egress_intrinsic_me
         }
         Penrose.apply(Lindy, Brady, Courtdale, Emden, Skillman, Swifton);
         Statham.apply(Lindy, Brady, Courtdale, Emden, Skillman, Swifton);
+        McKibben.apply(Lindy, Brady, Courtdale, Emden, Skillman, Swifton);
     }
 }
 
@@ -5279,7 +5304,6 @@ control Anniston(inout Lemont Lindy, inout Wyndmoor Brady, in egress_intrinsic_m
     @name(".Putnam") LaMarque() Putnam;
     @name(".Hartville") Browning() Hartville;
     @name(".Gurdon") Northboro() Gurdon;
-    @name(".Poteet") Canton() Poteet;
     @name(".Blakeslee") Chappell() Blakeslee;
     @name(".Margie") Charters() Margie;
     @name(".Paradise") Beeler() Paradise;
@@ -5313,7 +5337,6 @@ control Anniston(inout Lemont Lindy, inout Wyndmoor Brady, in egress_intrinsic_m
             if (PeaRidge.egress_rid == 16w0) {
                 Sturgeon.apply(Lindy, Brady, PeaRidge, Centre, Pocopson, Barnwell);
             }
-            Poteet.apply(Lindy, Brady, PeaRidge, Centre, Pocopson, Barnwell);
             Gurdon.apply(Lindy, Brady, PeaRidge, Centre, Pocopson, Barnwell);
             Hartville.apply(Lindy, Brady, PeaRidge, Centre, Pocopson, Barnwell);
             Switzer.apply(Lindy, Brady, PeaRidge, Centre, Pocopson, Barnwell);

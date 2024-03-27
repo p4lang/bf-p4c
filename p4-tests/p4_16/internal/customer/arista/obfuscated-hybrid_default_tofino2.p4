@@ -1054,6 +1054,10 @@ struct Humeston {
     bit<10> Thawville;
 }
 
+struct Ossineke {
+    bit<2> Meridean;
+}
+
 struct Harriet {
     Wartburg  Dushore;
     Placedo   Bratt;
@@ -1100,6 +1104,7 @@ struct Harriet {
     bit<1>    Monrovia;
     bit<8>    Rienzi;
     Humeston  Ambler;
+    Ossineke  Tinaja;
 }
 
 @pa_mutually_exclusive("egress" , "Uniopolis.Lauada" , "Uniopolis.Rochert")
@@ -2754,6 +2759,7 @@ control Eaton(inout Olmitz Uniopolis, inout Harriet Moosic, in ingress_intrinsic
             @defaultonly Cropper();
         }
         key = {
+            Uniopolis.Lauada.Quogue     : exact @name("Lauada.Quogue") ;
             Uniopolis.Lindy[0].Woodfield: exact @name("Lindy[0].Woodfield") ;
         }
         const default_action = Cropper();
@@ -2783,7 +2789,9 @@ control Eaton(inout Olmitz Uniopolis, inout Harriet Moosic, in ingress_intrinsic
                 }
             }
             default: {
-                Slinger.apply();
+                if (Uniopolis.Lauada.Quogue == 1w0) {
+                    Slinger.apply();
+                }
                 if (Uniopolis.Lindy[0].isValid() && Uniopolis.Lindy[0].Woodfield != 12w0) {
                     switch (Ozark.apply().action_run) {
                         Newtonia: {
@@ -5464,6 +5472,7 @@ control Blackwood(inout Olmitz Uniopolis, inout Harriet Moosic, in egress_intrin
             Moosic.Lemont.Harbor & 9w0x7f: ternary @name("Lemont.Harbor") ;
             Moosic.Wanamassa.Ovett       : ternary @name("Wanamassa.Ovett") ;
             Moosic.Wanamassa.Naubinway   : ternary @name("Wanamassa.Naubinway") ;
+            Moosic.Moultrie.Chavies      : ternary @name("Moultrie.Chavies") ;
             Moosic.Moultrie.Pettry       : ternary @name("Moultrie.Pettry") ;
             Uniopolis.Skillman.Burrel    : ternary @name("Skillman.Burrel") ;
             Uniopolis.Skillman.isValid() : ternary @name("Skillman") ;
@@ -5635,6 +5644,90 @@ control Palomas(inout Olmitz Uniopolis, inout Harriet Moosic, in ingress_intrins
     }
 }
 
+control Dovray(inout Olmitz Uniopolis, inout Harriet Moosic, in egress_intrinsic_metadata_t Lemont, in egress_intrinsic_metadata_from_parser_t Langford, inout egress_intrinsic_metadata_for_deparser_t Cowley, inout egress_intrinsic_metadata_for_output_port_t Lackey) {
+    @name(".Ellinger") action Ellinger(bit<8> Westbury) {
+        Moosic.Peoria.Westbury = Westbury;
+        Moosic.Moultrie.Chavies = (bit<3>)3w0;
+    }
+    @ternary(1) @disable_atomic_modify(1) @name(".BoyRiver") table BoyRiver {
+        actions = {
+            Ellinger();
+        }
+        key = {
+            Moosic.Moultrie.Corydon     : exact @name("Moultrie.Corydon") ;
+            Uniopolis.Olcott.isValid()  : exact @name("Olcott") ;
+            Uniopolis.Skillman.isValid(): exact @name("Skillman") ;
+            Moosic.Moultrie.RedElm      : exact @name("Moultrie.RedElm") ;
+        }
+        const default_action = Ellinger(8w0);
+        size = 8192;
+    }
+    apply {
+        BoyRiver.apply();
+    }
+}
+
+control Waukegan(inout Olmitz Uniopolis, inout Harriet Moosic, in egress_intrinsic_metadata_t Lemont, in egress_intrinsic_metadata_from_parser_t Langford, inout egress_intrinsic_metadata_for_deparser_t Cowley, inout egress_intrinsic_metadata_for_output_port_t Lackey) {
+    @name(".Clintwood") DirectCounter<bit<64>>(CounterType_t.PACKETS) Clintwood;
+    @name(".Thalia") action Thalia(bit<3> Almedia) {
+        Clintwood.count();
+        Moosic.Moultrie.Chavies = Almedia;
+    }
+    @ignore_table_dependency(".Melrude") @ignore_table_dependency(".Cisne") @disable_atomic_modify(1) @name(".Trammel") table Trammel {
+        key = {
+            Moosic.Peoria.Westbury     : ternary @name("Peoria.Westbury") ;
+            Uniopolis.Skillman.Commack : ternary @name("Skillman.Commack") ;
+            Uniopolis.Skillman.Bonney  : ternary @name("Skillman.Bonney") ;
+            Uniopolis.Skillman.Coalwood: ternary @name("Skillman.Coalwood") ;
+            Uniopolis.Lefor.Joslin     : ternary @name("Lefor.Joslin") ;
+            Uniopolis.Lefor.Weyauwega  : ternary @name("Lefor.Weyauwega") ;
+            Moosic.Moultrie.McCammon   : ternary @name("Volens.Chugwater") ;
+            Moosic.Swifton.Greenland   : ternary @name("Swifton.Greenland") ;
+        }
+        actions = {
+            Thalia();
+            @defaultonly NoAction();
+        }
+        counters = Clintwood;
+        size = 512;
+        const default_action = NoAction();
+        requires_versioning = false;
+    }
+    apply {
+        Trammel.apply();
+    }
+}
+
+control Caldwell(inout Olmitz Uniopolis, inout Harriet Moosic, in egress_intrinsic_metadata_t Lemont, in egress_intrinsic_metadata_from_parser_t Langford, inout egress_intrinsic_metadata_for_deparser_t Cowley, inout egress_intrinsic_metadata_for_output_port_t Lackey) {
+    @name(".Sahuarita") DirectCounter<bit<64>>(CounterType_t.PACKETS) Sahuarita;
+    @name(".Thalia") action Thalia(bit<3> Almedia) {
+        Sahuarita.count();
+        Moosic.Moultrie.Chavies = Almedia;
+    }
+    @ignore_table_dependency(".Trammel") @ignore_table_dependency("Cisne") @disable_atomic_modify(1) @name(".Melrude") table Melrude {
+        key = {
+            Moosic.Peoria.Westbury   : ternary @name("Peoria.Westbury") ;
+            Uniopolis.Olcott.Commack : ternary @name("Olcott.Commack") ;
+            Uniopolis.Olcott.Bonney  : ternary @name("Olcott.Bonney") ;
+            Uniopolis.Olcott.McBride : ternary @name("Olcott.McBride") ;
+            Uniopolis.Lefor.Joslin   : ternary @name("Lefor.Joslin") ;
+            Uniopolis.Lefor.Weyauwega: ternary @name("Lefor.Weyauwega") ;
+            Moosic.Moultrie.McCammon : ternary @name("Volens.Chugwater") ;
+        }
+        actions = {
+            Thalia();
+            @defaultonly NoAction();
+        }
+        counters = Sahuarita;
+        size = 512;
+        const default_action = NoAction();
+        requires_versioning = false;
+    }
+    apply {
+        Melrude.apply();
+    }
+}
+
 control Sheyenne(inout Olmitz Uniopolis, inout Harriet Moosic, in ingress_intrinsic_metadata_t Sedan, in ingress_intrinsic_metadata_from_parser_t Ossining, inout ingress_intrinsic_metadata_for_deparser_t Nason, inout ingress_intrinsic_metadata_for_tm_t Almota) {
     @name(".Durant") DirectMeter(MeterType_t.BYTES) Durant;
     apply {
@@ -5737,8 +5830,8 @@ control Monteview(inout Olmitz Uniopolis, inout Harriet Moosic, in ingress_intri
 }
 
 control Waukesha(inout Olmitz Uniopolis, inout Harriet Moosic, in ingress_intrinsic_metadata_t Sedan, in ingress_intrinsic_metadata_from_parser_t Ossining, inout ingress_intrinsic_metadata_for_deparser_t Nason, inout ingress_intrinsic_metadata_for_tm_t Almota) {
-    @name(".Harney") action Harney(bit<9> Noyes, bit<32> Freeburg) {
-        Almota.ucast_egress_port = Noyes;
+    @name(".Harney") action Harney(bit<2> Meridean, bit<32> Freeburg) {
+        Moosic.Tinaja.Meridean = Meridean;
         Uniopolis.Baker.setValid();
         Uniopolis.Baker.Corinth = (bit<1>)1w0x0;
         Uniopolis.Baker.Freeburg = Freeburg;
@@ -5775,10 +5868,31 @@ control Waukesha(inout Olmitz Uniopolis, inout Harriet Moosic, in ingress_intrin
         size = 1;
         const default_action = Lenapah();
     }
+    @name(".Ikatan") action Ikatan(bit<9> Noyes) {
+        Almota.ucast_egress_port = Noyes;
+    }
+    @name(".Seagrove") CRCPolynomial<bit<10>>(10w0x5, true, false, true, 10w0x0, 10w0x0) Seagrove;
+    @name(".Dubuque") Hash<bit<10>>(HashAlgorithm_t.CRC16, Seagrove) Dubuque;
+    @name(".Senatobia") ActionProfile(32w512) Senatobia;
+    @name(".Danforth") ActionSelector(Senatobia, Dubuque, SelectorMode_t.FAIR, 32w512, 32w4) Danforth;
+    @disable_atomic_modify(1) @name(".Opelika") table Opelika {
+        actions = {
+            Ikatan();
+            @defaultonly NoAction();
+        }
+        key = {
+            Moosic.Tinaja.Meridean: exact @name("Tinaja.Meridean") ;
+            Moosic.Garrison.Nuyaka: selector @name("Garrison.Nuyaka") ;
+        }
+        size = 256;
+        const default_action = NoAction();
+        implementation = Danforth;
+    }
     apply {
         if (Uniopolis.Glenoma.isValid() == false) {
             switch (Roseville.apply().action_run) {
                 Harney: {
+                    Opelika.apply();
                     Colburn.apply();
                 }
             }
@@ -5861,6 +5975,8 @@ control Sandpoint(inout Olmitz Uniopolis, inout Harriet Moosic, in egress_intrin
         const default_action = Petroleum();
         const entries = {
                         (default, false, default, default, default, default, default, default, default, default, 3w2, default) : Petroleum();
+
+                        (default, default, default, default, default, default, default, true, default, default, default, default) : Petroleum();
 
                         (default, true, default, default, default, false, false, false, 1w0, false, 3w5, 16w0 .. 16w69) : Frederic();
 
@@ -6430,6 +6546,7 @@ control Tatum(inout Olmitz Uniopolis, inout Harriet Moosic, in egress_intrinsic_
     @name(".Shivwits") Blackwood() Shivwits;
     @name(".Elsinore") Motley() Elsinore;
     @name(".Caguas") Patchogue() Caguas;
+    @name(".Yemassee") Dovray() Yemassee;
     @name(".Duncombe") Anniston() Duncombe;
     @name(".Noonan") Forman() Noonan;
     @name(".Tanner") Warsaw() Tanner;
@@ -6457,6 +6574,8 @@ control Tatum(inout Olmitz Uniopolis, inout Harriet Moosic, in egress_intrinsic_
     @name(".Devore") McCallum() Devore;
     @name(".Melvina") Turney() Melvina;
     @name(".LaCenter") Lovilia() LaCenter;
+    @name(".Qulin") Waukegan() Qulin;
+    @name(".Caliente") Caldwell() Caliente;
     apply {
         Alderson.apply(Uniopolis, Moosic, Lemont, Langford, Cowley, Lackey);
         if (Uniopolis.Glenoma.isValid()) {
@@ -6469,6 +6588,7 @@ control Tatum(inout Olmitz Uniopolis, inout Harriet Moosic, in egress_intrinsic_
             Spindale.apply(Uniopolis, Moosic, Lemont, Langford, Cowley, Lackey);
             Hilltop.apply(Uniopolis, Moosic, Lemont, Langford, Cowley, Lackey);
             Elsinore.apply(Uniopolis, Moosic, Lemont, Langford, Cowley, Lackey);
+            Yemassee.apply(Uniopolis, Moosic, Lemont, Langford, Cowley, Lackey);
             if (Lemont.egress_rid == 16w0) {
                 Quamba.apply(Uniopolis, Moosic, Lemont, Langford, Cowley, Lackey);
             }
@@ -6483,6 +6603,12 @@ control Tatum(inout Olmitz Uniopolis, inout Harriet Moosic, in egress_intrinsic_
             FlatLick.apply(Uniopolis, Moosic, Lemont, Langford, Cowley, Lackey);
             Halstead.apply(Uniopolis, Moosic, Lemont, Langford, Cowley, Lackey);
             Tanana.apply(Uniopolis, Moosic, Lemont, Langford, Cowley, Lackey);
+            if (Uniopolis.Olcott.isValid()) {
+                Caliente.apply(Uniopolis, Moosic, Lemont, Langford, Cowley, Lackey);
+            }
+            if (Uniopolis.Skillman.isValid()) {
+                Qulin.apply(Uniopolis, Moosic, Lemont, Langford, Cowley, Lackey);
+            }
             if (Moosic.Moultrie.Vergennes != 3w2 && Moosic.Moultrie.Hematite == 1w0) {
                 Duncombe.apply(Uniopolis, Moosic, Lemont, Langford, Cowley, Lackey);
             }
@@ -6610,7 +6736,7 @@ parser Seibert(packet_in Oneonta, out Olmitz Uniopolis, out Harriet Moosic, out 
     state Chewalla {
         Moosic.Dushore.Havana = (bit<3>)3w6;
         Oneonta.extract<Whitten>(Uniopolis.Lefor);
-        Oneonta.extract<Powderly>(Uniopolis.Volens);
+        Moosic.Moultrie.McCammon = (Oneonta.lookahead<Powderly>()).Chugwater;
         transition Point;
     }
     state McIntyre {
@@ -6638,6 +6764,7 @@ parser Seibert(packet_in Oneonta, out Olmitz Uniopolis, out Harriet Moosic, out 
     state Ogunquit {
         Uniopolis.Glenoma.Uintah = (bit<8>)8w0x81;
         Uniopolis.BigRun.setValid();
+        Uniopolis.BigRun.Moorcroft = (bit<168>)168w0;
         transition Fairborn;
     }
     state TenSleep {

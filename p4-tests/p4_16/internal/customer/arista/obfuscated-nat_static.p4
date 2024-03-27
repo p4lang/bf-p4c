@@ -1051,6 +1051,10 @@ struct Gamaliel {
     bit<10> Fowlkes;
 }
 
+struct Kosciusko {
+    bit<2> Sawmills;
+}
+
 struct Harriet {
     Gasport   Dushore;
     Morstein  Bratt;
