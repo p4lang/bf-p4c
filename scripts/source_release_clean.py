@@ -85,16 +85,23 @@ def sed_replace(path, src, dst, include_cmake=False):
     subprocess.run([cmd], shell=True)
 
 
-def sed_delete(path, del_exp, include_cmake=False):
+SRC_ONLY = ['*.cpp', '*.h', '*.def', '*.py', 'SYNTAX.yaml']
+CMAKE_LISTS = ['CMakeLists.txt']
+CMAKE_ALL = ['CMakeLists.txt', '*.cmake']
+
+SRC_AND_CMAKE = SRC_ONLY + CMAKE_LISTS
+
+def sed_delete(path, del_exp, patterns=SRC_ONLY):
     '''
     Delete with sed on all .cpp and .h files, and optionally cmake files,
     within path. The delete expression is specified as a parameter.
     '''
     print("Deleting '{}' in {}".format(del_exp, path))
-    cmd = "find " + path + " -name '*.cpp' -or -name '*.h' -or -name '*.def'"
-    cmd += " -or -name '*.py' -or -name 'SYNTAX.yaml'"
-    if include_cmake:
-        cmd += " -or -name CMakeLists.txt"
+    cmd = "find " + path
+    sep = ""
+    for pattern in patterns:
+        cmd += sep + " -name '{}'".format(pattern)
+        sep = " -or"
     cmd += " | xargs sed -i '/" + del_exp + "/d'"
     subprocess.run([cmd], shell=True)
 
@@ -185,7 +192,10 @@ DOC_STRINGS = ['.*\<\(JIRA\|TOF[35]\)-DOC:.*']
 
 for path in SRC_DIRS:
     for del_str in DOC_STRINGS:
-        sed_delete(path, del_str, True)
+        sed_delete(path, del_str, SRC_AND_CMAKE)
+
+for del_str in DOC_STRINGS:
+    sed_delete('p4-tests', del_str, CMAKE_ALL)
 
 
 # =======================================================
@@ -388,6 +398,10 @@ for src_dir in SRC_DIRS:
         print('Filtering content of', path.as_posix())
         clean_cmake_ifs(path)
 
+for src_dir in ['p4-tests']:
+    for path in sorted(Path(src_dir).glob('*.cmake')):
+        print('Filtering content of', path.as_posix())
+        clean_cmake_ifs(path)
 
 # =======================================================
 # Miscellaneous clean steps
