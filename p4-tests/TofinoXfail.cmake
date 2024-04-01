@@ -52,7 +52,7 @@ set (TOFINO_XFAIL_TESTS ${TOFINO_XFAIL_TESTS}
     testdata/p4_16_samples/subparser-with-header-stack-bmv2.p4
     )
 
-  # P4C-2985 - tests added to p4c compile but do not pass in simple test harness
+  # JIRA-DOC: P4C-2985 - tests added to p4c compile but do not pass in simple test harness
   p4c_add_xfail_reason("tofino"
     "mismatch from expected(.*) at byte .*"
     testdata/p4_16_samples/parser-inline/parser-inline-test5.p4
@@ -104,21 +104,9 @@ if (ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET)
     extensions/p4_tests/p4_14/stateful2.p4
     )
 
-  p4c_add_xfail_reason("tofino"
-    "ERROR:PTF runner:Error when running PTF tests"
-    smoketest_programs_hash_driven
-    smoketest_programs_meters
-    )
-
 endif() # ENABLE_STF2PTF AND PTF_REQUIREMENTS_MET
 
 if (PTF_REQUIREMENTS_MET)
-
-# DRV-2380
-  p4c_add_xfail_reason("tofino"
-    "TTransportException"
-    extensions/p4_tests/internal/p4-programs/programs/perf_test_alpm/perf_test_alpm.p4
-    )
 
   p4c_add_xfail_reason("tofino"
     "AssertionError: Expected packet was not received on device"
@@ -189,29 +177,8 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "the following .* not written in .* will be overwritten illegally|slice list is not byte-sized"
-  switch_msdc_l3
-  )
-
-p4c_add_xfail_reason("tofino"
-  "error.*tofino supports up to 12 stages|error.*table allocation.*failed"
-  extensions/p4_tests/p4_16/internal/p4c-3417.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "error.*tofino supports up to 12 stages"
-  extensions/p4_tests/p4_16/internal/customer/extreme/p4c-1797-1.p4
-)
-
-p4c_add_xfail_reason("tofino"
   "error.*Ran out of parser match registers for"
   extensions/p4_tests/p4_16/compile_only/missing_checksumID.p4
-)
-
-# P4C-1400, P4C-1123
-p4c_add_xfail_reason("tofino"
-  "NameError: name 'step' is not defined"
-  extensions/p4_tests/internal/p4-programs/internal_p4_14/mau_test/mau_test.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -224,18 +191,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue692-bmv2.p4
   testdata/p4_16_samples/parser-if.p4
 )
-
-p4c_add_xfail_reason("tofino"
-  "Did not receive pkt on 2"
-  smoketest_switch_dtel_int_spine_dtel_INTL45_Transit_DoDTest
-  smoketest_switch_dtel_int_spine_dtel_MirrorOnDropDoDTest
-  smoketest_switch_dtel_int_spine_dtel_QueueReport_DoD_Test
-  )
-
-p4c_add_xfail_reason("tofino"
-  "A packet was received on device"
-  smoketest_switch_ent_dc_general_egress_acl
-  )
 
 p4c_add_xfail_reason("tofino"
 # Fail on purpose due to indirect tables not being mutually exclusive
@@ -294,7 +249,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue2330.p4
   testdata/p4_16_samples/issue-2123-3-bmv2.p4
   testdata/p4_16_samples/issue-2123-2-bmv2.p4
-  extensions/p4_tests/p4_16/internal/customer/extreme/p4c-1672-1.p4
   testdata/p4_16_samples/issue512.p4
   testdata/p4_16_samples/psa-dpdk-errorcode-1.p4
   testdata/p4_16_samples/hdr_stacks2345.p4
@@ -310,7 +264,6 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "This action requires hash, which can only be done through the hit pathway"
-  extensions/p4_tests/p4_14/internal/test_config_101_switch_msdc.p4
   testdata/p4_14_samples/acl1.p4
 )
 
@@ -397,11 +350,6 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "Cannot unify type"
-  extensions/p4_tests/p4_16/internal/fabric-psa/fabric.p4
-)
-
-p4c_add_xfail_reason("tofino"
   "Expected type T in digest to be a typeName"
   testdata/p4_16_samples/issue430-1-bmv2.p4
   )
@@ -418,14 +366,14 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "PHV allocation was not successful"
+  "PHV allocation was not successful|PHV fitting failed"
   extensions/p4_tests/p4_14/compile_only/04-FullPHV3.p4
   testdata/p4_14_samples/05-FullTPHV.p4
   testdata/p4_14_samples/06-FullTPHV1.p4
   testdata/p4_14_samples/08-FullTPHV3.p4
   extensions/p4_tests/p4_14/compile_only/20-SimpleTrillTwoStep.p4
 
-  # p4smith mask issues - P4C-2093
+  # JIRA-DOC: p4smith mask issues - P4C-2093
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/mask_slices_2.p4
   )
 
@@ -469,7 +417,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_14_samples/issue604.p4
   )
 
-# are we going to retire these switch profiles?
 p4c_add_xfail_reason("tofino"
   "error: .*: no such field in standard_metadata"
   extensions/p4_tests/p4_14/bf_p4c_samples/sai_p4.p4
@@ -502,7 +449,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/photostats_0.p4
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/sidestepped_0.p4
   testdata/p4_14_samples/action_inline.p4
-  extensions/p4_tests/p4_16/internal/p4c-2336.p4
   )
 
 p4c_add_xfail_reason("tofino"
@@ -520,7 +466,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue1544-2-bmv2.p4
 )
 
-# P4C-990
+# JIRA-DOC: P4C-990
 p4c_add_xfail_reason("tofino"
   "error: .*: could not infer a width"
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/chauncey_0.p4
@@ -563,20 +509,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/metadata_dependency.p4
 )
 
-# P4C-1067
-# Expected failure, negative test.
-p4c_add_xfail_reason("tofino"
-  "Operands of arithmetic operations cannot be greater than 64 bits"
-  extensions/p4_tests/p4_16/internal/customer/jeju/p4c-1067-neg.p4
-)
-
-# P4C-1067
-# Expected failure, negative test.
-p4c_add_xfail_reason("tofino"
-  "Operand field bit .* of wide arithmetic operation cannot have even and odd container placement constraints"
-  extensions/p4_tests/p4_16/internal/customer/jeju/p4c-1067-neg2.p4
-)
-
 p4c_add_xfail_reason("tofino"
   "Cannot extract field .* from .* which has type .*"
   testdata/p4_16_samples/issue1210.p4
@@ -607,7 +539,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/parser-unroll-test10.p4
 )
 
-# P4C-1011
+# JIRA-DOC: P4C-1011
 p4c_add_xfail_reason("tofino"
   "error: standard_metadata.mcast_grp is not accessible in the egress pipe"
   extensions/p4_tests/p4_16/bf_p4c_samples/v1model-special-ops-bmv2.p4
@@ -625,23 +557,10 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/perusal_0.p4
 )
 
-# Negative test
-p4c_add_xfail_reason("tofino"
-  "Unsupported unconditional .*.emit"
-  extensions/p4_tests/p4_16/internal/brig-neg-1259.p4
-)
-
 # Negative test. >66 bytes of ternary match key fields used.
 p4c_add_xfail_reason("tofino"
   "error.*Ternary table.*uses.*as ternary match key. Maximum number of bits allowed is.*"
   extensions/p4_tests/p4_16/compile_only/too_many_ternary_match_key_bits.p4
-)
-
-# Negative test. Directly attached resources (other than action data)
-# are not allowed for ATCAM tables.
-p4c_add_xfail_reason("tofino"
-  "error.*The ability to split directly addressed counters/meters/stateful resources across multiple logical tables of an algorithmic tcam match table is not currently supported.*"
-  extensions/p4_tests/p4_16/internal/p4c-1601-neg.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -650,18 +569,11 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "error.*This program violates action constraints imposed by Tofino.|ACTION_CANNOT_BE_SYNTHESIZED"
-  # Negative tests for violation of action constraints.
-  extensions/p4_tests/p4_16/internal/customer/kaloom/p4c-1299.p4
-)
-
-p4c_add_xfail_reason("tofino"
   "error.*This program violates action constraints imposed by Tofino."
 # Negative tests for violation of action constraints.
   extensions/p4_tests/p4_14/compile_only/action_conflict_1.p4
   extensions/p4_tests/p4_14/compile_only/action_conflict_3.p4
   extensions/p4_tests/p4_14/compile_only/action_conflict_7.p4
-  extensions/p4_tests/p4_16/internal/customer/noviflow/p4c-1288.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -681,20 +593,14 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/header-bool-bmv2.p4
 )
 
-# P4C-1451 -- requires action splitting to avoid the error
-p4c_add_xfail_reason("tofino"
-  "Action Data Argument .* cannot be used in a hash generation expression"
-  extensions/p4_tests/p4_14/internal/customer/barefoot_academy/p4c-1451.p4
-)
-
-# P4C-1371
+# JIRA-DOC: P4C-1371
 # Errors because pa_container_size pragmas used in these tests cannot be satisfy all constraints.
 p4c_add_xfail_reason("tofino"
   "Cannot find a slicing to satisfy @pa_container_size|NO_SLICING_FOUND"
   extensions/p4_tests/p4_16/compile_only/ssub_illegal_pack.p4
   )
 
-# P4C-1376
+# JIRA-DOC: P4C-1376
 p4c_add_xfail_reason("tofino"
   "Currently in p4c, any table using an action profile is required to use the same actions, and the following actions don't appear in all table using the action profile"
   testdata/p4_16_samples/psa-action-profile4.p4
@@ -714,7 +620,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue983-bmv2.p4
   )
 
-# P4C-539
+# JIRA-DOC: P4C-539
 p4c_add_xfail_reason("tofino"
   "error: .*: declaration not found"
   testdata/p4_16_samples/issue2201-bmv2.p4
@@ -764,11 +670,6 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/tofino-bug-5.p4
 )
 
-p4c_add_xfail_reason("tofino"
-  "Cannot cast implicitly type"
-  P4C-1021-1
-)
-
 # broken tests that don't set egress_spec
 p4c_add_xfail_reason("tofino"
   ".* expected packet.* on port .* not seen"
@@ -788,13 +689,13 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue1025-bmv2.p4
 )
 
-# P4C-1753
+# JIRA-DOC: P4C-1753
 p4c_add_xfail_reason("tofino"
   ".* expected packet on port .* not seen"
   testdata/p4_16_samples/table-entries-range-bmv2.p4
 )
 
-# P4C-1753
+# JIRA-DOC: P4C-1753
 p4c_add_xfail_reason("tofino"
   "unexpected packet output on port .*"
   testdata/p4_16_samples/table-entries-priority-bmv2.p4
@@ -842,7 +743,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Varbit field size expression evaluates to non byte-aligned value"
   # unbounded varbit expr
-  extensions/p4_tests/p4_16/internal/p4c-1478-neg.p4
   testdata/p4_16_samples/issue447-2-bmv2.p4
   testdata/p4_16_samples/issue447-3-bmv2.p4
   testdata/p4_16_samples/issue447-4-bmv2.p4
@@ -864,13 +764,7 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "Unsupported unconditional .*.emit"
-  extensions/p4_tests/p4_16/internal/customer/noviflow/p4c-1588-neg.p4
-  )
-
-p4c_add_xfail_reason("tofino"
   "error: Use of uninitialized parser value"
-  extensions/p4_tests/p4_16/internal/p4c-1561-neg.p4
   # unable to resolve "lookahead" expression in resolve_parser_values.cpp
   testdata/p4_16_samples/issue1409-bmv2.p4
   testdata/p4_14_samples/issue2196.p4
@@ -904,11 +798,10 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/shillings_0.p4
 )
 
-# P4C-1445, DRV-2667
+# JIRA-DOC: P4C-1445, DRV-2667
 # Requires Pipe prefix support to avoid duplicate names
 p4c_add_xfail_reason("tofino"
   "error: Found .* duplicate name.* in the P4Info"
-  extensions/p4_tests/p4_16/internal/brig-814-2.p4
   extensions/p4_tests/p4_16/compile_only/multiple_apply2.p4
 )
 
@@ -938,7 +831,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/runtime-index-bmv2.p4
   testdata/p4_16_samples/runtime-index-2-bmv2.p4
   testdata/p4_16_samples/predication_issue_2.p4
-  extensions/p4_tests/p4_16/internal/p4c-2056.p4
   testdata/p4_16_samples/issue2726-bmv2.p4
   testdata/p4_16_samples/issue1989-bmv2.p4
   # p4c update 2021-12-06
@@ -956,11 +848,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/pvs-struct-3-bmv2.p4
 )
 
-p4c_add_xfail_reason("tofino"
-  "error: Exceeded hardware limit for deparser field dictionary entries"
-  extensions/p4_tests/p4_16/internal/p4c-1757-neg.p4
-)
-
 if (NOT TEST_ALT_PHV_ALLOC)
     p4c_add_xfail_reason("tofino"
       "error: Ran out of tcam space in ingress parser"
@@ -968,32 +855,7 @@ if (NOT TEST_ALT_PHV_ALLOC)
     )
 endif()
 
-p4c_add_xfail_reason("tofino"
-  "Cannot cast implicitly type"
-  extensions/p4_tests/p4_16/internal/brig-305.p4
-)
-
-# Expected failures due to program error
-p4c_add_xfail_reason("tofino"
-  "Dynamic hashes must have the same field list and sets of algorithm for each get call"
-  extensions/p4_tests/p4_16/internal/customer/extreme/p4c-1492.p4
-  extensions/p4_tests/p4_16/internal/customer/extreme/p4c-1587-a.p4
-)
-
-# P4C-1862
-p4c_add_xfail_reason("tofino"
-  "InvalidTableOperation"
-  extensions/p4_tests/internal/p4-programs/internal_p4_14/ecc/ecc.p4
-)
-
-# P4C-2091
-# Expected failure (negative test)
-p4c_add_xfail_reason("tofino"
-  "error.*PHV allocation was not successful|ACTION_CANNOT_BE_SYNTHESIZED|NO_SLICING_FOUND"
-  extensions/p4_tests/p4_16/internal/p4c-2091.p4
-)
-
-# P4C-2123
+# JIRA-DOC: P4C-2123
 p4c_add_xfail_reason("tofino"
   "Not all applies of table .* are mutually exclusive"
   testdata/p4_16_samples/psa-table-hit-miss.p4
@@ -1003,18 +865,9 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/psa-dpdk-table-key-consolidation-if-1.p4
 )
 
-# Negative tests to test slice list creation
-p4c_add_xfail_reason("tofino"
-  "you can introduce padding fields"
-  extensions/p4_tests/p4_16/internal/p4c-2025.p4
-  extensions/p4_tests/p4_16/internal/p4c-1892.p4
-  # parde physical adjacency constraint violated by mau phv_no_pack constraint
-)
-
 p4c_add_xfail_reason("tofino"
   "Checksum destination field .* is not byte-aligned in the header. Checksum engine is unable to update a field if it is not byte-aligned"
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/checksum_align.p4
-  extensions/p4_tests/p4_14/internal/p4c-1162.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1030,27 +883,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Each field's bit alignment in the packet should be equal to that in the checksum list. Checksum engine is unable to read .* for .* checksum update"
   extensions/p4_tests/p4_16/compile_only/checksum_neg_test3.p4
-)
-
-# P4 program error
-p4c_add_xfail_reason("tofino"
-  "Dynamic hashes must have the same field list and sets of algorithm for each get call, as these must change simultaneously at runtime"
-  p4c_1585_a
-)
-
-# power.p4 PTF failure
-# hw team uses it to do some manual testing
-# to measure the SRAM and TCAM power draw
-# keeping it in regression for compile_only
-p4c_add_xfail_reason("tofino"
-  "TypeError: %d format: a number is required, not NoneType"
-  extensions/p4_tests/internal/p4-programs/internal_p4_14/power/power.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "Assignment to a header field in the deparser is only allowed when the source is checksum update, mirror, resubmit or learning digest"
-  extensions/p4_tests/p4_16/internal/p4c-1858_neg.p4
-  extensions/p4_tests/p4_16/internal/p4c-1867.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1109,7 +941,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue2359.p4
 )
 
-# P4C-3598
+# JIRA-DOC: P4C-3598
 p4c_add_xfail_reason("tofino"
   "error:.*Registers support only calls or assignments of the following forms"
   testdata/p4_16_samples/psa-register-complex-bmv2.p4
@@ -1120,18 +952,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue1879-bmv2.p4
 )
 
-# P4C-2694 - saturating arithmetic exceeding container width
-p4c_add_xfail_reason("tofino"
-  "Saturating arithmetic operators may not exceed maximum PHV container width"
-  extensions/p4_tests/p4_16/internal/p4c-2694.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "table.*is applied in multiple places"
-  extensions/p4_tests/p4_16/internal/customer/ruijie/p4c-2350-1.p4
-)
-
-# P4C-2783
+# JIRA-DOC: P4C-2783
 p4c_add_xfail_reason("tofino"
   "error: : source of modify_field invalid"
   extensions/p4_tests/p4_16/stf/arith_compare.p4
@@ -1140,7 +961,6 @@ p4c_add_xfail_reason("tofino"
 # Negative test, expected xfail
 p4c_add_xfail_reason("tofino"
   "error: table .*: Number of partitions are specified for table .* but the partition index .* is not found"
-  extensions/p4_tests/p4_16/internal/p4c-2035-name-neg.p4
   extensions/p4_tests/p4_16/compile_only/atcam_match_wide1-neg.p4
 )
 
@@ -1164,21 +984,9 @@ p4c_add_xfail_reason("tofino"
   extensions/p4_tests/p4_14/compile_only/03-VlanProfile.p4
 )
 
-# P4C-3036
-p4c_add_xfail_reason("tofino"
-  "AssertionError: Expected packet was not received on device 0, port 0"
-  p4c_2249
-)
-
 p4c_add_xfail_reason("tofino"
   "error: .*: type Counter has no matching constructor"
   extensions/p4_tests/p4_16/ptf/large_indirect_count.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "Flexible packing bug found"
-  # P4C-3042
-  extensions/p4_tests/p4_16/internal/p4c-3042.p4
 )
 
 # p4c dd7c0eb1
@@ -1220,11 +1028,6 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "warning: .*: Padding fields do not need to be explicitly set.* Tofino does not support action data/constant with rotated PHV source at the same time|ACTION_CANNOT_BE_SYNTHESIZED|PHV allocation creates an invalid container action within a Tofino ALU"
-  extensions/p4_tests/p4_16/internal/p4c-3453.p4
-)
-
-p4c_add_xfail_reason("tofino"
   "partly placed: table .*"
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/utes_0.p4
 )
@@ -1234,40 +1037,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/psa-register-read-write-2-bmv2.p4
 )
 
-# P4C-3722 - BA102 PTF tests to be fixed and removed from Xfails
-p4c_add_xfail_reason("tofino"
-  "ERROR:PTF runner:Error when running PTF tests"
-   ba102_04-simple_l3_nexthop_simple_l3_nexthop_hash_action
-   ba102_17-simple_l3_action_profile_simple_l3_nexthop_hash_action
-   ba102_10-simple_l3_mcast_simple_l3_mcast_checksum_full_headers
-   ba102_10-simple_l3_mcast_simple_l3_mcast_checksum_split_headers
-   ba102_03-simple_l3_rewrite_simple_l3_rewrite_920  # old version
-)
-
-p4c_add_xfail_reason("tofino"
-    "KeyError: 'SUDO_USER'"
-    ba102_02-simple_l3_acl_simple_l3_acl
-    ba102_03-simple_l3_rewrite_simple_l3_rewrite_930
-)
-
-p4c_add_xfail_reason("tofino"
-    "NOT READY YET"
-    ba102_17-simple_l3_action_profile_simple_l3_action_profile
-    ba102_17-simple_l3_action_profile_simple_l3_no_action_profile
-)
-
-# P4C-3402
-p4c_add_xfail_reason("tofino"
-  "error: Two or more assignments of .* inside the register action .* are not mutually exclusive and thus cannot be implemented in Tofino Stateful ALU."
-  extensions/p4_tests/p4_16/internal/p4c-3402.p4
-)
-
-p4c_add_xfail_reason("tofino"
-  "error: You can only have more than one binary operator in a statement"
-  extensions/p4_tests/p4_16/internal/p4c-3402-err.p4
-)
-
-# P4C-3803 - Update open source psa.p4 to use type instead of enum for
+# JIRA-DOC: P4C-3803 - Update open source psa.p4 to use type instead of enum for
 # PSA_MeterColor_t
 p4c_add_xfail_reason("tofino"
   "error: Cannot extract field .* from PSA_MeterColor_t which has type Type"
@@ -1285,27 +1055,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/psa-example-dpdk-byte-alignment_8.p4
   testdata/p4_16_samples/psa-example-dpdk-byte-alignment_9.p4
 )
-
-# P4C-3765
-p4c_add_xfail_reason("tofino"
-  "error: Value used in select statement needs to be set from input packet"
-  extensions/p4_tests/p4_16/internal/p4c-3765-fail.p4
-)
-p4c_add_xfail_reason("tofino"
-  "error: Unable to resolve extraction source. This is likely due to the source having no absolute offset from the state"
-  extensions/p4_tests/p4_16/internal/p4c-2752.p4
-)
-
-
-if (NOT TEST_ALT_PHV_ALLOC)
-    # P4C-3914
-    p4c_add_xfail_reason("tofino"
-      "error: Size of learning quanta is [0-9]+ bytes, greater than the maximum allowed 48 bytes.
-Compiler will improve allocation of learning fields in future releases.
-Temporary fix: try to apply @pa_container_size pragma to small fields allocated to large container in. Here are possible useful progmas you can try: .*"
-      extensions/p4_tests/p4_16/internal/p4c-3914.p4
-    )
-endif()
 
 # P4C update 2021-07-12
 # At frontend because there is
@@ -1333,11 +1082,6 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "Tofino does not support nested checksum updates in the same deparser"
-  basic_switching
-)
-
-p4c_add_xfail_reason("tofino"
   "no definitions found for"
   testdata/p4_16_samples/issue2362-bmv2.p4
 )
@@ -1359,7 +1103,7 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/psa-example-dpdk-byte-alignment_4.p4
 )
 
-# P4C-2985 - tests added to p4c do not compile for tofino
+# JIRA-DOC: P4C-2985 - tests added to p4c do not compile for tofino
 p4c_add_xfail_reason("tofino"
   "error: Unable to resolve extraction source. This is likely due to the source having no absolute offset from the state"
   testdata/p4_16_samples/parser-inline/parser-inline-test1.p4
@@ -1396,15 +1140,12 @@ p4c_add_xfail_reason("tofino"
   "error: : condition too complex"
   extensions/p4_tests/p4_14/compile_only/p4smith_regression/basseterre_0.p4
 )
-p4c_add_xfail_reason("tofino"
-  "Compiler Bug: Overwriting definitions"
-  extensions/p4_tests/p4_14/internal/customer/surfnet/p4c-1429.p4
-)
+
 p4c_add_xfail_reason("tofino"
   "mismatch from expected"
   extensions/p4_tests/p4_14/stf/stateful6.p4
 )
-# P4C-4140
+# JIRA-DOC: P4C-4140
 p4c_add_xfail_reason("tofino"
   "Compiler Bug: invalid SuperCluster was formed"
   extensions/p4_tests/p4_14/compile_only/cylinder_0.p4
@@ -1417,10 +1158,9 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/table-entries-ser-enum-bmv2.p4
 )
 
-# P4C-3922 - Fail with both python3 + bf-pktpy and python2 + scapy environments
+# JIRA-DOC: P4C-3922 - Fail with both python3 + bf-pktpy and python2 + scapy environments
 p4c_add_xfail_reason("tofino"
   "AssertionError: Expected packet was not received"
-  tor.p4
   extensions/p4_tests/p4_14/ptf/sful_split1.p4
 )
 
@@ -1434,17 +1174,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/invalid-hdr-warnings3-bmv2.p4
   testdata/p4_16_samples/issue3374.p4
   testdata/p4_16_samples/issue3650.p4
-)
-
-# P4C-4158 - Expected program output not communicated to us by customer (Arista)
-p4c_add_xfail_reason("tofino"
-  "AssertionError: Expected packet was not received on device"
-  p4c_4158
-)
-
-p4c_add_xfail_reason("tofino"
-  "not enough operands for .* instruction"
-  extensions/p4_tests/p4_14/internal/p4c-4090.p4
 )
 
 p4c_add_xfail_reason("tofino"
@@ -1492,12 +1221,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/psa-dpdk-128bitCast.p4
 )
 
-# P4C-3220
-p4c_add_xfail_reason("tofino"
-  "error: Incompatible outputs in RegisterAction: mem_lo and mem_hi"
-  extensions/p4_tests/p4_16/internal/p4c-3220_1.p4
-)
-
 # p4c update 2022-06-02
 p4c_add_xfail_reason("tofino"
   "does not have method matching this call"
@@ -1515,13 +1238,6 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "Unsupported architecture \"v1model\" for parser minimum depth enforcement"
   testdata/p4_16_samples/issue3394.p4
-)
-
-# p4c-4366 test currently does not work due to a model issue
-# MODEL-1156
-p4c_add_xfail_reason("tofino"
-  "AssertionError: Expected packet was not received on"
-  p4c_4366
 )
 
 # p4c update 2022-08-01
@@ -1597,33 +1313,10 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/psa-action-selector6.p4
 )
 
-# ALT-PHV: tests that do not work yet with the alternative allocator.
-# If you make an ALT-PHV test pass (or get close to it but if fails on later
-# error), please update the xfails accordingly.
-if (TEST_ALT_PHV_ALLOC)
-    # PHV fitting
-    p4c_add_xfail_reason("tofino"
-      "error: PHV fitting failed, [0-9]* clusters cannot be allocated."
-      extensions/p4_tests/p4_14/internal/customer/ruijie/p4c-2250.p4
-      switch_ent_dc_general # To be removed when switch-14 profiles are removed
-    )
-
-    p4c_add_xfail_reason("tofino"
-      "ActionAnalysis did not split up container by container"
-      extensions/p4_tests/p4_16/internal/customer/arista/obfuscated-nat_vxlan.p4
-    )
-endif (TEST_ALT_PHV_ALLOC)
-
-# P4C-4689: On Tofino1, this test compiles incorrectly but we only report a warning
+# JIRA-DOC: P4C-4689: On Tofino1, this test compiles incorrectly but we only report a warning
 p4c_add_xfail_reason("tofino"
   "mismatch from expected"
   extensions/p4_tests/p4_16/stf/parser_multi_write_checksum_verify_2.p4
-)
-
-# New failures after model/driver update - need to investigate the reason.
-p4c_add_xfail_reason("tofino"
-  "Invalid arguments"
-  p4c_3005
 )
 
 # Failure due to old version of p4runtime installed in jarvis docker images -- fixed by
@@ -1631,10 +1324,9 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "google.protobuf.text_format.ParseError: .*:3 : Message type \"p4.config.v1.Table\" has no field named \"has_initial_entries\""
   extensions/p4_tests/p4_16/ptf/static_entries.p4
-  extensions/p4_tests/p4_16/internal/ptf/p4c-5298.p4
 )
 
-# P4C-5307 - varbit extraction -> fixed-length extraction incorrect for constant lenghts
+# JIRA-DOC: P4C-5307 - varbit extraction -> fixed-length extraction incorrect for constant lenghts
 p4c_add_xfail_reason("tofino"
   "mismatch from expected(.*) at byte .*"
   extensions/p4_tests/p4_16/stf/varbit_constant.p4

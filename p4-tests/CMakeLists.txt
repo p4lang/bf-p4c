@@ -77,11 +77,17 @@ include(TestUtils.cmake)
 if (ENABLE_TESTING)
   # add tofino tests and xfails with reasons
   include(TofinoTests.cmake)
+  if (CLOSED_SOURCE)
+    include(internal/TofinoTests.cmake)
+  endif (CLOSED_SOURCE)
 
   # tofino2 variants -- to be enabled when support is added in the model and p4-build
   # include(Tofino2Tests.cmake)
   # add jbay tests and xfails with reasons
   include(JBayTests.cmake)
+  if (CLOSED_SOURCE)
+    include(internal/JBayTests.cmake)
+  endif (CLOSED_SOURCE)
   if (ENABLE_CLOUDBREAK)
     include(internal/CloudbreakTests.cmake)
   endif()

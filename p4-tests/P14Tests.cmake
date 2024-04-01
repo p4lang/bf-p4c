@@ -1,8 +1,10 @@
 
 # FIXME -- most of these programs fail due to the test repo reorg -- since the paths no
 # FIXME -- longer contain the string 'p4_14' they get compiled as p4_16, which fails.
-set (P14_XFAIL_TESTS
-  extensions/p4_tests/p4_14/compile_only/02-FlexCounterActionProfile.p4
+
+
+if (CLOSED_SOURCE)
+set (P14_XFAIL_TESTS_INTERNAL
   extensions/p4_tests/internal/p4-programs/programs/alpm_test/alpm_test.p4
   extensions/p4_tests/internal/p4-programs/programs/basic_ipv4/basic_ipv4.p4
   extensions/p4_tests/internal/p4-programs/programs/basic_switching/basic_switching.p4
@@ -38,15 +40,20 @@ set (P14_XFAIL_TESTS
   extensions/p4_tests/internal/p4-programs/programs/resubmit/resubmit.p4
   extensions/p4_tests/internal/p4-programs/programs/smoke_large_tbls/smoke_large_tbls.p4
   extensions/p4_tests/internal/p4-programs/programs/stful/stful.p4
-  extensions/p4_tests/p4_14/compile_only/shared_names.p4
-  extensions/p4_tests/p4_14/stf/hash_calculation_16.p4
-  extensions/p4_tests/p4_14/stf/hash_calculation_32.p4
-  extensions/p4_tests/p4_14/switch/p4src/switch.p4
   # proprietary algorithms for hash
   extensions/p4_tests/internal/p4-programs/programs/dyn_hash/dyn_hash.p4
   extensions/p4_tests/internal/p4-programs/programs/exm_direct/exm_direct.p4
   # hash_test.p4(171): error: set_p: parameter p must be bound
   extensions/p4_tests/internal/p4-programs/programs/hash_test/hash_test.p4
+)
+endif (CLOSED_SOURCE)
+
+set (P14_XFAIL_TESTS
+  extensions/p4_tests/p4_14/compile_only/02-FlexCounterActionProfile.p4
+  extensions/p4_tests/p4_14/compile_only/shared_names.p4
+  extensions/p4_tests/p4_14/stf/hash_calculation_16.p4
+  extensions/p4_tests/p4_14/stf/hash_calculation_32.p4
+  extensions/p4_tests/p4_14/switch/p4src/switch.p4
   # tofino hash function extensions not supported with p4test
   extensions/p4_tests/p4_14/compile_only/brig-540-2.p4
   # some declarations not supported with p4test
@@ -69,7 +76,6 @@ set (P14_XFAIL_TESTS
 
 # p4-tests has all the includes at the same level with the programs.
 set (BFN_EXCLUDE_PATTERNS "tofino\\.p4" ".*netcache.*")
-set (BFN_TESTS "${CMAKE_CURRENT_SOURCE_DIR}/internal/p4-programs/programs/*/*.p4")
 bfn_find_tests ("${BFN_TESTS}" BFN_TESTS_LIST EXCLUDE "${BFN_EXCLUDE_PATTERNS}")
 
 set (P14_TEST_SUITES
@@ -84,7 +90,9 @@ set (P14_TEST_SUITES
   )
 
 set (V12_DRIVER ${CMAKE_CURRENT_SOURCE_DIR}/test-v12-sample.sh)
- p4c_add_tests("p14_to_16" ${V12_DRIVER} "${P14_TEST_SUITES}" "${P14_XFAIL_TESTS}")
+ p4c_add_tests("p14_to_16" ${V12_DRIVER} "${P14_TEST_SUITES}" "${P14_XFAIL_TESTS};${P14_XFAIL_TESTS_INTERNAL}")
+
+set (BFN_TESTS "${CMAKE_CURRENT_SOURCE_DIR}/internal/p4-programs/programs/*/*.p4")    # JIRA-DOC:
 
 # tests which aren't supported by bf-p4c
 # =======================================
