@@ -394,7 +394,7 @@ def clean_cmake_ifs(path):
 
             line_no += 1
 
-        dst_fp.close
+        dst_fp.close()
         if changed:
             shutil.move(dst_fp.name, path)
         else:
