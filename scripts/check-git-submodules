@@ -12,6 +12,7 @@ declare -A branchOverrides=(
   ['p4-tests/p4testutils']='origin/rel_9_13'
   ['p4-tests/p4_16/switch_16']='origin/rel_9_13'
   ['p4c']='origin/main'
+  ['compiler_interfaces']='origin/open_source_safe'
 )
 
 ### End configuration #########################################################
