@@ -43,6 +43,19 @@ CPPP = os.getcwd() + '/scripts/_deps/cppp/cppp'
 
 
 # =======================================================
+# Verify that deps are present
+# =======================================================
+
+PREREQ_SCRIPT = os.getcwd() + '/scripts/install_source_release_clean_prereqs.sh'
+
+if not os.path.exists(CPPP):
+    print("Error: cannot find {}".format(CPPP), file=sys.stderr)
+    print("".format(CPPP), file=sys.stderr)
+    print("Have you run {}?".format(PREREQ_SCRIPT), file=sys.stderr)
+    sys.exit(1)
+
+
+# =======================================================
 # Remove source code corresponding to unreleased hardware
 # =======================================================
 
