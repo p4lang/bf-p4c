@@ -81,7 +81,7 @@ def run_cppp(src_dir):
             tmp_path = path + ".new"
             CPPP_CMD = CPPP_CMD_BASE + [path, tmp_path]
             subprocess.run(CPPP_CMD)
-            os.rename(tmp_path, path)
+            shutil.move(tmp_path, path)
 
 
 def sed_replace(path, src, dst, include_cmake=False):
@@ -396,7 +396,7 @@ def clean_cmake_ifs(path):
 
         dst_fp.close
         if changed:
-            os.rename(dst_fp.name, path)
+            shutil.move(dst_fp.name, path)
         else:
             os.unlink(dst_fp.name)
 
