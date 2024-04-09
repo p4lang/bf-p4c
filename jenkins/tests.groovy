@@ -136,6 +136,22 @@ pipeline {
                             }
                         }
 
+                        stage('Source Release') {
+                            when { expression { SANITIZERS_ENABLED != "true" } }
+                            steps {
+                                sh """
+                                    make -Cdocker test-build \
+                                                BUILD_ARGS="
+                                                    --cpus=4 \
+                                                    --privileged \
+                                                    -e MAKEFLAGS=j4 \
+                                                    -e UNITY_BUILD=true \
+                                            " \
+                                            BUILD_SCRIPT="scripts/package_sources.sh --build-dir build_src"
+                                """
+                            }
+                        }
+
                         stage("p4o") {
                             steps {
                                 catchError(catchInterruptions: false, stageResult: 'FAILURE') {
@@ -209,7 +225,7 @@ pipeline {
                                         -e MAKEFLAGS=j4 \
                                         -e UNITY_BUILD=true \
                                     " \
-                                    BUILD_SCRIPT="scripts/package_p4c_for_tofino.sh --build-dir build"
+                                    BUILD_SCRIPT="scripts/package_p4c_for_tofino.sh --build-dir build --delete-git-and-internal"
                         """
                     }
                 }

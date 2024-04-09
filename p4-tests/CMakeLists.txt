@@ -108,8 +108,11 @@ if (ENABLE_TESTING)
   # Exercise bmv2 back-end on Tofino-specific programs
   include (BMV2Tests.cmake)
 
+
+if (CLOSED_SOURCE)
   # Test code generation (check assembler output)
   include (internal/CodeGenTests.cmake)
+endif (CLOSED_SOURCE)
 
   if (ENABLE_STF2PTF)
     # test STF lexing and parsing by running the stf2ptf_pd generator on

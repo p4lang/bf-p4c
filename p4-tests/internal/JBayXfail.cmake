@@ -30,6 +30,12 @@ p4c_add_xfail_reason("tofino2"
   "google.protobuf.text_format.ParseError: .*:3 : Message type \"p4.config.v1.Table\" has no field named \"has_initial_entries\""
   extensions/p4_tests/p4_16/internal/ptf/p4c-5298.p4
 )
+
+p4c_add_xfail_reason("tofino2"
+  "AssertionError: Expected packet was not received on device .*, port .*"
+  tor.p4
+)
+
 endif() # PTF_REQUIREMENTS_MET
 
 p4c_add_xfail_reason("tofino2"

@@ -93,15 +93,6 @@ string (REGEX REPLACE "\\.stf;" ".p4;" STF_P4_TESTS "${STF_TESTS};")
 file (GLOB PTF_TESTS "${CMAKE_CURRENT_SOURCE_DIR}/p4_14/ptf/*.ptf")
 string (REGEX REPLACE "\\.ptf;" ".p4;" PTF_P4_TESTS "${PTF_TESTS};")
 
-# JIRA-DOC: P4C-2985
-# We need to create two tests with different args for one p4 file.
-# We utilize the fact that p4c_add_bf_backend_tests and p4c_add_test_with_args use the same name
-# of the *.test file if there is more tests for one *.p4 file, so we create test with command line option
-# --parser-inline-opt here, and let the other test be created as part of tests created from variable
-# JBAY_JNA_TEST_SUITES.
-bfn_add_test_with_args("tofino2" "jbay" "parser-inline-opt/${P4C_2985_TESTNAME}" ${P4C_2985_TESTNAME} "" "--parser-inline-opt")
-p4c_add_test_label("tofino2" "base;stf" "parser-inline-opt/${P4C_2985_TESTNAME}")
-
 set (JBAY_JNA_TEST_SUITES
   ${p16_jna_tests}
   )
@@ -189,8 +180,18 @@ bfn_needs_scapy("tofino2" "hash_field_expression_sym")
 file(RELATIVE_PATH tofino32q-3pipe_path ${P4C_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/tofino32q-3pipe/sfc.p4)
 bfn_add_test_with_args ("tofino2" "jbay" "tofino32q-3pipe" ${tofino32q-3pipe_path} "${testExtraArgs} -arch t2na" "")
 
+p4c_add_bf_backend_tests("tofino2" "jbay" "v1model" "base" "${JBAY_V1_TEST_SUITES_P416}" "-I${CMAKE_CURRENT_SOURCE_DIR}/p4_16/includes")
+
 if (CLOSED_SOURCE)
 # Internal
+
+# We need to create two tests with different args for one p4 file.
+# We utilize the fact that p4c_add_bf_backend_tests and p4c_add_test_with_args use the same name
+# of the *.test file if there is more tests for one *.p4 file, so we create test with command line option
+# --parser-inline-opt here, and let the other test be created as part of tests created from variable
+# JBAY_JNA_TEST_SUITES.
+bfn_add_test_with_args("tofino2" "jbay" "parser-inline-opt/${P4C_2985_TESTNAME}" ${P4C_2985_TESTNAME} "" "--parser-inline-opt")
+p4c_add_test_label("tofino2" "base;stf" "parser-inline-opt/${P4C_2985_TESTNAME}")
 p4c_find_test_names("${CMAKE_CURRENT_SOURCE_DIR}/p4_16/internal/stf/p4c-2985.p4" P4C_2985_TESTNAME)
 p4c_add_bf_backend_tests("tofino2" "jbay" "t2na" "base" "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/internal/jbay/p4c-3288.p4")
 
@@ -434,8 +435,6 @@ p4c_add_ptf_test_with_ptfdir (
     "${CMAKE_CURRENT_SOURCE_DIR}/p4_16/internal/bfrt/p4c-3484/tests")
 set_tests_properties("tofino2/p4c-3484" PROPERTIES TIMEOUT ${extended_timeout_4times})
 bfn_set_ptf_test_spec("tofino2" "p4c-3484" "test_mau_1hop_s___ing_mirror.test")
-
-p4c_add_bf_backend_tests("tofino2" "jbay" "v1model" "base" "${JBAY_V1_TEST_SUITES_P416}" "-I${CMAKE_CURRENT_SOURCE_DIR}/p4_16/includes")
 
 p4c_add_ptf_test_with_ptfdir (
     "tofino2" tor.p4 ${CMAKE_CURRENT_SOURCE_DIR}/p4_16/internal/google-tor/p4/spec/tor.p4
