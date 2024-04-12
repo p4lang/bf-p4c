@@ -87,8 +87,10 @@ rm_extras() {
 
 # Generate the final source archive
 tar_sources() {
-    mkdir $srcdir
-    apt-get install -y rsync
+    mkdir -p $srcdir
+    if ! which rsync > /dev/null ; then
+        apt-get install -y rsync
+    fi
     rsync -Rr --links $topdir $srcdir
     cd $topdir
     rm_extras
