@@ -130,7 +130,7 @@ struct RemoveExternMethodCallsExcludedByAnnotation : public Transform {
                 return call;
             }
 
-            if (excludedMethod->value == callExpr->toString()) {
+            if (excludedMethod->value == callExpr->method->toString()) {
                 ::warning("Excluding method call from translation due to "
                           "@dont_translate_extern_method: %1%", call);
                 return nullptr;

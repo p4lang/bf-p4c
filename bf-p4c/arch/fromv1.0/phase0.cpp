@@ -655,7 +655,7 @@ struct RewritePhase0IfPresent : public Transform {
             state->components.push_back(assignment);
         }
 
-        P4::ClonePathExpressions cloner;
+        P4::CloneExpressions cloner;
         // Generate assignments that copy the extracted phase 0 fields to their
         // final locations. The original extracts will get optimized out.
         for (auto& paramWrite : phase0->paramWrites) {
@@ -711,7 +711,7 @@ bool CheckPhaseZeroExtern::preorder(const IR::MethodCallExpression* expr) {
         auto extFuncExpr = extFunction->expr;
         // Check if method call is a phase0 extern
         if (extFuncExpr &&
-            extFuncExpr->toString() == BFN::ExternPortMetadataUnpackString) {
+            extFuncExpr->method->toString() == BFN::ExternPortMetadataUnpackString) {
             auto parser = findOrigCtxt<IR::BFN::TnaParser>();
             if (!parser) return false;
             ERROR_CHECK(parser->thread == INGRESS,
@@ -902,7 +902,7 @@ IR::MethodCallExpression* ConvertPhase0AssignToExtract::generate_phase0_extract_
     if (auto extFunction = mi->to<P4::ExternFunction>()) {
         auto extFuncExpr = extFunction->expr;
         if (extFuncExpr &&
-            extFuncExpr->toString() == BFN::ExternPortMetadataUnpackString) {
+            extFuncExpr->method->toString() == BFN::ExternPortMetadataUnpackString) {
             // Create packet extract method call to replace extern
             auto parser = findOrigCtxt<IR::BFN::TnaParser>();
             auto packetInParam = parser->tnaParams.at("pkt");

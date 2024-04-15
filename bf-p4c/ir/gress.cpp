@@ -24,10 +24,10 @@ cstring createThreadName(gress_t gress, cstring name) {
 }
 
 cstring stripThreadPrefix(cstring name) {
-    StringRef ref(name);
-    if (auto prefix = ref.findstr("::"))
-        ref = ref.after(prefix) += 2;
-    return ref;
+    if (auto *pos = name.find("::")) {
+        return cstring(pos + 2);
+    }
+    return name;
 }
 
 std::ostream& operator<<(std::ostream& out, gress_t gress) {

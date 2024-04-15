@@ -16,22 +16,3 @@ std::pair<int, int> rangeFromJSON(JSONLoader& json) {
     json >> endpoints;
     return endpoints;
 }
-
-std::ostream& toStream(std::ostream& out, RangeUnit unit,
-                       Endian order, int lo, int hi, bool closed) {
-    if (unit == RangeUnit::Bit) out << "bit";
-    else if (unit == RangeUnit::Byte) out << "byte";
-    else
-        BUG("unknown range unit");
-
-    out << (!closed && order == Endian::Little ? "(" : "[");
-
-    if (order == Endian::Little) std::swap(lo, hi);
-
-    out << std::dec << lo;
-    if (lo != hi) out << ".." << hi;
-
-    out << (!closed && order == Endian::Network ? ")" : "]");
-
-    return out;
-}

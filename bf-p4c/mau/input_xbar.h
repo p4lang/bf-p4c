@@ -383,6 +383,8 @@ struct IXBar {
     struct failure : public Backtrack::trigger {
         int     stage = -1, group = -1;
         failure(int stg, int grp) : trigger(OTHER), stage(stg), group(grp) {}
+
+        DECLARE_TYPEINFO(failure);
     };
 
  protected:

@@ -31,6 +31,8 @@ class ImplicitParserInit : public IR::Expression {
     const PHV::Field* field;
     void dbprint(std::ostream & out) const override {
         out << "ImplicitParserInit of " << field->id << ":" << field->name; }
+
+    DECLARE_TYPEINFO(ImplicitParserInit);
 };
 
 /** Represent a parser error write. TODO: move to actual IR.
@@ -46,6 +48,8 @@ class WriteParserError : public IR::Expression {
     explicit WriteParserError(const PHV::Field *f) : field(f) {}
     const PHV::Field *field;
     void dbprint(std::ostream &out) const override { out << "write parser error to " << field; }
+
+    DECLARE_TYPEINFO(WriteParserError);
 };
 
 class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWriteContext {

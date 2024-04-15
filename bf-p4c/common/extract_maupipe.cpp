@@ -1870,13 +1870,13 @@ ProcessBackendPipe::ProcessBackendPipe(P4::ReferenceMap *refMap, P4::TypeMap *ty
 
 cstring BackendConverter::getPipelineName(const IR::P4Program* program, int index) {
     auto mainDecls = program->getDeclsByName("main")->toVector();
-    if (mainDecls->size() == 0) {
+    if (mainDecls.size() == 0) {
         ::error("No main declaration in the program");
         return nullptr;
-    } else if (mainDecls->size() > 1) {
+    } else if (mainDecls.size() > 1) {
         ::error("Multiple main declarations in the program");
         return nullptr; }
-    auto decl = mainDecls->at(0);
+    auto decl = mainDecls.at(0);
     if (auto di = decl->to<IR::Declaration_Instance>()) {
         if (auto expr = di->arguments->at(index)->expression) {
             if (auto path = expr->to<IR::PathExpression>()) {

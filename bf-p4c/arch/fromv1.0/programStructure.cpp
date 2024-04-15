@@ -995,7 +995,7 @@ TnaProgramStructure::convertControl(const IR::V1Control* control, cstring newNam
     // add bridged metadata to ingress
     auto* body = ctrl->body->clone();
     if (control->name == "ingress") {
-        P4::ClonePathExpressions cloner;
+        P4::CloneExpressions cloner;
 
 #if 1
         if (useBridgeMetadata()) {
@@ -1298,7 +1298,7 @@ void TnaProgramStructure::createEgressParser() {
 
     IR::IndexedVector<IR::Declaration> stateful;
     auto states = new IR::IndexedVector<IR::ParserState>();
-    P4::ClonePathExpressions cloner;
+    P4::CloneExpressions cloner;
     for (auto p : parserStates) {
         auto state = convertParser(p.first, &stateful);
         if (state == nullptr)
@@ -1435,7 +1435,7 @@ TnaProgramStructure::createMirrorState(gress_t gress, unsigned index,
     statements->push_back(BFN::createSetMetadata("meta",
                 COMPILER_META, "mirror_source", 8, mirror_source));
 
-    P4::ClonePathExpressions cloner;
+    P4::CloneExpressions cloner;
     for (auto e : expr->to<IR::ListExpression>()->components) {
         if (e->to<IR::ListExpression>()) {
             BUG("\tnested field list");
@@ -1458,7 +1458,7 @@ TnaProgramStructure::createMirrorState(gress_t gress, unsigned index,
     auto *newState = new IR::ParserState(newStateName, *statements, select);
     newState->annotations = newState->annotations
         ->addAnnotationIfNew(IR::Annotation::nameAnnotation,
-                new IR::StringLiteral(cstring("$") + name));
+                new IR::StringLiteral(cstring(cstring("$") + name)));
     return newState;
 }
 
@@ -1537,7 +1537,7 @@ TnaProgramStructure::createResubmitState(gress_t gress, unsigned index,
                 COMPILER_META, "resubmit_source", 8, resubmit_source));
 
 
-    P4::ClonePathExpressions cloner;
+    P4::CloneExpressions cloner;
     for (auto e : expr->to<IR::ListExpression>()->components) {
         if (e->to<IR::ListExpression>()) {
             BUG("\tnested field list");
@@ -1556,7 +1556,7 @@ TnaProgramStructure::createResubmitState(gress_t gress, unsigned index,
     auto *newState = new IR::ParserState(newStateName, *statements, select);
     newState->annotations = newState->annotations
         ->addAnnotationIfNew(IR::Annotation::nameAnnotation,
-                new IR::StringLiteral(cstring("$") + name));
+                new IR::StringLiteral(cstring(cstring("$") + name)));
     return newState;
 }
 
@@ -1592,7 +1592,7 @@ TnaProgramStructure::createResubmitStates() {
 IR::IndexedVector<IR::ParserState>*
 TnaProgramStructure::createEgressParserStates() {
     auto states = new IR::IndexedVector<IR::ParserState>();
-    P4::ClonePathExpressions cloner;
+    P4::CloneExpressions cloner;
 
     // if bridge metadata is needed
     IR::IndexedVector<IR::StatOrDecl> bridgeStateStmts;

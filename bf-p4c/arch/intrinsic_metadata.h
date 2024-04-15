@@ -315,7 +315,7 @@ class AddIntrinsicMetadata : public PassManager {
          addPasses({
              new RenameP4StartState(),
              new AddMetadataFields(),
-             new P4::ClonePathExpressions(),
+             new P4::CloneExpressions(),
              new P4::ClearTypeMap(typeMap),
              new BFN::TypeChecking(refMap, typeMap, true),
              });

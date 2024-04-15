@@ -192,8 +192,8 @@ Visitor::profile_t FindPovAndParserErrorInMau::init_apply(const IR::Node* root) 
 
 bool FindPovAndParserErrorInMau::is_original_parser_err_field(const PHV::Field* field) {
     const char* str = nullptr;
-    StringRef name = field->name;
-    str = name.findstr("parser_err");
+    cstring name = field->name;
+    str = name.find("parser_err");
     return str;
 }
 

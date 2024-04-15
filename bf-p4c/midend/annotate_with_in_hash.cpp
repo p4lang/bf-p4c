@@ -24,14 +24,20 @@ namespace BFN {
  */
 bool DoAnnotateWithInHash::checkKeyDefaultAction(const IR::P4Control &control,
         const IR::P4Action &action) const {
-    for (const auto *decl : *(control.getDeclarations()->toVector())) {
+    for (const auto *decl : control.getDeclarations()->toVector()) {
         if (const auto *table = decl->to<IR::P4Table>()) {
             const auto *actionList = table->getActionList();
             if (actionList == nullptr) continue;  // The table has no actions
             const auto *actionListElement = actionList->getDeclaration(action.getName());
             if (!actionListElement) continue;  // The table does not call the action
             const IR::Expression *defaultAction = table->getDefaultAction();
-            bool isDefaultAction = (defaultAction->toString() == action.getName());
+            cstring defaultActionName;
+            if (auto mce = defaultAction->to<IR::MethodCallExpression>()) {
+                defaultActionName = mce->method->toString();
+            } else {
+                defaultActionName = defaultAction->toString();
+            }
+            bool isDefaultAction = (defaultActionName == action.getName());
             bool hasKey = (table->getKey() != nullptr);
             if ((isDefaultAction && hasKey) || (!isDefaultAction && !hasKey)) {
                 return false;

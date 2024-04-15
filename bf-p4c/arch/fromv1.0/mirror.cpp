@@ -148,7 +148,7 @@ struct FindMirroredFieldLists : public Inspector {
 };
 
 class AddMirroredFieldListParser : public Transform {
-    P4::ClonePathExpressions cloner;
+    P4::CloneExpressions cloner;
 
  public:
     explicit AddMirroredFieldListParser(const MirroredFieldLists* fieldLists,
@@ -236,7 +236,7 @@ class AddMirroredFieldListParser : public Transform {
         auto *newState = new IR::ParserState(newStateName, *statements, select);
         newState->annotations = newState->annotations
             ->addAnnotationIfNew(IR::Annotation::nameAnnotation,
-                                 new IR::StringLiteral(cstring("$") + name));
+                                 new IR::StringLiteral(cstring(cstring("$") + name)));
         return newState;
     }
 

@@ -1491,6 +1491,14 @@ class BFRuntimeArchHandlerCommon : public P4::ControlPlaneAPI::P4RuntimeArchHand
     cstring defaultPipeName = "pipe";
 
     static constexpr int64_t defaultMaxGroupSize = 120;
+
+    // JSON printing options for serialization
+    google::protobuf::util::JsonPrintOptions jsonPrintOptions;
+
+ public:
+    google::protobuf::util::JsonPrintOptions getJsonPrintOptions() override {
+        return jsonPrintOptions;
+    }
 };
 
 /// Implements BFRuntimeArchHandlerIface for the Tofino architecture. The

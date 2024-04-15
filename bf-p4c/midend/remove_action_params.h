@@ -39,7 +39,7 @@ class DoRemoveActionParametersTofino : public P4::DoRemoveActionParameters {
                 auto mcs = abc->to<IR::MethodCallStatement>();
                 auto mc = mcs->methodCall;
                 auto mce = mc->to<IR::MethodCallExpression>();
-                if ("mark_to_drop" == mce->toString()) {
+                if ("mark_to_drop" == mce->method->toString()) {
                     num_mark_to_drop++;
                 } else {
                     for (auto arg : *(mce->arguments)) {
@@ -123,7 +123,7 @@ class DoRemoveActionParametersTofino : public P4::DoRemoveActionParameters {
                         auto mc = mcs->methodCall;
                         auto mce = mc->to<IR::MethodCallExpression>();
                         // Add mark_to_drop action component with standard_metadata arg
-                        if ("mark_to_drop" == mce->toString()) {
+                        if ("mark_to_drop" == mce->method->toString()) {
                             auto new_mce = new IR::MethodCallExpression(mce->method, args);
                             abc = new IR::MethodCallStatement(new_mce);
                         }

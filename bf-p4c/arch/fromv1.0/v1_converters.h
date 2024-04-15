@@ -41,7 +41,7 @@ class StatementConverter : public Transform {
 class ControlConverter : public Transform {
  protected:
     ProgramStructure* structure;
-    P4::ClonePathExpressions cloner;
+    P4::CloneExpressions cloner;
     template<typename T> const IR::Node* substitute(T* s) {
         auto* orig = getOriginal<T>();
         if (structure->_map.count(orig)) {
@@ -105,7 +105,7 @@ class EgressDeparserConverter : public ControlConverter {
 class ParserConverter : public Transform {
  protected:
     ProgramStructure* structure;
-    P4::ClonePathExpressions cloner;
+    P4::CloneExpressions cloner;
     template<typename T> const IR::Node* substitute(T* s) {
         auto* orig = getOriginal<T>();
         if (structure->_map.count(orig)) {

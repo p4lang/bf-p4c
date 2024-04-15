@@ -1528,7 +1528,7 @@ DesugarVarbitExtract::DesugarVarbitExtract(P4::ReferenceMap* refMap, P4::TypeMap
         rewrite_varbit_uses,
         rewrite_parser_verify,
         rewrite_varbit_types,
-        new P4::ClonePathExpressions,
+        new P4::CloneExpressions,
         new P4::ClearTypeMap(typeMap),
         new BFN::TypeChecking(refMap, typeMap, true)
     });

@@ -15,6 +15,7 @@
 #include "barefoot/p4info.pb.h"
 #pragma GCC diagnostic pop
 #include "control-plane/p4RuntimeSerializer.h"
+#include "lib/error.h"
 #include "lib/exceptions.h"
 #include "lib/log.h"
 #include "lib/null.h"
@@ -377,12 +378,10 @@ class P4RuntimeStdConverter {
 };
 
 P4::P4RuntimeAPI convertToStdP4Runtime(const P4::P4RuntimeAPI& p4RuntimeIn) {
-    P4::P4RuntimeAPI p4RuntimeOut;
     CHECK_NULL(p4RuntimeIn.p4Info);
     P4RuntimeStdConverter converter(p4RuntimeIn.p4Info);
 
-    p4RuntimeOut.p4Info = converter.convert();
-    p4RuntimeOut.entries = p4RuntimeIn.entries;
+    P4::P4RuntimeAPI p4RuntimeOut(converter.convert(), p4RuntimeIn.entries);
 
     // Note that the output P4Info may include some additional data in
     // P4TypeInfo which is not required any more, however, this is unlikely to

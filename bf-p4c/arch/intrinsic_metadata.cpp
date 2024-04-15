@@ -54,7 +54,7 @@ const IR::ParserState*
                     new IR::PathExpression(nextState));
         startState->annotations = startState->annotations
             ->addAnnotationIfNew(IR::Annotation::nameAnnotation,
-                    new IR::StringLiteral(cstring("$") + name));
+                    new IR::StringLiteral(cstring(cstring("$") + name)));
         return startState;
     }
 
@@ -76,7 +76,7 @@ const IR::ParserState* createGeneratedParserState(cstring name,
     auto *newState = new IR::ParserState(newStateName, statements, selectExpression);
     newState->annotations = newState->annotations
         ->addAnnotationIfNew(IR::Annotation::nameAnnotation,
-                             new IR::StringLiteral(cstring("$") + name));
+                             new IR::StringLiteral(cstring(cstring("$") + name)));
     return newState;
 }
 

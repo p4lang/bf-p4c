@@ -8,7 +8,6 @@
 #include "range.h"
 #include "target.h"
 #include "top_level.h"
-#include "../lib/stringref.h"
 #include "ubits.h"
 #if HAVE_FLATROCK
 // FIXME: Creating a deparser class hierarchy would eliminate the need to include this Flatrock
@@ -397,15 +396,16 @@ void write_field_name_in_json(const Phv::Register* phv, const Phv::Register* pov
                               json::map& chunk_byte, json::map& fd_entry_chunk_byte,
                               int stageno, gress_t gress) {
     auto povName_ = Phv::get_pov_name(pov->mau_id(), povBit);
-    StringRef povName = povName_;
-    StringRef headerName;
-    if (auto *p = povName.findstr("$valid")) {
-        headerName = povName.before(p);
+    std::string povName = povName_;
+    std::string headerName;
+    size_t pos = 0;
+    if ((pos = povName.find("$valid")) != std::string::npos) {
+        headerName = povName.substr(0, pos);
     }
     std::string fieldNames;
     auto allFields = Phv::aliases(phv, stageno);
     for (auto fieldName : allFields) {
-         if (fieldName.find(headerName.string()) != std::string::npos)
+         if (fieldName.find(headerName) != std::string::npos)
              fieldNames += (fieldName + ", ");
     }
     fd_entry_chunk_byte["phv_container"] = phv->uid;

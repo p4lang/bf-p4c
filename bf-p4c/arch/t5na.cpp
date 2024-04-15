@@ -374,7 +374,7 @@ class TransformTnatoT5na : public PassManager {
             // We might have copied some paths (even between gresses)
             // Just make sure they are all cloned, so typechecking
             // won't get them confused
-            new P4::ClonePathExpressions(),
+            new P4::CloneExpressions(),
             new P4::ClearTypeMap(typeMap),
             // Some types might have changed from TNA to T5NA
             // Do TypeInference (TypeChecking assumes read only)

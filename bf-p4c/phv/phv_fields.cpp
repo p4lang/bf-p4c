@@ -197,11 +197,11 @@ const IR::TempVar* PhvInfo::getTempVar(const PHV::Field* f) const {
 }
 
 bool PhvInfo::has_struct_info(cstring name_) const {
-    StringRef name = name_;
+    cstring name = name_;
     if (all_structs.find(name) != all_structs.end())
         return true;
-    if (auto *p = name.findstr("::")) {
-        name = name.after(p+2); }
+    if (auto *pos = name.find("::"))
+        name = cstring(pos + 2);
     return all_structs.find(name) != all_structs.end();
 }
 

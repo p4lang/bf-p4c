@@ -9,6 +9,7 @@
 #include "test/gtest/helpers.h"
 #include "bf-p4c/common/bridged_packing.h"
 #include "bf-p4c/common/extract_maupipe.h"
+#include "bf-p4c/common/front_end_policy.h"
 #include "bf-p4c/common/header_stack.h"
 #include "bf-p4c/common/parse_annotations.h"
 #include "bf-p4c/midend.h"
@@ -34,7 +35,9 @@ MidendTestCase::create(const std::string& source) {
     AutoCompileContext autoBFNContext(new BFNContext(BFNContext::get()));
     auto& options = BackendOptions();
 
-    auto frontendTestCase = FrontendTestCase::create(source, BFN::ParseAnnotations());
+    auto parseAnnotations = BFN::ParseAnnotations();
+    auto policy = BFN::FrontEndPolicy(&parseAnnotations, true);
+    auto frontendTestCase = FrontendTestCase::create(source, &policy);
     if (!frontendTestCase) return std::nullopt;
     frontendTestCase->program->apply(BFN::FindArchitecture());
 
@@ -58,8 +61,10 @@ TofinoPipeTestCase::create(const std::string& source) {
     AutoCompileContext autoBFNContext(new BFNContext(BFNContext::get()));
     auto& options = BackendOptions();
 
+    auto parseAnnotations = BFN::ParseAnnotations();
+    auto policy = BFN::FrontEndPolicy(&parseAnnotations, true);
     auto frontendTestCase =
-        FrontendTestCase::create(source, options.langVersion, BFN::ParseAnnotations());
+        FrontendTestCase::create(source, options.langVersion, &policy);
     if (!frontendTestCase) return std::nullopt;
     frontendTestCase->program->apply(BFN::FindArchitecture());
 

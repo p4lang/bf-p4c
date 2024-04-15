@@ -95,6 +95,8 @@ class TablePlacement : public PassManager {
         bool limit_tmp_creation;
         explicit FinalRerunTablePlacementTrigger(bool l) : Backtrack::trigger(OK),
             limit_tmp_creation(l) {}
+
+        DECLARE_TYPEINFO(FinalRerunTablePlacementTrigger);
     };
 
     using GatewayMergeChoices = ordered_map<const IR::MAU::Table *, cstring>;

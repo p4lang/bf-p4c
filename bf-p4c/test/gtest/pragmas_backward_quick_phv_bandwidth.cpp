@@ -3,6 +3,7 @@
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/control-plane/runtime.h"
 #include "control-plane/p4RuntimeArchStandard.h"
+#include "control-plane/p4RuntimeSerializer.h"
 
 namespace Test {
 

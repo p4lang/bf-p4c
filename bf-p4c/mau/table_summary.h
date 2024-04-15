@@ -36,6 +36,8 @@ struct PHVTrigger {
             : trigger(OTHER), tableAlloc(tables), internalTableAlloc(internalTables),
               mergedGateways(mergedGateways), metaInitDisable(meta), ignorePackConflicts(pack),
               firstRoundFit(fit), stopTableReplayFitting(stop) { }
+
+        DECLARE_TYPEINFO(failure);
     };
 };
 
@@ -43,6 +45,8 @@ struct RerunTablePlacementTrigger {
     struct failure : public Backtrack::trigger {
         bool ignoreContainerConflicts = false;
         explicit failure(bool ig) : trigger(OTHER), ignoreContainerConflicts(ig) {}
+
+        DECLARE_TYPEINFO(failure);
     };
 };
 

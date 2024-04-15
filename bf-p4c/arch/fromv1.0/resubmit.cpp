@@ -131,7 +131,7 @@ class FindResubmit : public DeparserInspector {
 
 /// resubmit parser is only generated for p4-14 based programs
 class AddResubmitParser : public Transform {
-    P4::ClonePathExpressions cloner;
+    P4::CloneExpressions cloner;
 
  public:
     explicit AddResubmitParser(const ResubmitExtracts* extracts)
@@ -221,7 +221,7 @@ class AddResubmitParser : public Transform {
         auto *newState = new IR::ParserState(newStateName, *statements, select);
         newState->annotations = newState->annotations
             ->addAnnotationIfNew(IR::Annotation::nameAnnotation,
-                                 new IR::StringLiteral(cstring("$") + name));
+                                 new IR::StringLiteral(cstring(cstring("$") + name)));
         return newState;
     }
 

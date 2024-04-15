@@ -92,8 +92,8 @@ Visitor::profile_t CollectSourceInfoLogging::init_apply(const IR::Node* root) {
     // Set actual source root based on P4 program
     if (root->is<IR::P4Program>()) {
         auto mainDecls = root->to<IR::P4Program>()->getDeclsByName(IR::P4Program::main)->toVector();
-        if (!mainDecls->empty()) {
-            auto mainSrcInfo = mainDecls->front()->getSourceInfo();
+        if (!mainDecls.empty()) {
+            auto mainSrcInfo = mainDecls.front()->getSourceInfo();
             if (mainSrcInfo.isValid()) {
                 sourceRoot = mainSrcInfo.getSourceFile();
                 sourceRoot = sourceRoot.substr(0, sourceRoot.find_last_of("/"));

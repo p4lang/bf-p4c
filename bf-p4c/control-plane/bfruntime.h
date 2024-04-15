@@ -14,6 +14,7 @@
 #include <optional>
 
 #include "control-plane/p4RuntimeSerializer.h"
+#include "lib/error.h"
 #include "lib/exceptions.h"
 #include "lib/big_int_util.h"
 #include "lib/json.h"

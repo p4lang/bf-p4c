@@ -1,6 +1,7 @@
 #include "frontend.h"
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/arch/fromv1.0/programStructure.h"
+#include "bf-p4c/common/front_end_policy.h"
 #include "bf-p4c/common/parse_annotations.h"
 #include "bf-p4c/logging/event_logger.h"
 #include "bf-p4c/lib/error_type.h"
@@ -98,8 +99,10 @@ const IR::P4Program* run_frontend() {
     program->apply(P4::ApplyOptionsPragmas(optionsPragmaParser));
     program = program->apply(BFN::AnnotateVarbitExtractStates());
 
-    auto frontend = P4::FrontEnd(BFN::ParseAnnotations());
+    auto parse_annotations = BFN::ParseAnnotations();
+    auto policy = BFN::FrontEndPolicy(&parse_annotations, options.skip_seo);
+    auto frontend = P4::FrontEnd(&policy);
     frontend.addDebugHook(hook);
     frontend.addDebugHook(EventLogger::getDebugHook());
-    return frontend.run(options, program, options.skip_seo);
+    return frontend.run(options, program);
 }

@@ -8,7 +8,9 @@
 class SpreadGatewayAcrossSeq : public MauTransform, public Backtrack {
     FieldUse    uses;
     bool do_splitting = false;
-    struct enable : public Backtrack::trigger { };
+    struct enable : public Backtrack::trigger {
+        DECLARE_TYPEINFO(enable);
+    };
     bool backtrack(trigger &trig) override {
         if (!do_splitting && trig.is<enable>()) {
             do_splitting = true;

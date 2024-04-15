@@ -289,6 +289,7 @@ set (BF_P4C_BACKEND_COMMON_HDRS
   common/extract_maupipe.h
   common/field_defuse.h
   common/flatrock.h
+  common/front_end_policy.h
   common/bridged_packing.h
   common/header_stack.h
   common/ir_utils.h
@@ -1072,6 +1073,7 @@ if(BUILD_STATIC_BFP4C_LIBS)
 else()
     add_library(tofinobackend OBJECT ${BF_P4C_SOURCES})
 endif()
+target_link_libraries(tofinobackend PRIVATE absl::prefetch)
 add_dependencies(tofinobackend ir-generated frontend genLogging bfn_p4runtime)
 target_include_directories(tofinobackend PRIVATE "${BFN_P4C_SOURCE_DIR}/third_party/spdlog/include")
 foreach(dir ${Protobuf_INCLUDE_DIRS})
@@ -1466,6 +1468,7 @@ if(BUILD_STATIC_BFP4C_LIBS)
 else()
     add_library(bfn_p4runtime OBJECT ${BFN_P4RUNTIME_INFO_GEN_SRCS})
 endif()
+target_link_libraries(bfn_p4runtime PRIVATE absl::prefetch)
 set_source_files_properties(${BFN_P4RUNTIME_INFO_GEN_SRCS} PROPERTIES GENERATED TRUE)
 add_dependencies(bfn_p4runtime barefootdir controlplane)
 foreach(dir ${Protobuf_INCLUDE_DIRS})
@@ -1574,6 +1577,7 @@ if (ENABLE_GTESTS)
                                 "${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/tofino_gtest_utils.cpp")
                                 # test_bf_gtest_helpers should be in its own testlib - & requies 'whole_archive' hack!
                                 # Leave it in GTEST_BF_P4C_SOURCES for now.
+  target_link_libraries (bf_gtest_support PRIVATE absl::flat_hash_map PRIVATE absl::flat_hash_set)
   target_include_directories (bf_gtest_support PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/test/gtest}" PRIVATE "${P4C_BINARY_DIR}")
   add_dependencies (bf_gtest_support p4headers_h p4headers_cpp ir-generated gtest frontend-parser-gen)  # Indirectly we #include "ir/gen-tree-macro.h" and "p4parser.hpp"
 

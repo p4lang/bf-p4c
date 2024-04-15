@@ -687,8 +687,8 @@ void BFNContext::discoverPipes(const IR::P4Program *program, const IR::ToplevelB
         if (!pkg.second->is<IR::PackageBlock>()) continue;
         auto getPipeName = [program, pipe_id]() -> cstring {
             auto mainDecls = program->getDeclsByName("main")->toVector();
-            if (mainDecls->size() == 0) return nullptr;  // no main
-            auto decl = mainDecls->at(0);
+            if (mainDecls.size() == 0) return nullptr;  // no main
+            auto decl = mainDecls.at(0);
             auto expr = decl->to<IR::Declaration_Instance>()->arguments->at(pipe_id)->expression;
             if (!expr->is<IR::PathExpression>()) return nullptr;
             return expr->to<IR::PathExpression>()->path->name;

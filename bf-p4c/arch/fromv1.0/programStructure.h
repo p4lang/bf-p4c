@@ -890,7 +890,7 @@ class FixDuplicatePathExpression : public Transform {
     FixDuplicatePathExpression() {}
     const IR::Node* preorder(IR::P4Program* program) override {
         prune();
-        P4::ClonePathExpressions cloner;
+        P4::CloneExpressions cloner;
         return program->apply(cloner);
     }
 };
@@ -917,7 +917,7 @@ class ModifyParserForChecksum : public Modifier {
  public:
     template<typename Func>
     void forAllExtracts(const IR::ParserState* state, Func function) {
-        P4::ClonePathExpressions cloner;
+        P4::CloneExpressions cloner;
         for (auto expr : state->components) {
             if (!expr->is<IR::MethodCallStatement>())
                 continue;
@@ -992,7 +992,7 @@ class ModifyParserForChecksum : public Modifier {
             ordered_map<cstring, cstring>& checksum, gress_t gress) {
         if (checksum_fields.empty())
             return;
-        P4::ClonePathExpressions cloner;
+        P4::CloneExpressions cloner;
         const IR::Expression* constant = nullptr;
         for (auto csum : checksum_fields) {
             if (!csum.parserUpdateLocations.count(gress))
@@ -1064,7 +1064,7 @@ class ModifyParserForChecksum : public Modifier {
             std::vector<ChecksumInfo>& checksum_fields, const IR::Member* member,
             ordered_map<cstring, cstring>& checksum, gress_t gress,
             cstring state) {
-        P4::ClonePathExpressions cloner;
+        P4::CloneExpressions cloner;
         for (auto csum : checksum_fields) {
             if (!csum.parserUpdateLocations.count(gress))
                 continue;
@@ -1167,7 +1167,7 @@ class ModifyParserForChecksum : public Modifier {
         if (!residualChecksumPayloadFields.count(path))
             return;
         auto data = inst->substitution.lookupByName("data");
-        P4::ClonePathExpressions cloner;
+        P4::CloneExpressions cloner;
         if (auto expr = data->expression->to<IR::ListExpression>()) {
             // add checksum fields
             IR::ListExpression* fl = expr->clone();
@@ -1424,7 +1424,7 @@ class FixChecksum : public PassManager {
  * a map that built during the Rewriter pass.
  */
 class FixEgressParserDuplicateReference : public Transform {
-    P4::ClonePathExpressions cloner;
+    P4::CloneExpressions cloner;
  public:
     FixEgressParserDuplicateReference() {}
     const IR::Node* postorder(IR::ParserState* state) {

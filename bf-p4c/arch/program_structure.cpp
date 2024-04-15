@@ -55,21 +55,21 @@ void ProgramStructure::include(cstring filename, IR::Vector<IR::Node> *vector) {
     if (FILE *file = options.preprocess()) {
         if (::errorCount() > 0) {
             ::error("Failed to preprocess architecture file %1%", options.file);
-            options.closeInput(file);
+            options.closePreprocessedInput(file);
             return;
         }
 
         auto code = P4::P4ParserDriver::parse(file, options.file);
         if (code == nullptr || ::errorCount() > 0) {
             ::error("Failed to load architecture file %1%", options.file);
-            options.closeInput(file);
+            options.closePreprocessedInput(file);
             return;
         }
         code = code->apply(BFN::ParseAnnotations());
 
         for (auto decl : code->objects)
             vector->push_back(decl);
-        options.closeInput(file);
+        options.closePreprocessedInput(file);
     }
 }
 

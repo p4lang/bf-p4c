@@ -16,6 +16,7 @@
 #include "bf-p4c/arch/arch.h"
 #include "bf-p4c/common/bridged_packing.h"
 #include "bf-p4c/bf-p4c-options.h"
+#include "bf-p4c/common/front_end_policy.h"
 #include "bf-p4c/common/parse_annotations.h"
 #include "bf-p4c/logging/phv_logging.h"
 #include "bf-p4c/logging/source_info_logging.h"
@@ -592,8 +593,10 @@ bool TestCode::apply_pass(Pass pass) {
             mauasm = nullptr;
             auto before = ::errorCount();
             // The 'frontendPasses' are encapsulated in a run method, so we have to call that.
-            program = P4::FrontEnd(BFN::ParseAnnotations())
-                .run(options, program, skip_side_effect_ordering);
+            auto parseAnnotations = BFN::ParseAnnotations();
+            auto policy = BFN::FrontEndPolicy(&parseAnnotations, skip_side_effect_ordering);
+            program = P4::FrontEnd(&policy)
+                .run(options, program);
             // program->apply(*new BFN::FindArchitecture());
             return ::errorCount() == before;
         }

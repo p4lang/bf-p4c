@@ -389,7 +389,7 @@ p4c_add_xfail_reason("tofino"
 )
 
 p4c_add_xfail_reason("tofino"
-  "Conditional emit b.emit not supported"
+  "Conditional emit b.emit.* not supported"
   testdata/p4_16_samples/issue887.p4
 )
 
@@ -1330,4 +1330,10 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "mismatch from expected(.*) at byte .*"
   extensions/p4_tests/p4_16/stf/varbit_constant.p4
+)
+
+# p4c update 2024-04-11 (new tests)
+p4c_add_xfail_reason("tofino"
+  "error: Action profile ActionProfile IngressI.ap on table IngressI.indirect does not have any action data"
+  testdata/p4_16_samples/action_profile_sum_of_members_annotation.p4
 )

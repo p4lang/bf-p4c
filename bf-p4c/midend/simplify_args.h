@@ -203,7 +203,7 @@ struct InjectTmpVar : public PassManager {
  *      be eliminated by injecting temporary variables using pass InjectTmpVar before this pass.
  */
 class FlattenHeader : public Modifier {
-    P4::ClonePathExpressions cloner;
+    P4::CloneExpressions cloner;
     const P4::TypeMap* typeMap;
     IR::Type_Header* flattenedHeader = nullptr;
     std::vector<cstring> nameSegments{};
