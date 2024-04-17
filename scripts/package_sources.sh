@@ -25,6 +25,8 @@ cleanup_code() {
     cd $topdir
     ${topdir}/scripts/install_source_release_clean_prereqs.sh
     ${topdir}/scripts/source_release_clean.py
+    # Do this by adding headers to everything except p4c/ and p4-tests/.
+    "${topdir}/scripts/packaging/copyright-stamp" "${topdir}"
 }
 
 build_p4c() {
@@ -50,6 +52,7 @@ run_test() {
 }
 
 rm_extras() {
+    echo $srcdir
     rm -rf $srcdir/ci
     rm -rf $srcdir/docker
     rm -rf $srcdir/jenkins
@@ -57,32 +60,33 @@ rm_extras() {
     rm -rf $srcdir/ReleaseNotes.md
     rm -rf $srcdir/.travis.yml
     rm -rf $srcdir/Jenkinsfile
-
-    if $delfiles ; then
-        rm -rf $srcdir/.git
-        rm -rf $srcdir/.github
-        rm -rf $srcdir/.gitignore
-        rm -rf $srcdir/.gitmodules
-        rm -rf $srcdir/scripts/_deps
-        rm -rf $srcdir/scripts/internal
-        rm -rf $srcdir/scripts/flatrock_utilities
-        rm -rf $srcdir/scripts/gen_customer_reports
-        rm -rf $srcdir/scripts/gen_reference_outputs
-        rm -rf $srcdir/scripts/hooks
-        rm -rf $srcdir/scripts/pkg-src
-        rm -rf $srcdir/scripts/run_custom_tests
-        rm -rf $srcdir/scripts/check-git-submodules
-        rm -rf $srcdir/scripts/dot2pdf
-        rm -rf $srcdir/scripts/jbay_rename.sh
-        rm -rf $srcdir/scripts/p4c_build_for_arch.sh
-        rm -rf $srcdir/scripts/travis_test
-        rm -rf $srcdir/p4-tests/internal
-        rm -rf $srcdir/p4-tests/p4_14/internal
-        rm -rf $srcdir/p4-tests/p4_14/switch
-        rm -rf $srcdir/p4-tests/p4_16/internal
-        rm -rf $srcdir/p4-tests/p4_16/switch_16
-	rm -rf $srcdir/bf-p4c_source
-    fi
+    rm -rf $srcdir/.git
+    rm -rf $srcdir/.github
+    rm -rf $srcdir/.gitignore
+    rm -rf $srcdir/.gitmodules
+    rm -rf $srcdir/scripts/_deps
+    rm -rf $srcdir/scripts/internal
+    rm -rf $srcdir/scripts/flatrock_utilities
+    rm -rf $srcdir/scripts/gen_customer_reports
+    rm -rf $srcdir/scripts/gen_reference_outputs
+    rm -rf $srcdir/scripts/hooks
+    rm -rf $srcdir/scripts/pkg-src
+    rm -rf $srcdir/scripts/run_custom_tests
+    rm -rf $srcdir/scripts/check-git-submodules
+    rm -rf $srcdir/scripts/dot2pdf
+    rm -rf $srcdir/scripts/jbay_rename.sh
+    rm -rf $srcdir/scripts/p4c_build_for_arch.sh
+    rm -rf $srcdir/scripts/travis_test
+    rm -rf $srcdir/p4-tests/internal
+    rm -rf $srcdir/p4-tests/p4_14/internal
+    rm -rf $srcdir/p4-tests/p4_14/switch
+    rm -rf $srcdir/p4-tests/p4_16/internal
+    rm -rf $srcdir/p4-tests/p4_16/switch_16
+    rm -rf $srcdir/bf-asm/test/internal
+    rm -rf $srcdir/compiler_interfaces/.git
+    rm -rf $srcdir/compiler_interfaces/.gitignore
+    rm -rf $srcdir/compiler_interfaces/CODEOWNERS
+    rm -rf $srcdir/bf-p4c_source
 }
 
 # Generate the final source archive
@@ -91,9 +95,9 @@ tar_sources() {
     if ! which rsync > /dev/null ; then
         apt-get install -y rsync
     fi
-    rsync -Rr --links $topdir $srcdir
-    cd $topdir
+    rsync -r --links --exclude=bf-p4c_source --exclude=build --exclude=.git . $srcdir
     rm_extras
+    cd $topdir
     tar -czvf bf-p4c_source.tar.gz $srcdir
 }
 
@@ -107,7 +111,6 @@ install_cmake() {
 usage() {
     echo $1
     echo "Usage: ./scripts/package_sources.sh <optional arguments>"
-    echo "   --delete-git-and-internal"
     echo "   -j <numjobs>"
 }
 
@@ -116,9 +119,6 @@ while [ $# -gt 0 ]; do
 	-j)
             parallel_make="$2"
             shift;
-            ;;
-	--delete-git-and-internal)
-            delfiles=true
             ;;
         -h|--help)
             usage ""

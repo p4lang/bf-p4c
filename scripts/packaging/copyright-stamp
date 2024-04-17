@@ -76,6 +76,7 @@ ignoreFilePatterns=(
   '^scripts/flatrock_utilities/.*\.schema$'
   '^third_party/'
   '^ci/' # CI Klocwork Differential Analysis files 
+  '^scripts/_deps/' # Will be added for packaging_sources
 
   # The only file we ship from Glass seems to be primitives.json, which can't
   # have comments anyway.
@@ -90,6 +91,7 @@ noCopyrightCheckPatterns=(
   '^[a-zA-Z\.-_]*Jenkinsfile$'
   '^jenkins/'
   '^scripts/package_p4c_for_tofino\.sh$'
+  '^scripts/package_sources\.sh$'
   '^scripts/packaging/copyright-stamp$'
 )
 

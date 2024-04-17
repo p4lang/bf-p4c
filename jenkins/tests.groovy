@@ -147,7 +147,7 @@ pipeline {
                                                     -e MAKEFLAGS=j4 \
                                                     -e UNITY_BUILD=true \
                                             " \
-                                            BUILD_SCRIPT="scripts/package_sources.sh --build-dir build_src"
+                                            BUILD_SCRIPT="scripts/package_sources.sh --delete-git-and-internal --build-dir build_src"
                                 """
                             }
                         }
