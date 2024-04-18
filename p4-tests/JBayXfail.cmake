@@ -291,4 +291,3 @@ p4c_add_xfail_reason("tofino2"
   "mismatch from expected(.*) at byte .*"
   extensions/p4_tests/p4_16/stf/varbit_constant.p4
 )
-

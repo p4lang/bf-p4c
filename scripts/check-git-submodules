@@ -8,7 +8,7 @@
 declare -A branchOverrides=(
   # Looks like we have a custom branch of google-tor that omits PTF tests.
   ['p4-tests/p4_16/internal/google-tor']=4afb7169
-  ['p4-tests/p4-programs']='origin/rel_9_13'
+  ['p4-tests/internal/p4-programs']='origin/rel_9_13'
   ['p4-tests/p4testutils']='origin/rel_9_13'
   ['p4-tests/p4_16/switch_16']='origin/rel_9_13'
   ['p4c']='origin/main'

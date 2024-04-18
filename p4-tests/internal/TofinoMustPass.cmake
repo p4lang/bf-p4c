@@ -56,7 +56,7 @@ set (TOFINO_MUST_PASS_TESTS
   p4_16_programs_tna_32q_multiprogram_a
   p4_16_programs_tna_32q_multiprogram_b
   p4_16_programs_tna_action_profile
-  p4_16_programs_tna_action_selector
+  #p4_16_programs_tna_action_selector
   p4_16_programs_tna_counter
   p4_16_programs_tna_digest
   p4_16_programs_tna_dkm

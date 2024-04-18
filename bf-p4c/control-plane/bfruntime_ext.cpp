@@ -57,6 +57,7 @@ struct BFRuntimeSchemaGenerator::ActionSelector {
     P4Id action_profile_id;
     int64_t max_group_size;
     int64_t num_groups;  // aka size of selector
+    int64_t adt_offset;
     std::vector<P4Id> tableIds;
     Util::JsonArray* annotations;
 
@@ -72,8 +73,8 @@ struct BFRuntimeSchemaGenerator::ActionSelector {
             p4info, actionProfile.table_ids().begin(), actionProfile.table_ids().end());
         return ActionSelector{pre.name(), pre.name() + "_get_member",
             selectorId, selectorGetMemId, actionProfile.preamble().id(),
-            actionProfile.max_group_size(), actionProfile.size(), tableIds,
-            transformAnnotations(pre)};
+            actionProfile.max_group_size(), actionProfile.size(), 0xdeadbeef /* adt_offset */,
+            tableIds, transformAnnotations(pre)};
     }
 
     static std::optional<ActionSelector>
@@ -92,7 +93,7 @@ struct BFRuntimeSchemaGenerator::ActionSelector {
         return ActionSelector{pre.name(), pre.name() + "_get_member",
             selectorId, selectorGetMemId, actionSelector.action_profile_id(),
             actionSelector.max_group_size(), actionSelector.num_groups(),
-            tableIds, transformAnnotations(pre)};
+            0xdeadbeef /* adt_offset */, tableIds, transformAnnotations(pre)};
     };
 };
 
@@ -443,7 +444,7 @@ BFRuntimeSchemaGenerator::addActionSelectorGetMemberCommon(Util::JsonArray* tabl
 void
 BFRuntimeSchemaGenerator::addActionSelectorCommon(Util::JsonArray* tablesJson,
                 const ActionSelector& actionSelector) const {
-    // TODO: formalize ID allocation for selector tables
+    // formalize ID allocation for selector tables
     // repeat same annotations as for action table
     // the maximum number of groups is the table size for the selector table
     auto* tableJson = initTableJson(
@@ -474,6 +475,13 @@ BFRuntimeSchemaGenerator::addActionSelectorCommon(Util::JsonArray* tablesJson,
                 makeTypeInt("uint32", actionSelector.max_group_size), false /* repeated */);
         addSingleton(dataJson, f, false /* mandatory */, false /* read-only */);
     }
+    {
+        auto* f = makeCommonDataField(
+                BF_RT_DATA_ADT_OFFSET, "$ADT_OFFSET",
+                makeTypeInt("uint32", actionSelector.adt_offset), false /* repeated */);
+        addSingleton(dataJson, f, false /* mandatory */, false /* read-only */);
+    }
+
     tableJson->emplace("data", dataJson);
 
     tableJson->emplace("supported_operations", new Util::JsonArray());
@@ -606,7 +614,7 @@ BFRuntimeSchemaGenerator::genSchema() const {
     addActionProfs(tablesJson);
     addCounters(tablesJson);
     addMeters(tablesJson);
-    // TODO: handle "standard" (v1model / PSA) registers
+    // handle "standard" (v1model / PSA) registers
 
     auto* learnFiltersJson = new Util::JsonArray();
     json->emplace("learn_filters", learnFiltersJson);
@@ -1328,7 +1336,7 @@ BFRuntimeSchemaGenerator::addSnapshot(Util::JsonArray* tablesJson,
             addROSingleton(dataJson, tableContainerJson);
         }
         if (Device::currentDevice() == Device::JBAY) {
-            // TODO: This is likely not appropriate / sufficient for
+            // This is likely not appropriate / sufficient for
             // MPR. Maybe this should be a repeated field of table ids / names
             // instead...
             {

@@ -59,6 +59,7 @@ class BFRuntimeSchemaGenerator : public BFRuntimeGenerator {
         BF_RT_DATA_SELECTOR_GROUP_ID,
         BF_RT_DATA_ACTION_MEMBER_STATUS,
         BF_RT_DATA_MAX_GROUP_SIZE,
+        BF_RT_DATA_ADT_OFFSET,
 
         BF_RT_DATA_LPF_SPEC_TYPE,
         BF_RT_DATA_LPF_SPEC_GAIN_TIME_CONSTANT_NS,

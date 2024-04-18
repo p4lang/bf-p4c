@@ -1130,6 +1130,7 @@ endforeach()
      "all ^test.TestNonDflt ^test.IdleTimeoutNotifications")
  bfn_set_ptf_test_spec("tofino" "p4_16_programs_tna_pktgen"
      "all ^test.PortDownAppTF1 ^test.PortDownPktgenTest")
+p4c_add_test_label("tofino" "UNSTABLE" "p4_16_programs_tna_pktgen")
 
 # Add extra flags for p4_16_programs
 # Exclude the MirrorHA tests as they have hard coded install path (specific to p4factory)

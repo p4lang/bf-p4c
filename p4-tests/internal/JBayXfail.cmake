@@ -145,6 +145,17 @@ p4c_add_xfail_reason("tofino2"
   extensions/p4_tests/p4_16/internal/p4c-3220_1.p4
 )
 
+# P4C-5334: need to update dev env to incorporating corresponding driver change, wait on Prathima's update.
+p4c_add_xfail_reason("tofino2"
+  "SetValue failed for field:65566 table:pipe.SwitchIngress.example_action_selector Invalid arguments"
+  p4_16_programs_tna_action_selector
+)
+
+p4c_add_xfail_reason("tofino2"
+  "ERROR in getting value for table test.Ingress.ind_sel.as field id 65566 Invalid arguments"
+  large_counter_meter
+)
+
 # ALT-PHV: tests that do not work yet with the alternative allocator.
 # If you make an ALT-PHV test pass (or get close to it but if fails on later
 # error), please update the xfails accordingly.
