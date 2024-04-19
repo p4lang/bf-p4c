@@ -221,6 +221,9 @@ set (ENABLE_P4TC OFF CACHE BOOL "")
 set (ENABLE_P4C_GRAPHS OFF CACHE BOOL "")
 add_subdirectory(p4c)
 
+# Extend the libraries required for frontend-parser-gen
+target_link_libraries(frontend-parser-gen absl::bits)
+
 # Gtest needs additional includes, add them here.
 if (ENABLE_GTESTS)
   target_include_directories(gtestp4c
