@@ -409,12 +409,12 @@ for path in EXTRA_CMAKE_FILES:
 for src_dir in SRC_DIRS:
     for path in sorted(Path(src_dir).rglob('CMakeLists.txt')):
         print('Filtering content of', path.as_posix())
-        clean_cmake_ifs(path)
+        clean_cmake_ifs(str(path))
 
 for src_dir in ['p4-tests']:
     for path in sorted(Path(src_dir).glob('*.cmake')):
         print('Filtering content of', path.as_posix())
-        clean_cmake_ifs(path)
+        clean_cmake_ifs(str(path))
 
 # =======================================================
 # Miscellaneous clean steps
