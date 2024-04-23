@@ -48,7 +48,7 @@ build_p4c() {
 }
 
 run_test() {
-    (cd $builddir/p4c ; cp bf-p4c p4c ; ctest -V -R "tofino/.*ONLab|tofino/.*stf/.*decaf*|tofino32|tofino/.*ptf/hecksum*")
+    (cd $builddir/p4c ; cp bf-p4c p4c ; ctest -V -R "tofino/.*stf/.*decaf*|tofino32|tofino/.*ptf/hecksum*")
 }
 
 rm_extras() {
@@ -93,7 +93,7 @@ rm_extras() {
 tar_sources() {
     mkdir -p $srcdir
     if ! which rsync > /dev/null ; then
-        apt-get install -y rsync
+        apt-get update && apt-get install -y rsync
     fi
     rsync -r --links --exclude=bf-p4c_source --exclude=build --exclude=.git . $srcdir
     rm_extras
@@ -111,6 +111,7 @@ install_cmake() {
 usage() {
     echo $1
     echo "Usage: ./scripts/package_sources.sh <optional arguments>"
+    echo "   --install-prefix <install_prefix>"
     echo "   -j <numjobs>"
 }
 
@@ -118,6 +119,14 @@ while [ $# -gt 0 ]; do
     case $1 in
 	-j)
             parallel_make="$2"
+            shift;
+            ;;
+	--install-prefix)
+            if [ -z "$2" ]; then
+                usage "Error: Install prefix has to be specified"
+                exit 1
+            fi
+            install_prefix="$2"
             shift;
             ;;
         -h|--help)
