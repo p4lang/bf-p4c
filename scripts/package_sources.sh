@@ -5,7 +5,7 @@ set -e
 
 topdir=$(readlink -f $(dirname $0)/..)
 builddir=build.src_release
-srcdir=$topdir/bf-p4c_source
+srcdir=bf-p4c_source
 
 # set -x
 if [[ $(uname -s) == 'Linux' ]]; then
