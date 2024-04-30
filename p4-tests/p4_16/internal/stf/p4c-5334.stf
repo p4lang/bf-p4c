@@ -1,0 +1,5 @@
+#
+packet  0   00000001 0123456789abcdef
+add ingress.t hdr.test.flag:0x1 ipv4_fib_hit(port:132,usi:1)
+expect  132 00000001 0123456789abcdef
+

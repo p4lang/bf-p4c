@@ -215,8 +215,13 @@ template<class REGS> void StatefulTable::write_tofino2_common_regs(REGS &regs) {
                 warning(lineno, "Adjusting output address of %s for next stage, but noone is "
                         "reading it", name());
             adrdist.mau_stateful_log_stage_vpn_offset[m->logical_id]
-                .stateful_log_stage_vpn_offset = maxvpn - minvpn + 1; }
-        adrdist.stateful_instr_width_logical[m->logical_id] = format->log2size - 3; }
+                .stateful_log_stage_vpn_offset = maxvpn - minvpn + 1;
+            // state_instr_width_logical and stateful_log_stage_vpn_offset
+            // should be set or unset together as they are both used for the
+            // stateful logging fifo feature. See figure 6-73 in jbay uarch.
+            adrdist.stateful_instr_width_logical[m->logical_id] = format->log2size - 3;
+        }
+    }
     switch (meter_group()) {
     case 0: adrdist.meter_adr_shift.meter_adr_shift0 = meter_adr_shift; break;
     case 1: adrdist.meter_adr_shift.meter_adr_shift1 = meter_adr_shift; break;
