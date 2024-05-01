@@ -15,7 +15,7 @@ Additional setup required
 * ./ubuntu20.04.setup
 * sudo apt-get install -y rapidjson-dev libfl-dev z3
 
-* ./bootstrap_bfn_compilers.sh --no-ptf [--prefix <path>] [--enable-doxygen-docs]
+* ./bootstrap_bfn_compilers.sh --minimal-config --no-ptf -DCMAKE_BUILD_TYPE=RELEASE [--prefix <path>] [--enable-doxygen-docs]
 * cd build
 * make -j N [check] [install]
 
