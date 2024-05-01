@@ -1,5 +1,17 @@
 #!/bin/bash
 
+# Copyright 2013-2024 Intel Corporation.
+#
+# This software and the related documents are Intel copyrighted materials,
+# and your use of them is governed by the express license under which they
+# were provided to you ("License"). Unless the License provides otherwise,
+# you may not use, modify, copy, publish, distribute, disclose or transmit this
+# software or the related documents without Intel's prior written permission.
+#
+# This software and the related documents are provided as is, with no
+# express or implied warranties, other than those that are expressly stated
+# in the License.
+
 SUDO=sudo
 LDCONFIG=ldconfig
 
@@ -21,7 +33,7 @@ apt_packages="automake bison cmake curl doxygen flex g++-6 graphviz \
     libboost1.67-dev libboost-regex1.67-dev libboost-iostreams1.67-dev libboost-graph1.67-dev \
     libboost-system1.67-dev libboost-filesystem1.67-dev libboost-thread1.67-dev \
     libprotobuf-dev protobuf-compiler protobuf-compiler-grpc libgrpc-dev libgrpc++-dev \
-    thrift-compiler libthrift-dev"
+    thrift-compiler libthrift-dev rapidjson-dev libfl-dev libcli-dev z3"
 $SUDO apt-get install -y $apt_packages || die "failed to install packages"
 
 pip_packages="packaging jsl protobuf grpcio pyinstaller pyyaml jsonschema"
@@ -29,20 +41,6 @@ pip install $pip_packages || die "failed to install packages"
 
 #for some reason need this too?
 pip3 install pyyaml
-
-#get the Z3 lib
-if [ ! -x /usr/local/bin/z3 -o ! -x /usr/local/lib/libz3.so ]; then
-    Z3='z3_4.8.8_amd64-ubuntu.deb'
-    pushd /tmp
-    curl -L --noproxy "*" \
-      https://artifacts-bxdsw.sc.intel.com/repository/generic/third-party/"${Z3}" -o "${Z3}"
-    $SUDO dpkg -i ${Z3}
-    cd /tmp
-    rm -rf "${Z3}"
-    popd
-else
-    echo "Z3 already installed"
-fi
 
 ### Model dependencies that need manual build
 ## libcrafter
@@ -57,18 +55,6 @@ if [ ! -r /usr/local/include/crafter.h -o ! -x /usr/local/lib/libcrafter.so ]; t
     rm -rf libcrafter
 else
     echo "libcrafter already installed"
-fi
-## libcli
-if [ ! -r /usr/local/include/libcli.h -o ! -x /usr/local/lib/libcli.so ]; then
-    git clone git@github.com:dparrish/libcli.git
-    cd libcli
-    make || die "Failed to build libcli"
-    $SUDO make install
-    $SUDO $LDCONFIG
-    cd ..
-    rm -rf libcli
-else
-    echo "libcli already installed"
 fi
 
 #need to checkout, build, and install bf-syslibs (branch brig-stable)

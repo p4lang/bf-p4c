@@ -4,11 +4,18 @@ Distribution README
 Prerequisites
 * The compiler can be built from the sources in an environment setup to build and run p4studio.
 * Ensure that the build environment has p4studio dependencies installed.
+* Ensure that the SDE and SDE_INSTALL env variables are setup. These are at the same root level.
+* The source should be untarred to the $SDE path.
 
 Instructions for how to run the compiler
-* Untar the bf-p4c_source.tar.gz package
-* cd bf-p4c_source
-* ./bootstrap_bfn_compilers.sh [--prefix <path>] [--enable-doxygen-docs]
+* Untar the bf-p4c_source.tar.gz package to $SDE path
+* cd $SDE/bf-p4c_source
+
+Additional setup required
+* ./ubuntu20.04.setup
+* sudo apt-get install -y rapidjson-dev libfl-dev z3
+
+* ./bootstrap_bfn_compilers.sh --no-ptf [--prefix <path>] [--enable-doxygen-docs]
 * cd build
 * make -j N [check] [install]
 

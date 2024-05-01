@@ -64,6 +64,7 @@ rm_extras() {
     rm -rf $srcdir/.github
     rm -rf $srcdir/.gitignore
     rm -rf $srcdir/.gitmodules
+    rm -rf $srcdir/install_os_deps.sh
     rm -rf $srcdir/scripts/_deps
     rm -rf $srcdir/scripts/internal
     rm -rf $srcdir/scripts/flatrock_utilities
@@ -82,6 +83,7 @@ rm_extras() {
     rm -rf $srcdir/p4-tests/p4_14/switch
     rm -rf $srcdir/p4-tests/p4_16/internal
     rm -rf $srcdir/p4-tests/p4_16/switch_16
+    rm -rf $srcdir/p4-tests/p4testutils
     rm -rf $srcdir/bf-asm/test/internal
     rm -rf $srcdir/compiler_interfaces/.git
     rm -rf $srcdir/compiler_interfaces/.gitignore
