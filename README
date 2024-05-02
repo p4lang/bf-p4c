@@ -13,7 +13,8 @@ Instructions for how to run the compiler
 
 Additional setup required
 * ./ubuntu20.04.setup
-* sudo apt-get install -y rapidjson-dev libfl-dev z3
+* sudo apt-get install -y rapidjson-dev libfl-dev
+* Install z3 from https://github.com/Z3Prover/z3 (version z3-4.8.8)
 
 * ./bootstrap_bfn_compilers.sh --minimal-config --no-ptf -DCMAKE_BUILD_TYPE=RELEASE [--prefix <path>] [--enable-doxygen-docs]
 * cd build

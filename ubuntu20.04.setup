@@ -33,7 +33,7 @@ apt_packages="automake bison cmake curl doxygen flex g++-6 graphviz \
     libboost1.67-dev libboost-regex1.67-dev libboost-iostreams1.67-dev libboost-graph1.67-dev \
     libboost-system1.67-dev libboost-filesystem1.67-dev libboost-thread1.67-dev \
     libprotobuf-dev protobuf-compiler protobuf-compiler-grpc libgrpc-dev libgrpc++-dev \
-    thrift-compiler libthrift-dev rapidjson-dev libfl-dev libcli-dev z3"
+    thrift-compiler libthrift-dev rapidjson-dev libfl-dev libcli-dev"
 $SUDO apt-get install -y $apt_packages || die "failed to install packages"
 
 pip_packages="packaging jsl protobuf grpcio pyinstaller pyyaml jsonschema"
@@ -41,6 +41,21 @@ pip install $pip_packages || die "failed to install packages"
 
 #for some reason need this too?
 pip3 install pyyaml
+
+#install the Z3 lib
+if [ ! -x /usr/local/bin/z3 -o ! -x /usr/local/lib/libz3.so ]; then
+    pushd /tmp
+    cd /tmp
+    git clone https://github.com/Z3Prover/z3
+    cd z3
+    git checkout z3-4.8.8
+    python3 scripts/mk_make.py --staticlib
+    cd build/
+    make -j4 && make install -j4
+    popd
+else
+    echo "Z3 already installed"
+fi
 
 ### Model dependencies that need manual build
 ## libcrafter
