@@ -15,7 +15,7 @@ MAINTAINER bfn-docker <bfn-docker@barefootnetworks.com>
 ENV DISTCC_IO_TIMEOUT="450"
 
 # Set up Intel proxies.
-ENV http_proxy='http://proxy-dmz.intel.com:912'
+ENV http_proxy='http://proxy-dmz.intel.com:911'
 ENV https_proxy='http://proxy-dmz.intel.com:912'
 ENV ftp_proxy='http://proxy-dmz.intel.com:21'
 ENV socks_proxy='proxy-dmz.intel.com:1080'
