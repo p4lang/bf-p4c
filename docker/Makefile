@@ -30,7 +30,7 @@ SELF = $(lastword $(MAKEFILE_LIST))
 # p4factory git commit to use
 P4FACTORY_GIT_REV ?= da7b42c8228db373201e0cb5a85362cba4186ef7
 # builder image to use
-BUILDER_IMAGE ?= bf-p4c-builder@sha256:a295dd7581a33a02603cd6cab203e74a1cc7c19ce1f68a4ddea39ff1a5aa8c1a
+BUILDER_IMAGE ?= bf-p4c-builder@sha256:162c1fc9aeff0e05293c06b78dd6c5f8d04ab2b8ce80e346f6ff4ea28a0f7ea4
 # end of update variables
 
 
