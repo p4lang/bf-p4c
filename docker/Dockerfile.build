@@ -5,3 +5,8 @@ FROM ${BASE_IMAGE}
 LABEL BF_P4C_GIT_REV=$GIT_REV
 
 COPY . /bfn/bf-p4c-compilers/
+
+# Change the git proxy config. This *should* be set correctly in
+# the host, but currently isn't
+RUN git config --global http.proxy http://proxy-dmz.intel.com:911/ && \
+    git config --global https.proxy http://proxy-dmz.intel.com:912/
