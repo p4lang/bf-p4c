@@ -268,6 +268,14 @@ set_tests_properties("tofino2/p4_16_programs_tna_register" PROPERTIES TIMEOUT ${
 p4c_add_ptf_test_with_ptfdir ("tofino2" "t2na_misc2" "${CMAKE_CURRENT_SOURCE_DIR}/internal/p4-programs/internal_p4_16/misc2/misc2.p4" "${testExtraArgs} -target tofino2 -arch t2na -bfrt" "${CMAKE_CURRENT_SOURCE_DIR}/internal/p4-programs/internal_p4_16/misc2")
 bfn_set_ptf_test_spec("tofino2" "t2na_misc2" "^test.Atcam")
 
+set(P4TESTS_NON_PR
+    p4_16_programs_tna_action_selector
+)
+
+foreach(t IN LISTS P4TESTS_NON_PR)
+  p4c_add_test_label("tofino2" "NON_PR_TOFINO" ${t})
+endforeach()
+
 include(internal/SwitchJBay.cmake)
 include(internal/JBayErrors.cmake)
 include(internal/JBayMustPass.cmake)

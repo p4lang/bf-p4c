@@ -405,9 +405,3 @@ p4c_add_xfail_reason("tofino"
   "syntax error"
   extensions/p4_tests/p4_16/errors/register_action_errors.p4
 )
-
-# P4C-5334: need to update dev env to incorporating corresponding driver change, wait on Prathima's update.
-p4c_add_xfail_reason("tofino"
-  "SetValue failed for field:65566 table:pipe.SwitchIngress.example_action_selector Invalid arguments"
-  p4_16_programs_tna_action_selector
-)

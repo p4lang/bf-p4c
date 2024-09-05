@@ -1236,6 +1236,8 @@ set(P4TESTS_NON_PR
   p4_16_programs_internal_tna_alpmV2
   # Dev-env update 2023-02-13: this internal_p4_16 test is moved into p4_16_programs.
   p4_16_programs_selector_resize
+  # Taking a long time to run
+  p4_16_programs_tna_action_selector
 )
 
 foreach(t IN LISTS P4TESTS_NON_PR)
