@@ -440,7 +440,7 @@ parser egress:
     EXPECT_GT(parser_vector.size(), 0);
     Parser *parser = parser_vector.back();
     parser->process();
-    EXPECT_EQ(parser->get_prsr_max_dph(), 7);
+    EXPECT_EQ(parser->get_prsr_max_dph(), 4);
 }
 
 // TEST(parser_test, get_parser_deepest_depth_loop_no_stack)
@@ -583,7 +583,7 @@ parser egress:
     EXPECT_GT(parser_vector.size(), 0);
     Parser *parser = parser_vector.back();
     parser->process();
-    EXPECT_EQ(parser->get_prsr_max_dph(), 0x3ff);
+    EXPECT_EQ(parser->get_prsr_max_dph(), 0x3ff - 1);
 }
 
 // TEST(parser_test, get_parser_depth_loop_with_stack)
@@ -878,7 +878,7 @@ parser egress:
     EXPECT_GT(parser_vector.size(), 0);
     Parser *parser = parser_vector.back();
     parser->process();
-    EXPECT_EQ(parser->get_prsr_max_dph(), 9);
+    EXPECT_EQ(parser->get_prsr_max_dph(), 6);
 }
 
 // TEST(parser_test, get_parser_depth_untaken_path)
@@ -1035,7 +1035,7 @@ parser egress:
     EXPECT_GT(parser_vector.size(), 0);
     Parser *parser = parser_vector.back();
     parser->process();
-    EXPECT_EQ(parser->get_prsr_max_dph(), 5);
+    EXPECT_EQ(parser->get_prsr_max_dph(), 4);
 }
 
 }  // namespace

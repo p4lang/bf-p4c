@@ -442,7 +442,7 @@ int Parser::get_header_stack_size_from_valid_bits(std::vector<State::Match::Set*
 int Parser::state_prsr_dph_max(const State *s) {
     std::map<const State*, std::pair<int, int>> visited;  // pair: first=curr_dph_bits
                                                           //       second=recurse count
-    return state_prsr_dph_max(s, visited, 0);
+    return state_prsr_dph_max(s, visited, -hdr_len_adj * 8);
 }
 
 /**
@@ -472,7 +472,7 @@ int Parser::state_prsr_dph_max(const State *s,
     visited[s].second++;
     int curr_state_prsr_dph_max = 0;
     for (const auto *m : s->match) {
-        auto local_bits_shifted = curr_dph_bits + (m->shift * 8) - m->intr_md_bits;
+        auto local_bits_shifted = curr_dph_bits + (m->shift * 8);
         std::string next_name = m->next ? m->next->name : std::string("END");
         LOG5(" State : " << s->name << " --> " << m->match << " --> "
                 << next_name << " | Bits: " << curr_dph_bits
@@ -555,6 +555,9 @@ int Parser::get_prsr_max_dph() {
     prsr_dph_max /= 8;
     prsr_dph_max = (prsr_dph_max + 0xf) & ~0xf;
     prsr_dph_max /= 16;
+    // P4C-5341/5342: For Tofino EPB, the one additional word is sent beyond prsr_dph_max.
+    if (options.target == TOFINO && gress == EGRESS)
+        prsr_dph_max -= 1;
     return std::max(prsr_dph_max, 4);
 }
 
