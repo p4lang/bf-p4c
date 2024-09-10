@@ -3,10 +3,10 @@
 
 #include "ir/ir.h"
 #include "ir/visitor.h"
-#include "bf-p4c/ir/control_flow_visitor.h"
-#include "bf-p4c/ir/gress.h"
-#include "bf-p4c/parde/parde_visitor.h"
-#include "bf-p4c/phv/phv_fields.h"
+#include "backends/tofino/ir/control_flow_visitor.h"
+#include "backends/tofino/ir/gress.h"
+#include "backends/tofino/parde/parde_visitor.h"
+#include "backends/tofino/phv/phv_fields.h"
 
 namespace {
 

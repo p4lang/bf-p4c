@@ -1,9 +1,9 @@
 #include "action_analysis.h"
 #include "lib/log.h"
 #include "resource.h"
-#include "bf-p4c/common/slice.h"
-#include "bf-p4c/common/utils.h"
-#include "bf-p4c/phv/phv_fields.h"
+#include "backends/tofino/common/slice.h"
+#include "backends/tofino/common/utils.h"
+#include "backends/tofino/phv/phv_fields.h"
 #include "lib/bitrange.h"
 #include "lib/error.h"
 

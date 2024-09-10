@@ -1,7 +1,7 @@
-#include "bf-p4c/common/merge_pov_bits.h"
+#include "backends/tofino/common/merge_pov_bits.h"
 
-#include "bf-p4c/parde/clot/header_validity_analysis.h"
-#include "bf-p4c/parde/parde_visitor.h"
+#include "backends/tofino/parde/clot/header_validity_analysis.h"
+#include "backends/tofino/parde/parde_visitor.h"
 
 namespace BFN {
 

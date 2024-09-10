@@ -3,8 +3,8 @@
 #include <list>
 
 #include "gtest/gtest.h"
-#include "bf-p4c/test/gtest/tofino_gtest_utils.h"
-#include "bf-p4c/logging/container_size_extractor.h"
+#include "backends/tofino/test/gtest/tofino_gtest_utils.h"
+#include "backends/tofino/logging/container_size_extractor.h"
 
 namespace Test {
 

@@ -1,8 +1,8 @@
-#include "bf-p4c/midend/copy_header.h"
+#include "backends/tofino/midend/copy_header.h"
 
-#include "bf-p4c/midend/type_checker.h"
+#include "backends/tofino/midend/type_checker.h"
 #include "frontends/p4/simplifyParsers.h"
-#include "bf-p4c/midend/elim_cast.h"
+#include "backends/tofino/midend/elim_cast.h"
 
 #include "bf_gtest_helpers.h"
 #include "gtest/gtest.h"

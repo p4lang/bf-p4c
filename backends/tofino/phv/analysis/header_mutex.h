@@ -3,11 +3,11 @@
 
 #include "ir/ir.h"
 #include "ir/visitor.h"
-#include "bf-p4c/ir/gateway_control_flow.h"
-#include "bf-p4c/mau/mau_visitor.h"
-#include "bf-p4c/parde/parser_dominator_builder.h"
-#include "bf-p4c/parde/parser_info.h"
-#include "bf-p4c/phv/analysis/build_mutex.h"
+#include "backends/tofino/ir/gateway_control_flow.h"
+#include "backends/tofino/mau/mau_visitor.h"
+#include "backends/tofino/parde/parser_dominator_builder.h"
+#include "backends/tofino/parde/parser_info.h"
+#include "backends/tofino/phv/analysis/build_mutex.h"
 
 enum HeaderState : uintmax_t {
     UNKNOWN = 0,

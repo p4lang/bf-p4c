@@ -1,4 +1,4 @@
-#include "bf-p4c/phv/analysis/build_mutex.h"
+#include "backends/tofino/phv/analysis/build_mutex.h"
 
 Visitor::profile_t BuildMutex::init_apply(const IR::Node* root) {
     auto rv = Inspector::init_apply(root);

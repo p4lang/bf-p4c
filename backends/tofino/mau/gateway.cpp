@@ -1,10 +1,10 @@
 #include "gateway.h"
 #include <deque>
 #include "split_gateways.h"
-#include "bf-p4c/common/ir_utils.h"
-#include "bf-p4c/common/slice.h"
-#include "bf-p4c/phv/phv_fields.h"
-#include "bf-p4c/mau/asm_output.h"
+#include "backends/tofino/common/ir_utils.h"
+#include "backends/tofino/common/slice.h"
+#include "backends/tofino/phv/phv_fields.h"
+#include "backends/tofino/mau/asm_output.h"
 #include "ir/pattern.h"
 
 const Device::GatewaySpec &TofinoDevice::getGatewaySpec() const {

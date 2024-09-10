@@ -3,7 +3,7 @@
 
 #include <map>
 
-#include "bf-p4c/phv/phv_fields.h"
+#include "backends/tofino/phv/phv_fields.h"
 #include "lib/cstring.h"
 
 /// Collects header stacks that require strided allocation (in a parser loop).

@@ -2,7 +2,7 @@
 #define EXTENSIONS_BF_P4C_PHV_PRAGMA_PA_SOLITARY_H_
 
 #include "ir/ir.h"
-#include "bf-p4c/phv/phv_fields.h"
+#include "backends/tofino/phv/phv_fields.h"
 
 class PragmaSolitary : public Inspector {
     PhvInfo& phv_i;

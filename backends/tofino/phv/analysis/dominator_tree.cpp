@@ -1,7 +1,7 @@
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/dominator_tree.hpp>
-#include "bf-p4c/phv/analysis/dominator_tree.h"
-#include "bf-p4c/device.h"
+#include "backends/tofino/phv/analysis/dominator_tree.h"
+#include "backends/tofino/device.h"
 
 using namespace boost;
 

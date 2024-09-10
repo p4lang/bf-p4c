@@ -7,8 +7,8 @@
 #include "lib/error.h"
 #include "test/gtest/helpers.h"
 #include "tofino_gtest_utils.h"
-#include "bf-p4c/ir/gateway_control_flow.h"
-#include "bf-p4c/mau/gateway.h"
+#include "backends/tofino/ir/gateway_control_flow.h"
+#include "backends/tofino/mau/gateway.h"
 namespace Test {
 
 class GatewayControlFlowTest : public TofinoBackendTest {};

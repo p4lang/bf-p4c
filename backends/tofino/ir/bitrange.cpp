@@ -1,4 +1,4 @@
-#include "bf-p4c/ir/bitrange.h"
+#include "backends/tofino/ir/bitrange.h"
 
 #include <iostream>
 #include <utility>

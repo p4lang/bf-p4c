@@ -1,4 +1,4 @@
-#include "bf-p4c/common/slice.h"
+#include "backends/tofino/common/slice.h"
 #include "gtest/gtest.h"
 
 namespace Test {

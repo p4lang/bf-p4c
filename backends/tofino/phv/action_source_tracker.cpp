@@ -1,9 +1,9 @@
-#include "bf-p4c/phv/action_source_tracker.h"
-#include "bf-p4c/common/asm_output.h"
-#include "bf-p4c/ir/bitrange.h"
-#include "bf-p4c/mau/action_analysis.h"
-#include "bf-p4c/phv/cluster_phv_operations.h"
-#include "bf-p4c/phv/phv_fields.h"
+#include "backends/tofino/phv/action_source_tracker.h"
+#include "backends/tofino/common/asm_output.h"
+#include "backends/tofino/ir/bitrange.h"
+#include "backends/tofino/mau/action_analysis.h"
+#include "backends/tofino/phv/cluster_phv_operations.h"
+#include "backends/tofino/phv/phv_fields.h"
 #include "lib/log.h"
 
 namespace PHV {

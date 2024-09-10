@@ -82,7 +82,7 @@
 #include "ir/ir.h"
 #include "frontends/common/resolveReferences/referenceMap.h"
 #include "mau_visitor.h"
-#include "bf-p4c/device.h"
+#include "backends/tofino/device.h"
 
 struct Device::StatefulAluSpec {
     bool                        CmpMask;  // are cmp oprerands maskable?

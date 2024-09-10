@@ -2,7 +2,7 @@
 #define BF_P4C_PARDE_RESET_INVALIDATED_CHECKSUM_HEADERS_H_
 
 #include "ir/ir.h"
-#include "bf-p4c/phv/phv_fields.h"
+#include "backends/tofino/phv/phv_fields.h"
 
 /**
  * \defgroup ResetInvalidatedChecksumHeaders ResetInvalidatedChecksumHeaders

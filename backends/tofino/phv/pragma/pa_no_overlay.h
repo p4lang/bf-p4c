@@ -2,7 +2,7 @@
 #define EXTENSIONS_BF_P4C_PHV_PRAGMA_PA_NO_OVERLAY_H_
 
 #include "ir/ir.h"
-#include "bf-p4c/phv/phv_fields.h"
+#include "backends/tofino/phv/phv_fields.h"
 
 /** Adds the no_overlay pragma to the specified fields with the specified gress.
   * (1) When only one field is provided in a pa_no_overlay pragma,

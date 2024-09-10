@@ -5,12 +5,12 @@
 #include <stack>
 #include "mau_visitor.h"
 #include "table_dependency_graph.h"
-#include "bf-p4c/common/field_defuse.h"
-#include "bf-p4c/ir/control_flow_visitor.h"
-#include "bf-p4c/phv/phv_fields.h"
-#include "bf-p4c/mau/table_flow_graph.h"
-#include "bf-p4c/mau/table_mutex.h"
-#include "bf-p4c/mau/table_summary.h"
+#include "backends/tofino/common/field_defuse.h"
+#include "backends/tofino/ir/control_flow_visitor.h"
+#include "backends/tofino/phv/phv_fields.h"
+#include "backends/tofino/mau/table_flow_graph.h"
+#include "backends/tofino/mau/table_mutex.h"
+#include "backends/tofino/mau/table_summary.h"
 #include "lib/ordered_set.h"
 #include "lib/ordered_map.h"
 

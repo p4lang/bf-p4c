@@ -9,12 +9,12 @@
 #include <memory>
 
 #include "boost/range/adaptor/reversed.hpp"
-#include "bf-p4c/common/ir_utils.h"
-#include "bf-p4c/common/slice.h"
-#include "bf-p4c/lib/error_type.h"
-#include "bf-p4c/ir/tofino_write_context.h"
-#include "bf-p4c/mau/asm_output.h"
-#include "bf-p4c/phv/asm_output.h"
+#include "backends/tofino/common/ir_utils.h"
+#include "backends/tofino/common/slice.h"
+#include "backends/tofino/lib/error_type.h"
+#include "backends/tofino/ir/tofino_write_context.h"
+#include "backends/tofino/mau/asm_output.h"
+#include "backends/tofino/phv/asm_output.h"
 #include "lib/algorithm.h"
 #include "lib/bitops.h"
 #include "lib/bitrange.h"

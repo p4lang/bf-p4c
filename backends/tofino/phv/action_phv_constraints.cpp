@@ -3,17 +3,17 @@
 #include <tuple>
 #include <boost/optional/optional_io.hpp>
 
-#include "bf-p4c/phv/phv_fields.h"
+#include "backends/tofino/phv/phv_fields.h"
 #include "lib/algorithm.h"
-#include "bf-p4c/common/asm_output.h"
-#include "bf-p4c/common/scc_toposort.h"
-#include "bf-p4c/phv/solver/action_constraint_solver.h"
-#include "bf-p4c/phv/action_phv_constraints.h"
-#include "bf-p4c/phv/cluster_phv_operations.h"
-#include "bf-p4c/phv/utils/utils.h"
-#include "bf-p4c/phv/phv.h"
-#include "bf-p4c/ir/bitrange.h"
-#include "bf-p4c/phv/utils/slice_alloc.h"
+#include "backends/tofino/common/asm_output.h"
+#include "backends/tofino/common/scc_toposort.h"
+#include "backends/tofino/phv/solver/action_constraint_solver.h"
+#include "backends/tofino/phv/action_phv_constraints.h"
+#include "backends/tofino/phv/cluster_phv_operations.h"
+#include "backends/tofino/phv/utils/utils.h"
+#include "backends/tofino/phv/phv.h"
+#include "backends/tofino/ir/bitrange.h"
+#include "backends/tofino/phv/utils/slice_alloc.h"
 #include "lib/exceptions.h"
 
 namespace {

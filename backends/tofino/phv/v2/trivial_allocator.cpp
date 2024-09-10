@@ -1,14 +1,14 @@
-#include "bf-p4c/phv/v2/trivial_allocator.h"
+#include "backends/tofino/phv/v2/trivial_allocator.h"
 
 #include <sstream>
 
-#include "bf-p4c/device.h"
-#include "bf-p4c/phv/phv.h"
-#include "bf-p4c/phv/slicing/types.h"
-#include "bf-p4c/phv/utils/utils.h"
-#include "bf-p4c/phv/v2/allocator_base.h"
-#include "bf-p4c/phv/v2/tx_score.h"
-#include "bf-p4c/phv/v2/utils_v2.h"
+#include "backends/tofino/device.h"
+#include "backends/tofino/phv/phv.h"
+#include "backends/tofino/phv/slicing/types.h"
+#include "backends/tofino/phv/utils/utils.h"
+#include "backends/tofino/phv/v2/allocator_base.h"
+#include "backends/tofino/phv/v2/tx_score.h"
+#include "backends/tofino/phv/v2/utils_v2.h"
 
 namespace PHV {
 namespace v2 {

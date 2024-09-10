@@ -1,5 +1,5 @@
-#include "bf-p4c/device.h"
-#include "bf-p4c/midend/check_unsupported.h"
+#include "backends/tofino/device.h"
+#include "backends/tofino/midend/check_unsupported.h"
 
 namespace BFN {
 

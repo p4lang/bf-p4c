@@ -1,12 +1,12 @@
 #include "jbay_next_table.h"
 #include <unordered_map>
 #include <unordered_set>
-#include "bf-p4c/mau/memories.h"
-#include "bf-p4c/mau/resource.h"
-#include "bf-p4c/mau/table_layout.h"
+#include "backends/tofino/mau/memories.h"
+#include "backends/tofino/mau/resource.h"
+#include "backends/tofino/mau/table_layout.h"
 #include "device.h"
 #include "lib/error.h"
-#include "bf-p4c/common/table_printer.h"
+#include "backends/tofino/common/table_printer.h"
 
 
 /* This pass calculates 2 data structures used during assembly generation:

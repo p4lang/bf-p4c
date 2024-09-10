@@ -1,4 +1,4 @@
-#include "bf-p4c/common/size_of.h"
+#include "backends/tofino/common/size_of.h"
 
 namespace BFN {
 

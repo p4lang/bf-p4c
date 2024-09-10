@@ -1,4 +1,4 @@
-#include "bf-p4c/test/gtest/tofino_gtest_utils.h"
+#include "backends/tofino/test/gtest/tofino_gtest_utils.h"
 
 #include "gtest/gtest.h"
 
@@ -7,14 +7,14 @@
 #include "lib/error.h"
 #include "ir/ir.h"
 #include "test/gtest/helpers.h"
-#include "bf-p4c/common/bridged_packing.h"
-#include "bf-p4c/common/extract_maupipe.h"
-#include "bf-p4c/common/front_end_policy.h"
-#include "bf-p4c/common/header_stack.h"
-#include "bf-p4c/common/parse_annotations.h"
-#include "bf-p4c/midend.h"
-#include "bf-p4c/arch/arch.h"
-#include "bf-p4c/phv/create_thread_local_instances.h"
+#include "backends/tofino/common/bridged_packing.h"
+#include "backends/tofino/common/extract_maupipe.h"
+#include "backends/tofino/common/front_end_policy.h"
+#include "backends/tofino/common/header_stack.h"
+#include "backends/tofino/common/parse_annotations.h"
+#include "backends/tofino/midend.h"
+#include "backends/tofino/arch/arch.h"
+#include "backends/tofino/phv/create_thread_local_instances.h"
 
 namespace Test {
 

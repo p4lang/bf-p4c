@@ -1,6 +1,6 @@
-#include "bf-p4c/mau/attached_output.h"
-#include "bf-p4c/mau/action_format.h"
-#include "bf-p4c/mau/table_layout.h"
+#include "backends/tofino/mau/attached_output.h"
+#include "backends/tofino/mau/action_format.h"
+#include "backends/tofino/mau/table_layout.h"
 
 namespace MeterALU {
 

@@ -1,5 +1,5 @@
 #include "lib/log.h"
-#include "bf-p4c/ir/tofino_write_context.h"
+#include "backends/tofino/ir/tofino_write_context.h"
 
 bool TofinoWriteContext::isWrite(bool root_value) {
     bool rv = P4WriteContext::isWrite(root_value);

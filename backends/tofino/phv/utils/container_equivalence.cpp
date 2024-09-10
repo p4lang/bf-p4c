@@ -1,4 +1,4 @@
-#include "bf-p4c/phv/utils/container_equivalence.h"
+#include "backends/tofino/phv/utils/container_equivalence.h"
 
 namespace PHV {
 

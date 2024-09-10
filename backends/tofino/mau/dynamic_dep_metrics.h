@@ -2,7 +2,7 @@
 #define EXTENSIONS_BF_P4C_MAU_DYNAMIC_DEP_METRICS_H_
 
 #include <functional>
-#include "bf-p4c/mau/table_dependency_graph.h"
+#include "backends/tofino/mau/table_dependency_graph.h"
 
 
 class DynamicDependencyMetrics {

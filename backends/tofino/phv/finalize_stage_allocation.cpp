@@ -1,4 +1,4 @@
-#include "bf-p4c/phv/finalize_stage_allocation.h"
+#include "backends/tofino/phv/finalize_stage_allocation.h"
 
 bool CalcMaxPhysicalStages::preorder(const IR::MAU::Table* tbl) {
     int stage = tbl->stage();

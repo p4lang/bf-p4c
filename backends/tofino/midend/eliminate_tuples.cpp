@@ -1,4 +1,4 @@
-#include "bf-p4c/midend/eliminate_tuples.h"
+#include "backends/tofino/midend/eliminate_tuples.h"
 
 namespace BFN {
 

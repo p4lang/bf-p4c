@@ -1,10 +1,10 @@
 #include "elim_unused.h"
 #include <string.h>
-#include "bf-p4c/common/ir_utils.h"
-#include "bf-p4c/ir/thread_visitor.h"
-#include "bf-p4c/mau/mau_visitor.h"
-#include "bf-p4c/parde/dump_parser.h"
-#include "bf-p4c/parde/parde_visitor.h"
+#include "backends/tofino/common/ir_utils.h"
+#include "backends/tofino/ir/thread_visitor.h"
+#include "backends/tofino/mau/mau_visitor.h"
+#include "backends/tofino/parde/dump_parser.h"
+#include "backends/tofino/parde/parde_visitor.h"
 #include "lib/log.h"
 
 const IR::BFN::Extract*

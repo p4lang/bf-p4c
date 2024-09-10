@@ -1,4 +1,4 @@
-#include "bf-p4c/midend/elim_cast.h"
+#include "backends/tofino/midend/elim_cast.h"
 
 #include "bf_gtest_helpers.h"
 #include "gtest/gtest.h"

@@ -5,7 +5,7 @@
 #include "lib/ltbitmatrix.h"
 
 #include "table_injected_deps.h"
-#include "bf-p4c/common/field_defuse.h"
+#include "backends/tofino/common/field_defuse.h"
 
 bool InjectControlDependencies::preorder(const IR::MAU::TableSeq *seq) {
     const Context *ctxt = getContext();

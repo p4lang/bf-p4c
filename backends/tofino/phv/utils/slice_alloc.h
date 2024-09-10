@@ -2,9 +2,9 @@
 #define BF_P4C_PHV_UTILS_SLICE_ALLOC_H_
 
 #include <optional>
-#include "bf-p4c/ir/bitrange.h"
-#include "bf-p4c/lib/small_set.h"
-#include "bf-p4c/phv/phv.h"
+#include "backends/tofino/ir/bitrange.h"
+#include "backends/tofino/lib/small_set.h"
+#include "backends/tofino/phv/phv.h"
 #include "lib/bitvec.h"
 #include "lib/symbitmatrix.h"
 #include "ir/ir.h"

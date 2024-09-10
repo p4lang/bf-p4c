@@ -18,10 +18,10 @@
 #include "ir/ir.h"
 #include "frontends/common/resolveReferences/resolveReferences.h"
 #include "type_checker.h"
-#include "bf-p4c/common/pragma/all_pragmas.h"
-#include "bf-p4c/common/pragma/collect_global_pragma.h"
-#include "bf-p4c/common/pragma/pragma.h"
-#include "bf-p4c/device.h"
+#include "backends/tofino/common/pragma/all_pragmas.h"
+#include "backends/tofino/common/pragma/collect_global_pragma.h"
+#include "backends/tofino/common/pragma/pragma.h"
+#include "backends/tofino/device.h"
 
 namespace BFN {
 

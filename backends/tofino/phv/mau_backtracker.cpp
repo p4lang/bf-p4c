@@ -1,5 +1,5 @@
-#include "bf-p4c/phv/allocate_phv.h"
-#include "bf-p4c/phv/mau_backtracker.h"
+#include "backends/tofino/phv/allocate_phv.h"
+#include "backends/tofino/phv/mau_backtracker.h"
 #include "lib/log.h"
 
 bool MauBacktracker::backtrack(trigger &trig) {

@@ -1,11 +1,11 @@
 #include <sys/types.h>
 
-#include "bf-p4c/mau/table_layout.h"
-#include "bf-p4c/mau/memories.h"
-#include "bf-p4c/phv/analysis/dark_live_range.h"
-#include "bf-p4c/phv/analysis/live_range_shrinking.h"
-#include "bf-p4c/phv/utils/liverange_opti_utils.h"
-#include "bf-p4c/common/table_printer.h"
+#include "backends/tofino/mau/table_layout.h"
+#include "backends/tofino/mau/memories.h"
+#include "backends/tofino/phv/analysis/dark_live_range.h"
+#include "backends/tofino/phv/analysis/live_range_shrinking.h"
+#include "backends/tofino/phv/utils/liverange_opti_utils.h"
+#include "backends/tofino/common/table_printer.h"
 
 bool DarkLiveRange::overlaps(
         const int num_max_min_stages,

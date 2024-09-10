@@ -1,6 +1,6 @@
-#include "bf-p4c/midend/annotate_with_in_hash.h"
-#include "bf-p4c/midend/path_linearizer.h"
-#include "bf-p4c/midend/type_categories.h"
+#include "backends/tofino/midend/annotate_with_in_hash.h"
+#include "backends/tofino/midend/path_linearizer.h"
+#include "backends/tofino/midend/type_categories.h"
 
 namespace BFN {
 

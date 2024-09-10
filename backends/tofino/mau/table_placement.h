@@ -9,15 +9,15 @@
 #define BF_P4C_MAU_TABLE_PLACEMENT_H_
 
 #include <map>
-#include "bf-p4c/mau/mau_visitor.h"
+#include "backends/tofino/mau/mau_visitor.h"
 #include "lib/ordered_set.h"
-#include "bf-p4c/mau/dynamic_dep_metrics.h"
-#include "bf-p4c/mau/table_mutex.h"
-#include "bf-p4c/mau/table_flow_graph.h"
-#include "bf-p4c/backend.h"
-#include "bf-p4c/mau/resource.h"
-#include "bf-p4c/mau/resource_estimate.h"
-#include "bf-p4c/mau/table_summary.h"
+#include "backends/tofino/mau/dynamic_dep_metrics.h"
+#include "backends/tofino/mau/table_mutex.h"
+#include "backends/tofino/mau/table_flow_graph.h"
+#include "backends/tofino/backend.h"
+#include "backends/tofino/mau/resource.h"
+#include "backends/tofino/mau/resource_estimate.h"
+#include "backends/tofino/mau/table_summary.h"
 
 struct DependencyGraph;
 class TablesMutuallyExclusive;

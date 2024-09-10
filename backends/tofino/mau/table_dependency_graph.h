@@ -6,15 +6,15 @@
 #include <set>
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/transitive_closure.hpp>
-#include "bf-p4c/common/asm_output.h"
-#include "bf-p4c/ir/control_flow_visitor.h"
-#include "bf-p4c/logging/pass_manager.h"
-#include "bf-p4c/mau/mau_visitor.h"
-#include "bf-p4c/mau/reduction_or.h"
-#include "bf-p4c/mau/table_mutex.h"
-#include "bf-p4c/mau/table_flow_graph.h"
-#include "bf-p4c/phv/phv_fields.h"
-#include "bf-p4c/device.h"
+#include "backends/tofino/common/asm_output.h"
+#include "backends/tofino/ir/control_flow_visitor.h"
+#include "backends/tofino/logging/pass_manager.h"
+#include "backends/tofino/mau/mau_visitor.h"
+#include "backends/tofino/mau/reduction_or.h"
+#include "backends/tofino/mau/table_mutex.h"
+#include "backends/tofino/mau/table_flow_graph.h"
+#include "backends/tofino/phv/phv_fields.h"
+#include "backends/tofino/device.h"
 
 /* The DependencyGraph data structure is a directed graph in which tables are
  * vertices and edges are dependencies.  An edge from t1 to t2 means that t2

@@ -1,4 +1,4 @@
-#include "bf-p4c/asm.h"
+#include "backends/tofino/asm.h"
 
 #include <sys/stat.h>
 #include <climits>
@@ -9,8 +9,8 @@
 #include <sstream>
 
 #include "bf-asm/version.h"
-#include "bf-p4c/common/run_id.h"
-#include "bf-p4c/device.h"
+#include "backends/tofino/common/run_id.h"
+#include "backends/tofino/device.h"
 
 namespace BFN {
 

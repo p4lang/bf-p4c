@@ -1,4 +1,4 @@
-#include "bf-p4c/phv/optimize_phv.h"
+#include "backends/tofino/phv/optimize_phv.h"
 
 /**
  * Insert a Transaction/SuperCluster to the optimization strategy.

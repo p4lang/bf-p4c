@@ -1,8 +1,8 @@
 #ifndef EXTENSIONS_BF_P4C_PARDE_LOWERED_REWRITE_EMIT_CLOT_H_
 #define EXTENSIONS_BF_P4C_PARDE_LOWERED_REWRITE_EMIT_CLOT_H_
 
-#include "bf-p4c/parde/clot/clot_info.h"
-#include "bf-p4c/parde/parde_visitor.h"
+#include "backends/tofino/parde/clot/clot_info.h"
+#include "backends/tofino/parde/parde_visitor.h"
 
 namespace Parde::Lowered {
 

@@ -3,7 +3,7 @@
 
 #include "ir/ir.h"
 #include "bf-p4c-options.h"
-#include "bf-p4c/parde/parser_header_sequences.h"
+#include "backends/tofino/parde/parser_header_sequences.h"
 
 class PhvInfo;
 class ClotInfo;

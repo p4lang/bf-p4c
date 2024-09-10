@@ -1,6 +1,6 @@
-#include "bf-p4c/phv/analysis/meta_live_range.h"
-#include "bf-p4c/common/table_printer.h"
-#include "bf-p4c/phv/utils/live_range_report.h"
+#include "backends/tofino/phv/analysis/meta_live_range.h"
+#include "backends/tofino/common/table_printer.h"
+#include "backends/tofino/phv/utils/live_range_report.h"
 
 std::map<int, PHV::FieldUse> LiveRangeReport::processUseDefSet(
         const FieldDefUse::LocPairSet& defuseSet,

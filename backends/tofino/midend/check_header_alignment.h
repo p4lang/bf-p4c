@@ -5,7 +5,7 @@
 #include "frontends/p4/methodInstance.h"
 #include "frontends/p4/typeMap.h"
 #include "frontends/common/resolveReferences/resolveReferences.h"
-#include "bf-p4c/midend/type_checker.h"
+#include "backends/tofino/midend/type_checker.h"
 
 namespace P4 {
 class TypeMap;

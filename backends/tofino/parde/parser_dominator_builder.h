@@ -6,8 +6,8 @@
 #include <boost/graph/dominator_tree.hpp>
 #include <boost/graph/graph_utility.hpp>
 #include <boost/graph/reverse_graph.hpp>
-#include "bf-p4c/logging/event_logger.h"
-#include "bf-p4c/parde/parser_info.h"
+#include "backends/tofino/logging/event_logger.h"
+#include "backends/tofino/parde/parser_info.h"
 #include "ir/ir.h"
 #include "ir/visitor.h"
 
@@ -18,7 +18,7 @@
  *
  * Determining which other headers have also surely been encountered if a given header has been
  * encountered and which other headers have not been encountered if a given header has not been
- * encountered (see "bf-p4c/phv/analysis/header_mutex.h/cpp").
+ * encountered (see "backends/tofino/phv/analysis/header_mutex.h/cpp").
  */
 class ParserDominatorBuilder : public PardeInspector {
  public:

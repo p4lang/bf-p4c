@@ -9,7 +9,7 @@
 #include "ir/ir.h"
 #include "ir/json_generator.h"
 #include "ir/json_loader.h"
-#include "bf-p4c/phv/phv_fields.h"
+#include "backends/tofino/phv/phv_fields.h"
 
 std::map<gress_t, int> Clot::tag_count;
 

@@ -2,9 +2,9 @@
 #define BF_P4C_MAU_ADD_ALWAYS_RUN_H_
 
 #include <optional>
-#include "bf-p4c/logging/pass_manager.h"
-#include "bf-p4c/mau/table_flow_graph.h"
-#include "bf-p4c/phv/phv_fields.h"
+#include "backends/tofino/logging/pass_manager.h"
+#include "backends/tofino/mau/table_flow_graph.h"
+#include "backends/tofino/phv/phv_fields.h"
 
 /// Adds a set of Tables to the IR so that they are executed on all paths through the program. As
 /// input, each inserted table comes with a set of constraints, specifying which pipeline units

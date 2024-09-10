@@ -1,4 +1,4 @@
-#include "bf-p4c/phv/collect_table_keys.h"
+#include "backends/tofino/phv/collect_table_keys.h"
 
 namespace PHV {
 

@@ -8,10 +8,10 @@
 #include <variant>
 #include <vector>
 
-#include "bf-p4c/common/flatrock.h"
-#include "bf-p4c/ir/bitrange.h"
-#include "bf-p4c/phv/phv.h"
-#include "bf-p4c/phv/utils/slice_alloc.h"
+#include "backends/tofino/common/flatrock.h"
+#include "backends/tofino/ir/bitrange.h"
+#include "backends/tofino/phv/phv.h"
+#include "backends/tofino/phv/utils/slice_alloc.h"
 #include "lib/cstring.h"
 #include "lib/exceptions.h"
 #include "lib/ordered_set.h"

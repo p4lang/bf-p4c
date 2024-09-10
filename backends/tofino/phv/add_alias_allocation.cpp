@@ -1,4 +1,4 @@
-#include "bf-p4c/phv/add_alias_allocation.h"
+#include "backends/tofino/phv/add_alias_allocation.h"
 
 namespace PHV {
 

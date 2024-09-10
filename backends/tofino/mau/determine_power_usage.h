@@ -3,14 +3,14 @@
 
 #include <map>
 
-#include "bf-p4c/device.h"
-#include "bf-p4c/logging/manifest.h"
-#include "bf-p4c/mau/build_power_graph.h"
-#include "bf-p4c/mau/finalize_mau_pred_deps_power.h"
-#include "bf-p4c/mau/mau_power.h"
-#include "bf-p4c/mau/mau_visitor.h"
-#include "bf-p4c/mau/resource.h"
-#include "bf-p4c/mau/table_dependency_graph.h"
+#include "backends/tofino/device.h"
+#include "backends/tofino/logging/manifest.h"
+#include "backends/tofino/mau/build_power_graph.h"
+#include "backends/tofino/mau/finalize_mau_pred_deps_power.h"
+#include "backends/tofino/mau/mau_power.h"
+#include "backends/tofino/mau/mau_visitor.h"
+#include "backends/tofino/mau/resource.h"
+#include "backends/tofino/mau/table_dependency_graph.h"
 #include "lib/error.h"
 #include "lib/json.h"
 #include "lib/path.h"

@@ -10,11 +10,11 @@
 #include "lib/ordered_set.h"
 #include "lib/safe_vector.h"
 #include "ir/ir.h"
-#include "bf-p4c/ir/bitrange.h"
-#include "bf-p4c/mau/action_analysis.h"
-#include "bf-p4c/mau/attached_info.h"
-#include "bf-p4c/mau/ixbar_expr.h"
-#include "bf-p4c/phv/phv.h"
+#include "backends/tofino/ir/bitrange.h"
+#include "backends/tofino/mau/action_analysis.h"
+#include "backends/tofino/mau/attached_info.h"
+#include "backends/tofino/mau/ixbar_expr.h"
+#include "backends/tofino/phv/phv.h"
 
 namespace ActionData {
 

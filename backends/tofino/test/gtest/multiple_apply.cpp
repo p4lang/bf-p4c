@@ -5,8 +5,8 @@
 
 #include "ir/ir.h"
 #include "lib/error.h"
-#include "bf-p4c/common/multiple_apply.h"
-#include "bf-p4c/test/gtest/tofino_gtest_utils.h"
+#include "backends/tofino/common/multiple_apply.h"
+#include "backends/tofino/test/gtest/tofino_gtest_utils.h"
 #include "test/gtest/helpers.h"
 
 

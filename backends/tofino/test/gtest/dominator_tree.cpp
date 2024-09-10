@@ -9,10 +9,10 @@
 #include "lib/cstring.h"
 #include "lib/error.h"
 #include "test/gtest/helpers.h"
-#include "bf-p4c/ir/gress.h"
-#include "bf-p4c/common/header_stack.h"
-#include "bf-p4c/phv/analysis/dominator_tree.h"
-#include "bf-p4c/test/gtest/tofino_gtest_utils.h"
+#include "backends/tofino/ir/gress.h"
+#include "backends/tofino/common/header_stack.h"
+#include "backends/tofino/phv/analysis/dominator_tree.h"
+#include "backends/tofino/test/gtest/tofino_gtest_utils.h"
 
 namespace Test {
 

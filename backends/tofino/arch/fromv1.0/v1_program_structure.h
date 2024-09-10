@@ -6,8 +6,8 @@
 #include "lib/ordered_set.h"
 #include "frontends/common/resolveReferences/resolveReferences.h"
 #include "frontends/p4/evaluator/evaluator.h"
-#include "bf-p4c/arch/program_structure.h"
-#include "bf-p4c/ir/gress.h"
+#include "backends/tofino/arch/program_structure.h"
+#include "backends/tofino/ir/gress.h"
 
 namespace BFN {
 

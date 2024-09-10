@@ -1,9 +1,9 @@
 #include "frontends/p4/methodInstance.h"
 #include "register_read_write.h"
-#include "bf-p4c/common/utils.h"
-#include "bf-p4c/mau/stateful_alu.h"
-#include "bf-p4c/device.h"
-#include "bf-p4c/arch/helpers.h"
+#include "backends/tofino/common/utils.h"
+#include "backends/tofino/mau/stateful_alu.h"
+#include "backends/tofino/device.h"
+#include "backends/tofino/arch/helpers.h"
 
 namespace BFN {
 

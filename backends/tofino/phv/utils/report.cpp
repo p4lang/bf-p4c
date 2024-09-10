@@ -1,6 +1,6 @@
-#include "bf-p4c/phv/utils/report.h"
+#include "backends/tofino/phv/utils/report.h"
 #include <numeric>
-#include "bf-p4c/common/table_printer.h"
+#include "backends/tofino/common/table_printer.h"
 
 using ContainerAllocStatus = PHV::Allocation::ContainerAllocStatus;
 

@@ -1,4 +1,4 @@
-#include "bf-p4c/parde/rewrite_parser_locals.h"
+#include "backends/tofino/parde/rewrite_parser_locals.h"
 
 bool GetSelectFieldInfo::preorder(const IR::BFN::Select* select) {
     auto state = findContext<IR::BFN::ParserState>();

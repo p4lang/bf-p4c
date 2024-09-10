@@ -7,9 +7,9 @@
 #include "lib/cstring.h"
 #include "lib/error.h"
 #include "test/gtest/helpers.h"
-#include "bf-p4c/common/multiple_apply.h"
-#include "bf-p4c/mau/action_mutex.h"
-#include "bf-p4c/test/gtest/tofino_gtest_utils.h"
+#include "backends/tofino/common/multiple_apply.h"
+#include "backends/tofino/mau/action_mutex.h"
+#include "backends/tofino/test/gtest/tofino_gtest_utils.h"
 
 namespace Test {
 

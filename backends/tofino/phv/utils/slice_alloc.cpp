@@ -1,10 +1,10 @@
 #include <iostream>
 #include <sstream>
 #include <boost/optional/optional_io.hpp>
-#include "bf-p4c/phv/phv.h"
-#include "bf-p4c/phv/phv_fields.h"
-#include "bf-p4c/phv/utils/slice_alloc.h"
-#include "bf-p4c/mau/table_summary.h"
+#include "backends/tofino/phv/phv.h"
+#include "backends/tofino/phv/phv_fields.h"
+#include "backends/tofino/phv/utils/slice_alloc.h"
+#include "backends/tofino/mau/table_summary.h"
 
 namespace PHV {
 

@@ -6,23 +6,23 @@
 #include <memory>
 
 #include "boost/range/adaptor/reversed.hpp"
-#include "bf-p4c/common/alias.h"
-#include "bf-p4c/common/ir_utils.h"
-#include "bf-p4c/common/slice.h"
-#include "bf-p4c/common/utils.h"
-#include "bf-p4c/lib/error_type.h"
-#include "bf-p4c/ir/tofino_write_context.h"
-#include "bf-p4c/mau/asm_output.h"
-#include "bf-p4c/mau/default_next.h"
-#include "bf-p4c/mau/finalize_mau_pred_deps_power.h"
-#include "bf-p4c/mau/gateway.h"
-#include "bf-p4c/mau/payload_gateway.h"
-#include "bf-p4c/mau/resource.h"
-#include "bf-p4c/mau/table_format.h"
-#include "bf-p4c/parde/asm_output.h"
-#include "bf-p4c/mau/jbay_next_table.h"
-#include "bf-p4c/parde/phase0.h"
-#include "bf-p4c/phv/asm_output.h"
+#include "backends/tofino/common/alias.h"
+#include "backends/tofino/common/ir_utils.h"
+#include "backends/tofino/common/slice.h"
+#include "backends/tofino/common/utils.h"
+#include "backends/tofino/lib/error_type.h"
+#include "backends/tofino/ir/tofino_write_context.h"
+#include "backends/tofino/mau/asm_output.h"
+#include "backends/tofino/mau/default_next.h"
+#include "backends/tofino/mau/finalize_mau_pred_deps_power.h"
+#include "backends/tofino/mau/gateway.h"
+#include "backends/tofino/mau/payload_gateway.h"
+#include "backends/tofino/mau/resource.h"
+#include "backends/tofino/mau/table_format.h"
+#include "backends/tofino/parde/asm_output.h"
+#include "backends/tofino/mau/jbay_next_table.h"
+#include "backends/tofino/parde/phase0.h"
+#include "backends/tofino/phv/asm_output.h"
 #include "lib/algorithm.h"
 #include "lib/bitops.h"
 #include "lib/bitrange.h"
@@ -33,8 +33,8 @@
 #if HAVE_FLATROCK
 // FIXME -- temp hack for flatrock specific stuff here -- should be removed once we
 // have Flatrock-specific memory allocation
-#include "bf-p4c/mau/flatrock/input_xbar.h"
-#include "bf-p4c/mau/flatrock/asm_output.h"
+#include "backends/tofino/mau/flatrock/input_xbar.h"
+#include "backends/tofino/mau/flatrock/asm_output.h"
 #endif
 
 int DefaultNext::id_counter = 0;

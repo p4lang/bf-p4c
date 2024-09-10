@@ -4,7 +4,7 @@
 #include "ir/ir.h"
 #include "ir/namemap.h"
 #include "lib/ordered_set.h"
-#include "bf-p4c/ir/gress.h"
+#include "backends/tofino/ir/gress.h"
 #include "frontends/common/resolveReferences/resolveReferences.h"
 #include "frontends/p4/evaluator/evaluator.h"
 

@@ -6,7 +6,7 @@
 #pragma GCC diagnostic ignored "-Wpedantic"
 #include "barefoot/p4info.pb.h"
 #pragma GCC diagnostic pop
-#include "bf-p4c/device.h"
+#include "backends/tofino/device.h"
 #include "bfruntime.h"
 #include "dynamic_hash/bfn_hash_algorithm.h"
 

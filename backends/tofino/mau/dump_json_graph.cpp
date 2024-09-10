@@ -1,4 +1,4 @@
-#include "bf-p4c/mau/dump_json_graph.h"
+#include "backends/tofino/mau/dump_json_graph.h"
 
 DumpJsonGraph::DumpJsonGraph(DependencyGraph &dg, Util::JsonObject* dgJson,
                              cstring passContext, bool placed) :

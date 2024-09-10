@@ -1,8 +1,8 @@
 #ifndef BF_P4C_MAU_FLATROCK_TABLE_LAYOUT_H_
 #define BF_P4C_MAU_FLATROCK_TABLE_LAYOUT_H_
 
-#include "bf-p4c/mau/action_format.h"
-#include "bf-p4c/mau/table_layout.h"
+#include "backends/tofino/mau/action_format.h"
+#include "backends/tofino/mau/table_layout.h"
 #include "ir/ir-generated.h"
 
 namespace Flatrock {

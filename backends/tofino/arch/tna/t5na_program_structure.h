@@ -1,11 +1,11 @@
 #ifndef EXTENSIONS_BF_P4C_ARCH_TNA_T5NA_PROGRAM_STRUCTURE_H_
 #define EXTENSIONS_BF_P4C_ARCH_TNA_T5NA_PROGRAM_STRUCTURE_H_
 
-#include "bf-p4c/arch/program_structure.h"
+#include "backends/tofino/arch/program_structure.h"
 #include "ir/ir.h"
 #include "ir/namemap.h"
 #include "lib/ordered_set.h"
-#include "bf-p4c/ir/gress.h"
+#include "backends/tofino/ir/gress.h"
 #include "frontends/common/resolveReferences/resolveReferences.h"
 #include "frontends/p4/evaluator/evaluator.h"
 

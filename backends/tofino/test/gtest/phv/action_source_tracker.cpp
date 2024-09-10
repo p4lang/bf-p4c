@@ -7,11 +7,11 @@
 #include "lib/cstring.h"
 #include "lib/error.h"
 #include "test/gtest/helpers.h"
-#include "bf-p4c/phv/phv_fields.h"
-#include "bf-p4c/common/header_stack.h"
-#include "bf-p4c/test/gtest/tofino_gtest_utils.h"
-#include "bf-p4c/phv/action_source_tracker.h"
-#include "bf-p4c/mau/instruction_selection.h"
+#include "backends/tofino/phv/phv_fields.h"
+#include "backends/tofino/common/header_stack.h"
+#include "backends/tofino/test/gtest/tofino_gtest_utils.h"
+#include "backends/tofino/phv/action_source_tracker.h"
+#include "backends/tofino/mau/instruction_selection.h"
 
 namespace Test {
 

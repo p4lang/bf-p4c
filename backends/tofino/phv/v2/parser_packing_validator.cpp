@@ -1,9 +1,9 @@
-#include "bf-p4c/phv/v2/parser_packing_validator.h"
+#include "backends/tofino/phv/v2/parser_packing_validator.h"
 
-#include "bf-p4c/device.h"
-#include "bf-p4c/ir/bitrange.h"
-#include "bf-p4c/phv/phv.h"
-#include "bf-p4c/phv/phv_fields.h"
+#include "backends/tofino/device.h"
+#include "backends/tofino/ir/bitrange.h"
+#include "backends/tofino/phv/phv.h"
+#include "backends/tofino/phv/phv_fields.h"
 #include "ir/ir.h"
 #include "lib/algorithm.h"
 

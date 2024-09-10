@@ -6,8 +6,8 @@
 #include "lib/cstring.h"
 #include "lib/error.h"
 #include "test/gtest/helpers.h"
-#include "bf-p4c/phv/analysis/parser_critical_path.h"
-#include "bf-p4c/test/gtest/tofino_gtest_utils.h"
+#include "backends/tofino/phv/analysis/parser_critical_path.h"
+#include "backends/tofino/test/gtest/tofino_gtest_utils.h"
 
 // Changes related to inserting parser states might break
 // these tests.

@@ -1,4 +1,4 @@
-#include "bf-p4c/arch/fromv1.0/checksum.h"
+#include "backends/tofino/arch/fromv1.0/checksum.h"
 
 namespace BFN {
 namespace V1 {

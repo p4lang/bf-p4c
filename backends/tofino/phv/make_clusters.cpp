@@ -1,12 +1,12 @@
-#include "bf-p4c/phv/make_clusters.h"
+#include "backends/tofino/phv/make_clusters.h"
 #include <sstream>
 #include <boost/range/adaptors.hpp>
-#include "bf-p4c/bf-p4c-options.h"
-#include "bf-p4c/common/utils.h"
-#include "bf-p4c/ir/bitrange.h"
-#include "bf-p4c/phv/phv_fields.h"
-#include "bf-p4c/phv/utils/utils.h"
-#include "bf-p4c/phv/v2/smart_packing.h"
+#include "backends/tofino/bf-p4c-options.h"
+#include "backends/tofino/common/utils.h"
+#include "backends/tofino/ir/bitrange.h"
+#include "backends/tofino/phv/phv_fields.h"
+#include "backends/tofino/phv/utils/utils.h"
+#include "backends/tofino/phv/v2/smart_packing.h"
 #include "lib/algorithm.h"
 #include "lib/log.h"
 #include "lib/ordered_set.h"
@@ -1671,7 +1671,7 @@ Visitor::profile_t Clustering::UpdateSameContainerAllocConstraint::init_apply(
 // allow packing after $learning in bottom bits
 //
 // Note 4
-// ref: bf-p4c/ir/parde.def
+// ref: backends/tofino/ir/parde.def
 // IR::BFN::Deparser has a field egress_port,
 // which points to the egress port in the egress pipeline & egress spec in the ingress pipeline
 // Each Deparser holds a vector of digests, one of which will be the learning digest if present

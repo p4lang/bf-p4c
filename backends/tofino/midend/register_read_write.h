@@ -3,8 +3,8 @@
 
 #include "frontends/common/resolveReferences/referenceMap.h"
 #include "frontends/p4/typeMap.h"
-#include "bf-p4c/midend/copy_header.h"
-#include "bf-p4c/midend/type_checker.h"
+#include "backends/tofino/midend/copy_header.h"
+#include "backends/tofino/midend/type_checker.h"
 #include "ir/ir.h"
 #include "table_mutex.h"
 

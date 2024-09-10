@@ -2,14 +2,14 @@
 #define EXTENSIONS_BF_P4C_PHV_ANALYSIS_PACK_CONFLICTS_H_
 
 #include "ir/ir.h"
-#include "bf-p4c/lib/assoc.h"
-#include "bf-p4c/mau/action_analysis.h"
-#include "bf-p4c/mau/action_mutex.h"
-#include "bf-p4c/mau/table_dependency_graph.h"
-#include "bf-p4c/mau/table_mutex.h"
-#include "bf-p4c/phv/mau_backtracker.h"
-#include "bf-p4c/phv/phv_fields.h"
-#include "bf-p4c/phv/pragma/pa_no_pack.h"
+#include "backends/tofino/lib/assoc.h"
+#include "backends/tofino/mau/action_analysis.h"
+#include "backends/tofino/mau/action_mutex.h"
+#include "backends/tofino/mau/table_dependency_graph.h"
+#include "backends/tofino/mau/table_mutex.h"
+#include "backends/tofino/phv/mau_backtracker.h"
+#include "backends/tofino/phv/phv_fields.h"
+#include "backends/tofino/phv/pragma/pa_no_pack.h"
 
 /** This class is meant to gather information about what fields cannot be packed together because of
   * the constraint that two or more tables in the same stage must not invoke an action that writes

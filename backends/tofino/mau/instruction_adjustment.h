@@ -3,12 +3,12 @@
 
 #include <fstream>
 
-#include "bf-p4c/ir/tofino_write_context.h"
-#include "bf-p4c/mau/action_analysis.h"
-#include "bf-p4c/mau/mau_visitor.h"
-#include "bf-p4c/mau/resource.h"
-#include "bf-p4c/mau/tofino/input_xbar.h"
-#include "bf-p4c/phv/phv.h"
+#include "backends/tofino/ir/tofino_write_context.h"
+#include "backends/tofino/mau/action_analysis.h"
+#include "backends/tofino/mau/mau_visitor.h"
+#include "backends/tofino/mau/resource.h"
+#include "backends/tofino/mau/tofino/input_xbar.h"
+#include "backends/tofino/phv/phv.h"
 #include "lib/safe_vector.h"
 
 namespace PHV {

@@ -2,10 +2,10 @@
 #define BF_P4C_COMMON_MULTIPLE_APPLY_H_
 
 #include <set>
-#include "bf-p4c/ir/thread_visitor.h"
-#include "bf-p4c/lib/union_find.hpp"
-#include "bf-p4c/mau/mau_visitor.h"
-#include "bf-p4c/mau/table_mutex.h"
+#include "backends/tofino/ir/thread_visitor.h"
+#include "backends/tofino/lib/union_find.hpp"
+#include "backends/tofino/mau/mau_visitor.h"
+#include "backends/tofino/mau/table_mutex.h"
 #include "lib/ordered_set.h"
 #include "lib/ordered_map.h"
 

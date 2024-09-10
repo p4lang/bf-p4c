@@ -1,10 +1,10 @@
-#include "bf-p4c/phv/fieldslice_live_range.h"
+#include "backends/tofino/phv/fieldslice_live_range.h"
 
 #include <boost/algorithm/string/split.hpp>
 #include "gtest/gtest.h"
 
 #include "lib/exceptions.h"
-#include "bf-p4c/test/gtest/tofino_gtest_utils.h"
+#include "backends/tofino/test/gtest/tofino_gtest_utils.h"
 
 namespace Test {
 

@@ -1,5 +1,5 @@
 #include "bfruntime.h"
-#include "bf-p4c/common/utils.h"
+#include "backends/tofino/common/utils.h"
 
 namespace BFN {
 

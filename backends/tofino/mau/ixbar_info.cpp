@@ -1,7 +1,7 @@
-#include "bf-p4c/common/table_printer.h"
-#include "bf-p4c/logging/filelog.h"
-#include "bf-p4c/mau/ixbar_info.h"
-#include "bf-p4c/phv/phv_fields.h"
+#include "backends/tofino/common/table_printer.h"
+#include "backends/tofino/logging/filelog.h"
+#include "backends/tofino/mau/ixbar_info.h"
+#include "backends/tofino/phv/phv_fields.h"
 
 namespace BFN {
 

@@ -1,5 +1,5 @@
-#include "bf-p4c/mau/action_format.h"
-#include "bf-p4c/phv/phv.h"
+#include "backends/tofino/mau/action_format.h"
+#include "backends/tofino/phv/phv.h"
 #include "lib/log.h"
 #include "gtest/gtest.h"
 

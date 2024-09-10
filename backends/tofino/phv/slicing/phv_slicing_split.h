@@ -8,7 +8,7 @@
 #include "lib/bitvec.h"
 #include "lib/ordered_map.h"
 
-#include "bf-p4c/phv/utils/utils.h"
+#include "backends/tofino/phv/utils/utils.h"
 
 /** PHV Slicing Split functions
  * Basic functions to split a supercluster.

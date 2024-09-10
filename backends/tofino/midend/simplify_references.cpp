@@ -3,10 +3,10 @@
 #include "frontends/common/resolveReferences/referenceMap.h"
 #include "frontends/p4/evaluator/evaluator.h"
 #include "frontends/p4/typeMap.h"
-#include "bf-p4c/midend/param_binding.h"
-#include "bf-p4c/common/utils.h"
+#include "backends/tofino/midend/param_binding.h"
+#include "backends/tofino/common/utils.h"
 
-#include "bf-p4c/midend/copy_header.h"   // ENABLE_P4C3251
+#include "backends/tofino/midend/copy_header.h"   // ENABLE_P4C3251
 
 namespace {
 
@@ -153,7 +153,7 @@ class RemoveInstanceRef : public Transform {
 };
 
 #if ENABLE_P4C3251
-// Implemention consolidate in bf-p4c/midend/copy_header.cpp
+// Implemention consolidate in backends/tofino/midend/copy_header.cpp
 #else
 /**
  * Remove calls to the `isValid()`, `setValid()`, and `setInvalid()` methods on

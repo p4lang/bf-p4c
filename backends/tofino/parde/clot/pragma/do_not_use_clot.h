@@ -4,8 +4,8 @@
 #include <map>
 #include <optional>
 #include "ir/ir.h"
-#include "bf-p4c/phv/phv_fields.h"
-#include "bf-p4c/phv/utils/utils.h"
+#include "backends/tofino/phv/phv_fields.h"
+#include "backends/tofino/phv/utils/utils.h"
 
 /**
  * @brief do_not_use_clot pragma support.

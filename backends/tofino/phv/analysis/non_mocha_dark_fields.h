@@ -3,11 +3,11 @@
 
 #include "ir/ir.h"
 
-#include "bf-p4c/common/field_defuse.h"
-#include "bf-p4c/mau/action_analysis.h"
-#include "bf-p4c/phv/phv.h"
-#include "bf-p4c/phv/phv_fields.h"
-#include "bf-p4c/phv/pragma/phv_pragmas.h"
+#include "backends/tofino/common/field_defuse.h"
+#include "backends/tofino/mau/action_analysis.h"
+#include "backends/tofino/phv/phv.h"
+#include "backends/tofino/phv/phv_fields.h"
+#include "backends/tofino/phv/pragma/phv_pragmas.h"
 
 class NonMochaDarkFields : public Inspector {
  public:

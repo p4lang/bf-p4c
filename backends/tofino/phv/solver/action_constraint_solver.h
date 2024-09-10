@@ -3,11 +3,11 @@
 
 #include <vector>
 #include <optional>
-#include "bf-p4c/ir/bitrange.h"
+#include "backends/tofino/ir/bitrange.h"
 #include "lib/bitvec.h"
 #include "lib/cstring.h"
 #include "lib/ordered_map.h"
-#include "bf-p4c/phv/solver/symbolic_bitvec.h"
+#include "backends/tofino/phv/solver/symbolic_bitvec.h"
 
 namespace solver {
 

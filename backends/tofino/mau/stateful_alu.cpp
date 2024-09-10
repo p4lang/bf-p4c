@@ -1,12 +1,12 @@
 #include <cmath>
 #include "stateful_alu.h"
 #include "ixbar_expr.h"
-#include "bf-p4c/common/ir_utils.h"
-#include "bf-p4c/common/slice.h"
-#include "bf-p4c/common/asm_output.h"  // for generic formatting routines
+#include "backends/tofino/common/ir_utils.h"
+#include "backends/tofino/common/slice.h"
+#include "backends/tofino/common/asm_output.h"  // for generic formatting routines
 #include "lib/hex.h"
 #include "ir/pattern.h"
-#include "bf-p4c/ir/ir_enums.h"
+#include "backends/tofino/ir/ir_enums.h"
 
 const Device::StatefulAluSpec &TofinoDevice::getStatefulAluSpec() const {
     static const Device::StatefulAluSpec spec = {

@@ -1,10 +1,10 @@
-#include "bf-p4c/parde/merge_parser_state.h"
+#include "backends/tofino/parde/merge_parser_state.h"
 
 #include <vector>
 #include <map>
 #include "lib/ordered_map.h"
-#include "bf-p4c/parde/dump_parser.h"
-#include "bf-p4c/parde/parde_visitor.h"
+#include "backends/tofino/parde/dump_parser.h"
+#include "backends/tofino/parde/parde_visitor.h"
 
 namespace {
 

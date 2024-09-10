@@ -1,7 +1,7 @@
 #ifndef BF_P4C_MAU_TOFINO_INSTRUCTION_MEMORY_H_
 #define BF_P4C_MAU_TOFINO_INSTRUCTION_MEMORY_H_
 
-#include "bf-p4c/mau/instruction_memory.h"
+#include "backends/tofino/mau/instruction_memory.h"
 
 namespace Tofino {
 

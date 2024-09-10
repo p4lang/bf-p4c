@@ -6,10 +6,10 @@
 #include "field_pov_analysis.h"
 #include "header_validity_analysis.h"
 #include "merge_desugared_varbit_valids.h"
-#include "bf-p4c/common/utils.h"
-#include "bf-p4c/parde/count_strided_header_refs.h"
-#include "bf-p4c/parde/parser_info.h"
-#include "bf-p4c/phv/pragma/pa_alias.h"
+#include "backends/tofino/common/utils.h"
+#include "backends/tofino/parde/count_strided_header_refs.h"
+#include "backends/tofino/parde/parser_info.h"
+#include "backends/tofino/phv/pragma/pa_alias.h"
 #include "lib/log_fixup.h"
 
 /**

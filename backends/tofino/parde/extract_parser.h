@@ -7,9 +7,9 @@
 #include "logging/pass_manager.h"
 #include "frontends/common/resolveReferences/referenceMap.h"
 #include "frontends/p4/typeMap.h"
-#include "bf-p4c/bf-p4c-options.h"
-#include "bf-p4c/ir/gress.h"
-#include "bf-p4c/parde/parde_visitor.h"
+#include "backends/tofino/bf-p4c-options.h"
+#include "backends/tofino/ir/gress.h"
+#include "backends/tofino/parde/parde_visitor.h"
 
 namespace IR {
 

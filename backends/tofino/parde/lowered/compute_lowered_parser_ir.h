@@ -1,10 +1,10 @@
 #ifndef EXTENSIONS_BF_P4C_PARDE_LOWERED_COMPUTE_LOWERED_PARSER_IR_H_
 #define EXTENSIONS_BF_P4C_PARDE_LOWERED_COMPUTE_LOWERED_PARSER_IR_H_
 
-#include "bf-p4c/parde/allocate_parser_checksum.h"
-#include "bf-p4c/parde/count_strided_header_refs.h"
-#include "bf-p4c/parde/parde_visitor.h"
-#include "bf-p4c/parde/clot/clot_info.h"
+#include "backends/tofino/parde/allocate_parser_checksum.h"
+#include "backends/tofino/parde/count_strided_header_refs.h"
+#include "backends/tofino/parde/parde_visitor.h"
+#include "backends/tofino/parde/clot/clot_info.h"
 
 namespace Parde::Lowered {
 

@@ -1,4 +1,4 @@
-#include "bf-p4c/common/map_tables_to_actions.h"
+#include "backends/tofino/common/map_tables_to_actions.h"
 
 Visitor::profile_t MapTablesToActions::init_apply(const IR::Node* root) {
     tableToActionsMap.clear();

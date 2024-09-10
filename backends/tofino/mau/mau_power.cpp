@@ -2,9 +2,9 @@
 #include <ostream>
 #include <string>
 
-#include "bf-p4c/device.h"
-#include "bf-p4c/mau/mau_power.h"
-#include "bf-p4c/mau/memories.h"
+#include "backends/tofino/device.h"
+#include "backends/tofino/mau/mau_power.h"
+#include "backends/tofino/mau/memories.h"
 #include "lib/hex.h"
 
 namespace MauPower {

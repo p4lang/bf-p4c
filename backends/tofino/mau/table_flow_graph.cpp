@@ -1,5 +1,5 @@
 #include <boost/graph/graphviz.hpp>
-#include "bf-p4c/mau/table_flow_graph.h"
+#include "backends/tofino/mau/table_flow_graph.h"
 
 std::ostream &operator<<(std::ostream &out, const FlowGraph &fg) {
     auto all_vertices = boost::vertices(fg.g);

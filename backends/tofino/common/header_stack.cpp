@@ -1,6 +1,6 @@
 #include "header_stack.h"
-#include "bf-p4c/ir/bitrange.h"
-#include "bf-p4c/phv/phv_fields.h"
+#include "backends/tofino/ir/bitrange.h"
+#include "backends/tofino/phv/phv_fields.h"
 
 CollectHeaderStackInfo::CollectHeaderStackInfo() {
     stacks = new BFN::HeaderStackInfo; }

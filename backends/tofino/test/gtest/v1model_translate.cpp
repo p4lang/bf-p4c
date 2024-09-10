@@ -6,7 +6,7 @@
 #include <boost/algorithm/string/replace.hpp>
 #include "gtest/gtest.h"
 
-#include "bf-p4c/test/gtest/tofino_gtest_utils.h"
+#include "backends/tofino/test/gtest/tofino_gtest_utils.h"
 #include "lib/compile_context.h"
 #include "lib/error_reporter.h"
 #include "test/gtest/helpers.h"

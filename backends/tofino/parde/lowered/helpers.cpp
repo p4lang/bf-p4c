@@ -4,7 +4,7 @@
 
 #include <boost/range/adaptor/reversed.hpp>
 
-#include "bf-p4c/arch/bridge_metadata.h"
+#include "backends/tofino/arch/bridge_metadata.h"
 
 namespace Parde::Lowered {
 

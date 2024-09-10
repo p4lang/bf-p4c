@@ -1,4 +1,4 @@
-#include "bf-p4c/phv/v2/types.h"
+#include "backends/tofino/phv/v2/types.h"
 
 namespace PHV {
 namespace v2 {

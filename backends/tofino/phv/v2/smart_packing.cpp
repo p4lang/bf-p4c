@@ -1,12 +1,12 @@
-#include "bf-p4c/phv/v2/smart_packing.h"
+#include "backends/tofino/phv/v2/smart_packing.h"
 
 #include <sstream>
 
-#include "bf-p4c/lib/autoclone.h"
-#include "bf-p4c/phv/phv_fields.h"
-#include "bf-p4c/phv/utils/utils.h"
-#include "bf-p4c/phv/v2/allocator_base.h"
-#include "bf-p4c/phv/v2/utils_v2.h"
+#include "backends/tofino/lib/autoclone.h"
+#include "backends/tofino/phv/phv_fields.h"
+#include "backends/tofino/phv/utils/utils.h"
+#include "backends/tofino/phv/v2/allocator_base.h"
+#include "backends/tofino/phv/v2/utils_v2.h"
 
 namespace PHV {
 namespace v2 {

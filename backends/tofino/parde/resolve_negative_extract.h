@@ -5,12 +5,12 @@
 #include <sstream>
 #include <utility>
 
-#include "bf-p4c/common/utils.h"
-#include "bf-p4c/parde/dump_parser.h"
-#include "bf-p4c/parde/parde_visitor.h"
-#include "bf-p4c/parde/parser_dominator_builder.h"
-#include "bf-p4c/parde/parser_info.h"
-#include "bf-p4c/device.h"
+#include "backends/tofino/common/utils.h"
+#include "backends/tofino/parde/dump_parser.h"
+#include "backends/tofino/parde/parde_visitor.h"
+#include "backends/tofino/parde/parser_dominator_builder.h"
+#include "backends/tofino/parde/parser_info.h"
+#include "backends/tofino/device.h"
 #include "ir/ir-generated.h"
 #include "lib/indent.h"
 #include "lib/ordered_map.h"

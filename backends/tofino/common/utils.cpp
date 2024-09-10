@@ -1,8 +1,8 @@
 #include <regex>
 
 #include "utils.h"
-#include "bf-p4c/bf-p4c-options.h"
-#include "bf-p4c/device.h"
+#include "backends/tofino/bf-p4c-options.h"
+#include "backends/tofino/device.h"
 
 bool ghost_only_on_other_pipes(int pipe_id) {
     if (pipe_id < 0) return false;  // invalid pipe id

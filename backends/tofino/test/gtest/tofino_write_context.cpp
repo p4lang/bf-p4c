@@ -1,7 +1,7 @@
 #include "gtest/gtest.h"
 
 #include "ir/ir.h"
-#include "bf-p4c/ir/tofino_write_context.h"
+#include "backends/tofino/ir/tofino_write_context.h"
 #include "test/gtest/helpers.h"
 
 namespace Test {

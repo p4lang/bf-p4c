@@ -2,14 +2,14 @@
 #define BF_P4C_MAU_RESOURCE_H_
 
 #include <map>
-#include "bf-p4c/lib/autoclone.h"
-#include "bf-p4c/mau/action_data_bus.h"
-#include "bf-p4c/mau/instruction_memory.h"
-#include "bf-p4c/mau/memories.h"
-#include "bf-p4c/mau/table_format.h"
+#include "backends/tofino/lib/autoclone.h"
+#include "backends/tofino/mau/action_data_bus.h"
+#include "backends/tofino/mau/instruction_memory.h"
+#include "backends/tofino/mau/memories.h"
+#include "backends/tofino/mau/table_format.h"
 #include "ir/ir.h"
 #include "lib/safe_vector.h"
-#include "bf-p4c/mau/tofino/input_xbar.h"
+#include "backends/tofino/mau/tofino/input_xbar.h"
 
 struct TableResourceAlloc {
     // TODO: Currently we only have a std::map for the UniqueId objects for Memories.  This would

@@ -2,11 +2,11 @@
 #define EXTENSIONS_BF_P4C_PARDE_COLLECT_PARSER_USEDEF_H_
 
 #include <optional>
-#include "bf-p4c/common/utils.h"
-#include "bf-p4c/parde/dump_parser.h"
-#include "bf-p4c/parde/parde_utils.h"
-#include "bf-p4c/parde/parser_info.h"
-#include "bf-p4c/phv/phv_fields.h"
+#include "backends/tofino/common/utils.h"
+#include "backends/tofino/parde/dump_parser.h"
+#include "backends/tofino/parde/parde_utils.h"
+#include "backends/tofino/parde/parser_info.h"
+#include "backends/tofino/phv/phv_fields.h"
 
 /** @addtogroup ParserCopyProp
  *  @{

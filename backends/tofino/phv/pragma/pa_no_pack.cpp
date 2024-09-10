@@ -1,6 +1,6 @@
-#include "bf-p4c/phv/pragma/pa_no_pack.h"
+#include "backends/tofino/phv/pragma/pa_no_pack.h"
 
-#include "bf-p4c/phv/pragma/phv_pragmas.h"
+#include "backends/tofino/phv/pragma/phv_pragmas.h"
 
 /// BFN::Pragma interface
 const char *PragmaNoPack::name = "pa_no_pack";

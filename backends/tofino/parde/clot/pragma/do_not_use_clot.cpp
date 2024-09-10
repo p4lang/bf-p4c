@@ -1,11 +1,11 @@
-#include "bf-p4c/parde/clot/pragma/do_not_use_clot.h"
+#include "backends/tofino/parde/clot/pragma/do_not_use_clot.h"
 
 #include <string>
 #include <numeric>
 
 #include "lib/log.h"
-#include "bf-p4c/common/utils.h"
-#include "bf-p4c/phv/pragma/phv_pragmas.h"
+#include "backends/tofino/common/utils.h"
+#include "backends/tofino/phv/pragma/phv_pragmas.h"
 
 // BFN::Pragma interface
 const char *PragmaDoNotUseClot::name = "do_not_use_clot";

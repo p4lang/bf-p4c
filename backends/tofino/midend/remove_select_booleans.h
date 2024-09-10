@@ -39,7 +39,7 @@
 #include "ir/ir.h"
 #include "frontends/p4/typeMap.h"
 #include "midend/removeSelectBooleans.h"
-#include "bf-p4c/midend/elim_cast.h"
+#include "backends/tofino/midend/elim_cast.h"
 
 namespace BFN {
 

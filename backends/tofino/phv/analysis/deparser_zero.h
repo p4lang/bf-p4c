@@ -3,12 +3,12 @@
 
 #include <optional>
 #include "ir/ir.h"
-#include "bf-p4c/common/field_defuse.h"
-#include "bf-p4c/mau/action_analysis.h"
-#include "bf-p4c/parde/clot/clot_info.h"
-#include "bf-p4c/phv/phv_fields.h"
-#include "bf-p4c/phv/pragma/pa_deparser_zero.h"
-#include "bf-p4c/phv/utils/utils.h"
+#include "backends/tofino/common/field_defuse.h"
+#include "backends/tofino/mau/action_analysis.h"
+#include "backends/tofino/parde/clot/clot_info.h"
+#include "backends/tofino/phv/phv_fields.h"
+#include "backends/tofino/phv/pragma/pa_deparser_zero.h"
+#include "backends/tofino/phv/utils/utils.h"
 
 // JIRA-DOC: BRIG-697. COMPILER-961.
 

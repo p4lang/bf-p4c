@@ -6,7 +6,7 @@
 #include "ir/json_loader.h"
 
 #if HAVE_FLATROCK
-#include "bf-p4c/common/flatrock.h"
+#include "backends/tofino/common/flatrock.h"
 #endif
 
 int MatchRegister::s_id = 0;

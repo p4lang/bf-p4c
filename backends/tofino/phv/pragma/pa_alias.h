@@ -4,10 +4,10 @@
 #include <map>
 #include <optional>
 #include "ir/ir.h"
-#include "bf-p4c/phv/phv_fields.h"
-#include "bf-p4c/phv/utils/utils.h"
-#include "bf-p4c/phv/pragma/pretty_print.h"
-#include "bf-p4c/phv/pragma/pa_no_overlay.h"
+#include "backends/tofino/phv/phv_fields.h"
+#include "backends/tofino/phv/utils/utils.h"
+#include "backends/tofino/phv/pragma/pretty_print.h"
+#include "backends/tofino/phv/pragma/pa_no_overlay.h"
 
 /** pa_alias pragma support.
  *

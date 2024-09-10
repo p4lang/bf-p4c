@@ -1,6 +1,6 @@
 #include "validate_actions.h"
 
-#include "bf-p4c/mau/action_analysis.h"
+#include "backends/tofino/mau/action_analysis.h"
 #include "ir/ir.h"
 #include "lib/log.h"
 

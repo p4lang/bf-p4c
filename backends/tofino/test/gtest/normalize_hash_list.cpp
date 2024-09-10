@@ -8,7 +8,7 @@
 #include "bf_gtest_helpers.h"
 
 #include "ir/ir.h"
-#include "bf-p4c/test/gtest/tofino_gtest_utils.h"
+#include "backends/tofino/test/gtest/tofino_gtest_utils.h"
 #include "test/gtest/helpers.h"
 
 namespace Test {

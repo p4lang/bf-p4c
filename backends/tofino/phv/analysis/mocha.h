@@ -2,9 +2,9 @@
 #define EXTENSIONS_BF_P4C_PHV_ANALYSIS_MOCHA_H_
 
 #include "ir/ir.h"
-#include "bf-p4c/mau/action_analysis.h"
-#include "bf-p4c/phv/phv_fields.h"
-#include "bf-p4c/phv/analysis/non_mocha_dark_fields.h"
+#include "backends/tofino/mau/action_analysis.h"
+#include "backends/tofino/phv/phv_fields.h"
+#include "backends/tofino/phv/analysis/non_mocha_dark_fields.h"
 
 /** This pass analyzes all fields used in the program and marks the fields suitable for allocation
   * in mocha containers by setting the `is_mocha_candidate()` property of the corresponding

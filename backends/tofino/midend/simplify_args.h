@@ -58,9 +58,9 @@
 #include "frontends/p4/typeMap.h"
 #include "frontends/p4/cloner.h"
 #include "midend/flattenHeaders.h"
-#include "bf-p4c/midend/type_checker.h"
-#include "bf-p4c/midend/check_header_alignment.h"
-#include "bf-p4c/midend/copy_header.h"
+#include "backends/tofino/midend/type_checker.h"
+#include "backends/tofino/midend/check_header_alignment.h"
+#include "backends/tofino/midend/copy_header.h"
 
 namespace BFN {
 

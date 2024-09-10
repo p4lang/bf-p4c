@@ -11,17 +11,17 @@
 
 #include "barefoot/p4info.pb.h"
 
-#include "bf-p4c/control-plane/bfruntime.h"
-#include "bf-p4c/control-plane/p4runtime_force_std.h"
-#include "bf-p4c/control-plane/runtime.h"
+#include "backends/tofino/control-plane/bfruntime.h"
+#include "backends/tofino/control-plane/p4runtime_force_std.h"
+#include "backends/tofino/control-plane/runtime.h"
 
-#include "bf-p4c/arch/fromv1.0/phase0.h"
-#include "bf-p4c/arch/helpers.h"
-#include "bf-p4c/arch/tna.h"
+#include "backends/tofino/arch/fromv1.0/phase0.h"
+#include "backends/tofino/arch/helpers.h"
+#include "backends/tofino/arch/tna.h"
 
-#include "bf-p4c/common/utils.h"
+#include "backends/tofino/common/utils.h"
 
-#include "bf-p4c/device.h"
+#include "backends/tofino/device.h"
 
 #include "control-plane/flattenHeader.h"
 #include "control-plane/p4RuntimeArchHandler.h"

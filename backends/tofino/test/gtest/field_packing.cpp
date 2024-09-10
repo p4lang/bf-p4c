@@ -1,7 +1,7 @@
 #include "gtest/gtest.h"
 
 #include "ir/ir.h"
-#include "bf-p4c/parde/field_packing.h"
+#include "backends/tofino/parde/field_packing.h"
 
 namespace BFN {
 

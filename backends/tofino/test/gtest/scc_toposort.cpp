@@ -1,7 +1,7 @@
 #include "gtest/gtest.h"
 
-#include "bf-p4c/test/gtest/tofino_gtest_utils.h"
-#include "bf-p4c/common/scc_toposort.h"
+#include "backends/tofino/test/gtest/tofino_gtest_utils.h"
+#include "backends/tofino/common/scc_toposort.h"
 
 namespace Test {
 

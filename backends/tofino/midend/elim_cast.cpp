@@ -1,5 +1,5 @@
 #include "elim_cast.h"
-#include "bf-p4c/common/slice.h"
+#include "backends/tofino/common/slice.h"
 
 namespace BFN {
 

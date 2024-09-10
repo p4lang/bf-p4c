@@ -2,7 +2,7 @@
 #include "ir/pattern.h"
 #include "ir/visitor.h"
 #include "simplifyIfStatement.h"
-#include "bf-p4c/midend/path_linearizer.h"
+#include "backends/tofino/midend/path_linearizer.h"
 
 namespace P4 {
 

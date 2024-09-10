@@ -4,13 +4,13 @@
 
 #include "ir/ir.h"
 
-#include "bf-p4c/ir/gress.h"
-#include "bf-p4c/common/alias.h"
-#include "bf-p4c/parde/clot/clot_info.h"
-#include "bf-p4c/parde/parde_visitor.h"
-#include "bf-p4c/parde/parser_info.h"
-#include "bf-p4c/phv/phv_fields.h"
-#include "bf-p4c/phv/pragma/pa_alias.h"
+#include "backends/tofino/ir/gress.h"
+#include "backends/tofino/common/alias.h"
+#include "backends/tofino/parde/clot/clot_info.h"
+#include "backends/tofino/parde/parde_visitor.h"
+#include "backends/tofino/parde/parser_info.h"
+#include "backends/tofino/phv/phv_fields.h"
+#include "backends/tofino/phv/pragma/pa_alias.h"
 
 /**
  * Identify headers corresponding to varbit fields that were injected during varbit header

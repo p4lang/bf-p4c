@@ -1,7 +1,7 @@
-#include "bf-p4c/phv/slicing/phv_slicing_iterator.h"
+#include "backends/tofino/phv/slicing/phv_slicing_iterator.h"
 
-#include "bf-p4c/phv/action_packing_validator_interface.h"
-#include "bf-p4c/phv/slicing/phv_slicing_dfs_iterator.h"
+#include "backends/tofino/phv/action_packing_validator_interface.h"
+#include "backends/tofino/phv/slicing/phv_slicing_dfs_iterator.h"
 
 namespace PHV {
 namespace Slicing {

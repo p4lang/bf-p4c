@@ -1,6 +1,6 @@
 #include "action_data_bus.h"
-#include "bf-p4c/mau/action_format.h"
-#include "bf-p4c/mau/resource.h"
+#include "backends/tofino/mau/action_format.h"
+#include "backends/tofino/mau/resource.h"
 
 namespace Flatrock {
 

@@ -9,7 +9,7 @@
 
 #include "ir/ir.h"
 #include "ir/unique_id.h"
-#include "bf-p4c/device.h"
+#include "backends/tofino/device.h"
 #include "lib/dyn_vector.h"
 #include "power_schema.h"
 

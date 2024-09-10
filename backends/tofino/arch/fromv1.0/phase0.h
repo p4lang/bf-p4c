@@ -135,7 +135,7 @@ class UpdatePhase0Header: public Transform {
  * After  => pkt.advance(192); // for Tofino2
  * The advance bits are determined by
  * Device::pardeSpec().bitPhase0Size() + Device::pardeSpec().bitIngressPrePacketPaddingSize()
- * as specified in bf-p4c/parde/parde_spec.h
+ * as specified in backends/tofino/parde/parde_spec.h
  *
  * Used when we dont wish to extract the fields but simply advance or skip
  * through phase0 or port metadata

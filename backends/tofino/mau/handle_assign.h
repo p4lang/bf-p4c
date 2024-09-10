@@ -1,9 +1,9 @@
 #ifndef EXTENSIONS_BF_P4C_MAU_HANDLE_ASSIGN_H_
 #define EXTENSIONS_BF_P4C_MAU_HANDLE_ASSIGN_H_
 
-#include "bf-p4c/mau/mau_visitor.h"
-#include "bf-p4c/phv/phv_fields.h"
-#include "bf-p4c/mau/ixbar_expr.h"
+#include "backends/tofino/mau/mau_visitor.h"
+#include "backends/tofino/phv/phv_fields.h"
+#include "backends/tofino/mau/ixbar_expr.h"
 
 /**
  * The purpose of this pass is to assign the action handle for the context JSON node

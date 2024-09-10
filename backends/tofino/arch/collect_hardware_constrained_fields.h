@@ -5,9 +5,9 @@
 #include "lib/cstring.h"
 #include "lib/ordered_map.h"
 #include "lib/ordered_set.h"
-#include "bf-p4c/phv/phv_fields.h"
-#include "bf-p4c/common/ir_utils.h"
-#include "bf-p4c/common/pragma/all_pragmas.h"
+#include "backends/tofino/phv/phv_fields.h"
+#include "backends/tofino/common/ir_utils.h"
+#include "backends/tofino/common/pragma/all_pragmas.h"
 
 namespace BFN {
 

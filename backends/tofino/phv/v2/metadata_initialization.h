@@ -2,10 +2,10 @@
 #define BF_P4C_PHV_V2_METADATA_INITIALIZATION_H_
 
 #include <algorithm>
-#include "bf-p4c/phv/mau_backtracker.h"
-#include "bf-p4c/common/field_defuse.h"
-#include "bf-p4c/common/utils.h"
-#include "bf-p4c/phv/pragma/pa_no_init.h"
+#include "backends/tofino/phv/mau_backtracker.h"
+#include "backends/tofino/common/field_defuse.h"
+#include "backends/tofino/common/utils.h"
+#include "backends/tofino/phv/pragma/pa_no_init.h"
 
 namespace PHV {
 

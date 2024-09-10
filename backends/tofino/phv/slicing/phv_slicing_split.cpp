@@ -1,10 +1,10 @@
-#include "bf-p4c/phv/slicing/phv_slicing_split.h"
+#include "backends/tofino/phv/slicing/phv_slicing_split.h"
 
 #include <cstddef>
 #include <sstream>
 
-#include "bf-p4c/lib/union_find.hpp"
-#include "bf-p4c/phv/utils/utils.h"
+#include "backends/tofino/lib/union_find.hpp"
+#include "backends/tofino/phv/utils/utils.h"
 #include "lib/log.h"
 
 // TODO: These codes are ported from the old implementation without any changes.

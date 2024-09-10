@@ -1,4 +1,4 @@
-#include "bf-p4c/midend/initialize_mirror_io_select.h"
+#include "backends/tofino/midend/initialize_mirror_io_select.h"
 
 namespace BFN {
 

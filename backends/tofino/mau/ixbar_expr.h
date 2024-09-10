@@ -1,14 +1,14 @@
 #ifndef BF_P4C_MAU_IXBAR_EXPR_H_
 #define BF_P4C_MAU_IXBAR_EXPR_H_
 
-#include "bf-p4c/common/utils.h"
+#include "backends/tofino/common/utils.h"
 #include "ir/ir-generated.h"
 #include "ir/ir.h"
 #include "boost/range/adaptor/reversed.hpp"
 #include "lib/bitvec.h"
-#include "bf-p4c/bf-p4c-options.h"
-#include "bf-p4c/mau/mau_visitor.h"
-#include "bf-p4c/phv/phv_fields.h"
+#include "backends/tofino/bf-p4c-options.h"
+#include "backends/tofino/mau/mau_visitor.h"
+#include "backends/tofino/phv/phv_fields.h"
 
 /** Functor to test if an expression can be computed in the ixbar & hash matrixes */
 class CanBeIXBarExpr : public Inspector {

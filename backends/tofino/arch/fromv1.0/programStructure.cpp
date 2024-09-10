@@ -6,12 +6,12 @@
 #include "frontends/p4/fromv1.0/converters.h"
 #include "frontends/p4/simplify.h"
 #include "frontends/p4/unusedDeclarations.h"
-#include "bf-p4c/device.h"
-#include "bf-p4c/arch/fromv1.0/meter.h"
-#include "bf-p4c/arch/fromv1.0/phase0.h"
-#include "bf-p4c/arch/bridge_metadata.h"
-#include "bf-p4c/arch/intrinsic_metadata.h"
-#include "bf-p4c/common/pragma/all_pragmas.h"
+#include "backends/tofino/device.h"
+#include "backends/tofino/arch/fromv1.0/meter.h"
+#include "backends/tofino/arch/fromv1.0/phase0.h"
+#include "backends/tofino/arch/bridge_metadata.h"
+#include "backends/tofino/arch/intrinsic_metadata.h"
+#include "backends/tofino/common/pragma/all_pragmas.h"
 
 namespace P4V1 {
 

@@ -9,7 +9,7 @@
 
 #include "lib/cstring.h"
 #include "lib/path.h"
-#include "bf-p4c/logging/manifest.h"
+#include "backends/tofino/logging/manifest.h"
 
 namespace Logging {
 

@@ -1,5 +1,5 @@
 #include "gtest/gtest.h"
-#include "bf-p4c/lib/union_find.hpp"
+#include "backends/tofino/lib/union_find.hpp"
 #include "lib/ordered_set.h"
 
 namespace Test {

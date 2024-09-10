@@ -1,4 +1,4 @@
-#include "bf-p4c/midend/type_checker.h"
+#include "backends/tofino/midend/type_checker.h"
 
 namespace BFN {
 

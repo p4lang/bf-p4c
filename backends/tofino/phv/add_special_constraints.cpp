@@ -1,6 +1,6 @@
-#include "bf-p4c/arch/bridge_metadata.h"
-#include "bf-p4c/common/utils.h"
-#include "bf-p4c/phv/add_special_constraints.h"
+#include "backends/tofino/arch/bridge_metadata.h"
+#include "backends/tofino/common/utils.h"
+#include "backends/tofino/phv/add_special_constraints.h"
 
 Visitor::profile_t AddSpecialConstraints::init_apply(const IR::Node* root) {
     profile_t rv = Inspector::init_apply(root);

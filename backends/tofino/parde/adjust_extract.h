@@ -2,8 +2,8 @@
 #define EXTENSIONS_BF_P4C_PARDE_ADJUST_EXTRACT_H_
 
 #include "ir/ir.h"
-#include "bf-p4c/phv/phv_fields.h"
-#include "bf-p4c/parde/parde_visitor.h"
+#include "backends/tofino/phv/phv_fields.h"
+#include "backends/tofino/parde/parde_visitor.h"
 
 /**
  * @ingroup parde

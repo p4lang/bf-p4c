@@ -1,8 +1,8 @@
-#include "bf-p4c/parde/field_packing.h"
+#include "backends/tofino/parde/field_packing.h"
 
 #include "ir/ir.h"
 #include "lib/cstring.h"
-#include "bf-p4c/parde/marshal.h"
+#include "backends/tofino/parde/marshal.h"
 
 namespace BFN {
 

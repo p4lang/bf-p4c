@@ -2,12 +2,12 @@
  * This test covers folding of hash functions with constant inputs.
  */
 
-#include "bf-p4c/midend/fold_constant_hashes.h"
+#include "backends/tofino/midend/fold_constant_hashes.h"
 
 #include "bf_gtest_helpers.h"
 #include "gtest/gtest.h"
 
-#include "bf-p4c/midend/type_checker.h"
+#include "backends/tofino/midend/type_checker.h"
 #include "frontends/common/resolveReferences/referenceMap.h"
 #include "frontends/p4/typeMap.h"
 

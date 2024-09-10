@@ -1,7 +1,7 @@
 #ifndef BF_P4C_PHV_DUMP_TABLE_FLOW_GRAPH_H_
 #define BF_P4C_PHV_DUMP_TABLE_FLOW_GRAPH_H_
 
-#include "bf-p4c/mau/table_flow_graph.h"
+#include "backends/tofino/mau/table_flow_graph.h"
 
 struct DumpTableFlowGraph : public Visitor {
     const PhvInfo& phv;

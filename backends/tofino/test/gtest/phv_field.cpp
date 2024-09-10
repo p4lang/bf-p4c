@@ -2,12 +2,12 @@
 
 #include "gtest/gtest.h"
 
-#include "bf-p4c/device.h"
-#include "bf-p4c/ir/bitrange.h"
+#include "backends/tofino/device.h"
+#include "backends/tofino/ir/bitrange.h"
 #include "lib/bitvec.h"
 #include "test/gtest/helpers.h"
-#include "bf-p4c/test/gtest/tofino_gtest_utils.h"
-#include "bf-p4c/phv/phv_fields.h"
+#include "backends/tofino/test/gtest/tofino_gtest_utils.h"
+#include "backends/tofino/phv/phv_fields.h"
 
 namespace Test {
 

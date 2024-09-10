@@ -1,6 +1,6 @@
 #include "lib/bitvec.h"
 #include "check_extern_invocation.h"
-#include "bf-p4c/device.h"
+#include "backends/tofino/device.h"
 
 namespace BFN {
 

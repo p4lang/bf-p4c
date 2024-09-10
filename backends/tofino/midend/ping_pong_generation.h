@@ -6,7 +6,7 @@
 #include "frontends/p4/methodInstance.h"
 #include "ir/ir.h"
 #include "ir/gress.h"
-#include "bf-p4c/midend/type_checker.h"
+#include "backends/tofino/midend/type_checker.h"
 #include "midend/collect_pipelines.h"
 
 namespace BFN {

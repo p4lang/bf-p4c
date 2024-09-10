@@ -2,7 +2,7 @@
 #define BF_P4C_COMMON_CHECK_HEADER_REFS_H_
 
 #include "ir/ir.h"
-#include "bf-p4c/common/utils.h"
+#include "backends/tofino/common/utils.h"
 
 /**
  * Once the CopyHeaderEliminator and HeaderPushPo passes have run, HeaderRef

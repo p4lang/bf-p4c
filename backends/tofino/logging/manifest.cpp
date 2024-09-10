@@ -6,8 +6,8 @@
 #include "backends/graphs/controls.h"
 #include "backends/graphs/graph_visitor.h"
 #include "backends/graphs/parsers.h"
-#include "bf-p4c/common/run_id.h"
-#include "bf-p4c/version.h"  // for BF_P4C_VERSION
+#include "backends/tofino/common/run_id.h"
+#include "backends/tofino/version.h"  // for BF_P4C_VERSION
 #include "ir/ir.h"
 #include "manifest.h"
 

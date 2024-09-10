@@ -3,9 +3,9 @@
 
 #include "lib/cstring.h"
 
-#include "bf-p4c/phv/v2/phv_kit.h"
-#include "bf-p4c/phv/mau_backtracker.h"
-#include "bf-p4c/phv/utils/utils.h"
+#include "backends/tofino/phv/v2/phv_kit.h"
+#include "backends/tofino/phv/mau_backtracker.h"
+#include "backends/tofino/phv/utils/utils.h"
 
 namespace PHV {
 namespace v2 {

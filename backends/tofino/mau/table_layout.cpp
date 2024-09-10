@@ -1,18 +1,18 @@
-#include "bf-p4c/mau/table_layout.h"
+#include "backends/tofino/mau/table_layout.h"
 #ifdef HAVE_FLATROCK
-#include "bf-p4c/mau/flatrock/table_layout.h"
+#include "backends/tofino/mau/flatrock/table_layout.h"
 #endif
 #include <math.h>
 
 #include <set>
-#include "bf-p4c/common/utils.h"
-#include "bf-p4c/lib/error_type.h"
-#include "bf-p4c/mau/input_xbar.h"
-#include "bf-p4c/mau/memories.h"
-#include "bf-p4c/mau/resource.h"
-#include "bf-p4c/mau/resource_estimate.h"
-#include "bf-p4c/mau/table_format.h"
-#include "bf-p4c/phv/phv_fields.h"
+#include "backends/tofino/common/utils.h"
+#include "backends/tofino/lib/error_type.h"
+#include "backends/tofino/mau/input_xbar.h"
+#include "backends/tofino/mau/memories.h"
+#include "backends/tofino/mau/resource.h"
+#include "backends/tofino/mau/resource_estimate.h"
+#include "backends/tofino/mau/table_format.h"
+#include "backends/tofino/phv/phv_fields.h"
 #include "lib/bitops.h"
 #include "lib/log.h"
 

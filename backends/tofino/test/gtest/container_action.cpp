@@ -3,11 +3,11 @@
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"
 
-#include "bf-p4c/ir/gress.h"
-#include "bf-p4c/phv/utils/utils.h"
-#include "bf-p4c/mau/action_analysis.h"
+#include "backends/tofino/ir/gress.h"
+#include "backends/tofino/phv/utils/utils.h"
+#include "backends/tofino/mau/action_analysis.h"
 
-#include "bf-p4c/test/gtest/tofino_gtest_utils.h"
+#include "backends/tofino/test/gtest/tofino_gtest_utils.h"
 
 namespace Test {
 

@@ -1,7 +1,7 @@
 #ifndef EXTENSIONS_BF_P4C_PARDE_PARDE_UTILS_H_
 #define EXTENSIONS_BF_P4C_PARDE_PARDE_UTILS_H_
 
-#include "bf-p4c/device.h"
+#include "backends/tofino/device.h"
 
 
 static const IR::BFN::PacketRVal* get_packet_range(const IR::BFN::ParserPrimitive* p) {

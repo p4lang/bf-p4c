@@ -5,8 +5,8 @@
 #include "mau_visitor.h"
 #include "lib/bitvec.h"
 #include "lib/safe_vector.h"
-#include "bf-p4c/ir/tofino_write_context.h"
-#include "bf-p4c/phv/phv_fields.h"
+#include "backends/tofino/ir/tofino_write_context.h"
+#include "backends/tofino/phv/phv_fields.h"
 
 class FieldUse : public MauInspector, TofinoWriteContext {
     const PhvInfo&              phv;

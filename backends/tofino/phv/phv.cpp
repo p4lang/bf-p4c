@@ -1,4 +1,4 @@
-#include "bf-p4c/phv/phv.h"
+#include "backends/tofino/phv/phv.h"
 
 #include <cstring>
 #include <iostream>

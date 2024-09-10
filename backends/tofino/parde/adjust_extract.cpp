@@ -1,9 +1,9 @@
-#include "bf-p4c/parde/adjust_extract.h"
+#include "backends/tofino/parde/adjust_extract.h"
 
 #include <map>
 #include <vector>
 
-#include "bf-p4c/device.h"
+#include "backends/tofino/device.h"
 
 void AdjustExtract::postorder(IR::BFN::ParserState* state) {
     if (!hasMarshaled(state)) return;

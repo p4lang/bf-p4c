@@ -2,7 +2,7 @@
 #define BF_P4C_MAU_ACTION_MUTEX_H_
 
 #include <map>
-#include "bf-p4c/mau/mau_visitor.h"
+#include "backends/tofino/mau/mau_visitor.h"
 #include "lib/symbitmatrix.h"
 
 class ActionMutuallyExclusive : public MauInspector {

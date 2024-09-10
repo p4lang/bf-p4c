@@ -1,4 +1,4 @@
-#include "bf-p4c/phv/analysis/deparser_zero.h"
+#include "backends/tofino/phv/analysis/deparser_zero.h"
 
 Visitor::profile_t IdentifyDeparserZeroCandidates::init_apply(const IR::Node* root) {
     profile_t rv = Inspector::init_apply(root);

@@ -1,5 +1,5 @@
-#include "bf-p4c/common/pragma/all_pragmas.h"
-#include "bf-p4c/phv/analysis/mocha.h"
+#include "backends/tofino/common/pragma/all_pragmas.h"
+#include "backends/tofino/phv/analysis/mocha.h"
 
 Visitor::profile_t CollectMochaCandidates::init_apply(const IR::Node* root) {
     profile_t rv = Inspector::init_apply(root);

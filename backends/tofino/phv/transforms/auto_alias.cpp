@@ -1,4 +1,4 @@
-#include "bf-p4c/phv/transforms/auto_alias.h"
+#include "backends/tofino/phv/transforms/auto_alias.h"
 
 Visitor::profile_t DetermineCandidateHeaders::init_apply(const IR::Node* root) {
     allHeaders.clear();

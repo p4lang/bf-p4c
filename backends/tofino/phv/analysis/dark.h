@@ -2,11 +2,11 @@
 #define EXTENSIONS_BF_P4C_PHV_ANALYSIS_DARK_H_
 
 #include "ir/ir.h"
-#include "bf-p4c/common/field_defuse.h"
-#include "bf-p4c/mau/mau_visitor.h"
-#include "bf-p4c/phv/phv_fields.h"
-#include "bf-p4c/phv/analysis/mocha.h"
-#include "bf-p4c/phv/pragma/phv_pragmas.h"
+#include "backends/tofino/common/field_defuse.h"
+#include "backends/tofino/mau/mau_visitor.h"
+#include "backends/tofino/phv/phv_fields.h"
+#include "backends/tofino/phv/analysis/mocha.h"
+#include "backends/tofino/phv/pragma/phv_pragmas.h"
 
 /** This pass analyses all fields used in the program and marks fields that have nondark uses in the
   * MAU (used on the input crossbar). This pass is used by two different passes:

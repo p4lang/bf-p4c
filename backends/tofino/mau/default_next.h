@@ -2,11 +2,11 @@
 #define BF_P4C_MAU_DEFAULT_NEXT_H_
 
 #include "mau_visitor.h"
-#include "bf-p4c/ir/control_flow_visitor.h"
-#include "bf-p4c/ir/table_tree.h"
+#include "backends/tofino/ir/control_flow_visitor.h"
+#include "backends/tofino/ir/table_tree.h"
 #include "lib/ordered_map.h"
 #include "lib/ordered_set.h"
-#include "bf-p4c/phv/utils/utils.h"  // for operator<<(ordered_set)
+#include "backends/tofino/phv/utils/utils.h"  // for operator<<(ordered_set)
 #include "next_table.h"
 
 class DefaultNext : public MauInspector, public NextTable, BFN::ControlFlowVisitor {

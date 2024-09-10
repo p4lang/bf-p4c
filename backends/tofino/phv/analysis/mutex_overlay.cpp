@@ -2,7 +2,7 @@
 #include <typeinfo>
 #include "ir/ir.h"
 #include "lib/log.h"
-#include "bf-p4c/phv/analysis/mutex_overlay.h"
+#include "backends/tofino/phv/analysis/mutex_overlay.h"
 
 Visitor::profile_t BuildParserOverlay::init_apply(const IR::Node* root) {
     auto rv = BuildMutex::init_apply(root);

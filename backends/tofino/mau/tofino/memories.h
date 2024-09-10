@@ -2,12 +2,12 @@
 #define BF_P4C_MAU_TOFINO_MEMORIES_H_
 
 #include <algorithm>
-#include "bf-p4c/mau/attached_entries.h"
-#include "bf-p4c/mau/tofino/input_xbar.h"
-#include "bf-p4c/mau/table_format.h"
-#include "bf-p4c/mau/instruction_memory.h"
-#include "bf-p4c/mau/action_format.h"
-#include "bf-p4c/mau/memories.h"
+#include "backends/tofino/mau/attached_entries.h"
+#include "backends/tofino/mau/tofino/input_xbar.h"
+#include "backends/tofino/mau/table_format.h"
+#include "backends/tofino/mau/instruction_memory.h"
+#include "backends/tofino/mau/action_format.h"
+#include "backends/tofino/mau/memories.h"
 #include "ir/ir.h"
 #include "lib/safe_vector.h"
 

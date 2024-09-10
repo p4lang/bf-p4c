@@ -1,7 +1,7 @@
 #ifndef BF_P4C_MAU_ATTACHED_INFO_H_
 #define BF_P4C_MAU_ATTACHED_INFO_H_
 
-#include "bf-p4c/mau/mau_visitor.h"
+#include "backends/tofino/mau/mau_visitor.h"
 #include "attached_entries.h"
 #include "ir/pass_manager.h"
 #include "lib/ordered_map.h"

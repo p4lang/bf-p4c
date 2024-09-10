@@ -6,9 +6,9 @@
 #include <fstream>
 #include <boost/algorithm/string.hpp>
 
-#include "bf-p4c/bf-p4c-options.h"
-#include "bf-p4c/ir/gress.h"
-#include "bf-p4c/parde/parser_info.h"
+#include "backends/tofino/bf-p4c-options.h"
+#include "backends/tofino/ir/gress.h"
+#include "backends/tofino/parde/parser_info.h"
 #include "ir/dump.h"
 #include "lib/log.h"
 

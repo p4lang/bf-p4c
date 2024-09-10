@@ -3,8 +3,8 @@
 
 #include "ir/ir.h"
 #include "lib/cstring.h"
-#include "bf-p4c/phv/make_clusters.h"
-#include "bf-p4c/phv/analysis/parser_critical_path.h"
+#include "backends/tofino/phv/make_clusters.h"
+#include "backends/tofino/phv/analysis/parser_critical_path.h"
 
 /** Provide a function to produces an ordered_set<const SuperCluster*> that
  * those SuperClusters have at least one cluster that

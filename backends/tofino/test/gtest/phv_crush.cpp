@@ -4,12 +4,12 @@
 #include "lib/bitvec.h"
 #include "test/gtest/helpers.h"
 
-#include "bf-p4c/device.h"
-#include "bf-p4c/ir/gress.h"
-#include "bf-p4c/phv/allocate_phv.h"
-#include "bf-p4c/phv/slicing/phv_slicing_split.h"
-#include "bf-p4c/phv/utils/utils.h"
-#include "bf-p4c/test/gtest/tofino_gtest_utils.h"
+#include "backends/tofino/device.h"
+#include "backends/tofino/ir/gress.h"
+#include "backends/tofino/phv/allocate_phv.h"
+#include "backends/tofino/phv/slicing/phv_slicing_split.h"
+#include "backends/tofino/phv/utils/utils.h"
+#include "backends/tofino/test/gtest/tofino_gtest_utils.h"
 
 namespace Test {
 

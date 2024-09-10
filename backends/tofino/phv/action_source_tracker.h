@@ -4,8 +4,8 @@
 #include <optional>
 
 #include "ir/ir.h"
-#include "bf-p4c/phv/phv_fields.h"
-#include "bf-p4c/mau/action_analysis.h"
+#include "backends/tofino/phv/phv_fields.h"
+#include "backends/tofino/mau/action_analysis.h"
 
 namespace PHV {
 

@@ -2,7 +2,7 @@
 #define BF_P4C_MAU_TABLE_CONTROL_DEPS_H_
 
 #include "lib/ordered_map.h"
-#include "bf-p4c/mau/mau_visitor.h"
+#include "backends/tofino/mau/mau_visitor.h"
 
 /** Find control dependencies between tables in the presence of multiply applied tables
  * Table B is control dependent on table A if and only if A appears on all IR paths from

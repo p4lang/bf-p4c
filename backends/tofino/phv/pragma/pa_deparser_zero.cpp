@@ -1,5 +1,5 @@
-#include "bf-p4c/phv/pragma/pa_deparser_zero.h"
-#include "bf-p4c/phv/pragma/phv_pragmas.h"
+#include "backends/tofino/phv/pragma/pa_deparser_zero.h"
+#include "backends/tofino/phv/pragma/phv_pragmas.h"
 
 const std::vector<cstring>*
 PragmaDeparserZero::supported_pragmas = new std::vector<cstring>{

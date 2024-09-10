@@ -2,9 +2,9 @@
 #define BF_P4C_MAU_GEN_PRIM_JSON_H_
 
 #include "lib/json.h"
-#include "bf-p4c/common/asm_output.h"
-#include "bf-p4c/mau/ixbar_expr.h"
-#include "bf-p4c/mau/mau_visitor.h"
+#include "backends/tofino/common/asm_output.h"
+#include "backends/tofino/mau/ixbar_expr.h"
+#include "backends/tofino/mau/mau_visitor.h"
 
 // Generate Primitive Info for actions before instruction adjustment. Once
 // instruction adjustment is applied it merges/splits instructions and we loose

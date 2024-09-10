@@ -3,8 +3,8 @@
 #include "frontends/common/resolveReferences/resolveReferences.h"
 #include "frontends/p4/coreLibrary.h"
 #include "lib/ordered_set.h"
-#include "bf-p4c/midend/type_checker.h"
-#include "bf-p4c/arch/bridge_metadata.h"
+#include "backends/tofino/midend/type_checker.h"
+#include "backends/tofino/arch/bridge_metadata.h"
 #include "rewrite_packet_path.h"
 
 namespace BFN {

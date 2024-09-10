@@ -4,12 +4,12 @@
 #include "ir/ir.h"
 #include "lib/log.h"
 #include "lib/symbitmatrix.h"
-#include "bf-p4c/common/field_defuse.h"
-#include "bf-p4c/mau/table_dependency_graph.h"
-#include "bf-p4c/phv/mau_backtracker.h"
-#include "bf-p4c/phv/phv_fields.h"
-#include "bf-p4c/phv/phv_parde_mau_use.h"
-#include "bf-p4c/phv/pragma/phv_pragmas.h"
+#include "backends/tofino/common/field_defuse.h"
+#include "backends/tofino/mau/table_dependency_graph.h"
+#include "backends/tofino/phv/mau_backtracker.h"
+#include "backends/tofino/phv/phv_fields.h"
+#include "backends/tofino/phv/phv_parde_mau_use.h"
+#include "backends/tofino/phv/pragma/phv_pragmas.h"
 
 /** This class calculates the live range of metadata fields (as well as other fields whose live
   * ranges are affected by programmer specified pragmas). The calculated live ranges use the

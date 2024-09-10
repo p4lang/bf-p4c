@@ -1,6 +1,6 @@
 #include "auto_init_metadata.h"
-#include "bf-p4c/common/pragma/all_pragmas.h"
-#include "bf-p4c/phv/pragma/pa_no_init.h"
+#include "backends/tofino/common/pragma/all_pragmas.h"
+#include "backends/tofino/phv/pragma/pa_no_init.h"
 
 bool DisableAutoInitMetadata::auto_init_metadata(const IR::BFN::Pipe* pipe) const {
     for (auto* anno : pipe->global_pragmas) {

@@ -1,9 +1,9 @@
 #include "input_xbar.h"
-#include "bf-p4c/common/ir_utils.h"
-#include "bf-p4c/logging/resources.h"
-#include "bf-p4c/mau/gateway.h"
-#include "bf-p4c/mau/resource.h"
-#include "bf-p4c/phv/phv.h"
+#include "backends/tofino/common/ir_utils.h"
+#include "backends/tofino/logging/resources.h"
+#include "backends/tofino/mau/gateway.h"
+#include "backends/tofino/mau/resource.h"
+#include "backends/tofino/phv/phv.h"
 
 namespace Flatrock {
 

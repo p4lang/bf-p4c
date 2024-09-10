@@ -1,6 +1,6 @@
-#include "bf-p4c/mau/flatrock/table_format.h"
-#include "bf-p4c/mau/flatrock/table_layout.h"
-#include "bf-p4c/mau/memories.h"
+#include "backends/tofino/mau/flatrock/table_format.h"
+#include "backends/tofino/mau/flatrock/table_layout.h"
+#include "backends/tofino/mau/memories.h"
 #include "lib/indent.h"
 
 namespace Flatrock {

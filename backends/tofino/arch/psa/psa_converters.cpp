@@ -1,5 +1,5 @@
-#include "bf-p4c/arch/bridge_metadata.h"
-#include "bf-p4c/arch/program_structure.h"
+#include "backends/tofino/arch/bridge_metadata.h"
+#include "backends/tofino/arch/program_structure.h"
 #include "programStructure.h"
 #include "psa_converters.h"
 #include "lib/ordered_map.h"

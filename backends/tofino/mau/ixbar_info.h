@@ -2,8 +2,8 @@
 #define EXTENSIONS_BF_P4C_MAU_IXBAR_INFO_H_
 
 #include <array>
-#include "bf-p4c/mau/mau_visitor.h"
-#include "bf-p4c/mau/resource.h"
+#include "backends/tofino/mau/mau_visitor.h"
+#include "backends/tofino/mau/resource.h"
 #include "lib/safe_vector.h"
 
 namespace BFN {

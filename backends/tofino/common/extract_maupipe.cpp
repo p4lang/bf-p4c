@@ -11,24 +11,24 @@
 #include "frontends/p4-14/inline_control_flow.h"
 #include "frontends/p4/methodInstance.h"
 #include "frontends/p4/externInstance.h"
-#include "bf-p4c/arch/bridge_metadata.h"
-#include "bf-p4c/arch/helpers.h"
-#include "bf-p4c/common/pragma/collect_global_pragma.h"
-#include "bf-p4c/common/bridged_packing.h"
-#include "bf-p4c/common/utils.h"
-#include "bf-p4c/midend/simplify_references.h"
-#include "bf-p4c/mau/mau_visitor.h"
-#include "bf-p4c/mau/stateful_alu.h"
-#include "bf-p4c/mau/table_dependency_graph.h"
-#include "bf-p4c/mau/resource_estimate.h"
-#include "bf-p4c/parde/deparser_checksum_update.h"
-#include "bf-p4c/parde/extract_parser.h"
-#include "bf-p4c/parde/extract_deparser.h"
+#include "backends/tofino/arch/bridge_metadata.h"
+#include "backends/tofino/arch/helpers.h"
+#include "backends/tofino/common/pragma/collect_global_pragma.h"
+#include "backends/tofino/common/bridged_packing.h"
+#include "backends/tofino/common/utils.h"
+#include "backends/tofino/midend/simplify_references.h"
+#include "backends/tofino/mau/mau_visitor.h"
+#include "backends/tofino/mau/stateful_alu.h"
+#include "backends/tofino/mau/table_dependency_graph.h"
+#include "backends/tofino/mau/resource_estimate.h"
+#include "backends/tofino/parde/deparser_checksum_update.h"
+#include "backends/tofino/parde/extract_parser.h"
+#include "backends/tofino/parde/extract_deparser.h"
 #include "lib/algorithm.h"
 #include "lib/error.h"
 #include "lib/safe_vector.h"
 
-#include "bf-p4c/midend/copy_header.h"   // ENABLE_P4C3251
+#include "backends/tofino/midend/copy_header.h"   // ENABLE_P4C3251
 
 namespace BFN {
 
@@ -142,7 +142,7 @@ class ConvertMethodCalls : public MauTransform {
             name = bi->name;
             recv = bi->appliedTo;
 #if ENABLE_P4C3251
-            // Implemention consolidate in bf-p4c/midend/copy_header.cpp
+            // Implemention consolidate in backends/tofino/midend/copy_header.cpp
             BUG_CHECK(name != IR::Type_Header::setValid &&
                       name != IR::Type_Header::setInvalid &&
                       name != IR::Type_Header::isValid, "%s not removed by DoCopyHeaders", name);

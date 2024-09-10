@@ -1,13 +1,13 @@
 #ifndef BF_P4C_PHV_FINALIZE_PHYSICAL_LIVERANGE_H_
 #define BF_P4C_PHV_FINALIZE_PHYSICAL_LIVERANGE_H_
 
-#include "bf-p4c/common/field_defuse.h"
-#include "bf-p4c/ir/tofino_write_context.h"
-#include "bf-p4c/mau/table_mutex.h"
-#include "bf-p4c/parde/clot/clot_info.h"
-#include "bf-p4c/phv/phv.h"
-#include "bf-p4c/phv/phv_fields.h"
-#include "bf-p4c/phv/pragma/pa_no_init.h"
+#include "backends/tofino/common/field_defuse.h"
+#include "backends/tofino/ir/tofino_write_context.h"
+#include "backends/tofino/mau/table_mutex.h"
+#include "backends/tofino/parde/clot/clot_info.h"
+#include "backends/tofino/phv/phv.h"
+#include "backends/tofino/phv/phv_fields.h"
+#include "backends/tofino/phv/pragma/pa_no_init.h"
 #include "ir/ir.h"
 
 

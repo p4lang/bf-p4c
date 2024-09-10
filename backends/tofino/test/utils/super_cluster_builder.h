@@ -9,9 +9,9 @@
 #include <sstream>
 #include <optional>
 
-#include "bf-p4c/phv/utils/utils.h"
-#include "bf-p4c/phv/allocate_phv.h"
-#include "bf-p4c/ir/bitrange.h"
+#include "backends/tofino/phv/utils/utils.h"
+#include "backends/tofino/phv/allocate_phv.h"
+#include "backends/tofino/ir/bitrange.h"
 
 /// A helpfull class for building SuperClusters
 class SuperClusterBuilder {

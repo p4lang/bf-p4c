@@ -3,7 +3,7 @@
 
 #include "ir/ir.h"
 #include "ir/visitor.h"
-#include "bf-p4c/arch/arch.h"
+#include "backends/tofino/arch/arch.h"
 #include "frontends/p4/methodInstance.h"
 #include "midend/checkExternInvocationCommon.h"
 

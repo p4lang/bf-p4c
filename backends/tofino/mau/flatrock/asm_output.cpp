@@ -1,8 +1,8 @@
 #include <boost/iostreams/detail/select.hpp>
 #include "action_data_bus.h"
-#include "bf-p4c/mau/asm_output.h"
-#include "bf-p4c/mau/asm_hash_output.h"
-#include "bf-p4c/mau/flatrock/asm_output.h"
+#include "backends/tofino/mau/asm_output.h"
+#include "backends/tofino/mau/asm_hash_output.h"
+#include "backends/tofino/mau/flatrock/asm_output.h"
 #include "input_xbar.h"
 
 namespace Flatrock {

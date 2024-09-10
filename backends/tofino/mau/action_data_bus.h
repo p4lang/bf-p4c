@@ -1,8 +1,8 @@
 #ifndef BF_P4C_MAU_ACTION_DATA_BUS_H_
 #define BF_P4C_MAU_ACTION_DATA_BUS_H_
 
-#include "bf-p4c/mau/table_layout.h"
-#include "bf-p4c/mau/action_format.h"
+#include "backends/tofino/mau/table_layout.h"
+#include "backends/tofino/mau/action_format.h"
 #include "lib/safe_vector.h"
 
 /** Algorithm for the allocation of the action data bus.  The action data bus is broken into

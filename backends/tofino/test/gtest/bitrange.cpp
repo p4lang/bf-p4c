@@ -3,8 +3,8 @@
 #include <utility>
 #include "gtest/gtest.h"
 
-#include "bf-p4c/ir/bitrange.h"
-#include "bf-p4c/test/gtest/tofino_gtest_utils.h"
+#include "backends/tofino/ir/bitrange.h"
+#include "backends/tofino/test/gtest/tofino_gtest_utils.h"
 #include "ir/ir.h"
 #include "ir/json_loader.h"
 

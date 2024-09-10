@@ -2,10 +2,10 @@
 #define BF_P4C_MAU_TABLE_MUTEX_H_
 
 #include <map>
-#include "bf-p4c/mau/mau_visitor.h"
-#include "bf-p4c/mau/action_mutex.h"
-#include "bf-p4c/mau/table_layout.h"
-#include "bf-p4c/mau/resource.h"
+#include "backends/tofino/mau/mau_visitor.h"
+#include "backends/tofino/mau/action_mutex.h"
+#include "backends/tofino/mau/table_layout.h"
+#include "backends/tofino/mau/resource.h"
 #include "lib/ordered_map.h"
 #include "lib/safe_vector.h"
 #include "lib/symbitmatrix.h"

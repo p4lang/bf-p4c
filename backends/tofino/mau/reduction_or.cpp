@@ -1,4 +1,4 @@
-#include "bf-p4c/mau/reduction_or.h"
+#include "backends/tofino/mau/reduction_or.h"
 
 /**
  * A check to see if an instruction is part of a reduction or.  The operation is part of

@@ -1,9 +1,9 @@
 #ifndef BF_P4C_MAU_PUSH_POP_H_
 #define BF_P4C_MAU_PUSH_POP_H_
 
-#include "bf-p4c/common/header_stack.h"
+#include "backends/tofino/common/header_stack.h"
 #include "mau_visitor.h"
-#include "bf-p4c/common/slice.h"
+#include "backends/tofino/common/slice.h"
 
 /**
  * Lowers `push_front` and `pop_front` primitives to a sequence of

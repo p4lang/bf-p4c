@@ -5,16 +5,16 @@
 #include "lib/log.h"
 #include "lib/range.h"
 
-#include "bf-p4c/common/asm_output.h"
-#include "bf-p4c/common/autoindent.h"
-#include "bf-p4c/common/debug_info.h"
+#include "backends/tofino/common/asm_output.h"
+#include "backends/tofino/common/autoindent.h"
+#include "backends/tofino/common/debug_info.h"
 #if HAVE_FLATROCK
-#include "bf-p4c/common/flatrock.h"
+#include "backends/tofino/common/flatrock.h"
 #endif  /* HAVE_FLATROCK */
-#include "bf-p4c/parde/asm_output.h"
-#include "bf-p4c/parde/parde_visitor.h"
-#include "bf-p4c/parde/clot/clot_info.h"
-#include "bf-p4c/phv/phv_fields.h"
+#include "backends/tofino/parde/asm_output.h"
+#include "backends/tofino/parde/parde_visitor.h"
+#include "backends/tofino/parde/clot/clot_info.h"
+#include "backends/tofino/phv/phv_fields.h"
 #include "midend/parser_enforce_depth_req.h"
 
 namespace {

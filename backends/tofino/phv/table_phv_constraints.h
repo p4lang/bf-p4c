@@ -2,12 +2,12 @@
 #define BF_P4C_PHV_TABLE_PHV_CONSTRAINTS_H_
 
 #include "ir/ir.h"
-#include "bf-p4c/mau/mau_visitor.h"
-#include "bf-p4c/phv/action_phv_constraints.h"
-#include "bf-p4c/phv/phv_fields.h"
-#include "bf-p4c/phv/analysis/pack_conflicts.h"
-#include "bf-p4c/phv/pragma/pa_container_size.h"
-#include "bf-p4c/phv/utils/slice_alloc.h"
+#include "backends/tofino/mau/mau_visitor.h"
+#include "backends/tofino/phv/action_phv_constraints.h"
+#include "backends/tofino/phv/phv_fields.h"
+#include "backends/tofino/phv/analysis/pack_conflicts.h"
+#include "backends/tofino/phv/pragma/pa_container_size.h"
+#include "backends/tofino/phv/utils/slice_alloc.h"
 
 /** This class enforces the following constraints related to match key sizes for ternary match
   * tables:

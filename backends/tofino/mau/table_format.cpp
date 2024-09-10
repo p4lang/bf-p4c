@@ -5,7 +5,7 @@
 #include "memories.h"
 #include "tofino/input_xbar.h"
 #ifdef HAVE_FLATROCK
-#include "bf-p4c/mau/flatrock/table_format.h"
+#include "backends/tofino/mau/flatrock/table_format.h"
 #endif
 
 void ByteInfo::InterleaveInfo::dbprint(std::ostream &out) const {

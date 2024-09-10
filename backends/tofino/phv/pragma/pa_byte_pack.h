@@ -1,8 +1,8 @@
 #ifndef EXTENSIONS_BF_P4C_PHV_PRAGMA_PA_BYTE_PACK_H_
 #define EXTENSIONS_BF_P4C_PHV_PRAGMA_PA_BYTE_PACK_H_
 
-#include "bf-p4c/phv/phv_fields.h"
-#include "bf-p4c/phv/utils/utils.h"
+#include "backends/tofino/phv/phv_fields.h"
+#include "backends/tofino/phv/utils/utils.h"
 #include "ir/ir.h"
 #include "lib/safe_vector.h"
 

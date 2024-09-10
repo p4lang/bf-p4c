@@ -1,5 +1,5 @@
-#include "bf-p4c/test/utils/super_cluster_builder.h"
-#include "bf-p4c/../p4c/lib/log.h"
+#include "backends/tofino/test/utils/super_cluster_builder.h"
+#include "backends/tofino/../p4c/lib/log.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 // Helpfull inline functions

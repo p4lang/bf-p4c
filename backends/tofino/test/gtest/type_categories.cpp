@@ -1,6 +1,6 @@
 #include "gtest/gtest.h"
 
-#include "bf-p4c/midend/type_categories.h"
+#include "backends/tofino/midend/type_categories.h"
 #include "ir/ir.h"
 
 namespace BFN {

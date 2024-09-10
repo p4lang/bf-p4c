@@ -2,9 +2,9 @@
 #define EXTENSIONS_BF_P4C_PHV_PRAGMA_PA_CONTAINER_TYPE_H_
 
 #include <optional>
-#include "bf-p4c/phv/phv.h"
+#include "backends/tofino/phv/phv.h"
 #include "ir/ir.h"
-#include "bf-p4c/phv/phv_fields.h"
+#include "backends/tofino/phv/phv_fields.h"
 
 /** Specifies the type of container to which a field should be allocated.
   * Syntax is: `@pragma pa_container_type <gress> <fieldname> <container_type>`

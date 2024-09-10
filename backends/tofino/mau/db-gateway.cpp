@@ -1,5 +1,5 @@
 #include "gateway.h"
-#include "bf-p4c/phv/phv_fields.h"
+#include "backends/tofino/phv/phv_fields.h"
 #include "ir/dbprint.h"
 #include "lib/indent.h"
 #include "lib/log.h"

@@ -1,9 +1,9 @@
 #ifndef EXTENSIONS_BF_P4C_PARDE_LOWERED_COMPUTE_MULTI_WRITE_CONTAINERS_H_
 #define EXTENSIONS_BF_P4C_PARDE_LOWERED_COMPUTE_MULTI_WRITE_CONTAINERS_H_
 
-#include "bf-p4c/parde/allocate_parser_checksum.h"
-#include "bf-p4c/parde/parde_visitor.h"
-#include "bf-p4c/parde/clot/clot_info.h"
+#include "backends/tofino/parde/allocate_parser_checksum.h"
+#include "backends/tofino/parde/parde_visitor.h"
+#include "backends/tofino/parde/clot/clot_info.h"
 
 namespace Parde::Lowered {
 

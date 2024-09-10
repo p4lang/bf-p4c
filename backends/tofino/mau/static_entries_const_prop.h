@@ -1,7 +1,7 @@
 #ifndef BF_P4C_MAU_STATIC_ENTRIES_CONST_PROP_H_
 #define BF_P4C_MAU_STATIC_ENTRIES_CONST_PROP_H_
 
-#include "bf-p4c/mau/mau_visitor.h"
+#include "backends/tofino/mau/mau_visitor.h"
 
 /*
   In P4-16, user can specify constant static entries for table matches.

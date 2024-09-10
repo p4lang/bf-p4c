@@ -1,11 +1,11 @@
 #include "fieldslice_live_range.h"
 #include <sstream>
 #include <string>
-#include "bf-p4c/common/field_defuse.h"
-#include "bf-p4c/common/table_printer.h"
-#include "bf-p4c/device.h"
-#include "bf-p4c/phv/phv.h"
-#include "bf-p4c/phv/phv_fields.h"
+#include "backends/tofino/common/field_defuse.h"
+#include "backends/tofino/common/table_printer.h"
+#include "backends/tofino/device.h"
+#include "backends/tofino/phv/phv.h"
+#include "backends/tofino/phv/phv_fields.h"
 #include "lib/exceptions.h"
 #include "lib/safe_vector.h"
 

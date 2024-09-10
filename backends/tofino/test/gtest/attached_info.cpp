@@ -1,4 +1,4 @@
-#include "bf-p4c/mau/attached_info.h"
+#include "backends/tofino/mau/attached_info.h"
 
 #include "bf_gtest_helpers.h"
 #include "gtest/gtest.h"

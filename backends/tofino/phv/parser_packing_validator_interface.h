@@ -1,7 +1,7 @@
 #ifndef BF_P4C_PHV_PARSER_PACKING_VALIDATOR_INTERFACE_H_
 #define BF_P4C_PHV_PARSER_PACKING_VALIDATOR_INTERFACE_H_
 
-#include "bf-p4c/phv/v2/utils_v2.h"
+#include "backends/tofino/phv/v2/utils_v2.h"
 
 namespace PHV {
 

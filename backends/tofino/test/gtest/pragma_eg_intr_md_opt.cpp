@@ -3,8 +3,8 @@
 #include <boost/make_unique.hpp>
 
 #include "gtest/gtest.h"
-#include "bf-p4c/test/gtest/tofino_gtest_utils.h"
-#include "bf-p4c/test/gtest/bf_gtest_helpers.h"
+#include "backends/tofino/test/gtest/tofino_gtest_utils.h"
+#include "backends/tofino/test/gtest/bf_gtest_helpers.h"
 
 
 namespace Test {

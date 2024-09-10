@@ -1,10 +1,10 @@
 #ifndef BF_P4C_MAU_FLATROCK_INPUT_XBAR_H_
 #define BF_P4C_MAU_FLATROCK_INPUT_XBAR_H_
 
-#include "bf-p4c/mau/input_xbar.h"
-#include "bf-p4c/common/alloc.h"
-#include "bf-p4c/mau/asm_output.h"
-#include "bf-p4c/mau/mau_spec.h"
+#include "backends/tofino/mau/input_xbar.h"
+#include "backends/tofino/common/alloc.h"
+#include "backends/tofino/mau/asm_output.h"
+#include "backends/tofino/mau/mau_spec.h"
 
 class Slice;
 

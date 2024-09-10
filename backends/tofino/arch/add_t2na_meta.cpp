@@ -1,5 +1,5 @@
 
-#include "bf-p4c/arch/add_t2na_meta.h"
+#include "backends/tofino/arch/add_t2na_meta.h"
 
 namespace BFN {
 

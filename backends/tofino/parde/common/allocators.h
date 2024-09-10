@@ -1,9 +1,9 @@
 #ifndef EXTENSIONS_BF_P4C_PARDE_COMMON_ALLOCATORS_H_
 #define EXTENSIONS_BF_P4C_PARDE_COMMON_ALLOCATORS_H_
 
-#include "bf-p4c/common/ir_utils.h"
-#include "bf-p4c/parde/parde_visitor.h"
-#include "bf-p4c/parde/clot/clot_info.h"
+#include "backends/tofino/common/ir_utils.h"
+#include "backends/tofino/parde/parde_visitor.h"
+#include "backends/tofino/parde/clot/clot_info.h"
 #include "ir/ir.h"
 
 /**

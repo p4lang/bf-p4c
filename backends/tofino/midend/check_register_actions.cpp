@@ -1,4 +1,4 @@
-#include "bf-p4c/midend/check_register_actions.h"
+#include "backends/tofino/midend/check_register_actions.h"
 #include "frontends/p4/typeMap.h"
 #include "ir/ir.h"
 

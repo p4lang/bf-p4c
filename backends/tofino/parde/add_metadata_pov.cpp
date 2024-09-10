@@ -1,7 +1,7 @@
 #include "add_metadata_pov.h"
 
 #include "ir/ir.h"
-#include "bf-p4c/phv/phv_fields.h"
+#include "backends/tofino/phv/phv_fields.h"
 
 #if HAVE_FLATROCK
 std::map<cstring, std::set<cstring>> AddMetadataPOV::flatrock_dprsr_param_with_pov({

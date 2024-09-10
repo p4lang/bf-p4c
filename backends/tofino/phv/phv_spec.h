@@ -3,7 +3,7 @@
 
 #include <optional>
 #include <vector>
-#include "bf-p4c/phv/phv.h"
+#include "backends/tofino/phv/phv.h"
 #include "lib/ordered_map.h"
 #include "lib/bitvec.h"
 #include "lib/json.h"

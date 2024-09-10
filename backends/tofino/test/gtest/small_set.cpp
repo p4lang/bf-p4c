@@ -1,6 +1,6 @@
 #include <unordered_set>
 
-#include "bf-p4c/lib/small_set.h"
+#include "backends/tofino/lib/small_set.h"
 #include "gtest/gtest.h"
 
 namespace Test {

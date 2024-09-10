@@ -5,7 +5,7 @@
 #include "lib/cstring.h"
 #include "lib/exceptions.h"
 #include "logging/pass_manager.h"
-#include "bf-p4c/ir/gress.h"
+#include "backends/tofino/ir/gress.h"
 
 
 namespace BFN {

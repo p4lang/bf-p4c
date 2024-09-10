@@ -1,4 +1,4 @@
-#include "bf-p4c/phv/analysis/dark.h"
+#include "backends/tofino/phv/analysis/dark.h"
 #include <queue>
 
 Visitor::profile_t CollectNonDarkUses::init_apply(const IR::Node* root) {

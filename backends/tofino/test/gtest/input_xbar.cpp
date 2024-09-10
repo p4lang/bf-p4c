@@ -2,11 +2,11 @@
 
 #include "gtest/gtest.h"
 
-#include "bf-p4c/ir/gress.h"
-#include "bf-p4c/phv/utils/utils.h"
-#include "bf-p4c/mau/tofino/input_xbar.h"
+#include "backends/tofino/ir/gress.h"
+#include "backends/tofino/phv/utils/utils.h"
+#include "backends/tofino/mau/tofino/input_xbar.h"
 
-#include "bf-p4c/test/gtest/tofino_gtest_utils.h"
+#include "backends/tofino/test/gtest/tofino_gtest_utils.h"
 
 namespace Test {
 

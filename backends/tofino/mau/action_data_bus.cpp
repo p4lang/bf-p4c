@@ -1,8 +1,8 @@
 #include "action_data_bus.h"
-#include "bf-p4c/mau/resource.h"
-#include "bf-p4c/mau/tofino/action_data_bus.h"
+#include "backends/tofino/mau/resource.h"
+#include "backends/tofino/mau/tofino/action_data_bus.h"
 #if HAVE_FLATROCK
-#include "bf-p4c/mau/flatrock/action_data_bus.h"
+#include "backends/tofino/mau/flatrock/action_data_bus.h"
 #endif
 
 void ActionDataBus::clear() {

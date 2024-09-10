@@ -2,7 +2,7 @@
 #define EXTENSIONS_BF_P4C_PARDE_CLOT_PSEUDOHEADER_H_
 
 #include "field_slice_set.h"
-#include "bf-p4c/phv/phv_fields.h"
+#include "backends/tofino/phv/phv_fields.h"
 
 /// Represents a sequence of fields that are always contiguously emitted by the deparser. A
 /// pseudoheader may be emitted multiple times by the deparser, each time with a different POV bit.

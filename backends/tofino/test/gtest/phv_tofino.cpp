@@ -1,7 +1,7 @@
 #include <iostream>
 #include <sstream>
 
-#include "bf-p4c/phv/phv.h"
+#include "backends/tofino/phv/phv.h"
 #include "gtest/gtest.h"
 
 #include "ir/ir.h"

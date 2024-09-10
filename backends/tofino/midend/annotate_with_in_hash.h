@@ -37,7 +37,7 @@
 #define EXTENSIONS_BF_P4C_MIDEND_ANNOTATE_WITH_IN_HASH_H_
 
 #include "ir/ir.h"
-#include "bf-p4c/midend/type_checker.h"
+#include "backends/tofino/midend/type_checker.h"
 
 namespace BFN {
 

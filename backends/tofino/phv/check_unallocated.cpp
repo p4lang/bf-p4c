@@ -1,4 +1,4 @@
-#include "bf-p4c/phv/check_unallocated.h"
+#include "backends/tofino/phv/check_unallocated.h"
 #include <initializer_list>
 
 CheckForUnallocatedTemps::CheckForUnallocatedTemps(const PhvInfo& phv, PhvUse& uses,

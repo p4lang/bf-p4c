@@ -1,5 +1,5 @@
 #include "ir/ir.h"
-#include "bf-p4c/arch/intrinsic_metadata.h"
+#include "backends/tofino/arch/intrinsic_metadata.h"
 
 namespace BFN {
 

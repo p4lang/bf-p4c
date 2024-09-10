@@ -2,9 +2,9 @@
 #define EXTENSIONS_BF_P4C_ARCH_FROMV1_0_CHECKSUM_H_
 
 #include "v1_program_structure.h"
-#include "bf-p4c/midend/parser_graph.h"
-#include "bf-p4c/arch/intrinsic_metadata.h"
-#include "bf-p4c/lib/assoc.h"
+#include "backends/tofino/midend/parser_graph.h"
+#include "backends/tofino/arch/intrinsic_metadata.h"
+#include "backends/tofino/lib/assoc.h"
 
 using DeclToStates = ordered_map<const IR::Declaration*, ordered_set<cstring>>;
 

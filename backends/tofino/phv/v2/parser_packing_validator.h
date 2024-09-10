@@ -3,13 +3,13 @@
 
 #include "ir/ir.h"
 
-#include "bf-p4c/lib/assoc.h"
-#include "bf-p4c/common/field_defuse.h"
-#include "bf-p4c/parde/parser_info.h"
-#include "bf-p4c/phv/parser_packing_validator_interface.h"
-#include "bf-p4c/phv/phv_fields.h"
-#include "bf-p4c/phv/pragma/phv_pragmas.h"
-#include "bf-p4c/phv/v2/utils_v2.h"
+#include "backends/tofino/lib/assoc.h"
+#include "backends/tofino/common/field_defuse.h"
+#include "backends/tofino/parde/parser_info.h"
+#include "backends/tofino/phv/parser_packing_validator_interface.h"
+#include "backends/tofino/phv/phv_fields.h"
+#include "backends/tofino/phv/pragma/phv_pragmas.h"
+#include "backends/tofino/phv/v2/utils_v2.h"
 
 namespace PHV {
 namespace v2 {

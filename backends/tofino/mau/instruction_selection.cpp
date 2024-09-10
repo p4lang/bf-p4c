@@ -1,21 +1,21 @@
-#include "bf-p4c/mau/instruction_selection.h"
+#include "backends/tofino/mau/instruction_selection.h"
 
 #include <sstream>
 
 #include <boost/algorithm/string.hpp>
 
-#include "bf-p4c/mau/stateful_alu.h"
-#include "bf-p4c/mau/static_entries_const_prop.h"
+#include "backends/tofino/mau/stateful_alu.h"
+#include "backends/tofino/mau/static_entries_const_prop.h"
 #include "ir/pattern.h"
 #include "lib/bitops.h"
 #include "lib/safe_vector.h"
 #include "action_analysis.h"
 #include "ixbar_expr.h"
-#include "bf-p4c/common/elim_unused.h"
-#include "bf-p4c/common/ir_utils.h"
-#include "bf-p4c/common/slice.h"
-#include "bf-p4c/phv/phv_fields.h"
-#include "bf-p4c/mau/validate_actions.h"
+#include "backends/tofino/common/elim_unused.h"
+#include "backends/tofino/common/ir_utils.h"
+#include "backends/tofino/common/slice.h"
+#include "backends/tofino/phv/phv_fields.h"
+#include "backends/tofino/mau/validate_actions.h"
 
 bool UnimplementedRegisterMethodCalls::preorder(const IR::MAU::Primitive *prim) {
     auto dot = prim->name.find('.');

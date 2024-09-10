@@ -1,4 +1,4 @@
-#include "bf-p4c/parde/create_pov_encoder.h"
+#include "backends/tofino/parde/create_pov_encoder.h"
 
 static const IR::Entry* create_static_entry(unsigned key_size,
                                             unsigned match,

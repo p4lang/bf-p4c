@@ -5,8 +5,8 @@
 #include <map>
 #include <set>
 
-#include "bf-p4c/ir/gress.h"
-#include "bf-p4c/lib/cmp.h"
+#include "backends/tofino/ir/gress.h"
+#include "backends/tofino/lib/cmp.h"
 #include "lib/exceptions.h"
 #include "lib/ordered_map.h"
 

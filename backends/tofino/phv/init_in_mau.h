@@ -3,8 +3,8 @@
 
 #include "ir/visitor.h"
 #include "ir/ir-generated.h"
-#include "bf-p4c/phv/phv_fields.h"
-#include "bf-p4c/phv/add_initialization.h"
+#include "backends/tofino/phv/phv_fields.h"
+#include "backends/tofino/phv/add_initialization.h"
 
 
 // *****************************************************************************************

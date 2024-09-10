@@ -1,6 +1,6 @@
 #include <cmath>
 #include <fstream>
-#include "bf-p4c/device.h"
+#include "backends/tofino/device.h"
 #include "psa.h"
 #include "rewrite_packet_path.h"
 #include "lib/bitops.h"
@@ -9,11 +9,11 @@
 #include "midend/copyStructures.h"
 #include "midend/validateProperties.h"
 #include "psa_converters.h"
-#include "bf-p4c/midend/type_checker.h"
-#include "bf-p4c/arch/bridge_metadata.h"
-#include "bf-p4c/arch/intrinsic_metadata.h"
-#include "bf-p4c/arch/rewrite_action_selector.h"
-#include "bf-p4c/arch/fromv1.0/add_metadata_parser_states.h"
+#include "backends/tofino/midend/type_checker.h"
+#include "backends/tofino/arch/bridge_metadata.h"
+#include "backends/tofino/arch/intrinsic_metadata.h"
+#include "backends/tofino/arch/rewrite_action_selector.h"
+#include "backends/tofino/arch/fromv1.0/add_metadata_parser_states.h"
 #include "rewrite_bridge_metadata.h"
 
 namespace BFN {

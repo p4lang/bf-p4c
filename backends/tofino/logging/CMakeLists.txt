@@ -35,7 +35,7 @@ add_custom_target(genLogging
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/..
   ${CMAKE_CURRENT_BINARY_DIR} ${LIBRAPIDJSON_INCLUDE_DIRS})
-add_executable(test_phv_logging test_phv.cpp ${BFN_P4C_SOURCE_DIR}/bf-p4c/common/run_id.cpp)
+add_executable(test_phv_logging test_phv.cpp ${BFN_P4C_SOURCE_DIR}/common/run_id.cpp)
 add_dependencies(test_phv_logging genLogging)
 
 add_test(NAME test_phv_logging COMMAND ${CMAKE_CURRENT_BINARY_DIR}/test_phv_logging)

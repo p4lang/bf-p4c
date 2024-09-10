@@ -1,4 +1,4 @@
-#include "bf-p4c/common/ir_utils.h"
+#include "backends/tofino/common/ir_utils.h"
 #include "lib/exceptions.h"
 
 IR::Member *gen_fieldref(const IR::HeaderOrMetadata *hdr, cstring field) {

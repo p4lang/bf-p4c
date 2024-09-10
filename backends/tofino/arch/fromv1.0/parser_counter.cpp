@@ -1,8 +1,8 @@
 #include "parser_counter.h"
 #include <boost/range/adaptor/reversed.hpp>
 #include "ir/ir.h"
-#include "bf-p4c/common/utils.h"
-#include "bf-p4c/device.h"
+#include "backends/tofino/common/utils.h"
+#include "backends/tofino/device.h"
 
 namespace BFN {
 namespace V1 {

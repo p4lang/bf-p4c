@@ -6,13 +6,13 @@
  * 1. Frontend
  *   * Parses input P4 file
  *   * Creates IR
- *   * See bf-p4c/frontend.h, bf-p4c/frontend.cpp, and p4c/frontends/
+ *   * See backends/tofino/frontend.h, backends/tofino/frontend.cpp, and p4c/frontends/
  * 2. Generate P4 Runtime
  *   * Creates the Barefoot runtime JSON file
  *   * Currently also:
  *     * replaces typedefs (P4::EliminateTypedef) – this is also done in midend
  *     * rewrites action selectors to newer syntax (BFN::RewriteActionSelector)
- *   * See bf-p4c/control-plane/p4runtime.h, bf-p4c/control-plane/p4runtime.cpp,
+ *   * See backends/tofino/control-plane/p4runtime.h, backends/tofino/control-plane/p4runtime.cpp,
  *     p4c/control-plane/p4RuntimeSerializer.h, and p4c/control-plane/p4RuntimeSerializer.cpp
  * 3. \ref midend
  * 4. \ref post_midend
@@ -21,12 +21,12 @@
  *   * Substitute Packed Headers
  *     * Transforms the IR towards backend IR (vector of pipes, no longer able to be type-checked)
  *     * Replaces flexible type definition with packed version
- *   * See bf-p4c/arch/bridge.h and bf-p4c/arch/bridge.cpp
+ *   * See backends/tofino/arch/bridge.h and backends/tofino/arch/bridge.cpp
  * 5. Source Info Logging
  *   * Creates a JSON file with source info for P4I
  *   * This is done via information that were collected in different parts of the compiler
  *     by CollectSourceInfoLogging
- *   * See bf-p4c/logging/source_info_logging.h and bf-p4c/logging/source_info_logging.cpp
+ *   * See backends/tofino/logging/source_info_logging.h and backends/tofino/logging/source_info_logging.cpp
  * 6. Generate graphs
  *   * Essentially a backend for generating graphs of programs
  *   * See p4c/backends/graphs/
@@ -74,22 +74,22 @@
 #include "backend.h"
 #include "backends/graphs/controls.h"
 #include "backends/graphs/graph_visitor.h"
-#include "bf-p4c/backend.h"
-#include "bf-p4c/common/pragma/collect_global_pragma.h"
-#include "bf-p4c/common/bridged_packing.h"
-#include "bf-p4c/control-plane/runtime.h"
-#include "bf-p4c/frontend.h"
-#include "bf-p4c/lib/error_type.h"
-#include "bf-p4c/logging/collect_diagnostic_checks.h"
-#include "bf-p4c/logging/filelog.h"
-#include "bf-p4c/logging/phv_logging.h"
-#include "bf-p4c/logging/source_info_logging.h"
-#include "bf-p4c/logging/event_logger.h"
-#include "bf-p4c/logging/resources.h"
-#include "bf-p4c/mau/dynhash.h"
-#include "bf-p4c/midend/type_checker.h"
-#include "bf-p4c/mau/table_flow_graph.h"
-#include "bf-p4c/parde/parser_header_sequences.h"
+#include "backends/tofino/backend.h"
+#include "backends/tofino/common/pragma/collect_global_pragma.h"
+#include "backends/tofino/common/bridged_packing.h"
+#include "backends/tofino/control-plane/runtime.h"
+#include "backends/tofino/frontend.h"
+#include "backends/tofino/lib/error_type.h"
+#include "backends/tofino/logging/collect_diagnostic_checks.h"
+#include "backends/tofino/logging/filelog.h"
+#include "backends/tofino/logging/phv_logging.h"
+#include "backends/tofino/logging/source_info_logging.h"
+#include "backends/tofino/logging/event_logger.h"
+#include "backends/tofino/logging/resources.h"
+#include "backends/tofino/mau/dynhash.h"
+#include "backends/tofino/midend/type_checker.h"
+#include "backends/tofino/mau/table_flow_graph.h"
+#include "backends/tofino/parde/parser_header_sequences.h"
 #include "common/extract_maupipe.h"
 #include "common/run_id.h"
 #include "device.h"

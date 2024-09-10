@@ -6,7 +6,7 @@
 #include "gtest/gtest.h"
 #include "frontends/p4/toP4/toP4.h"
 #include "lib/sourceCodeBuilder.h"
-#include "bf-p4c/midend/elim_cast.h"
+#include "backends/tofino/midend/elim_cast.h"
 
 namespace Test {
 

@@ -1,10 +1,10 @@
-#include "bf-p4c/parde/add_parde_metadata.h"
-#include "bf-p4c/arch/bridge_metadata.h"
-#include "bf-p4c/device.h"
-#include "bf-p4c/common/ir_utils.h"
-#include "bf-p4c/common/pragma/all_pragmas.h"
-#include "bf-p4c/common/pragma/collect_global_pragma.h"
-#include "bf-p4c/common/pragma/pragma.h"
+#include "backends/tofino/parde/add_parde_metadata.h"
+#include "backends/tofino/arch/bridge_metadata.h"
+#include "backends/tofino/device.h"
+#include "backends/tofino/common/ir_utils.h"
+#include "backends/tofino/common/pragma/all_pragmas.h"
+#include "backends/tofino/common/pragma/collect_global_pragma.h"
+#include "backends/tofino/common/pragma/pragma.h"
 #include "lib/exceptions.h"
 
 bool AddParserMetadata::preorder(IR::BFN::Parser *parser) {

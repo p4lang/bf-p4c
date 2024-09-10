@@ -10,10 +10,10 @@
 
 #include "ir/ir.h"
 #include "lib/cstring.h"
-#include "bf-p4c/ir/gress.h"
-#include "bf-p4c/ir/control_flow_visitor.h"
-#include "bf-p4c/parde/parde_visitor.h"
-#include "bf-p4c/lib/assoc.h"
+#include "backends/tofino/ir/gress.h"
+#include "backends/tofino/ir/control_flow_visitor.h"
+#include "backends/tofino/parde/parde_visitor.h"
+#include "backends/tofino/lib/assoc.h"
 
 namespace boost {
     enum vertex_state_t { vertex_state };

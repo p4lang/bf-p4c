@@ -1,9 +1,9 @@
-#include "bf-p4c/phv/v2/tx_score.h"
+#include "backends/tofino/phv/v2/tx_score.h"
 
 #include <sstream>
 
-#include "bf-p4c/phv/phv.h"
-#include "bf-p4c/phv/utils/utils.h"
+#include "backends/tofino/phv/phv.h"
+#include "backends/tofino/phv/utils/utils.h"
 #include "lib/exceptions.h"
 
 namespace PHV {

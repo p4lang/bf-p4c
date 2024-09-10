@@ -2,10 +2,10 @@
 #include <fstream>
 #include "bf_gtest_helpers.h"
 #include "gtest/gtest.h"
-#include "bf-p4c/logging/event_logger.h"
+#include "backends/tofino/logging/event_logger.h"
 #include "lib/source_file.h"
 #include "frontends/parsers/parserDriver.h"
-#include "bf-p4c/bf-p4c-options.h"
+#include "backends/tofino/bf-p4c-options.h"
 
 namespace Test {
 class EventLoggerTestable : public EventLogger {

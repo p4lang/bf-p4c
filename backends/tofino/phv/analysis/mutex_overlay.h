@@ -4,14 +4,14 @@
 #include <iostream>
 #include "ir/ir.h"
 #include "ir/visitor.h"
-#include "bf-p4c/phv/pragma/pa_no_pack.h"
-#include "bf-p4c/ir/tofino_write_context.h"
-#include "bf-p4c/mau/mau_visitor.h"
-#include "bf-p4c/parde/parde_visitor.h"
-#include "bf-p4c/parde/parser_info.h"
-#include "bf-p4c/phv/phv_fields.h"
-#include "bf-p4c/phv/analysis/build_mutex.h"
-#include "bf-p4c/phv/analysis/header_mutex.h"
+#include "backends/tofino/phv/pragma/pa_no_pack.h"
+#include "backends/tofino/ir/tofino_write_context.h"
+#include "backends/tofino/mau/mau_visitor.h"
+#include "backends/tofino/parde/parde_visitor.h"
+#include "backends/tofino/parde/parser_info.h"
+#include "backends/tofino/phv/phv_fields.h"
+#include "backends/tofino/phv/analysis/build_mutex.h"
+#include "backends/tofino/phv/analysis/header_mutex.h"
 
 namespace PHV {
 class Field;

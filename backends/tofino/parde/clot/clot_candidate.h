@@ -1,7 +1,7 @@
 #ifndef EXTENSIONS_BF_P4C_PARDE_CLOT_CLOT_CANDIDATE_H_
 #define EXTENSIONS_BF_P4C_PARDE_CLOT_CLOT_CANDIDATE_H_
 
-#include "bf-p4c/lib/cmp.h"
+#include "backends/tofino/lib/cmp.h"
 #include "clot_info.h"
 #include "pseudoheader.h"
 

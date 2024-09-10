@@ -2,8 +2,8 @@
 #define BF_P4C_MIDEND_ACTION_SYNTHESIS_POLICY_H_
 
 #include "midend/actionSynthesis.h"
-#include "bf-p4c/ir/tofino_write_context.h"
-#include "bf-p4c/midend/register_read_write.h"
+#include "backends/tofino/ir/tofino_write_context.h"
+#include "backends/tofino/midend/register_read_write.h"
 
 namespace BFN {
 

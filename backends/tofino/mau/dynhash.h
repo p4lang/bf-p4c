@@ -8,9 +8,9 @@
 #include "lib/cstring.h"
 #include "lib/json.h"
 #include "lib/ordered_map.h"
-#include "bf-p4c/mau/input_xbar.h"
-#include "bf-p4c/mau/tofino/input_xbar.h"
-#include "bf-p4c/phv/phv_fields.h"
+#include "backends/tofino/mau/input_xbar.h"
+#include "backends/tofino/mau/tofino/input_xbar.h"
+#include "backends/tofino/phv/phv_fields.h"
 
 struct HashFuncLoc {
     int stage;

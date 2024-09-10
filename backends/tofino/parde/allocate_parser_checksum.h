@@ -3,9 +3,9 @@
 
 #include "ir/ir.h"
 #include "lib/cstring.h"
-#include "bf-p4c/parde/clot/clot_info.h"
-#include "bf-p4c/parde/parser_info.h"
-#include "bf-p4c/logging/pass_manager.h"
+#include "backends/tofino/parde/clot/clot_info.h"
+#include "backends/tofino/parde/parser_info.h"
+#include "backends/tofino/logging/pass_manager.h"
 #include "parde_visitor.h"
 
 /**

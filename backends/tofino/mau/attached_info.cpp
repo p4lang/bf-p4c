@@ -1,8 +1,8 @@
-#include "bf-p4c/common/slice.h"
-#include "bf-p4c/mau/attached_info.h"
-#include "bf-p4c/mau/resource_estimate.h"
-#include "bf-p4c/mau/table_placement.h"
-#include "bf-p4c/phv/phv_fields.h"
+#include "backends/tofino/common/slice.h"
+#include "backends/tofino/mau/attached_info.h"
+#include "backends/tofino/mau/resource_estimate.h"
+#include "backends/tofino/mau/table_placement.h"
+#include "backends/tofino/phv/phv_fields.h"
 
 
 /** The purpose of the ValidateAttachedOfSingleTable pass is to determine whether or not the

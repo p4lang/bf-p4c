@@ -1,9 +1,9 @@
 #ifndef EXTENSIONS_BF_P4C_COMMON_PRAGMA_ALL_PRAGMAS_H_
 #define EXTENSIONS_BF_P4C_COMMON_PRAGMA_ALL_PRAGMAS_H_
 
-#include "bf-p4c/common/pragma/pragma.h"
-#include "bf-p4c/parde/clot/pragma/do_not_use_clot.h"
-#include "bf-p4c/phv/pragma/phv_pragmas.h"
+#include "backends/tofino/common/pragma/pragma.h"
+#include "backends/tofino/parde/clot/pragma/do_not_use_clot.h"
+#include "backends/tofino/phv/pragma/phv_pragmas.h"
 
 #define DEFINE_PRAGMA_CLASS(cname)      \
   class cname {                         \

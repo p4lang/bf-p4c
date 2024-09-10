@@ -4,9 +4,9 @@
 #include <ir/ir.h>
 #include "ir/pass_manager.h"
 
-#include "bf-p4c/parde/check_parser_multi_write.h"
-#include "bf-p4c/parde/parser_info.h"
-#include "bf-p4c/phv/phv_fields.h"
+#include "backends/tofino/parde/check_parser_multi_write.h"
+#include "backends/tofino/parde/parser_info.h"
+#include "backends/tofino/phv/phv_fields.h"
 
 struct UpdateParserWriteMode : public PassManager {
     explicit UpdateParserWriteMode(const PhvInfo& phv) {

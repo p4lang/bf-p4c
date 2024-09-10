@@ -2,12 +2,12 @@
 #define BF_P4C_MAU_MEMORIES_H_
 
 #include <algorithm>
-#include "bf-p4c/mau/attached_entries.h"
-#include "bf-p4c/mau/input_xbar.h"
-#include "bf-p4c/mau/action_format.h"
+#include "backends/tofino/mau/attached_entries.h"
+#include "backends/tofino/mau/input_xbar.h"
+#include "backends/tofino/mau/action_format.h"
 #include "ir/ir.h"
 #include "lib/safe_vector.h"
-#include "bf-p4c/common/alloc.h"
+#include "backends/tofino/common/alloc.h"
 
 // FIXME -- should be in algorithm.h
 template<class C, class Pred> inline bool any_of(C c, Pred pred) {

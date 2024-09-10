@@ -1,9 +1,9 @@
 #ifndef BF_P4C_MAU_VALIDATE_ACTIONS_H_
 #define BF_P4C_MAU_VALIDATE_ACTIONS_H_
 
-#include "bf-p4c/mau/mau_visitor.h"
+#include "backends/tofino/mau/mau_visitor.h"
 #include "ir/visitor.h"
-#include "bf-p4c/phv/phv_fields.h"
+#include "backends/tofino/phv/phv_fields.h"
 
 class PhvInfo;
 class ReductionOrInfo;

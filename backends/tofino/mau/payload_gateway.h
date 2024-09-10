@@ -2,8 +2,8 @@
 #define BF_P4C_MAU_PAYLOAD_GATEWAY_H_
 
 #include "ir/ir.h"
-#include "bf-p4c/mau/mau_visitor.h"
-#include "bf-p4c/phv/phv.h"
+#include "backends/tofino/mau/mau_visitor.h"
+#include "backends/tofino/phv/phv.h"
 
 class PhvInfo;
 class LayoutChoices;

@@ -1,19 +1,19 @@
 #ifndef EXTENSIONS_BF_P4C_PHV_ANALYSIS_LIVE_RANGE_SHRINKING_H_
 #define EXTENSIONS_BF_P4C_PHV_ANALYSIS_LIVE_RANGE_SHRINKING_H_
 
-#include "bf-p4c/phv/phv_fields.h"
-#include "bf-p4c/common/field_defuse.h"
-#include "bf-p4c/common/map_tables_to_actions.h"
-#include "bf-p4c/mau/table_dependency_graph.h"
-#include "bf-p4c/mau/table_flow_graph.h"
-#include "bf-p4c/mau/table_mutex.h"
-#include "bf-p4c/phv/action_phv_constraints.h"
-#include "bf-p4c/phv/mau_backtracker.h"
-#include "bf-p4c/phv/analysis/dominator_tree.h"
-#include "bf-p4c/phv/analysis/meta_live_range.h"
-#include "bf-p4c/phv/pragma/pa_no_init.h"
-#include "bf-p4c/phv/transforms/auto_alias.h"
-#include "bf-p4c/phv/utils/utils.h"
+#include "backends/tofino/phv/phv_fields.h"
+#include "backends/tofino/common/field_defuse.h"
+#include "backends/tofino/common/map_tables_to_actions.h"
+#include "backends/tofino/mau/table_dependency_graph.h"
+#include "backends/tofino/mau/table_flow_graph.h"
+#include "backends/tofino/mau/table_mutex.h"
+#include "backends/tofino/phv/action_phv_constraints.h"
+#include "backends/tofino/phv/mau_backtracker.h"
+#include "backends/tofino/phv/analysis/dominator_tree.h"
+#include "backends/tofino/phv/analysis/meta_live_range.h"
+#include "backends/tofino/phv/pragma/pa_no_init.h"
+#include "backends/tofino/phv/transforms/auto_alias.h"
+#include "backends/tofino/phv/utils/utils.h"
 
 /** Find the actions in which to initialize metadata fields after live range shrinking.
   */

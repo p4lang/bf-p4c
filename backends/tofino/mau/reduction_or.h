@@ -2,7 +2,7 @@
 #define BF_P4C_MAU_REDUCTION_OR_H_
 
 #include <map>
-#include "bf-p4c/mau/mau_visitor.h"
+#include "backends/tofino/mau/mau_visitor.h"
 #include "lib/ordered_set.h"
 
 /**

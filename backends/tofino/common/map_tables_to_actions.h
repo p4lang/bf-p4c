@@ -2,7 +2,7 @@
 #define EXTENSIONS_BF_P4C_COMMON_MAP_TABLES_TO_ACTIONS_H_
 
 #include "ir/ir.h"
-#include "bf-p4c/phv/utils/utils.h"
+#include "backends/tofino/phv/utils/utils.h"
 
 /** Create maps of tables to associated actions and associated default actions.
   */

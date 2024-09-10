@@ -1,4 +1,4 @@
-#include "bf-p4c/mau/mau_spec.h"
+#include "backends/tofino/mau/mau_spec.h"
 
 #define MAU_SPEC_UNSUPPORTED                                     \
     BUG("Unsupported: a base class was used in a context/place " \

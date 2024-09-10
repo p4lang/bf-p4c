@@ -1,7 +1,7 @@
 #include <algorithm>
 #include <numeric>
 
-#include "bf-p4c/logging/container_size_extractor.h"
+#include "backends/tofino/logging/container_size_extractor.h"
 
 void ContainerSizeExtractor::extract(const PragmaContainerSize &pragma, ConstrainedFieldMap &dst) {
     for (auto &kv : pragma.field_to_layout()) {

@@ -2,8 +2,8 @@
 #define EXTENSIONS_BF_P4C_PARDE_SPLIT_PARSER_STATE_H_
 
 #include "parde_visitor.h"
-#include "bf-p4c/parde/clot/clot_info.h"
-#include "bf-p4c/ir/bitrange.h"
+#include "backends/tofino/parde/clot/clot_info.h"
+#include "backends/tofino/ir/bitrange.h"
 
 /**
  * @ingroup LowerParserIR

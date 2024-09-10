@@ -1,4 +1,4 @@
-#include "bf-p4c/ir/ir_enums.h"
+#include "backends/tofino/ir/ir_enums.h"
 
 static const char *data_aggr_to_str[] = {
     "NONE", "PACKETS", "BYTES", "BOTH"

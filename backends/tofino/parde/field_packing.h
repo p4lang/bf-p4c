@@ -4,8 +4,8 @@
 #include <vector>
 
 #include "lib/cstring.h"
-#include "bf-p4c/ir/bitrange.h"
-#include "bf-p4c/ir/gress.h"
+#include "backends/tofino/ir/bitrange.h"
+#include "backends/tofino/ir/gress.h"
 
 namespace IR {
 namespace BFN {

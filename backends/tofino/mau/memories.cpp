@@ -1,14 +1,14 @@
-#include "bf-p4c/device.h"
-#include "bf-p4c/mau/memories.h"
-#include "bf-p4c/mau/mau_visitor.h"
-#include "bf-p4c/mau/payload_gateway.h"
-#include "bf-p4c/mau/resource.h"
-#include "bf-p4c/mau/resource_estimate.h"
+#include "backends/tofino/device.h"
+#include "backends/tofino/mau/memories.h"
+#include "backends/tofino/mau/mau_visitor.h"
+#include "backends/tofino/mau/payload_gateway.h"
+#include "backends/tofino/mau/resource.h"
+#include "backends/tofino/mau/resource_estimate.h"
 #include "lib/bitops.h"
 #include "lib/range.h"
-#include "bf-p4c/mau/tofino/memories.h"
+#include "backends/tofino/mau/tofino/memories.h"
 #if HAVE_FLATROCK
-#include "bf-p4c/mau/flatrock/memories.h"
+#include "backends/tofino/mau/flatrock/memories.h"
 #endif  /* HAVE_FLATROCK */
 
 constexpr int Memories::SRAM_DEPTH;

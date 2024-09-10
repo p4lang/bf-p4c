@@ -5,9 +5,9 @@
 #include <map>
 #include <set>
 
-#include "bf-p4c/phv/phv_fields.h"
-#include "bf-p4c/phv/utils/utils.h"
-#include "bf-p4c/logging/constrained_fields.h"
+#include "backends/tofino/phv/phv_fields.h"
+#include "backends/tofino/phv/utils/utils.h"
+#include "backends/tofino/logging/constrained_fields.h"
 
 class PhvInfo;
 

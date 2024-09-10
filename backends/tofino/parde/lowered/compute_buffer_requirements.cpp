@@ -1,6 +1,6 @@
 #include "compute_buffer_requirements.h"
 
-#include "bf-p4c/device.h"
+#include "backends/tofino/device.h"
 
 namespace Parde::Lowered {
 

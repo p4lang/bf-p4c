@@ -1,5 +1,5 @@
 
-#include "bf-p4c/common/ir_utils.h"
+#include "backends/tofino/common/ir_utils.h"
 
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"

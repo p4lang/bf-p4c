@@ -3,7 +3,7 @@
 
 #include "ir/ir.h"
 #include "frontends/p4/fromv1.0/converters.h"
-#include "bf-p4c/midend/path_linearizer.h"
+#include "backends/tofino/midend/path_linearizer.h"
 
 namespace P4V1 {
 

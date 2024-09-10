@@ -1,6 +1,6 @@
 #include "simplify_args.h"
-#include "bf-p4c/common/utils.h"
-#include "bf-p4c/midend/path_linearizer.h"
+#include "backends/tofino/common/utils.h"
+#include "backends/tofino/midend/path_linearizer.h"
 
 namespace BFN {
 

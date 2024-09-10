@@ -6,14 +6,14 @@
 #include "lib/exceptions.h"
 #include "frontends/p4/typeMap.h"
 #include "frontends/common/resolveReferences/referenceMap.h"
-#include "bf-p4c/bf-p4c-options.h"
-#include "bf-p4c/arch/bridge_metadata.h"
-#include "bf-p4c/common/ir_utils.h"
-#include "bf-p4c/common/pragma/all_pragmas.h"
-#include "bf-p4c/common/pragma/collect_global_pragma.h"
-#include "bf-p4c/device.h"
-#include "bf-p4c/ir/gress.h"
-#include "bf-p4c/parde/parde_visitor.h"
+#include "backends/tofino/bf-p4c-options.h"
+#include "backends/tofino/arch/bridge_metadata.h"
+#include "backends/tofino/common/ir_utils.h"
+#include "backends/tofino/common/pragma/all_pragmas.h"
+#include "backends/tofino/common/pragma/collect_global_pragma.h"
+#include "backends/tofino/device.h"
+#include "backends/tofino/ir/gress.h"
+#include "backends/tofino/parde/parde_visitor.h"
 
 namespace IR {
 

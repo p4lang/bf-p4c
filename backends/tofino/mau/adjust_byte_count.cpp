@@ -1,4 +1,4 @@
-#include "bf-p4c/mau/adjust_byte_count.h"
+#include "backends/tofino/mau/adjust_byte_count.h"
 
 namespace BFN {
 

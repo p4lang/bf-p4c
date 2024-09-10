@@ -3,7 +3,7 @@
 
 #include "ir/ir.h"
 #include "lib/ordered_map.h"
-#include "bf-p4c/mau/table_summary.h"
+#include "backends/tofino/mau/table_summary.h"
 
 /** When backtracking, this class contains members that save the generated table placement (without
   * container conflicts) for use by the second round of PHV allocation

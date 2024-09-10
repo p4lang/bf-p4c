@@ -1,4 +1,4 @@
-#include "bf-p4c/mau/action_mutex.h"
+#include "backends/tofino/mau/action_mutex.h"
 
 /**
  * The functionality of this algorithm, pretty much the exact same algorithm used right now

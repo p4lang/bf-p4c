@@ -2,8 +2,8 @@
 #define BF_P4C_MIDEND_FOLD_CONSTANT_HASHES_H_
 
 #include "ir/ir.h"
-#include "bf-p4c/midend/type_checker.h"
-#include "bf-p4c/mau/hash_function.h"
+#include "backends/tofino/midend/type_checker.h"
+#include "backends/tofino/mau/hash_function.h"
 #include "dynamic_hash/dynamic_hash.h"
 
 namespace BFN {

@@ -8,7 +8,7 @@
 #include <string>
 #include <vector>
 
-#include "bf-p4c/mau/mau_power.h"
+#include "backends/tofino/mau/mau_power.h"
 
 namespace MauPower {
 class Node;

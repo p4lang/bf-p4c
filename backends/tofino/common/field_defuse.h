@@ -6,9 +6,9 @@
 #include "lib/symbitmatrix.h"
 #include "lib/ltbitmatrix.h"
 #include "lib/ordered_set.h"
-#include "bf-p4c/phv/phv_fields.h"
-#include "bf-p4c/ir/control_flow_visitor.h"
-#include "bf-p4c/ir/tofino_write_context.h"
+#include "backends/tofino/phv/phv_fields.h"
+#include "backends/tofino/ir/control_flow_visitor.h"
+#include "backends/tofino/ir/tofino_write_context.h"
 
 /** @addtogroup parde
  *  @{
@@ -106,7 +106,7 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
         // The reason to have a set of bit range is that there is a case that new def's range only
         // shadows a segment of a previous range, e.g., [3,5] shadows [0,7]. In this case, the
         // unshadowed range will be cut into two ranges. In addition, as shown in
-        // bf-p4c/test/gtest/field_defuse.cpp test case FieldDefUseTest.ComplexSliceTest3, a def may
+        // backends/tofino/test/gtest/field_defuse.cpp test case FieldDefUseTest.ComplexSliceTest3, a def may
         // be duplicated since a def may go through multiple branchs and each branch may have
         // different covered def bit range.
     };

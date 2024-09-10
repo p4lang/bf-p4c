@@ -1,8 +1,8 @@
 #include <algorithm>
-#include "bf-p4c/common/utils.h"
-#include "bf-p4c/mau/action_format.h"
+#include "backends/tofino/common/utils.h"
+#include "backends/tofino/mau/action_format.h"
 #include "lib/bitrange.h"  // DANGER -- two (very) different bitrange.h source files...
-#include "bf-p4c/phv/phv_fields.h"
+#include "backends/tofino/phv/phv_fields.h"
 #include "lib/indent.h"
 
 namespace ActionData {

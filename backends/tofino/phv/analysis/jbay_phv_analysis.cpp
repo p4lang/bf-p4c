@@ -1,6 +1,6 @@
-#include "bf-p4c/device.h"
-#include "bf-p4c/phv/phv_fields.h"
-#include "bf-p4c/phv/phv_parde_mau_use.h"
+#include "backends/tofino/device.h"
+#include "backends/tofino/phv/phv_fields.h"
+#include "backends/tofino/phv/phv_parde_mau_use.h"
 #include "jbay_phv_analysis.h"
 
 Visitor::profile_t JbayPhvAnalysis::init_apply(const IR::Node *root) {

@@ -1,6 +1,6 @@
-#include "bf-p4c/phv/utils/liverange_opti_utils.h"
+#include "backends/tofino/phv/utils/liverange_opti_utils.h"
 #include "ir/ir.h"
-#include "bf-p4c/phv/utils/utils.h"
+#include "backends/tofino/phv/utils/utils.h"
 
 /// @returns true if any of the dominator units in @doms is a parser node.
 bool hasParserUse(const PHV::UnitSet& doms) {

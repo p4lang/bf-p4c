@@ -1,9 +1,9 @@
 #include <lib/bitvec.h>
 #include "desugar_varbit_extract.h"
 #include "frontends/common/constantFolding.h"
-#include "bf-p4c/bf-p4c-options.h"
-#include "bf-p4c/device.h"
-#include "bf-p4c/common/utils.h"
+#include "backends/tofino/bf-p4c-options.h"
+#include "backends/tofino/device.h"
+#include "backends/tofino/common/utils.h"
 
 namespace BFN {
 

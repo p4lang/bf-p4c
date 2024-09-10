@@ -1,16 +1,16 @@
-#include "bf-p4c/phv/phv_fields.h"
+#include "backends/tofino/phv/phv_fields.h"
 
 #include <string>
 #include <boost/range/adaptor/reversed.hpp>
-#include "bf-p4c/arch/bridge_metadata.h"
-#include "bf-p4c/common/bridged_packing.h"
-#include "bf-p4c/common/header_stack.h"
-#include "bf-p4c/common/pragma/all_pragmas.h"
-#include "bf-p4c/common/utils.h"
-#include "bf-p4c/mau/table_summary.h"
-#include "bf-p4c/mau/gateway.h"
-#include "bf-p4c/lib/error_type.h"
-#include "bf-p4c/parde/parde_visitor.h"
+#include "backends/tofino/arch/bridge_metadata.h"
+#include "backends/tofino/common/bridged_packing.h"
+#include "backends/tofino/common/header_stack.h"
+#include "backends/tofino/common/pragma/all_pragmas.h"
+#include "backends/tofino/common/utils.h"
+#include "backends/tofino/mau/table_summary.h"
+#include "backends/tofino/mau/gateway.h"
+#include "backends/tofino/lib/error_type.h"
+#include "backends/tofino/parde/parde_visitor.h"
 #include "lib/stringref.h"
 
 namespace {
@@ -1951,7 +1951,7 @@ class CollectPardeConstraints : public Inspector {
     void postorder(const IR::BFN::DeparserParameter* param) override {
         if (!param->source) return;
 
-        // extract deparser constraints from Deparser & Digest IR nodes ref: bf-p4c/ir/parde.def
+        // extract deparser constraints from Deparser & Digest IR nodes ref: backends/tofino/ir/parde.def
         // set deparser constaints on field
         PHV::Field* f = phv.field(param->source->field);
         BUG_CHECK(f != nullptr, "Field not created in PhvInfo");

@@ -1,10 +1,10 @@
 #ifndef EXTENSIONS_BF_P4C_PARDE_CHARACTERIZE_PARSER_H_
 #define EXTENSIONS_BF_P4C_PARDE_CHARACTERIZE_PARSER_H_
 
-#include "bf-p4c/bf-p4c-options.h"
-#include "bf-p4c/common/table_printer.h"
-#include "bf-p4c/logging/filelog.h"
-#include "bf-p4c/parde/parser_info.h"
+#include "backends/tofino/bf-p4c-options.h"
+#include "backends/tofino/common/table_printer.h"
+#include "backends/tofino/logging/filelog.h"
+#include "backends/tofino/parde/parser_info.h"
 
 /**
  * @ingroup LowerParser

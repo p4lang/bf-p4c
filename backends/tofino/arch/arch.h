@@ -25,11 +25,11 @@
 #include "frontends/p4/uniqueNames.h"
 #include "frontends/p4/sideEffects.h"
 #include "frontends/p4/methodInstance.h"
-#include "bf-p4c/bf-p4c-options.h"
-#include "bf-p4c/ir/gress.h"
-#include "bf-p4c/lib/assoc.h"
-#include "bf-p4c/arch/program_structure.h"
-#include "bf-p4c/midend/type_checker.h"
+#include "backends/tofino/bf-p4c-options.h"
+#include "backends/tofino/ir/gress.h"
+#include "backends/tofino/lib/assoc.h"
+#include "backends/tofino/arch/program_structure.h"
+#include "backends/tofino/midend/type_checker.h"
 
 namespace BFN {
 

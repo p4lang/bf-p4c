@@ -1,7 +1,7 @@
 #include "frontends/p4/externInstance.h"
-#include "bf-p4c/arch/rewrite_action_selector.h"
-#include "bf-p4c/mau/resource_estimate.h"
-#include "bf-p4c/bf-p4c-options.h"
+#include "backends/tofino/arch/rewrite_action_selector.h"
+#include "backends/tofino/mau/resource_estimate.h"
+#include "backends/tofino/bf-p4c-options.h"
 
 namespace BFN {
 

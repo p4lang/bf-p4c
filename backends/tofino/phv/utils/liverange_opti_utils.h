@@ -2,8 +2,8 @@
 #define EXTENSIONS_BF_P4C_PHV_UTILS_LIVERANGE_OPTI_UTILS_H_
 
 #include "ir/ir.h"
-#include "bf-p4c/phv/analysis/dominator_tree.h"
-#include "bf-p4c/phv/utils/slice_alloc.h"
+#include "backends/tofino/phv/analysis/dominator_tree.h"
+#include "backends/tofino/phv/utils/slice_alloc.h"
 
 namespace PHV {
 class Transaction;

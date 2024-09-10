@@ -84,8 +84,8 @@
 
 #include "ir/ir.h"
 #include "frontends/p4/cloner.h"
-#include "bf-p4c/midend/type_checker.h"
-#include "bf-p4c/common/utils.h"
+#include "backends/tofino/midend/type_checker.h"
+#include "backends/tofino/common/utils.h"
 #include "frontends/common/resolveReferences/referenceMap.h"
 
 namespace BFN {

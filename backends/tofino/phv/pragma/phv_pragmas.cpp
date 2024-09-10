@@ -1,4 +1,4 @@
-#include "bf-p4c/phv/pragma/phv_pragmas.h"
+#include "backends/tofino/phv/pragma/phv_pragmas.h"
 
 /// @returns true if for the associated \@pragmaName, the @p gress is either ingress or egress.
 bool PHV::Pragmas::gressValid(cstring gress) {

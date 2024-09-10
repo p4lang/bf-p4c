@@ -2,14 +2,14 @@
 #include "frontends/p4/typeChecking/typeChecker.h"
 #include "frontends/p4/evaluator/evaluator.h"
 #include "midend/validateProperties.h"
-#include "bf-p4c/arch/arch.h"
-#include "bf-p4c/arch/add_t2na_meta.h"
-#include "bf-p4c/arch/check_extern_invocation.h"
-#include "bf-p4c/arch/fromv1.0/phase0.h"
-#include "bf-p4c/arch/t2na.h"
-#include "bf-p4c/arch/rewrite_action_selector.h"
-#include "bf-p4c/bf-p4c-options.h"
-#include "bf-p4c/midend/type_checker.h"
+#include "backends/tofino/arch/arch.h"
+#include "backends/tofino/arch/add_t2na_meta.h"
+#include "backends/tofino/arch/check_extern_invocation.h"
+#include "backends/tofino/arch/fromv1.0/phase0.h"
+#include "backends/tofino/arch/t2na.h"
+#include "backends/tofino/arch/rewrite_action_selector.h"
+#include "backends/tofino/bf-p4c-options.h"
+#include "backends/tofino/midend/type_checker.h"
 
 namespace BFN {
 

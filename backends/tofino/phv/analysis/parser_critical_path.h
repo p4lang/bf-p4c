@@ -3,9 +3,9 @@
 
 #include "ir/ir.h"
 #include "lib/cstring.h"
-#include "bf-p4c/ir/control_flow_visitor.h"
-#include "bf-p4c/parde/parde_visitor.h"
-#include "bf-p4c/phv/phv_fields.h"
+#include "backends/tofino/ir/control_flow_visitor.h"
+#include "backends/tofino/parde/parde_visitor.h"
+#include "backends/tofino/phv/phv_fields.h"
 
 struct ParserCriticalPathResult {
     /// A vector of pairs where the first of a pair is

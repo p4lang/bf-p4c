@@ -3,7 +3,7 @@
 
 #include "ir/ir.h"
 #include "lib/bitvec.h"
-#include "bf-p4c/phv/phv_fields.h"
+#include "backends/tofino/phv/phv_fields.h"
 
 /// Helper class to handle the @hash_mask() annotation.
 class HashMaskAnnotations {

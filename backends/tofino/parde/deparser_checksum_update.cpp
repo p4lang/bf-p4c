@@ -1,14 +1,14 @@
-#include "bf-p4c/parde/deparser_checksum_update.h"
+#include "backends/tofino/parde/deparser_checksum_update.h"
 #include <map>
 
 #include "ir/ir.h"
 #include "ir/pattern.h"
 #include "lib/error.h"
-#include "bf-p4c/bf-p4c-options.h"
-#include "bf-p4c/device.h"
-#include "bf-p4c/common/utils.h"
-#include "bf-p4c/parde/create_pov_encoder.h"
-#include "bf-p4c/parde/parser_info.h"
+#include "backends/tofino/bf-p4c-options.h"
+#include "backends/tofino/device.h"
+#include "backends/tofino/common/utils.h"
+#include "backends/tofino/parde/create_pov_encoder.h"
+#include "backends/tofino/parde/parser_info.h"
 #include "logging/filelog.h"
 
 namespace {

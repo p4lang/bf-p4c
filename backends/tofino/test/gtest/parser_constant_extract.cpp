@@ -6,12 +6,12 @@
 #include "lib/cstring.h"
 #include "lib/error.h"
 #include "test/gtest/helpers.h"
-#include "bf-p4c/common/field_defuse.h"
-#include "bf-p4c/common/elim_unused.h"
-#include "bf-p4c/lib/union_find.hpp"
-#include "bf-p4c/phv/parde_phv_constraints.h"
-#include "bf-p4c/phv/phv_fields.h"
-#include "bf-p4c/test/gtest/tofino_gtest_utils.h"
+#include "backends/tofino/common/field_defuse.h"
+#include "backends/tofino/common/elim_unused.h"
+#include "backends/tofino/lib/union_find.hpp"
+#include "backends/tofino/phv/parde_phv_constraints.h"
+#include "backends/tofino/phv/phv_fields.h"
+#include "backends/tofino/test/gtest/tofino_gtest_utils.h"
 
 // Changes related to inserting parser states might break
 // these tests.

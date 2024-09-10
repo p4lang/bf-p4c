@@ -1,11 +1,11 @@
-#include "bf-p4c/phv/v2/phv_allocation_v2.h"
+#include "backends/tofino/phv/v2/phv_allocation_v2.h"
 
 #include "lib/error.h"
 
-#include "bf-p4c/phv/v2/allocator_base.h"
-#include "bf-p4c/phv/v2/greedy_allocator.h"
-#include "bf-p4c/phv/v2/trivial_allocator.h"
-#include "bf-p4c/phv/v2/smart_packing.h"
+#include "backends/tofino/phv/v2/allocator_base.h"
+#include "backends/tofino/phv/v2/greedy_allocator.h"
+#include "backends/tofino/phv/v2/trivial_allocator.h"
+#include "backends/tofino/phv/v2/smart_packing.h"
 
 namespace PHV {
 namespace v2 {

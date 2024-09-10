@@ -1,6 +1,6 @@
-#include "bf-p4c/phv/v2/greedy_tx_score.h"
+#include "backends/tofino/phv/v2/greedy_tx_score.h"
 
-#include "bf-p4c/phv/phv.h"
+#include "backends/tofino/phv/phv.h"
 #include "gtest/gtest.h"
 
 namespace Test {

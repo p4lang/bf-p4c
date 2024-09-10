@@ -4,9 +4,9 @@
 
 #include "v1_program_structure.h"
 #include "lib/ordered_map.h"
-#include "bf-p4c/arch/bridge_metadata.h"
-#include "bf-p4c/common/utils.h"
-#include "bf-p4c/device.h"
+#include "backends/tofino/arch/bridge_metadata.h"
+#include "backends/tofino/common/utils.h"
+#include "backends/tofino/device.h"
 
 namespace BFN {
 

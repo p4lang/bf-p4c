@@ -2,9 +2,9 @@
 #define EXTENSIONS_BF_P4C_ARCH_PSA_REWRITE_PACKET_PATH_H_
 
 #include "ir/ir.h"
-#include "bf-p4c/arch/program_structure.h"
-#include "bf-p4c/arch/psa/programStructure.h"
-#include "bf-p4c/arch/psa/psa.h"
+#include "backends/tofino/arch/program_structure.h"
+#include "backends/tofino/arch/psa/programStructure.h"
+#include "backends/tofino/arch/psa/psa.h"
 
 namespace BFN {
 

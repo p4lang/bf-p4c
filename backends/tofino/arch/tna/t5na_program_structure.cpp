@@ -19,7 +19,7 @@
 #include "frontends/p4/fromv1.0/converters.h"
 #include "frontends/p4-14/header_type.h"
 #include "frontends/p4-14/typecheck.h"
-#include "bf-p4c/common/parse_annotations.h"
+#include "backends/tofino/common/parse_annotations.h"
 
 namespace BFN {
 

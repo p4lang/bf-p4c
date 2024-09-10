@@ -2,7 +2,7 @@
 #define BF_P4C_PARDE_STACK_PUSH_SHIMS_H_
 
 #include "parde_visitor.h"
-#include "bf-p4c/common/header_stack.h"
+#include "backends/tofino/common/header_stack.h"
 
 /**
  * @ingroup parde

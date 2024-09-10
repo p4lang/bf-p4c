@@ -2,10 +2,10 @@
 #define BF_P4C_MAU_GATEWAY_H_
 
 #include <set>
-#include "bf-p4c/device.h"
-#include "bf-p4c/mau/input_xbar.h"
-#include "bf-p4c/mau/tofino/input_xbar.h"
-#include "bf-p4c/mau/mau_visitor.h"
+#include "backends/tofino/device.h"
+#include "backends/tofino/mau/input_xbar.h"
+#include "backends/tofino/mau/tofino/input_xbar.h"
+#include "backends/tofino/mau/mau_visitor.h"
 #include "lib/safe_vector.h"
 
 namespace PHV {

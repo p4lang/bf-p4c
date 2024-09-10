@@ -1,7 +1,7 @@
 #ifndef BF_P4C_PHV_ADD_ALIAS_ALLOCATION_H_
 #define BF_P4C_PHV_ADD_ALIAS_ALLOCATION_H_
 
-#include "bf-p4c/phv/phv_fields.h"
+#include "backends/tofino/phv/phv_fields.h"
 
 namespace PHV {
 

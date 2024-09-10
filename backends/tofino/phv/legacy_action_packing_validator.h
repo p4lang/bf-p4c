@@ -3,7 +3,7 @@
 
 #include <optional>
 
-#include "bf-p4c/phv/action_packing_validator_interface.h"
+#include "backends/tofino/phv/action_packing_validator_interface.h"
 #include "lib/ordered_set.h"
 
 namespace PHV {

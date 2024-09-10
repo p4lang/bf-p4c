@@ -1,9 +1,9 @@
 #include "frontends/p4/methodInstance.h"
-#include "bf-p4c/device.h"
-#include "bf-p4c/common/ir_utils.h"
-#include "bf-p4c/common/utils.h"
-#include "bf-p4c/parde/extract_deparser.h"
-#include "bf-p4c/bf-p4c-options.h"
+#include "backends/tofino/device.h"
+#include "backends/tofino/common/ir_utils.h"
+#include "backends/tofino/common/utils.h"
+#include "backends/tofino/parde/extract_deparser.h"
+#include "backends/tofino/bf-p4c-options.h"
 #include "ir/pattern.h"
 
 namespace BFN {

@@ -4,7 +4,7 @@
 #include "ir/ir.h"
 #include "frontends/common/resolveReferences/referenceMap.h"
 #include "frontends/p4/typeMap.h"
-#include "bf-p4c/midend/type_checker.h"
+#include "backends/tofino/midend/type_checker.h"
 
 /** At the P4 level, the TNA architecture provides an interface for users to
  * define custom parsers/controls/deparsers that are parameterized on

@@ -12,9 +12,9 @@
 #include "bf_gtest_helpers.h"
 #include "gtest/gtest.h"
 
-#include "bf-p4c/bf-p4c-options.h"
-#include "bf-p4c/control-plane/runtime.h"
-#include "bf-p4c/control-plane/bfruntime_arch_handler.h"
+#include "backends/tofino/bf-p4c-options.h"
+#include "backends/tofino/control-plane/runtime.h"
+#include "backends/tofino/control-plane/bfruntime_arch_handler.h"
 #include "control-plane/p4RuntimeArchStandard.h"
 
 namespace Test {

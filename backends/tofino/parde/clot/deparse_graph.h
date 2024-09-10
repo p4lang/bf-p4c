@@ -1,8 +1,8 @@
 #ifndef EXTENSIONS_BF_P4C_PARDE_CLOT_DEPARSE_GRAPH_H_
 #define EXTENSIONS_BF_P4C_PARDE_CLOT_DEPARSE_GRAPH_H_
 
-#include "bf-p4c/lib/boost_graph.h"
-#include "bf-p4c/phv/phv_fields.h"
+#include "backends/tofino/lib/boost_graph.h"
+#include "backends/tofino/phv/phv_fields.h"
 
 // Declare a type and boost property for DeparseGraph vertices.
 namespace boost {

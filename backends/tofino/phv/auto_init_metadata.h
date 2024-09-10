@@ -7,8 +7,8 @@
 #include "ir/ir.h"
 #include "ir/visitor.h"
 
-#include "bf-p4c/common/elim_unused.h"
-#include "bf-p4c/common/field_defuse.h"
+#include "backends/tofino/common/elim_unused.h"
+#include "backends/tofino/common/field_defuse.h"
 
 /// By default, the compiler automatically initializes metadata at the start of each gress.
 /// This pass disables this automatic initialization by adding \@pa_no_init annotations to all

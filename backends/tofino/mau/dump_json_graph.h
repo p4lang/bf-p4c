@@ -1,8 +1,8 @@
 #ifndef BF_P4C_MAU_DUMP_JSON_GRAPH_H_
 #define BF_P4C_MAU_DUMP_JSON_GRAPH_H_
 
-#include "bf-p4c/logging/pass_manager.h"
-#include "bf-p4c/mau/table_dependency_graph.h"
+#include "backends/tofino/logging/pass_manager.h"
+#include "backends/tofino/mau/table_dependency_graph.h"
 
 class DumpJsonGraph : public PassManager {
     FlowGraph fg;

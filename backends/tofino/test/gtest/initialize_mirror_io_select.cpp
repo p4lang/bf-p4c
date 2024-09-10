@@ -4,14 +4,14 @@
  * TOF3-DOC: Applies to Tofino3 targets as well.
  */
 
-#include "bf-p4c/midend/initialize_mirror_io_select.h"
+#include "backends/tofino/midend/initialize_mirror_io_select.h"
 
 #include "bf_gtest_helpers.h"
 #include "gtest/gtest.h"
 
-#include "bf-p4c/arch/arch.h"
-#include "bf-p4c/bf-p4c-options.h"
-#include "bf-p4c/midend/type_checker.h"
+#include "backends/tofino/arch/arch.h"
+#include "backends/tofino/bf-p4c-options.h"
+#include "backends/tofino/midend/type_checker.h"
 #include "frontends/common/resolveReferences/referenceMap.h"
 #include "frontends/p4/typeMap.h"
 

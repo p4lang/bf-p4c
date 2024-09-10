@@ -1,9 +1,9 @@
 #ifndef BF_P4C_MAU_INSTRUCTION_MEMORY_H_
 #define BF_P4C_MAU_INSTRUCTION_MEMORY_H_
 
-#include "bf-p4c/mau/table_layout.h"
-#include "bf-p4c/ir/gress.h"
-#include "bf-p4c/common/alloc.h"
+#include "backends/tofino/mau/table_layout.h"
+#include "backends/tofino/ir/gress.h"
+#include "backends/tofino/common/alloc.h"
 
 class GenerateVLIWInstructions {
     PhvInfo &phv;

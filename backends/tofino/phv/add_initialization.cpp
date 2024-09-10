@@ -1,4 +1,4 @@
-#include "bf-p4c/phv/add_initialization.h"
+#include "backends/tofino/phv/add_initialization.h"
 #include "boost/optional/optional_io.hpp"
 
 bool MapFieldToExpr::preorder(const IR::Expression* expr) {

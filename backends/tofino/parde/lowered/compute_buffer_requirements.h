@@ -1,7 +1,7 @@
 #ifndef EXTENSIONS_BF_P4C_PARDE_LOWERED_COMPUTE_BUFFER_REQUIREMENTS_H_
 #define EXTENSIONS_BF_P4C_PARDE_LOWERED_COMPUTE_BUFFER_REQUIREMENTS_H_
 
-#include "bf-p4c/parde/parde_visitor.h"
+#include "backends/tofino/parde/parde_visitor.h"
 
 namespace Parde::Lowered {
 

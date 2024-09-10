@@ -1,12 +1,12 @@
-#include "bf-p4c/mau/instruction_memory.h"
-#include "bf-p4c/mau/resource.h"
-#include "bf-p4c/mau/table_format.h"
-#include "bf-p4c/phv/phv_fields.h"
-#include "bf-p4c/device.h"
+#include "backends/tofino/mau/instruction_memory.h"
+#include "backends/tofino/mau/resource.h"
+#include "backends/tofino/mau/table_format.h"
+#include "backends/tofino/phv/phv_fields.h"
+#include "backends/tofino/device.h"
 
-#include "bf-p4c/mau/tofino/instruction_memory.h"
+#include "backends/tofino/mau/tofino/instruction_memory.h"
 #if HAVE_FLATROCK
-#include "bf-p4c/mau/flatrock/instruction_memory.h"
+#include "backends/tofino/mau/flatrock/instruction_memory.h"
 #endif
 
 GenerateVLIWInstructions::GenerateVLIWInstructions(PhvInfo &p, ActionData::FormatType_t ft,

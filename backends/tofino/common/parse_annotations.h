@@ -2,7 +2,7 @@
 #define EXTENSIONS_BF_P4C_COMMON_PARSE_ANNOTATIONS_H_
 
 #include "ir/ir.h"
-#include "bf-p4c/common/pragma/all_pragmas.h"
+#include "backends/tofino/common/pragma/all_pragmas.h"
 #include "frontends/p4/parseAnnotations.h"
 
 namespace BFN {

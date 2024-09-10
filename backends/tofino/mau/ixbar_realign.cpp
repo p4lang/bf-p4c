@@ -1,6 +1,6 @@
-#include "bf-p4c/mau/ixbar_realign.h"
-#include "bf-p4c/mau/table_summary.h"
-#include "bf-p4c/phv/phv_fields.h"
+#include "backends/tofino/mau/ixbar_realign.h"
+#include "backends/tofino/mau/table_summary.h"
+#include "backends/tofino/phv/phv_fields.h"
 #include "lib/hex.h"
 
 class IXBarVerify::GetCurrentUse : public MauInspector {

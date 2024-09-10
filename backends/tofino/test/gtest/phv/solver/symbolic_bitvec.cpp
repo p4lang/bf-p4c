@@ -1,4 +1,4 @@
-#include "bf-p4c/phv/solver/symbolic_bitvec.h"
+#include "backends/tofino/phv/solver/symbolic_bitvec.h"
 #include "gtest/gtest.h"
 
 namespace Test {

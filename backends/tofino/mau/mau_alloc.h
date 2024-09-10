@@ -5,12 +5,12 @@
 #include "lib/json.h"
 
 #include "bf-p4c-options.h"
-#include "bf-p4c/logging/pass_manager.h"
-#include "bf-p4c/mau/payload_gateway.h"
-#include "bf-p4c/mau/table_dependency_graph.h"
-#include "bf-p4c/mau/table_mutex.h"
-#include "bf-p4c/mau/table_layout.h"
-#include "bf-p4c/phv/mau_backtracker.h"
+#include "backends/tofino/logging/pass_manager.h"
+#include "backends/tofino/mau/payload_gateway.h"
+#include "backends/tofino/mau/table_dependency_graph.h"
+#include "backends/tofino/mau/table_mutex.h"
+#include "backends/tofino/mau/table_layout.h"
+#include "backends/tofino/phv/mau_backtracker.h"
 
 class TableSummary;
 

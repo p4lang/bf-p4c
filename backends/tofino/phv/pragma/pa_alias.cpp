@@ -3,10 +3,10 @@
 #include <sstream>
 
 #include "lib/log.h"
-#include "bf-p4c/common/utils.h"
-#include "bf-p4c/common/table_printer.h"
-#include "bf-p4c/phv/pragma/pa_alias.h"
-#include "bf-p4c/phv/pragma/phv_pragmas.h"
+#include "backends/tofino/common/utils.h"
+#include "backends/tofino/common/table_printer.h"
+#include "backends/tofino/phv/pragma/pa_alias.h"
+#include "backends/tofino/phv/pragma/phv_pragmas.h"
 #include "bf-p4c-options.h"
 
 /// BFN::Pragma interface

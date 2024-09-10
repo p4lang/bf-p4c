@@ -8,14 +8,14 @@
 #include "frontends/common/resolveReferences/referenceMap.h"
 #include "frontends/p4/externInstance.h"
 #include "frontends/p4/typeMap.h"
-#include "bf-p4c/lib/assoc.h"
-#include "bf-p4c/mau/mau_visitor.h"
-#include "bf-p4c/midend/param_binding.h"
-#include "bf-p4c/arch/fromv1.0/resubmit.h"
-#include "bf-p4c/arch/fromv1.0/mirror.h"
-#include "bf-p4c/arch/arch.h"
-#include "bf-p4c/logging/source_info_logging.h"
-#include "bf-p4c/device.h"
+#include "backends/tofino/lib/assoc.h"
+#include "backends/tofino/mau/mau_visitor.h"
+#include "backends/tofino/midend/param_binding.h"
+#include "backends/tofino/arch/fromv1.0/resubmit.h"
+#include "backends/tofino/arch/fromv1.0/mirror.h"
+#include "backends/tofino/arch/arch.h"
+#include "backends/tofino/logging/source_info_logging.h"
+#include "backends/tofino/device.h"
 
 class BFN_Options;
 class CreateSaluInstruction;

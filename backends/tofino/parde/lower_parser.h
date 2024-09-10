@@ -5,7 +5,7 @@
 #include "logging/pass_manager.h"
 #include "logging/phv_logging.h"
 #include "common/utils.h"
-#include "bf-p4c/parde/parser_header_sequences.h"
+#include "backends/tofino/parde/parser_header_sequences.h"
 
 class ClotInfo;
 class PhvInfo;

@@ -4,8 +4,8 @@
 #include "gtest/gtest.h"
 #include "lib/error.h"
 #include "frontends/parsers/parserDriver.h"
-#include "bf-p4c/logging/collect_diagnostic_checks.h"
-#include "bf-p4c/arch/arch.h"
+#include "backends/tofino/logging/collect_diagnostic_checks.h"
+#include "backends/tofino/arch/arch.h"
 
 namespace Test {
 class ErrorReporterTest : public ::testing::Test {
@@ -14,8 +14,8 @@ class ErrorReporterTest : public ::testing::Test {
     std::string ROOT_DIR = std::string(__FILE__);
 
     void SetUp() {
-        // ROOT_DIR currently looks like 'ROOT_DIR/bf-p4c/test/gtest/error_reporter.cpp' -> adjust
-        const std::string SUFFIX("/p4c/extensions/bf-p4c/test/gtest/error_reporter.cpp");
+        // ROOT_DIR currently looks like 'ROOT_DIR/backends/tofino/test/gtest/error_reporter.cpp' -> adjust
+        const std::string SUFFIX("/p4c/extensions/backends/tofino/test/gtest/error_reporter.cpp");
         ROOT_DIR = ROOT_DIR.substr(0, ROOT_DIR.size() - std::string(SUFFIX).size());
     }
 

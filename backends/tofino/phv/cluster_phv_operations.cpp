@@ -1,6 +1,6 @@
-#include "bf-p4c/phv/cluster_phv_operations.h"
-#include "bf-p4c/phv/phv_fields.h"
-#include "bf-p4c/ir/bitrange.h"
+#include "backends/tofino/phv/cluster_phv_operations.h"
+#include "backends/tofino/phv/phv_fields.h"
+#include "backends/tofino/ir/bitrange.h"
 #include "common/utils.h"
 #include "lib/log.h"
 

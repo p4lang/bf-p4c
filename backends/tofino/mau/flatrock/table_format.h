@@ -1,7 +1,7 @@
 #ifndef BF_P4C_MAU_FLATROCK_TABLE_FORMAT_H_
 #define BF_P4C_MAU_FLATROCK_TABLE_FORMAT_H_
 
-#include "bf-p4c/mau/table_format.h"
+#include "backends/tofino/mau/table_format.h"
 
 namespace Flatrock {
 struct TableFormat : ::TableFormat {

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "bf-p4c/phv/utils/utils.h"
+#include "backends/tofino/phv/utils/utils.h"
 
 namespace PHV {
 

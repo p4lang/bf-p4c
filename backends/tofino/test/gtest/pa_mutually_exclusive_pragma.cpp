@@ -4,11 +4,11 @@
 #include <boost/algorithm/string/replace.hpp>
 #include "gtest/gtest.h"
 
-#include "bf-p4c/common/header_stack.h"
-#include "bf-p4c/phv/analysis/mutex_overlay.h"
-#include "bf-p4c/phv/phv_fields.h"
-#include "bf-p4c/phv/pragma/pa_mutually_exclusive.h"
-#include "bf-p4c/test/gtest/tofino_gtest_utils.h"
+#include "backends/tofino/common/header_stack.h"
+#include "backends/tofino/phv/analysis/mutex_overlay.h"
+#include "backends/tofino/phv/phv_fields.h"
+#include "backends/tofino/phv/pragma/pa_mutually_exclusive.h"
+#include "backends/tofino/test/gtest/tofino_gtest_utils.h"
 #include "ir/ir.h"
 #include "lib/error.h"
 #include "test/gtest/helpers.h"

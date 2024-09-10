@@ -2,9 +2,9 @@
 #define BF_P4C_PARDE_INFER_PAYLOAD_OFFSET_H_
 
 #include "ir/ir.h"
-#include "bf-p4c/common/field_defuse.h"
-#include "bf-p4c/parde/parde_visitor.h"
-#include "bf-p4c/parde/parde_utils.h"
+#include "backends/tofino/common/field_defuse.h"
+#include "backends/tofino/parde/parde_visitor.h"
+#include "backends/tofino/parde/parde_utils.h"
 
 /**
  * @ingroup parde

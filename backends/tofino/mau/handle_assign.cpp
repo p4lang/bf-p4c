@@ -1,7 +1,7 @@
-#include "bf-p4c/mau/handle_assign.h"
-#include "bf-p4c/mau/input_xbar.h"
-#include "bf-p4c/mau/tofino/input_xbar.h"
-#include "bf-p4c/mau/resource_estimate.h"
+#include "backends/tofino/mau/handle_assign.h"
+#include "backends/tofino/mau/input_xbar.h"
+#include "backends/tofino/mau/tofino/input_xbar.h"
+#include "backends/tofino/mau/resource_estimate.h"
 #include "lib/safe_vector.h"
 
 

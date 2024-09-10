@@ -1,7 +1,7 @@
 /* -*-C++-*- */
 
 #emit
-#include "bf-p4c/ir/gress.h"
+#include "backends/tofino/ir/gress.h"
 #include "lib/ordered_map.h"
 #end
 

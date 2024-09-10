@@ -1,7 +1,7 @@
 #ifndef BF_P4C_MAU_FLATROCK_ASM_OUTPUT_H_
 #define BF_P4C_MAU_FLATROCK_ASM_OUTPUT_H_
 
-#include "bf-p4c/mau/asm_output.h"
+#include "backends/tofino/mau/asm_output.h"
 
 namespace Flatrock {
 

@@ -1,7 +1,7 @@
 #include "split_parser_state.h"
-#include "bf-p4c/common/utils.h"
-#include "bf-p4c/parde/parser_query.h"
-#include "bf-p4c/parde/parde_utils.h"
+#include "backends/tofino/common/utils.h"
+#include "backends/tofino/parde/parser_query.h"
+#include "backends/tofino/parde/parde_utils.h"
 
 class DumpSplitStates : public DotDumper {
  public:

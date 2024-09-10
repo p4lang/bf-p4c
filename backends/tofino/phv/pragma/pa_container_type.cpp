@@ -1,12 +1,12 @@
-#include "bf-p4c/phv/pragma/pa_container_type.h"
+#include "backends/tofino/phv/pragma/pa_container_type.h"
 
 #include <string>
 #include <numeric>
 
-#include "bf-p4c/phv/phv.h"
+#include "backends/tofino/phv/phv.h"
 #include "lib/log.h"
-#include "bf-p4c/common/utils.h"
-#include "bf-p4c/phv/pragma/phv_pragmas.h"
+#include "backends/tofino/common/utils.h"
+#include "backends/tofino/phv/pragma/phv_pragmas.h"
 
 namespace {
 

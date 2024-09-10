@@ -2,7 +2,7 @@
 #define EXTENSIONS_BF_P4C_ARCH_ARCH_SPEC_H_
 
 #include "ir/ir.h"
-#include "bf-p4c/ir/gress.h"
+#include "backends/tofino/ir/gress.h"
 
 struct IntrinsicField {
  public:

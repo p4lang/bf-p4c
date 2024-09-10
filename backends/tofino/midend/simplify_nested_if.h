@@ -13,10 +13,10 @@
 #include "frontends/p4/simplify.h"
 #include "frontends/p4/typeChecking/typeChecker.h"
 #include "frontends/p4/typeMap.h"
-#include "bf-p4c/midend/path_linearizer.h"
-#include "bf-p4c/midend/type_categories.h"
-#include "bf-p4c/midend/type_checker.h"
-#include "bf-p4c/device.h"
+#include "backends/tofino/midend/path_linearizer.h"
+#include "backends/tofino/midend/type_categories.h"
+#include "backends/tofino/midend/type_checker.h"
+#include "backends/tofino/device.h"
 
 #ifndef _EXTENSIONS_BF_P4C_MIDEND_SIMPLIFY_NESTED_IF_H_
 #define _EXTENSIONS_BF_P4C_MIDEND_SIMPLIFY_NESTED_IF_H_

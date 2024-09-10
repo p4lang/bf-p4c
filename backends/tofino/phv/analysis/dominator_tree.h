@@ -2,8 +2,8 @@
 #define EXTENSIONS_BF_P4C_PHV_ANALYSIS_DOMINATOR_TREE_H_
 
 #include "ir/ir.h"
-#include "bf-p4c/mau/mau_visitor.h"
-#include "bf-p4c/mau/table_flow_graph.h"
+#include "backends/tofino/mau/mau_visitor.h"
+#include "backends/tofino/mau/table_flow_graph.h"
 
 /** This class builds an immediate dominator tree using separate table flow graphs for ingress and
   * egress. This class uses the Lengauer-Tarjan dominator tree algorithm offered by boost.

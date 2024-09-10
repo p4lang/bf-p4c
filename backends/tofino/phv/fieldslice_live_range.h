@@ -3,14 +3,14 @@
 
 #include <algorithm>
 
-#include "bf-p4c/parde/clot/clot_info.h"
+#include "backends/tofino/parde/clot/clot_info.h"
 #include "mau_backtracker.h"
 #include "lib/safe_vector.h"
-#include "bf-p4c/common/field_defuse.h"
-#include "bf-p4c/mau/action_analysis.h"
-#include "bf-p4c/common/map_tables_to_actions.h"
-#include "bf-p4c/phv/phv.h"
-#include "bf-p4c/phv/pragma/phv_pragmas.h"
+#include "backends/tofino/common/field_defuse.h"
+#include "backends/tofino/mau/action_analysis.h"
+#include "backends/tofino/common/map_tables_to_actions.h"
+#include "backends/tofino/phv/phv.h"
+#include "backends/tofino/phv/pragma/phv_pragmas.h"
 
 namespace PHV {
 

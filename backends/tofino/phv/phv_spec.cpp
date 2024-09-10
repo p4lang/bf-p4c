@@ -1,9 +1,9 @@
-#include "bf-p4c/phv/phv_spec.h"
+#include "backends/tofino/phv/phv_spec.h"
 
 #include <optional>
 #include <sstream>
-#include "bf-p4c/bf-p4c-options.h"
-#include "bf-p4c/common/pragma/all_pragmas.h"
+#include "backends/tofino/bf-p4c-options.h"
+#include "backends/tofino/common/pragma/all_pragmas.h"
 #include "lib/bitvec.h"
 #include "lib/cstring.h"
 #include "lib/exceptions.h"

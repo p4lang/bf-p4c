@@ -1,4 +1,4 @@
-#include "bf-p4c/arch/helpers.h"
+#include "backends/tofino/arch/helpers.h"
 
 namespace BFN {
 

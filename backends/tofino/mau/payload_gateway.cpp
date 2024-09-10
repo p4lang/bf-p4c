@@ -1,11 +1,11 @@
-#include "bf-p4c/mau/payload_gateway.h"
+#include "backends/tofino/mau/payload_gateway.h"
 
 #include <boost/range/combine.hpp>
 
-#include "bf-p4c/mau/gateway.h"
-#include "bf-p4c/mau/resource.h"
-#include "bf-p4c/mau/table_format.h"
-#include "bf-p4c/phv/phv_fields.h"
+#include "backends/tofino/mau/gateway.h"
+#include "backends/tofino/mau/resource.h"
+#include "backends/tofino/mau/table_format.h"
+#include "backends/tofino/phv/phv_fields.h"
 
 
 /**

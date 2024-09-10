@@ -2,7 +2,7 @@
  *  Collect pipelines form program.
  */
 #include "collect_pipelines.h"
-#include "bf-p4c/device.h"
+#include "backends/tofino/device.h"
 
 namespace BFN {
 

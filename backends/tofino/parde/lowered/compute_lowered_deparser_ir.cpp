@@ -1,8 +1,8 @@
 #include "compute_lowered_deparser_ir.h"
 
-#include "bf-p4c/common/ir_utils.h"
-#include "bf-p4c/common/utils.h"
-#include "bf-p4c/device.h"
+#include "backends/tofino/common/ir_utils.h"
+#include "backends/tofino/common/utils.h"
+#include "backends/tofino/device.h"
 #include "helpers.h"
 
 namespace Parde::Lowered {

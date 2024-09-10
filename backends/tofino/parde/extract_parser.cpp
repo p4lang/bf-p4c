@@ -7,14 +7,14 @@
 
 #include "ir/ir.h"
 #include "lib/log.h"
-#include "bf-p4c/midend/parser_graph.h"
-#include "bf-p4c/device.h"
-#include "bf-p4c/arch/arch.h"
-#include "bf-p4c/common/utils.h"
-#include "bf-p4c/common/asm_output.h"
-#include "bf-p4c/parde/add_parde_metadata.h"
-#include "bf-p4c/parde/dump_parser.h"
-#include "bf-p4c/parde/parser_loops_info.h"
+#include "backends/tofino/midend/parser_graph.h"
+#include "backends/tofino/device.h"
+#include "backends/tofino/arch/arch.h"
+#include "backends/tofino/common/utils.h"
+#include "backends/tofino/common/asm_output.h"
+#include "backends/tofino/parde/add_parde_metadata.h"
+#include "backends/tofino/parde/dump_parser.h"
+#include "backends/tofino/parde/parser_loops_info.h"
 
 namespace BFN {
 

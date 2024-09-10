@@ -3,10 +3,10 @@
 #emit
 #include "lib/match.h"
 #include <optional>
-#include "bf-p4c/common/debug_info.h"
-#include "bf-p4c/ir/bitrange.h"
-#include "bf-p4c/parde/marshal.h"
-#include "bf-p4c/parde/match_register.h"
+#include "backends/tofino/common/debug_info.h"
+#include "backends/tofino/ir/bitrange.h"
+#include "backends/tofino/parde/marshal.h"
+#include "backends/tofino/parde/match_register.h"
 #end
 
 namespace BFN {

@@ -1,10 +1,10 @@
 #include <algorithm>
 #include <map>
 #include <vector>
-#include "bf-p4c/mau/determine_power_usage.h"
-#include "bf-p4c/mau/mau_power.h"
-#include "bf-p4c/mau/resource_estimate.h"
-#include "bf-p4c/phv/phv.h"
+#include "backends/tofino/mau/determine_power_usage.h"
+#include "backends/tofino/mau/mau_power.h"
+#include "backends/tofino/mau/resource_estimate.h"
+#include "backends/tofino/phv/phv.h"
 
 namespace MauPower {
 

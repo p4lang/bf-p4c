@@ -11,8 +11,8 @@
 #include <set>
 #include <algorithm>
 
-#include "bf-p4c/common/table_printer.h"
-#include "bf-p4c/phv/phv.h"
+#include "backends/tofino/common/table_printer.h"
+#include "backends/tofino/phv/phv.h"
 
 struct StateExtractUsage {
     static const std::vector<PHV::Size> extractor_sizes;

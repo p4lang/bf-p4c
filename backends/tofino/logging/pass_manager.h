@@ -4,8 +4,8 @@
 #include "ir/ir.h"
 #include "ir/pass_manager.h"
 #include "lib/cstring.h"
-#include "bf-p4c/bf-p4c-options.h"
-#include "bf-p4c/logging/filelog.h"
+#include "backends/tofino/bf-p4c-options.h"
+#include "backends/tofino/logging/filelog.h"
 
 namespace Logging {
 

@@ -1,10 +1,10 @@
 #include "lib/stringify.h"
-#include "bf-p4c/common/asm_output.h"
-#include "bf-p4c/common/utils.h"
-#include "bf-p4c/mau/dynhash.h"
-#include "bf-p4c/mau/ixbar_expr.h"
-#include "bf-p4c/mau/resource.h"
-#include "bf-p4c/mau/tofino/input_xbar.h"
+#include "backends/tofino/common/asm_output.h"
+#include "backends/tofino/common/utils.h"
+#include "backends/tofino/mau/dynhash.h"
+#include "backends/tofino/mau/ixbar_expr.h"
+#include "backends/tofino/mau/resource.h"
+#include "backends/tofino/mau/tofino/input_xbar.h"
 
 /**
  * Guarantees that each dynamic hash function is the same across all calls of this dynamic

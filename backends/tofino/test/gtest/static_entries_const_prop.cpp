@@ -7,12 +7,12 @@
 #include "lib/cstring.h"
 #include "lib/error.h"
 #include "test/gtest/helpers.h"
-#include "bf-p4c/mau/table_mutex.h"
-#include "bf-p4c/common/multiple_apply.h"
-#include "bf-p4c/test/gtest/tofino_gtest_utils.h"
-#include "bf-p4c/phv/action_phv_constraints.h"
-#include "bf-p4c/mau/instruction_selection.h"
-#include "bf-p4c/common/header_stack.h"
+#include "backends/tofino/mau/table_mutex.h"
+#include "backends/tofino/common/multiple_apply.h"
+#include "backends/tofino/test/gtest/tofino_gtest_utils.h"
+#include "backends/tofino/phv/action_phv_constraints.h"
+#include "backends/tofino/mau/instruction_selection.h"
+#include "backends/tofino/common/header_stack.h"
 namespace Test {
 
 class StaticEntriesConstPropTest : public TofinoBackendTest {};
