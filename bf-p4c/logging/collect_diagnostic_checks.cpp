@@ -1,10 +1,17 @@
 #include "collect_diagnostic_checks.h"
 #include <regex>
+#include <optional>
 
 namespace BFN {
 
-static std::string get_file_contents(BFN_Options &options) {
-    FILE *file = options.preprocess();
+static std::optional<std::string> get_file_contents(BFN_Options &options) {
+    auto preprocessorResult = options.preprocess();
+    if (!preprocessorResult.has_value()) {
+        // Return std::nullopt if preprocess fails
+        return std::nullopt;
+    }
+
+    FILE *file = preprocessorResult.value().get();
 
     constexpr std::size_t BUFFER_SIZE = 4096;
     std::string buffer;
@@ -75,8 +82,9 @@ inline std::string to_lower(std::smatch::const_reference it) {
 
 void collect_diagnostic_checks(BfErrorReporter &reporter, BFN_Options &options) {
     const auto contents = get_file_contents(options);
-    const auto comments = get_comments(std::move(contents));
-
+    if (!contents.has_value())
+        return;
+    const auto comments = get_comments(std::move(contents.value()));
     std::smatch match;
 
     /* Matches expect TYPE@OFFSET: "REGEXP",

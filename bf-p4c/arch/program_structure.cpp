@@ -52,24 +52,29 @@ void ProgramStructure::include(cstring filename, IR::Vector<IR::Node> *vector) {
     else if (filename == "t5na.p4")
         options.preprocessor_options += " -D__TARGET_TOFINO__=5";
 #endif  /* HAVE_FLATROCK */
-    if (FILE *file = options.preprocess()) {
+    if (auto preprocessorResult = options.preprocess(); preprocessorResult.has_value()) {
+        FILE *file = preprocessorResult.value().get();
+
         if (::errorCount() > 0) {
             ::error("Failed to preprocess architecture file %1%", options.file);
-            options.closePreprocessedInput(file);
             return;
         }
 
         auto code = P4::P4ParserDriver::parse(file, options.file.string());
         if (code == nullptr || ::errorCount() > 0) {
             ::error("Failed to load architecture file %1%", options.file);
-            options.closePreprocessedInput(file);
             return;
         }
+
+        // Apply the ParseAnnotations
         code = code->apply(BFN::ParseAnnotations());
 
-        for (auto decl : code->objects)
+        // Add parsed declarations to vector
+        for (auto decl : code->objects) {
             vector->push_back(decl);
-        options.closePreprocessedInput(file);
+        }
+    } else {
+        ::error("Preprocessing failed for architecture file %1%", options.file);
     }
 }
 

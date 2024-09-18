@@ -6,16 +6,16 @@ Util::JsonObject *GeneratePrimitiveInfo::add_op_json(Util::JsonObject *prim,
     auto op_json = new Util::JsonObject();
     op_json->emplace("type"_cs, type);
     op_json->emplace("name"_cs, name);
-    prim->emplace(op, op_json);
+    prim->emplace(cstring(op), op_json);
     return op_json;
 }
 
 Util::JsonObject *GeneratePrimitiveInfo::add_stful_op_json(Util::JsonObject *prim,
         const std::string op, const std::string op_pfx, const std::string type, cstring name) {
     auto op_json = new Util::JsonObject();
-    op_json->emplace(op_pfx + "_type"_cs, type);
-    op_json->emplace(op_pfx + "_value"_cs, name);
-    prim->emplace(op, op_json);
+    op_json->emplace(cstring(op_pfx + "_type"), type);
+    op_json->emplace(cstring(op_pfx + "_value"), name);
+    prim->emplace(cstring(op), op_json);
     return op_json;
 }
 
