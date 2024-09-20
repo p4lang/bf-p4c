@@ -168,7 +168,7 @@ bool FinalizePhysicalLiverange::preorder(const IR::BFN::Extract* extract) {
         if (stack_index < 0 || stack_index > stackInfo->size)
             continue;  // write to popbits/pushbits -> does not correspond to stack index
         auto valid_bit_expr = new IR::Member(
-            new IR::Type_Bits(1, false),
+            IR::Type_Bits::get(1),
             new IR::HeaderStackItemRef(member->expr, new IR::Constant(stack_index)),
             IR::ID("$valid"));
         const auto* unit = findContext<IR::BFN::Unit>();

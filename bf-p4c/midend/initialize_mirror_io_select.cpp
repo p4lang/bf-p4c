@@ -73,7 +73,7 @@ const IR::Node* DoInitializeMirrorIOSelect::preorder(IR::ParserState* state) {
             new IR::Member(
                 new IR::PathExpression(new IR::Path(egIntrMdForDprsrName)),
                 "mirror_io_select"),
-            new IR::Constant(new IR::Type_Bits(1, false), 1));
+            new IR::Constant(IR::Type_Bits::get(1), 1));
     IR::IndexedVector<IR::StatOrDecl> newStateComponents;
     newStateComponents.push_back(mirrorIOSelectInit);
     for (const auto* component : state->components)

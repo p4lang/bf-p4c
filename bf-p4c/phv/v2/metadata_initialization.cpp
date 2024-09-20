@@ -41,7 +41,7 @@ class MapFieldToExpr : public Inspector {
     const IR::MAU::Instruction* generate_init_instruction(const PHV::Field* f) const {
         BUG_CHECK(f, "Field is nullptr in generate_init_instruction");
         const IR::Expression* zero_expr =
-            new IR::Constant(new IR::Type_Bits(f->size, false), 0);
+            new IR::Constant(IR::Type_Bits::get(f->size), 0);
         const IR::Expression* field_expr = get_expr(f);
         auto* prim =
             new IR::MAU::Instruction("set", { field_expr, zero_expr });

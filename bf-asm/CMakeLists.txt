@@ -392,7 +392,8 @@ if (ENABLE_GTESTS)
   include_directories(
     ${BFN_P4C_SOURCE_DIR}/p4c
   )
-  target_link_libraries (gtestasm PRIVATE bfas_lib gtest)
+  target_link_libraries (gtestasm PRIVATE bfas_lib gtest absl::strings
+	  absl::str_format)
   target_compile_options (gtestasm PRIVATE -Wall -Wextra -ggdb -O3
                           -Wno-unused-parameter -Wno-sign-compare)
 

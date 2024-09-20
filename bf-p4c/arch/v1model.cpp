@@ -2448,7 +2448,7 @@ class LoweringType : public Transform {
         if (!node->type->is<IR::Type_Boolean>())
             return node;
         return new IR::StructField(node->srcInfo, node->name,
-                                   node->annotations, new IR::Type_Bits(1, false));
+                                   node->annotations, IR::Type_Bits::get(1));
     }
 
     const IR::Node* postorder(IR::Type_Enum* node) override {
@@ -2461,7 +2461,7 @@ class LoweringType : public Transform {
         auto name = node->path->name;
         if (enum_encoding.count(name)) {
             auto size = enum_encoding.at(name);
-            return new IR::Type_Bits(size, false);
+            return IR::Type_Bits::get(size);
         }
         return node;
     }

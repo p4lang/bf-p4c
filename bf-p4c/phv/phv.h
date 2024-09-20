@@ -3,6 +3,7 @@
 
 #include <iosfwd>
 #include <limits>
+#include <boost/functional/hash.hpp>
 #include "lib/exceptions.h"
 #include "lib/ordered_set.h"
 

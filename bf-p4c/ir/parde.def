@@ -443,7 +443,7 @@ class Select {
         CHECK_NULL(source);
         BUG_CHECK(source->is<IR::BFN::SavedRVal>() ||
                   source->is<IR::BFN::ParserCounterRVal>(),
-                  "Select source can only be match register or parser counter: %1%", select);
+                  "Select source can only be match register or parser counter: %1%", source);
     }
 
     /// The value to match against.

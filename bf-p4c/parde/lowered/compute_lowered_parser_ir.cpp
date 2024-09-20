@@ -22,7 +22,7 @@ bool ComputeLoweredParserIR::preorder(const IR::Type_Header* type) {
 
         for (auto it = eg_intr_md.begin(); it != eg_intr_md.end(); it++) {
             for (auto f : type->fields) {
-                if (f->name == it->first) {
+                if (f->name.name == it->first) {
                     egressMetaOpt |= 1 << (it - eg_intr_md.begin());
                     egressMetaSize += it->second;
                     break;

@@ -20,7 +20,7 @@ class CloneConstants : public Transform {
         } else if (auto ii = type->to<IR::Type_InfInt>()) {
             // You can't just clone a InfInt value, because
             // you get the same declid.  We want a new declid.
-            type = new IR::Type_InfInt(ii->srcInfo);
+            type = IR::Type_InfInt::get(ii->srcInfo);
         } else {
             BUG("unexpected type %2% for constant %2%", type, constant);
         }

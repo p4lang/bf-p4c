@@ -73,8 +73,8 @@ static void split_shl_instruction(IR::Vector<IR::MAU::Primitive> *split,
         // ****|-->  instruction:set(ingress::hdr.mul32_64.res[31:0], 0);
         //     |-->  instruction:shl(ingress::hdr.mul32_64.res[63:32], ingress::tmp0_0[31:0], 8);
         if (shift_val > slice.hi) {
-            const IR::Expression* zero = new IR::Constant(new IR::Type_Bits(alloc_slice.width(),
-                                                                            false), 0);
+            const IR::Expression* zero = new IR::Constant(
+                                            IR::Type_Bits::get(alloc_slice.width()), 0);
             auto* prim = new IR::MAU::Instruction("set", { slice_expr, zero });
             split->push_back(prim);
         // Shifting with a value equal to a container boundary result in a set instruction with
@@ -224,8 +224,8 @@ static void split_shr_instruction(IR::Vector<IR::MAU::Primitive> *split,
                 auto* prim = new IR::MAU::Instruction("shrs", { slice_expr, slice_src, shift_adj });
                 split->push_back(prim);
             } else {
-                const IR::Expression *zero = new IR::Constant(new IR::Type_Bits(alloc_slice.width(),
-                                                                                false), 0);
+                const IR::Expression *zero = new IR::Constant(
+                                                IR::Type_Bits::get(alloc_slice.width()), 0);
                 auto* prim = new IR::MAU::Instruction("set", { slice_expr, zero });
                 split->push_back(prim);
             }

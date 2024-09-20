@@ -58,7 +58,7 @@ class PacketPathTo8Bits : public P4::ChooseEnumRepresentation {
  * Headers must be explicitly converted to an 8 bit value
  */
 class MeterColorTypeTo8Bits: public Transform {
-    IR::Node* postorder(IR::Type_Name *t) override {
+    const IR::Node* postorder(IR::Type_Name *t) override {
         auto path = t->path->to<IR::Path>();
         if (path->name != "MeterColor_t") {
             return t;
@@ -68,7 +68,7 @@ class MeterColorTypeTo8Bits: public Transform {
                 && !findContext<IR::Declaration_Variable>())
             return t;
         LOG3("Convert L-Value of MeterColor_t to 8 Bits " << path);
-        return new IR::Type_Bits(8, false);
+        return IR::Type_Bits::get(8);
     }
 };
 
@@ -1043,7 +1043,7 @@ struct CreateErrorStates : public Transform {
                                    expr->is<IR::Equ>() ? origTransState->name :
                                                          errorState->name)));
             selectCases->push_back(new IR::SelectCase(
-                               new IR::DefaultExpression(new IR::Type_Dontcare()),
+                               new IR::DefaultExpression(IR::Type_Dontcare::get()),
                                new IR::PathExpression(expr->is<IR::Equ>() ? errorState->name :
                                                        origTransState->name)));
             IR::Vector<IR::Expression> selectOn;

@@ -802,7 +802,7 @@ void DoInstructionSelection::limitWidth(const IR::Expression *e) {
 const IR::Expression *DoInstructionSelection::postorder(IR::BoolLiteral *bl) {
     if (!findContext<IR::MAU::Action>())
         return bl;
-    return new IR::Constant(new IR::Type::Bits(1, false), static_cast<int>(bl->value));
+    return new IR::Constant(IR::Type::Bits::get(1), static_cast<int>(bl->value));
 }
 
 const IR::Expression *DoInstructionSelection::postorder(IR::BAnd *e) {
@@ -2897,7 +2897,7 @@ const IR::MAU::Instruction *
         }
         if (write->type->width_bits() != width) {
             auto dst = write->clone();
-            dst->type = new IR::Type_Bits(width, false);
+            dst->type = IR::Type_Bits::get(width);
             instr->operands[0] = dst;
         }
     }
@@ -2947,7 +2947,7 @@ const IR::Node *ArithCompareAdjustment::Update::preorder(IR::Member *m) {
             LOG3("Changing field width of " << name
                     << " in " << getContext()->node->toString());
 
-        m->type = new IR::Type_Bits(target_width, false);
+        m->type = IR::Type_Bits::get(target_width);
         return new IR::Slice(m, orig_width - 1, 0);
     }
 
@@ -2970,7 +2970,7 @@ const IR::Type_StructLike *ArithCompareAdjustment::Update::adjust_type_struct(
         if (it != self.comp_adj_name_width_map.end() && f->type->width_bits() != it->second) {
             int width = it->second;
             auto fc = f->clone();
-            fc->type = new IR::Type_Bits(width, false);
+            fc->type = IR::Type_Bits::get(width);
             rv->fields.push_back(fc);
             changed = true;
         } else {

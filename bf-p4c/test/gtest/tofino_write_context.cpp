@@ -55,9 +55,9 @@ TEST(TofinoWriteContext, Read) {
       new IR::Type_Method(
         new IR::ParameterList(
           IR::IndexedVector<IR::Parameter>({
-            new IR::Parameter(IR::ID("zero"), IR::Direction::In, new IR::Type_Bits(8, false)),
-            new IR::Parameter(IR::ID("one"), IR::Direction::Out, new IR::Type_Bits(8, false)),
-            new IR::Parameter(IR::ID("two"), IR::Direction::InOut, new IR::Type_Bits(8, false))})),
+            new IR::Parameter(IR::ID("zero"), IR::Direction::In, IR::Type_Bits::get(8)),
+            new IR::Parameter(IR::ID("one"), IR::Direction::Out, IR::Type_Bits::get(8)),
+            new IR::Parameter(IR::ID("two"), IR::Direction::InOut, IR::Type_Bits::get(8))})),
         "foo");
     prim->apply(TestRead());
 
@@ -94,9 +94,9 @@ TEST(TofinoWriteContext, Write) {
       new IR::Type_Method(
         new IR::ParameterList(
           IR::IndexedVector<IR::Parameter>({
-            new IR::Parameter(IR::ID("zero"), IR::Direction::In, new IR::Type_Bits(8, false)),
-            new IR::Parameter(IR::ID("one"), IR::Direction::Out, new IR::Type_Bits(8, false)),
-            new IR::Parameter(IR::ID("two"), IR::Direction::InOut, new IR::Type_Bits(8, false))})),
+            new IR::Parameter(IR::ID("zero"), IR::Direction::In, IR::Type_Bits::get(8)),
+            new IR::Parameter(IR::ID("one"), IR::Direction::Out, IR::Type_Bits::get(8)),
+            new IR::Parameter(IR::ID("two"), IR::Direction::InOut, IR::Type_Bits::get(8))})),
         "foo");
     prim->apply(TestWrite());
 

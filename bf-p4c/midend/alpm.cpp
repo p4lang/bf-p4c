@@ -50,7 +50,7 @@ const IR::StatOrDecl* SplitAlpm::synth_funnel_shift_ops(
         // cast to bit<32> if the upper half is less than 32 bit wide
         IR::Expression* upper = new IR::Slice(lpm_key, lpm_key_width - 1, 32);
         if (lpm_key_width != 64)
-            upper = new IR::Cast(new IR::Type_Bits(32), upper);
+            upper = new IR::Cast(IR::Type_Bits::get(32), upper);
         arguments->push_back(new IR::Argument(upper));
         arguments->push_back(new IR::Argument(new IR::Slice(lpm_key, 31, 0)));
         arguments->push_back(new IR::Argument(shift_amt_const));

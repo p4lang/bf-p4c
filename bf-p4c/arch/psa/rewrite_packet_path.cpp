@@ -286,7 +286,7 @@ struct PacketPath : public Transform {
                                new IR::Constant(IR::Type::Bits::get(9), 0x1FF)),
                                new IR::PathExpression("__recirculate")));
         selectCases->push_back(new IR::SelectCase(
-                                   new IR::DefaultExpression(new IR::Type_Dontcare()),
+                                   new IR::DefaultExpression(IR::Type_Dontcare::get()),
                                    new IR::PathExpression(IR::ID("__skip_to_packet"))));
         IR::Vector<IR::Expression> selectOn;
         selectOn.push_back(member);

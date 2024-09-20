@@ -1331,7 +1331,7 @@ typedef bit<11> switch_ip_index_t;
     bit<8>                  label_space;
     bit<1>                  ttl_copy;
     bool                    exp_mode;
-    bool                    continue;
+    bool                    continue_;
     switch_next_hdr_type_t  next_hdr_type;
     bit<1>                  bos;
     switch_ptag_mod_t       ptag_igmod;

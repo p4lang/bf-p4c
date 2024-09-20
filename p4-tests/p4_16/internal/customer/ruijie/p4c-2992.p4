@@ -1106,7 +1106,7 @@ struct switch_ingress_tunnel_metadata_t {
     bit<8>                  label_space;
     bool                    ttl_copy;
     bool                    exp_mode;
-    bool                    continue;
+    bool                    continue_;
     switch_next_hdr_type_t  next_hdr_type;
     bit<1>                  bos;
     switch_ptag_mod_t       ptag_igmod;

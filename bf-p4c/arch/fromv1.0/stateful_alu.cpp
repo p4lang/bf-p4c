@@ -267,7 +267,7 @@ class CreateSaluApplyFunction : public Inspector {
             // FIXME -- probably only want this for constants that did not have an explicit
             // FIXME -- type originally, but we have no good way of knowing.
             // If we fix P4_14 typechecking to understand externs, need for this goes away
-            c->type = new IR::Type_InfInt;
+            c->type = IR::Type_InfInt::get();
             return c; }
         const IR::Expression *postorder(IR::Add *e) override {
             if (self.convert_to_saturating)

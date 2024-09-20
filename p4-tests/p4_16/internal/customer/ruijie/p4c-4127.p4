@@ -2113,7 +2113,7 @@ struct switch_ingress_tunnel_metadata_t {
     bit<8> label_space;
     bit<1> ttl_copy; /* 0 = NoAction, 1 = copy */
     bool exp_mode;
-    bool continue;
+    bool continue_;
     switch_next_hdr_type_t next_hdr_type;
     // bit<1> cw_mode;
     bit<1> bos;
@@ -20133,19 +20133,19 @@ control MPLS_ILM0(
     action pop1(bit<1> copy) {
         pop_common(copy);
         hdr.mpls_ig.pop_front(1);
-        ig_md.tunnel.continue = true;
+        ig_md.tunnel.continue_ = true;
     }
 
     action pop2(bit<1> copy) {
         pop_common(copy);
         hdr.mpls_ig.pop_front(2);
-        ig_md.tunnel.continue = true;
+        ig_md.tunnel.continue_ = true;
     }
 
     action pop3(bit<1> copy) {
         pop_common(copy);
         hdr.mpls_ig.pop_front(3);
-        ig_md.tunnel.continue = true;
+        ig_md.tunnel.continue_ = true;
     }
 
     action explicit_null_pop(bit<1> copy, bit<1> chgDSCP_disable) {
@@ -20153,7 +20153,7 @@ control MPLS_ILM0(
         ig_md.tunnel.bos = hdr.mpls_ig[0].bos;
         hdr.mpls_ig.pop_front(1);
         ig_md.tunnel.terminate = true;
-        ig_md.tunnel.continue = false;
+        ig_md.tunnel.continue_ = false;
         //ig_md.tunnel.inner_pkt_parsed = SWITCH_TUNNEL_INNER_PKT_IPX;
         ig_md.qos.chgDSCP_disable = chgDSCP_disable;
     }
@@ -20163,7 +20163,7 @@ control MPLS_ILM0(
         ig_md.tunnel.bos = hdr.mpls_ig[1].bos;
         hdr.mpls_ig.pop_front(2);
         ig_md.tunnel.terminate = true;
-        ig_md.tunnel.continue = false;
+        ig_md.tunnel.continue_ = false;
         //ig_md.tunnel.inner_pkt_parsed = SWITCH_TUNNEL_INNER_PKT_IPX;
         ig_md.qos.chgDSCP_disable = chgDSCP_disable;
     }
@@ -20173,7 +20173,7 @@ control MPLS_ILM0(
         ig_md.tunnel.bos = hdr.mpls_ig[2].bos;
         hdr.mpls_ig.pop_front(3);
         ig_md.tunnel.terminate = true;
-        ig_md.tunnel.continue = false;
+        ig_md.tunnel.continue_ = false;
         //ig_md.tunnel.inner_pkt_parsed = SWITCH_TUNNEL_INNER_PKT_IPX;
         ig_md.qos.chgDSCP_disable = chgDSCP_disable;
     }
@@ -20182,16 +20182,16 @@ control MPLS_ILM0(
         ig_md.tunnel.ttl_copy_1 = 1w0;
         ig_md.tunnel.ttl_1 = hdr.mpls_ig[0].ttl;
         ig_md.tunnel.exp = hdr.mpls_ig[0].exp;
-        ig_md.tunnel.continue = true;
+        ig_md.tunnel.continue_ = true;
     }
 
     action drop_reason() {
-        ig_md.tunnel.continue = false;
+        ig_md.tunnel.continue_ = false;
         ig_md.common.drop_reason = SWITCH_DROP_REASON_MPLS_POP_ERROR;
     }
 
     action special_ttl_process() {
-        ig_md.tunnel.continue = false;
+        ig_md.tunnel.continue_ = false;
     }
 
     /* 空标签判断 */
@@ -20261,7 +20261,7 @@ control MPLS_ILM1(
     }
 
     action miss_back() {
-        ig_md.tunnel.continue = true;
+        ig_md.tunnel.continue_ = true;
         ig_md.tunnel.ttl_copy_2 = ig_md.tunnel.ttl_copy_1;
         ig_md.tunnel.ttl_2 = ig_md.tunnel.ttl_1;
     }
@@ -20284,24 +20284,24 @@ control MPLS_ILM1(
 
     action pop1() {
         hdr.mpls_ig.pop_front(1);
-        ig_md.tunnel.continue = true;
+        ig_md.tunnel.continue_ = true;
     }
 
     action pop3() {
         hdr.mpls_ig.pop_front(3);
-        ig_md.tunnel.continue = true;
+        ig_md.tunnel.continue_ = true;
     }
 
     action pop4() {
         hdr.mpls_ig.pop_front(4);
-        ig_md.tunnel.continue = true;
+        ig_md.tunnel.continue_ = true;
     }
 
     action pop_terminate() {
         ig_md.tunnel.bos = hdr.mpls_ig[0].bos;
         hdr.mpls_ig.pop_front(1);
         ig_md.tunnel.terminate = true;
-        ig_md.tunnel.continue = false;
+        ig_md.tunnel.continue_ = false;
         //ig_md.tunnel.inner_pkt_parsed = SWITCH_TUNNEL_INNER_PKT_IPX;
     }
 
@@ -20309,11 +20309,11 @@ control MPLS_ILM1(
         ig_md.tunnel.bos = hdr.mpls_ig[2].bos;
         hdr.mpls_ig.pop_front(3);
         ig_md.tunnel.terminate = true;
-        ig_md.tunnel.continue = false;
+        ig_md.tunnel.continue_ = false;
     }
 
     action drop_reason() {
-        ig_md.tunnel.continue = false;
+        ig_md.tunnel.continue_ = false;
         ig_md.common.drop_reason = SWITCH_DROP_REASON_MPLS_POP_ERROR;
     }
 
@@ -20362,7 +20362,7 @@ control MPLS_ILM1(
     }
 
     apply {
-        if (ig_md.tunnel.continue == true) {
+        if (ig_md.tunnel.continue_ == true) {
             switch(mpls_ilm1.apply().action_run) {
                 pop_continue: {
                     pop_num1.apply();
@@ -20395,7 +20395,7 @@ control MPLS_ILM2(
     }
 
     action miss_back() {
-        ig_md.tunnel.continue = true;
+        ig_md.tunnel.continue_ = true;
         ig_md.tunnel.ttl_copy_3 = ig_md.tunnel.ttl_copy_2;
         ig_md.tunnel.ttl_3 = ig_md.tunnel.ttl_2;
     }
@@ -20418,24 +20418,24 @@ control MPLS_ILM2(
 
     action pop1() {
         hdr.mpls_ig.pop_front(1);
-        ig_md.tunnel.continue = true;
+        ig_md.tunnel.continue_ = true;
     }
 
     action pop3() {
         hdr.mpls_ig.pop_front(3);
-        ig_md.tunnel.continue = true;
+        ig_md.tunnel.continue_ = true;
     }
 
     action pop4() {
         hdr.mpls_ig.pop_front(4);
-        ig_md.tunnel.continue = true;
+        ig_md.tunnel.continue_ = true;
     }
 
     action pop_terminate() {
         ig_md.tunnel.bos = hdr.mpls_ig[0].bos;
         hdr.mpls_ig.pop_front(1);
         ig_md.tunnel.terminate = true;
-        ig_md.tunnel.continue = false;
+        ig_md.tunnel.continue_ = false;
         //ig_md.tunnel.inner_pkt_parsed = SWITCH_TUNNEL_INNER_PKT_IPX;
     }
 
@@ -20443,11 +20443,11 @@ control MPLS_ILM2(
         ig_md.tunnel.bos = hdr.mpls_ig[2].bos;
         hdr.mpls_ig.pop_front(3);
         ig_md.tunnel.terminate = true;
-        ig_md.tunnel.continue = false;
+        ig_md.tunnel.continue_ = false;
     }
 
     action drop_reason() {
-        ig_md.tunnel.continue = false;
+        ig_md.tunnel.continue_ = false;
         ig_md.common.drop_reason = SWITCH_DROP_REASON_MPLS_POP_ERROR;
     }
 
@@ -20496,7 +20496,7 @@ control MPLS_ILM2(
     }
 
     apply {
-        if (ig_md.tunnel.continue == true) {
+        if (ig_md.tunnel.continue_ == true) {
             switch(mpls_ilm2.apply().action_run) {
                 pop_continue: {
                     pop_num2.apply();
@@ -20539,7 +20539,7 @@ control MPLS_ILM3(
 
         ig_md.common.iif = lif;
         ig_md.common.iif_type = SWITCH_L3_IIF_TYPE;
-        ig_md.tunnel.continue = false;
+        ig_md.tunnel.continue_ = false;
         ig_md.tunnel.terminate = true;
         ig_md.tunnel.bos = hdr.mpls_ig[0].bos;
         hdr.mpls_ig.pop_front(1);
@@ -20558,7 +20558,7 @@ control MPLS_ILM3(
         ig_md.common.iif = lif;
         ig_md.common.iif_type = SWITCH_L2_IIF_TYPE;
         // ig_md.tunnel.cw_mode = cw_mode;
-        ig_md.tunnel.continue = false;
+        ig_md.tunnel.continue_ = false;
         ig_md.tunnel.terminate = true;
         ig_md.tunnel.inner_pkt_parsed = SWITCH_TUNNEL_INNER_PKT_ETHERNET;
         ig_md.tunnel.ttl_copy = 1w0;
@@ -20566,7 +20566,7 @@ control MPLS_ILM3(
 
 
     action miss_back() {
-        ig_md.tunnel.continue = true;
+        ig_md.tunnel.continue_ = true;
         ig_md.tunnel.ttl_copy_4 = ig_md.tunnel.ttl_copy_3;
         ig_md.tunnel.ttl_4 = ig_md.tunnel.ttl_3;
     }
@@ -20592,24 +20592,24 @@ control MPLS_ILM3(
 
     action pop1() {
         hdr.mpls_ig.pop_front(1);
-        ig_md.tunnel.continue = true;
+        ig_md.tunnel.continue_ = true;
     }
 
     action pop3() {
         hdr.mpls_ig.pop_front(3);
-        ig_md.tunnel.continue = true;
+        ig_md.tunnel.continue_ = true;
     }
 
     action pop4() {
         hdr.mpls_ig.pop_front(4);
-        ig_md.tunnel.continue = true;
+        ig_md.tunnel.continue_ = true;
     }
 
     action pop_terminate() {
         ig_md.tunnel.bos = hdr.mpls_ig[0].bos;
         hdr.mpls_ig.pop_front(1);
         ig_md.tunnel.terminate = true;
-        ig_md.tunnel.continue = false;
+        ig_md.tunnel.continue_ = false;
         //ig_md.tunnel.inner_pkt_parsed = SWITCH_TUNNEL_INNER_PKT_IPX;
     }
 
@@ -20617,11 +20617,11 @@ control MPLS_ILM3(
         ig_md.tunnel.bos = hdr.mpls_ig[2].bos;
         hdr.mpls_ig.pop_front(3);
         ig_md.tunnel.terminate = true;
-        ig_md.tunnel.continue = false;
+        ig_md.tunnel.continue_ = false;
     }
 
     action drop_reason() {
-        ig_md.tunnel.continue = false;
+        ig_md.tunnel.continue_ = false;
         ig_md.common.drop_reason = SWITCH_DROP_REASON_MPLS_POP_ERROR;
     }
 
@@ -20701,7 +20701,7 @@ control MPLS_ILM3(
     }
 
     apply {
-        if (ig_md.tunnel.continue == true) {
+        if (ig_md.tunnel.continue_ == true) {
             switch(mpls_ilm3.apply().action_run) {
                 pop_continue: {
                     pop_num3.apply();

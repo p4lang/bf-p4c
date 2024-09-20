@@ -103,7 +103,7 @@ void ProgramStructure::createMain() {
     typeArgs->push_back(new IR::Type_Name("compiler_generated_metadata_t"));
     // PSA only uses one pipeline, hence the other type arguments are dont_care.
     for (auto i=0; i < 15; i++)
-        typeArgs->push_back(new IR::Type_Dontcare());
+        typeArgs->push_back(IR::Type_Dontcare::get());
     auto typeSpecialized = new IR::Type_Specialized(type, typeArgs);
 
     auto args = new IR::Vector<IR::Argument>();

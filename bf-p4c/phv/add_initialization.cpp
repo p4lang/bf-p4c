@@ -14,7 +14,7 @@ const IR::MAU::Instruction*
 MapFieldToExpr::generateInitInstruction(const PHV::AllocSlice& slice) const {
     const auto* f = slice.field();
     BUG_CHECK(f, "Field is nullptr in generateInitInstruction");
-    const IR::Expression* zeroExpr = new IR::Constant(new IR::Type_Bits(slice.width(), false), 0);
+    const IR::Expression* zeroExpr = new IR::Constant(IR::Type_Bits::get(slice.width()), 0);
     const IR::Expression* fieldExpr = getExpr(f);
     if (slice.width() == f->size) {
         auto* prim = new IR::MAU::Instruction("set", { fieldExpr, zeroExpr });

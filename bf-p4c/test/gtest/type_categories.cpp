@@ -24,9 +24,9 @@ TEST(BFNTypeCategories, Types) {
     auto* structCgType = new IR::Type_Struct("meta", cgAnnotation,
                                            new IR::TypeParameters(), { });
     auto* bitType = IR::Type::Bits::get(1);
-    auto* boolType = new IR::Type_Boolean;
-    auto* infIntType = new IR::Type_InfInt;
-    auto* stringType = new IR::Type_String;
+    auto* boolType = IR::Type_Boolean::get();
+    auto* infIntType = IR::Type_InfInt::get();
+    auto* stringType = IR::Type_String::get();
 
     EXPECT_FALSE(isIntrinsicMetadataType(headerType));
     EXPECT_TRUE(isIntrinsicMetadataType(headerImType));

@@ -418,7 +418,7 @@ void T5naProgramStructure::createMain() {
     // This only gives us first 4 pipelines, we fill out the rest with don't cares
     // T5NA has 16 pipes (each with H and M) => 32 arguments
     for (unsigned i=8; i < 32; i++) {
-        typeArgList->push_back(new IR::Type_Dontcare());
+        typeArgList->push_back(IR::Type_Dontcare::get());
     }
 
     auto newMainInstance = new IR::Declaration_Instance(

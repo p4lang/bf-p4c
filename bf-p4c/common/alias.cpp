@@ -186,7 +186,7 @@ IR::Node* AddValidityBitSets::postorder(IR::MAU::Action* action) {
             LOG3("\t  Could not find POV corresponding to " << f->name);
             continue;
         }
-        auto* oneExpr = new IR::Constant(new IR::Type_Bits(pov->type->width_bits(), false), 1);
+        auto* oneExpr = new IR::Constant(IR::Type_Bits::get(pov->type->width_bits()), 1);
         auto* prim = new IR::MAU::Instruction("set", { pov, oneExpr });
         LOG1("\t  Add to action " << action->name << " : " << prim);
         action->action.push_back(prim);
