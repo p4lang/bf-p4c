@@ -15,6 +15,8 @@
 #include "ordered_map.h"
 #include "rvalue_reference_wrapper.h"
 
+using namespace P4;
+
 namespace json {
 
 /* this is std::make_unique, except that is missing in some compilers/versions.  We give

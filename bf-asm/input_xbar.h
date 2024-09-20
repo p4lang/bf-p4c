@@ -117,7 +117,7 @@ class InputXbar {
     void gen_hash_column(std::pair<const int, HashCol> &col,
                          std::pair<const HashTable, std::map<int, HashCol>> &hash);
 
-    struct GroupSet {
+    struct GroupSet : public IHasDbPrint {
         Group           group;
         const std::vector<InputXbar *> &use;
         GroupSet(const std::vector<InputXbar *> &u, Group g) : group(g), use(u) {}

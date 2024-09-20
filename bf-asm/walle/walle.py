@@ -387,6 +387,7 @@ def generate_cPlusPlus_file(outfile, top_level, args, schema, file_basename):
     if args.widereg:
         outfile.write('#include "widereg.h"\n')
     outfile.write('\n')
+    outfile.write("using namespace P4;")
     if len(args.global_types) > 0:
         args.global_types_generated = {}
         top_level.gen_global_types(outfile, args, schema)

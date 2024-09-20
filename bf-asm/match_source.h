@@ -1,3 +1,6 @@
+#include <string>
+#include <sstream>
+
 #ifndef BF_ASM_MATCH_SOURCE_H_
 #define BF_ASM_MATCH_SOURCE_H_
 
@@ -6,7 +9,7 @@
  * galois field matrix, as indicated in uArch Section Exact Match Row Vertical/Horizontal (VH)
  * Xbars.  This class is the parent of HashMatchSource and Phv::Ref.
  */
-class MatchSource {
+class MatchSource : public IHasDbPrint {
  public:
     virtual int fieldlobit() const = 0;
     virtual int fieldhibit() const = 0;
@@ -16,6 +19,8 @@ class MatchSource {
     virtual const char* name() const = 0;
     virtual int get_lineno() const = 0;
     virtual std::string toString() const = 0;
+    // friend std::ostream& operator<<(std::ostream& os, const MatchSource& source);
+    virtual void dbprint(std::ostream &out) const = 0;
 };
 
 /**
@@ -54,6 +59,7 @@ class HashMatchSource : public MatchSource {
         str << *this;
         return str.str();
     }
+
     void dbprint(std::ostream &out) const { out << name() << "(" << lo << ".." << hi << ")"; }
 };
 

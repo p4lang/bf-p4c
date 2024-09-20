@@ -6,7 +6,7 @@
 #include <functional>
 #include "tables.h"
 
-struct Instruction {
+struct Instruction : public IHasDbPrint{
     int         lineno;
     int         slot;
     explicit Instruction(int l) : lineno(l), slot(-1) {}

@@ -64,7 +64,7 @@ Instruction *Instruction::decode(Table *tbl, const Table::Actions::Action *act,
 namespace VLIW {
 static const int group_size[] = { 32, 32, 32, 32, 8, 8, 8, 8, 16, 16, 16, 16, 16, 16 };
 
-struct Operand {
+struct Operand : public IHasDbPrint {
     /** A source operand to a VLIW instruction -- this can be a variety of things, so we
      * have a pointer to an abstract base class and a number of derived concrete classes for
      * the different kinds of operands.  When we parse the operand, the type may be determined,

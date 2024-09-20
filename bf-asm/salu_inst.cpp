@@ -10,8 +10,8 @@
 
 namespace StatefulAlu {
 
-struct operand {
-    struct Base {
+struct operand : public IHasDbPrint {
+    struct Base : public IHasDbPrint {
         int lineno;
         explicit Base(int line) : lineno(line) {}
         Base(const Base &a) : lineno(a.lineno) {}

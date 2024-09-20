@@ -130,6 +130,8 @@ set (BFAS_COMMON_SOURCES
   ${BFN_P4C_LIB_DIR}/hex.cpp
   ${BFN_P4C_LIB_DIR}/indent.cpp
   ${BFN_P4C_LIB_DIR}/log.cpp
+  ${BFN_P4C_LIB_DIR}/cstring.cpp
+  ${BFN_P4C_LIB_DIR}/hash.cpp
   )
 
 SET (BFAS_COMMON_HEADERS
@@ -298,7 +300,12 @@ set_source_files_properties(${BFAS_SOURCES} PROPERTIES COMPILE_FLAGS ${BFASM_CXX
 string(REPLACE "-Wno-overloaded-virtual" "" vector_c_flags ${BFASM_CXX_FLAGS})
 set_source_files_properties(vector.c PROPERTIES COMPILE_FLAGS ${vector_c_flags})
 add_executable (bfas ${BFAS_SOURCES})
-target_link_libraries (bfas ${BFASM_LIBS} ${BFASM_LIB_DEPS})
+target_link_libraries (bfas ${BFASM_LIBS} ${BFASM_LIB_DEPS} absl::strings absl::str_format absl::hash absl::base
+absl::flags
+absl::flags_parse
+absl::status
+absl::str_format
+absl::hash)
 
 install (TARGETS bfas
   RUNTIME DESTINATION bin)
@@ -392,13 +399,8 @@ if (ENABLE_GTESTS)
   include_directories(
     ${BFN_P4C_SOURCE_DIR}/p4c
   )
-  target_link_libraries (gtestasm PRIVATE bfas_lib gtest absl::strings
-	  absl::str_format absl::base
-    absl::flags
-    absl::flags_parse
-    absl::status
-    absl::str_format
-    absl::hash)
+  target_link_libraries (gtestasm PRIVATE bfas_lib gtest absl::strings 
+	  absl::str_format absl::base absl::flags absl::flags_parse absl::status absl::hash)
   target_compile_options (gtestasm PRIVATE -Wall -Wextra -ggdb -O3
                           -Wno-unused-parameter -Wno-sign-compare)
 

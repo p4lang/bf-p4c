@@ -5,7 +5,7 @@
 #include "dynamic_hash/dynamic_hash.h"
 #include "input_xbar.h"
 
-class HashExpr {
+class HashExpr : public IHasDbPrint {
     class PhvRef;
     class Random;
     class Crc;

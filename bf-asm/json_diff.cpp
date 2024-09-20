@@ -4,6 +4,7 @@
 #include <cstring>
 #include "fdstream.h"
 #include "json.h"
+#include "ordered_map.h"
 
 static bool show_deletion = true;
 static bool show_addition = true;

@@ -16,6 +16,8 @@
 #include "flatrock/hdr.h"
 #endif  /* HAVE_FLATROCK */
 
+using namespace P4;
+
 unsigned Deparser::unique_field_list_handle;
 Deparser Deparser::singleton_object;
 

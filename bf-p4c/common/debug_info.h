@@ -4,6 +4,8 @@
 #include <vector>
 #include "lib/cstring.h"
 
+using namespace P4;
+
 namespace BFN {
 
 /// A tracker for debugging information. This is used for informational purposes

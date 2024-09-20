@@ -55,7 +55,7 @@ class Phv : public Section {
             return "";
         }
     };
-    class Slice {
+    class Slice : public IHasDbPrint {
         static const Register invalid;
 
      public:

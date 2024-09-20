@@ -21,6 +21,8 @@
 #define MAJOR_VERSION   1
 #define MINOR_VERSION   0
 
+using namespace P4;
+
 const std::string SCHEMA_VERSION = CONTEXT_SCHEMA_VERSION;              // NOLINT(runtime/string)
 
 option_t options = {
