@@ -5,8 +5,12 @@
 #include "lib/cstring.h"
 #include "bf-p4c/ir/gress.h"
 
+using namespace P4;
+
 class JSONGenerator;
 class JSONLoader;
+
+namespace P4 {
 
 struct MarshaledFrom {
     // use those two to uniquely identify a field.
@@ -40,5 +44,7 @@ struct MarshaledFrom {
 
 std::ostream& operator<<(std::ostream& s, const MarshaledFrom& m);
 JSONGenerator& operator<<(JSONGenerator& out, const MarshaledFrom& c);
+
+}  // namespace P4
 
 #endif /* PARDE_MARSHAL_H_ */

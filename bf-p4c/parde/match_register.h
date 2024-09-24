@@ -7,6 +7,8 @@
 class JSONGenerator;
 class JSONLoader;
 
+namespace P4 {
+
 class MatchRegister {
  public:
     MatchRegister();
@@ -39,5 +41,7 @@ class MatchRegister {
 
 std::ostream& operator<<(std::ostream& out, const MatchRegister& c);
 JSONGenerator& operator<<(JSONGenerator& out, const MatchRegister& c);
+
+}  // namespace P4
 
 #endif /* EXTENSIONS_BF_P4C_PARDE_MATCH_REGISTER_H_ */

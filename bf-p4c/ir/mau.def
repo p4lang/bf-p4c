@@ -1153,11 +1153,11 @@ class RangeMatch : Operation_Unary {
 
 #emit
 // defined down here to resolve order of declaration issues
-template<class T> inline const T *IR::MAU::Table::get_attached() const {
+template<class T> inline const T *P4::IR::MAU::Table::get_attached() const {
     for (auto *at : attached)
         if (auto rv = at->attached->to<T>())
             return rv;
     return nullptr; }
 
-std::ostream &operator<<(std::ostream &out, const IR::MAU::Table::Layout &layout);
+std::ostream &operator<<(std::ostream &out, const P4::IR::MAU::Table::Layout &layout);
 #end

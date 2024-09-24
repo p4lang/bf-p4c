@@ -6,7 +6,7 @@
 #include "bf-p4c/phv/utils/slice_alloc.h"
 #include "bf-p4c/mau/table_summary.h"
 
-namespace PHV {
+namespace P4::PHV {
 
 AllocSlice::AllocSlice(
         const Field* f,
@@ -660,7 +660,7 @@ std::ostream& operator<<(std::ostream& out, const DarkInitPrimitive& prim) {
 }  // namespace PHV
 
 std::ostream &operator<<(std::ostream &out,
-                         const safe_vector<PHV::AllocSlice> &sl_vec) {
+                         const safe_vector<P4::PHV::AllocSlice> &sl_vec) {
     for (auto &sl : sl_vec) out << sl << "\n";
     return out;
 }

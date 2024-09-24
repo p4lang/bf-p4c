@@ -16,6 +16,8 @@
 #include "lib/exceptions.h"
 #include "lib/ordered_set.h"
 
+namespace P4 {
+
 /*
  * Output ALU0 instruction in the form e.g. { opcode: 2, msb: 5, lsb: 2 }.
  * See bf-asm/SYNTAX.yaml for the list of ALU0 instructions.
@@ -648,5 +650,7 @@ inline std::ostream& operator<<(std::ostream& os, const Flatrock::PovSelectKey& 
     }
     return os << std::to_string(p.start);
 }
+
+}  // namespace P4
 
 #endif  /* BF_P4C_PARDE_FLATROCK_H_ */
