@@ -189,10 +189,47 @@ struct metadata_select {
             int index;
         } counter;
     };
+    friend std::ostream& operator<<(std::ostream& out, const metadata_select& select);
 
     metadata_select() : type(INVALID) {}
     explicit metadata_select(type_enum type, std::vector<int> ops = {});
 };
+
+/*
+ * Output single metadata selection item.
+ */
+inline std::ostream& operator<<(std::ostream& out, const Flatrock::metadata_select& select) {
+    switch (select.type) {
+    case Flatrock::metadata_select::CONSTANT:
+        out << select.constant.value;
+        break;
+    case Flatrock::metadata_select::LOGICAL_PORT_NUMBER:
+        out << "logical_port_number";
+        break;
+    case Flatrock::metadata_select::PORT_METADATA:
+        out << "port_metadata " << select.port_metadata.index;
+        break;
+    case Flatrock::metadata_select::INBAND_METADATA:
+        out << "inband_metadata " << select.inband_metadata.index;
+        break;
+    case Flatrock::metadata_select::TIMESTAMP:
+        out << "timestamp " << select.timestamp.index;
+        break;
+    case Flatrock::metadata_select::COUNTER:
+        out << "counter " << select.counter.index;
+        break;
+    default:
+        BUG("Invalid metadata selection");
+    }
+    return out;
+}
+
+std::ostream& operator<<(std::ostream& out, const std::vector<metadata_select>& selects) {
+    for (const auto& select : selects) {
+        out << select << " ";
+    }
+    return out;
+}
 
 struct PushHdrId {
     uint8_t hdr_id = 0xff;
@@ -221,8 +258,6 @@ struct ModifyChecksum {
     bool enabled = false;
 };
 
-}  /* namespace Flatrock */
-
 inline std::ostream& operator<<(std::ostream& os, const Flatrock::PushHdrId phi) {
     return os << "hdr_id=" << std::to_string(phi.hdr_id) <<
             ", offset=" << std::to_string(phi.offset);
@@ -242,5 +277,7 @@ inline std::ostream& operator<<(std::ostream& os, const Flatrock::ModifyFlags<N>
             ", imm=" << std::to_string(mf.imm) << ", mask=" << std::to_string(mf.mask) <<
             ", shift=" << std::to_string(mf.shift);
 }
+
+}  /* namespace Flatrock */
 
 #endif  /* BF_P4C_COMMON_FLATROCK_H_ */

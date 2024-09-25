@@ -35,19 +35,6 @@ enum class AlwaysRun {
     ACTION
 };
 
-}  // end namespace MAU
-
-namespace BFN {
-
-/// The mode of operation of parser checksum units.
-enum class ChecksumMode { VERIFY, RESIDUAL, CLOT };
-
-/// The mode of operation of parser writes to PHV
-enum class ParserWriteMode { SINGLE_WRITE, BITWISE_OR, CLEAR_ON_WRITE };
-}  // end namespace BFN
-
-}  // end namespace IR
-
 std::ostream& operator<<(std::ostream &out, const IR::MAU::DataAggregation &d);
 bool operator>>(cstring s, IR::MAU::DataAggregation &d);
 
@@ -71,6 +58,18 @@ bool operator>>(cstring s, IR::MAU::ColorMapramAddress &cma);
 
 std::ostream& operator<<(std::ostream &out, const IR::MAU::SelectorMode &sm);
 bool operator>>(cstring s, IR::MAU::SelectorMode &sm);
+std::ostream& operator<<(std::ostream &out, const IR::MAU::AlwaysRun &ar);
+bool operator>>(cstring s, IR::MAU::AlwaysRun &ar);
+
+}  // end namespace MAU
+
+namespace BFN {
+
+/// The mode of operation of parser checksum units.
+enum class ChecksumMode { VERIFY, RESIDUAL, CLOT };
+
+/// The mode of operation of parser writes to PHV
+enum class ParserWriteMode { SINGLE_WRITE, BITWISE_OR, CLEAR_ON_WRITE };
 
 std::ostream& operator<<(std::ostream &out, const IR::BFN::ChecksumMode &t);
 bool operator>>(cstring s, IR::BFN::ChecksumMode &t);
@@ -78,7 +77,9 @@ bool operator>>(cstring s, IR::BFN::ChecksumMode &t);
 std::ostream& operator<<(std::ostream &out, const IR::BFN::ParserWriteMode &t);
 bool operator>>(cstring s, IR::BFN::ParserWriteMode &t);
 
-std::ostream& operator<<(std::ostream &out, const IR::MAU::AlwaysRun &ar);
-bool operator>>(cstring s, IR::MAU::AlwaysRun &ar);
+}  // end namespace BFN
+
+
+}  // end namespace IR
 
 #endif /* BF_P4C_IR_IR_ENUMS_H_ */

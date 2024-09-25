@@ -11,7 +11,6 @@
  * @namespace IR::Flatrock
  * @brief The namespace encapsulating Flatrock-specific %IR nodes
  */
-namespace P4 {
 namespace Flatrock {
 
 /**
@@ -359,7 +358,7 @@ class PhvBuilderExtract {
     match_t match = {match_all, match_all};
 #emit
     PHV::Size size = PHV::Size::null;
-    P4::Flatrock::PheSource source[::Flatrock::PARSER_PHV_BUILDER_GROUP_PHE_SOURCES];
+    ::Flatrock::PheSource source[::Flatrock::PARSER_PHV_BUILDER_GROUP_PHE_SOURCES];
 #end
 #noconstructor
 #emit
@@ -413,7 +412,7 @@ class PhvBuilderExtract {
 class PhvBuilderGroup {
     int index;
 #emit
-    std::vector<P4::Flatrock::PovSelectKey> pov_select;
+    std::vector<::Flatrock::PovSelectKey> pov_select;
 #end
     optional inline Vector<PhvBuilderExtract> extracts;
 
@@ -537,5 +536,3 @@ class Parser : BFN::BaseLoweredParser {
 }
 
 }  // namespace Flatrock
-
-}  // namespace P4

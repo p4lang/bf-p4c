@@ -38,7 +38,7 @@
  */
 struct ActionDataBus {
  public:
-    struct Loc {
+    struct Loc : public IHasDbPrint {
         int byte;
         ActionData::SlotType_t type;
         Loc(int b, ActionData::SlotType_t t) : byte(b), type(t) {}

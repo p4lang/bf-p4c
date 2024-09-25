@@ -167,7 +167,7 @@ class IXBarExprSeed : public Inspector {
     operator bitvec() const { return rv >> slice.lo; }
 };
 
-struct P4HashFunction {
+struct P4HashFunction : public IHasDbPrint {
     safe_vector<const IR::Expression *> inputs;
     le_bitrange hash_bits;
     IR::MAU::HashFunction algorithm;

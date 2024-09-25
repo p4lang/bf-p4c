@@ -3,7 +3,7 @@
 
 #include <iosfwd>
 #include <optional>
-#include <lib/cstring.h>
+#include "lib/cstring.h"
 
 /// An enumeration identifying a thread in the Tofino architecture.
 enum gress_t {
@@ -17,13 +17,13 @@ enum gress_t {
 /// same, so they both return egress.
 inline gress_t operator~(const gress_t& gress) { return gress_t((gress & 1) ^ 1); }
 
-P4::cstring toString(gress_t gress);
-P4::cstring toSymbol(gress_t gress);
-P4::cstring createThreadName(gress_t gress, P4::cstring name);
-P4::cstring stripThreadPrefix(P4::cstring name);
+cstring toString(gress_t gress);
+cstring toSymbol(gress_t gress);
+cstring createThreadName(gress_t gress, cstring name);
+cstring stripThreadPrefix(cstring name);
 
 std::ostream& operator<<(std::ostream& out, gress_t gress);
 std::ostream& operator<<(std::ostream& out, std::optional<gress_t> gress);
-bool operator>>(P4::cstring s, gress_t& gressOut);
+bool operator>>(cstring s, gress_t& gressOut);
 
 #endif /* BF_P4C_IR_GRESS_H_ */

@@ -30,7 +30,7 @@ enum ModConditionally_t { NONE, VALUE, /* MASK */ };
  * particular location in the bus or relationship to PHV, but is just information that can
  * be classified as ActionData
  */
-class Parameter {
+class Parameter : public IHasDbPrint {
  /**
   * A modify_field_conditionally in p4-14, which is converted to a ternary operation in p4-16
   * is done in the following manner.  The instruction is converted to a bitmasked-set, with

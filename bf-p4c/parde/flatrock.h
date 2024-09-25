@@ -16,8 +16,6 @@
 #include "lib/exceptions.h"
 #include "lib/ordered_set.h"
 
-namespace P4 {
-
 /*
  * Output ALU0 instruction in the form e.g. { opcode: 2, msb: 5, lsb: 2 }.
  * See bf-asm/SYNTAX.yaml for the list of ALU0 instructions.
@@ -242,13 +240,13 @@ inline std::ostream& print_pretty(std::ostream& out,
         cond << ")";
         cond << (instruction.opcode_4_5_6_7.shift_dir ? " >> " : " << ");
         cond << instruction.opcode_4_5_6_7.shift_imm2u << ")";
-        out << cond;
+        out << cond.str();
         out <<" + ("
             << instruction.opcode_4_5_6_7.add_imm2u << " << 2)";
         switch (instruction.opcode) {
         case Flatrock::alu1_instruction::OPCODE_6:
         case Flatrock::alu1_instruction::OPCODE_7:
-            out << "if (" << cond << ") != 0, then + 4 - " << cond;
+            out << "if (" << cond.str() << ") != 0, then + 4 - " << cond.str();
         default:
             break;
         }
@@ -256,35 +254,6 @@ inline std::ostream& print_pretty(std::ostream& out,
     }
     default:
         BUG("Invalid ALU1 opcode");
-    }
-    return out;
-}
-
-/*
- * Output single metadata selection item.
- */
-inline std::ostream& operator<<(std::ostream& out, const Flatrock::metadata_select& select) {
-    switch (select.type) {
-    case Flatrock::metadata_select::CONSTANT:
-        out << select.constant.value;
-        break;
-    case Flatrock::metadata_select::LOGICAL_PORT_NUMBER:
-        out << "logical_port_number";
-        break;
-    case Flatrock::metadata_select::PORT_METADATA:
-        out << "port_metadata " << select.port_metadata.index;
-        break;
-    case Flatrock::metadata_select::INBAND_METADATA:
-        out << "inband_metadata " << select.inband_metadata.index;
-        break;
-    case Flatrock::metadata_select::TIMESTAMP:
-        out << "timestamp " << select.timestamp.index;
-        break;
-    case Flatrock::metadata_select::COUNTER:
-        out << "counter " << select.counter.index;
-        break;
-    default:
-        BUG("Invalid metadata selection");
     }
     return out;
 }
@@ -573,7 +542,6 @@ struct ParserExtractValue {
             BUG("Unexpectedly getting info about slices from a packet PHE source.");
     }
 };
-}  // namespace Flatrock
 
 inline std::ostream& operator<<(std::ostream& os, const Flatrock::ExtractType type) {
 #define CASE(VAL)                    \
@@ -651,6 +619,6 @@ inline std::ostream& operator<<(std::ostream& os, const Flatrock::PovSelectKey& 
     return os << std::to_string(p.start);
 }
 
-}  // namespace P4
+}  // namespace Flatrock
 
 #endif  /* BF_P4C_PARDE_FLATROCK_H_ */

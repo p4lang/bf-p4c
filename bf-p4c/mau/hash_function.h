@@ -77,6 +77,7 @@ struct HashFunction {
     void build_algorithm_t(bfn_hash_algorithm_ *) const;
     static const IR::Expression *convertHashAlgorithmBFN(Util::SourceInfo srcInfo,
                                                          IR::ID algorithm);
+    friend std::ostream &operator<<(std::ostream &, const HashFunction &);
 
  private:
     static const IR::Expression *convertHashAlgorithmExtern(Util::SourceInfo srcInfo,

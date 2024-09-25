@@ -219,6 +219,7 @@ class Table : BFN::Unit, IAnnotated  {
             return no_match_rams() && !no_match_hit_path() && !gateway_match;
         }
 #emit
+        friend std::ostream &operator<<(std::ostream &out, const Layout &layout);
         Layout &operator+=(const Layout &a);
 #end
     }
@@ -583,6 +584,12 @@ class StatefulAlu : MeterBus2Port {
         int             scale = 0;
         int[16]         table = { 0 };
         dbprint { out << valid; }
+#emit
+        friend std::ostream &operator<<(std::ostream &out, const MathUnit &mu) {
+            out << mu.valid;
+            return out;
+        }
+#end
     }
     MathUnit            math = MathUnit();
 
@@ -1153,11 +1160,11 @@ class RangeMatch : Operation_Unary {
 
 #emit
 // defined down here to resolve order of declaration issues
-template<class T> inline const T *P4::IR::MAU::Table::get_attached() const {
+template<class T> inline const T *IR::MAU::Table::get_attached() const {
     for (auto *at : attached)
         if (auto rv = at->attached->to<T>())
             return rv;
     return nullptr; }
 
-std::ostream &operator<<(std::ostream &out, const P4::IR::MAU::Table::Layout &layout);
+std::ostream &operator<<(std::ostream &out, const IR::MAU::Table::Layout &layout);
 #end

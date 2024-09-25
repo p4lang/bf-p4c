@@ -9,7 +9,7 @@
 #include "lib/symbitmatrix.h"
 #include "ir/ir.h"
 
-namespace P4::PHV {
+namespace PHV {
 
 using ActionSet = SmallSet<const IR::MAU::Action*>;
 using UnitSet = SmallSet<const IR::BFN::Unit*>;
@@ -370,6 +370,6 @@ std::ostream &operator<<(std::ostream &out, const DarkInitPrimitive&);
 
 }   // namespace PHV
 
-std::ostream &operator<<(std::ostream &, const safe_vector<P4::PHV::AllocSlice> &);
+std::ostream &operator<<(std::ostream &, const safe_vector<PHV::AllocSlice> &);
 
 #endif  /* BF_P4C_PHV_UTILS_SLICE_ALLOC_H_ */

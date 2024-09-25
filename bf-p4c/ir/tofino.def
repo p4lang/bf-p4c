@@ -102,6 +102,13 @@ class BFN::Pipe {
                       out << "ghost_parser=" << ghost_parser; }
         dbprint { out << "ghost_mau=" << ghost_mau << " "
                       << "ghost_parser=" << ghost_parser; }
+#emit
+        friend std::ostream &operator<<(std::ostream &out, const ghost_thread_t &gt) {
+            out << "ghost_mau=" << gt.ghost_mau << " "
+                << "ghost_parser=" << gt.ghost_parser;
+            return out;
+        }
+#end
     }
     ghost_thread_t ghost_thread;
 
