@@ -18,7 +18,7 @@
 #include "hex.h"
 #include "log.h"
 
-using namespace P4;
+// using namespace P4;
 
 static const char *signames[] = {
     "NONE", "HUP",  "INT",  "QUIT", "ILL",  "TRAP", "ABRT",   "BUS",  "FPE",   "KILL",

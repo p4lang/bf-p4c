@@ -10,7 +10,7 @@
 #include "bitvec.h"
 #include "log.h"
 
-using namespace P4;
+// using namespace P4;
 
 void declare_registers(const void *addr, size_t sz,
         std::function<void(std::ostream &, const char *, const void *)> fn);
