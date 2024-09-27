@@ -23,7 +23,7 @@ struct MarshaledFrom {
     size_t pre_padding;
     // size_t post_padding;
 
-    cstring toString() const;
+    std::string toString() const;
 
     bool operator==(const MarshaledFrom& other) const {
         return gress == other.gress && field_name == other.field_name
@@ -34,6 +34,9 @@ struct MarshaledFrom {
     void toJSON(JSONGenerator& json) const;
     static MarshaledFrom fromJSON(JSONLoader& json);
 
+    friend std::ostream& operator<<(std::ostream& s, const MarshaledFrom& m);
+    friend JSONGenerator& operator<<(JSONGenerator& out, const MarshaledFrom& c);
+
     MarshaledFrom()
         : gress(INGRESS), field_name(""), pre_padding(0) { }
     MarshaledFrom(gress_t gress, cstring name)
@@ -42,8 +45,14 @@ struct MarshaledFrom {
         : gress(gress), field_name(name), pre_padding(pre_padding) { }
 };
 
-std::ostream& operator<<(std::ostream& s, const MarshaledFrom& m);
-JSONGenerator& operator<<(JSONGenerator& out, const MarshaledFrom& c);
+inline std::ostream& operator<<(std::ostream& s, const MarshaledFrom& m) {
+    s << "(" << m.gress << ", " << m.field_name << ", " << m.pre_padding << ")";
+    return s;
+}
+
+inline JSONGenerator& operator<<(JSONGenerator& out, const MarshaledFrom& c) {
+    return out << c;
+}
 
 }  // namespace P4
 

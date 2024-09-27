@@ -20,7 +20,7 @@ class NextTable : public virtual Visitor {
         return -1; }
 };
 
-class DynamicNextTable : public DynamicVisitor, public NextTable {
+class DynamicNextTable : public DynamicVisitor, public NextTable, public IHasDbPrint {
     NextTable   *pass = nullptr;
 
  public:

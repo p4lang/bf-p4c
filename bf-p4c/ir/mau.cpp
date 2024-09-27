@@ -462,8 +462,8 @@ IR::MAU::Table::Layout &IR::MAU::Table::Layout::operator +=(const IR::MAU::Table
     sets_per_word       += a.sets_per_word;
     return *this;
 }
-
-std::ostream &operator<<(std::ostream &out, const IR::MAU::Table::Layout &layout) {
+/*
+std::ostream &operator<<(std::ostream &out, IR::MAU::Table::Layout &layout) {
     Log::TempIndent indent;
     out << "layout: " << layout.entries << indent;
     if (layout.pre_classifier) out << 'c';
@@ -490,6 +490,34 @@ std::ostream &operator<<(std::ostream &out, const IR::MAU::Table::Layout &layout
     return out;
 }
 
+/// same function with const parameter
+std::ostream &operator<<(std::ostream &out, const IR::MAU::Table::Layout &layout) {
+    Log::TempIndent indent;
+    out << "layout: " << layout.entries << indent;
+    if (layout.pre_classifier) out << 'c';
+    if (layout.gateway) out << 'g';
+    if (layout.exact) out << 'e';
+    if (layout.ternary) out << 't';
+    if (layout.hash_action) out << 'h';
+    if (layout.gateway_match) out << 'G';
+    if (layout.atcam) out << 'T';
+    if (layout.alpm) out << 'L';
+    if (layout.has_range) out << 'r';
+    if (layout.proxy_hash) out << 'P';
+    if (layout.requires_versioning) out << 'V';
+    out << " ixbar:" << layout.ixbar_bytes << "B/" << layout.ixbar_width_bits << "b";
+    out << " match:" << layout.match_bytes << "B/" << layout.match_width_bits << "b";
+    if (layout.ghost_bytes) out << " gh:" << layout.ghost_bytes;
+    if (layout.action_data_bytes || layout.action_data_bytes_in_table) {
+        out << " adb:" << layout.action_data_bytes;
+        if (layout.action_data_bytes_in_table)
+            out << "/" << layout.action_data_bytes_in_table; }
+    if (layout.overhead_bits) out << " ov:" << layout.overhead_bits;
+    if (layout.immediate_bits) out << " imm:" << layout.immediate_bits;
+    if (layout.partition_bits) out << " part:" << layout.partition_bits;
+    return out;
+}
+*/
 IR::MAU::Table::IndirectAddress
     &IR::MAU::Table::IndirectAddress::operator +=(const IR::MAU::Table::IndirectAddress &a) {
     shifter_enabled |= a.shifter_enabled;

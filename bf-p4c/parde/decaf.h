@@ -207,7 +207,7 @@ struct FieldGroup : public ordered_set<const PHV::Field*> {
 /**
  * \ingroup DeparserCopyOpt
  */
-struct CollectHeaderValidity : public Inspector {
+struct CollectHeaderValidity : public Inspector, IHasDbPrint {
     const PhvInfo &phv;
 
     assoc::map<const PHV::Field*, const IR::Expression*> field_to_expr;
@@ -291,7 +291,7 @@ struct CollectHeaderValidity : public Inspector {
  * digest). The weak fields are, by exclusion, the ones that are not strong. Weak fields
  * also shall not have a transitive strong source. All weak fields are then decaf candidates.
  */
-class CollectWeakFields : public MauInspector, BFN::ControlFlowVisitor {
+class CollectWeakFields : public MauInspector, BFN::ControlFlowVisitor, IHasDbPrint {
     const PhvInfo &phv;
     const PhvUse &uses;
     const FieldDefUse &defuse;
@@ -536,7 +536,7 @@ struct VersionMap {
  * the deparser, we construct tables to synthesize the POV bits needed
  * to deparse the right version at runtime.
  */
-class SynthesizePovEncoder : public MauTransform {
+class SynthesizePovEncoder : public MauTransform, IHasDbPrint {
     const CollectHeaderValidity& pov_bits;
     const CollectWeakFields& weak_fields;
     const ComputeValuesAtDeparser& values_at_deparser;
@@ -643,7 +643,7 @@ class SynthesizePovEncoder : public MauTransform {
  * by the parser in Tofino. In JBay, the deparser comes with 8 bytes of constants we
  * can use, the rest still need to be extracted in the parser.
  */
-class CreateConstants : public PardeTransform {
+class CreateConstants : public PardeTransform, IHasDbPrint {
     const ComputeValuesAtDeparser& values_at_deparser;
     unsigned cid = 0;
 

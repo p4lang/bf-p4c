@@ -45,10 +45,6 @@ MatchRegister MatchRegister::fromJSON(JSONLoader& json) {
     return MatchRegister();
 }
 
-std::ostream& operator<<(std::ostream& out, const MatchRegister& c) {
-    return out << c.name;
-}
-
 JSONGenerator& operator<<(JSONGenerator& out, const MatchRegister& c) {
     return out << c.toString();
 }

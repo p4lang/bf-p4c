@@ -46,7 +46,7 @@ struct IXBarRandom {
     static unsigned nextRandomNumber(unsigned numBits = 1);
 };
 
-struct IXBar {
+struct IXBar : public IHasDbPrint {
     // these constants aren't realy target specific, but don't really belong here
     static constexpr int LAMB_LINE_SELECT_BITS = 6;
     static constexpr int RAM_LINE_SELECT_BITS = 10;
@@ -312,7 +312,7 @@ struct IXBar {
 
         typedef safe_vector<safe_vector<Byte> *> TotalBytes;
 
-        struct GroupInfo {
+        struct GroupInfo : public IHasDbPrint {
             int search_bus;
             int ixbar_group;
             int bytes;

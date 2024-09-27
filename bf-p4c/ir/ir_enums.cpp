@@ -1,5 +1,8 @@
 #include "bf-p4c/ir/ir_enums.h"
 
+namespace IR {
+namespace MAU {
+
 static const char *data_aggr_to_str[] = {
     "NONE", "PACKETS", "BYTES", "BOTH"
 };
@@ -186,6 +189,31 @@ bool operator>>(cstring s, IR::MAU::SelectorMode &t) {
     return false;
 }
 
+static const char *always_run_to_str[] = {
+    "NONE", "TABLE", "ACTION"
+};
+
+std::ostream& operator<<(std::ostream &out, const IR::MAU::AlwaysRun &ar) {
+    out << always_run_to_str[static_cast<int>(ar)];
+    return out;
+}
+
+bool operator>>(cstring s, IR::MAU::AlwaysRun &ar) {
+    for (int i = 0; i < 3; i++) {
+        if (always_run_to_str[i] == s) {
+            ar = static_cast<IR::MAU::AlwaysRun>(i);
+            return true;
+        }
+    }
+    return false;
+}
+
+}  // end namespace MAU
+}  // end namespace IR
+
+namespace IR {
+namespace BFN {
+
 static const char *checksum_mode_to_str[] = {
     "VERIFY", "RESIDUAL", "CLOT"
 };
@@ -223,21 +251,5 @@ bool operator>>(cstring s, IR::BFN::ParserWriteMode &t) {
     return false;
 }
 
-static const char *always_run_to_str[] = {
-    "NONE", "TABLE", "ACTION"
-};
-
-std::ostream& operator<<(std::ostream &out, const IR::MAU::AlwaysRun &ar) {
-    out << always_run_to_str[static_cast<int>(ar)];
-    return out;
-}
-
-bool operator>>(cstring s, IR::MAU::AlwaysRun &ar) {
-    for (int i = 0; i < 3; i++) {
-        if (always_run_to_str[i] == s) {
-            ar = static_cast<IR::MAU::AlwaysRun>(i);
-            return true;
-        }
-    }
-    return false;
-}
+}  // end namespace BFN
+}  // end namespace IR

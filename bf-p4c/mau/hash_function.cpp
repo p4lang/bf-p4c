@@ -523,34 +523,6 @@ bool IR::MAU::HashFunction::convertPolynomialExtern(const IR::GlobalRef *ref) {
     return true;
 }
 
-std::ostream &operator<<(std::ostream &out, const IR::MAU::HashFunction &h) {
-    switch (h.type) {
-    case IR::MAU::HashFunction::IDENTITY:
-        out << "identity";
-        break;
-    case IR::MAU::HashFunction::CSUM:
-        out << "csum" << h.size;
-        break;
-    case IR::MAU::HashFunction::XOR:
-        out << "xor" << h.size;
-        break;
-    case IR::MAU::HashFunction::CRC:
-        out << "crc(0x" << hex(h.poly);
-        if (h.init)
-            out << " init=0x" << hex(h.init);
-        out << ")";
-        if (h.final_xor)
-            out << "^" << hex(h.final_xor);
-        break;
-    case IR::MAU::HashFunction::RANDOM:
-        out << "random";
-        break;
-    default:
-        out << "invalid(0x" << hex(h.type) << ")";
-        break; }
-    return out;
-}
-
 void IR::MAU::HashFunction::toJSON(JSONGenerator &json) const {
     json << json.indent << "\"type\": " << static_cast<int>(type) << ",\n"
          << json.indent << "\"size\": " << size << ",\n"

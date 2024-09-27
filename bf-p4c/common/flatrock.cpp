@@ -1,5 +1,4 @@
 #include "flatrock.h"
-#include "lib/exceptions.h"
 
 using namespace Flatrock;
 

@@ -235,7 +235,7 @@ void WalkPowerGraph::clear_mpr_settings() {
  */
 void WalkPowerGraph::compute_mpr() {
     BUG_CHECK(next_table_properties_, "next table properties not set");
-    LOG4("" << *next_table_properties_);
+    // LOG4("" << *next_table_properties_);
 
     for (gress_t g : Device::allGresses()) {
         MprSettings *mpr = mpr_settings_.at(g);

@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <iostream>
 #include <vector>
+#include "lib/exceptions.h"
 
 /**
  * @file flatrock.h
@@ -220,13 +221,6 @@ inline std::ostream& operator<<(std::ostream& out, const Flatrock::metadata_sele
         break;
     default:
         BUG("Invalid metadata selection");
-    }
-    return out;
-}
-
-std::ostream& operator<<(std::ostream& out, const std::vector<metadata_select>& selects) {
-    for (const auto& select : selects) {
-        out << select << " ";
     }
     return out;
 }

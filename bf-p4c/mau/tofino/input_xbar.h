@@ -425,7 +425,7 @@ struct IXBar : public ::IXBar {
     enum AvailBytesPerRepeatingSect_t { AV_FULL = 1, AV_HALF = 2, AV_BYTE = 4 };
 
 /* An individual SRAM group or half of a TCAM group */
-    struct grp_use {
+    struct grp_use : public IHasDbPrint {
         enum type_t { MATCH, HASH_DIST, FREE };
         int group;
         /**

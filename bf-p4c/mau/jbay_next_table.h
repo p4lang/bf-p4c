@@ -15,7 +15,7 @@
  * using global_exec/local_exec instead. This pass must be run after modifications to IR graph are
  * done, otherwise its data will be invalidated.
  */
-class JbayNextTable : public PassRepeated, public NextTable {
+class JbayNextTable : public PassRepeated, public NextTable, public IHasDbPrint {
  public:
     // Map from tables->condition (tseq names)->sets of tables that need to occur next
     using next_map_t = std::map<UniqueId, std::unordered_map<cstring, std::set<UniqueId>>>;

@@ -8,7 +8,6 @@
 
 #include "rapidjson_adapter.h"
 #include "bf-p4c/common/run_id.h"
-#include "lib/exceptions.h"
 
 namespace Logging {
 /// Define the levels of logging. All messages above the set level for logger are logged.
@@ -42,7 +41,10 @@ class Logger : public rapidjson::Document {
     static const std::string buildDate(void) {
       const time_t now = time(NULL);
       struct tm tmp;
-      BUG_CHECK(localtime_r(&now, &tmp), "Error calling localtime_r: %1%", strerror(errno));
+      
+      if (localtime_r(&now, &tmp) == NULL) {
+          throw std::runtime_error("Error calling localtime_r: " + std::string(strerror(errno)));
+      }
 
       char bdate[1024];
       strftime(bdate, 1024, "%c", &tmp);

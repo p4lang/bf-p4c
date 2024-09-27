@@ -262,7 +262,7 @@ struct Memories : public ::Memories {
     friend std::ostream & operator<<(std::ostream &out, const Memories::table_alloc &ta);
 
     /** Information on a particular table that is to be allocated in the RAM array */
-    struct SRAM_group {
+    struct SRAM_group : public IHasDbPrint {
         table_alloc *ta;  // Link to the table alloc to be generated
         int depth = 0;    // Individual number of RAMs required for a group
         int width = 0;    // How wide an individual group is, only needed for exact match

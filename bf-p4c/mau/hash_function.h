@@ -89,9 +89,35 @@ struct HashFunction {
                                                            const std::string &alg_name);
 };
 
+inline std::ostream &operator<<(std::ostream &out, const IR::MAU::HashFunction &h) {
+    switch (h.type) {
+    case IR::MAU::HashFunction::IDENTITY:
+        out << "identity";
+        break;
+    case IR::MAU::HashFunction::CSUM:
+        out << "csum" << h.size;
+        break;
+    case IR::MAU::HashFunction::XOR:
+        out << "xor" << h.size;
+        break;
+    case IR::MAU::HashFunction::CRC:
+        out << "crc(0x" << std::hex << h.poly;
+        if (h.init)
+            out << " init=0x" << std::hex << h.init;
+        out << ")";
+        if (h.final_xor)
+            out << "^" << std::hex << h.final_xor;
+        break;
+    case IR::MAU::HashFunction::RANDOM:
+        out << "random";
+        break;
+    default:
+        out << "invalid(0x" << std::hex << h.type << ")";
+        break; }
+    return out;
+}
+
 }  // end namespace MAU
 }  // end namespace IR
-
-std::ostream &operator<<(std::ostream &, const IR::MAU::HashFunction &);
 
 #endif /* BF_P4C_MAU_HASH_FUNCTION_H_ */

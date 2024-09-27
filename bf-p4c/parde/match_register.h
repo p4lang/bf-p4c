@@ -37,10 +37,13 @@ class MatchRegister {
         if (other.id > id) return false;
         return false;
     }
+
+    friend std::ostream& operator<<(std::ostream& out, const MatchRegister& c);
 };
 
-std::ostream& operator<<(std::ostream& out, const MatchRegister& c);
-JSONGenerator& operator<<(JSONGenerator& out, const MatchRegister& c);
+inline std::ostream& operator<<(std::ostream& out, const MatchRegister& c) {
+    return out << c.name;
+}
 
 }  // namespace P4
 

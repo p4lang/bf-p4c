@@ -11,7 +11,7 @@
 #include "lib/safe_vector.h"
 
 // Info for the allocation scheme for individual byte off of the input crossbar
-struct ByteInfo {
+struct ByteInfo : public IHasDbPrint {
  public:
     IXBar::Use::Byte byte;  // Obviously the byte
     bitvec bit_use;   // Relevant bits of the byte
@@ -29,7 +29,7 @@ struct ByteInfo {
     bool better_hole_type(int hole, int comp_hole, int overhead_bits) const;
     void set_interleave_info(int overhead_bits);
 
-    struct InterleaveInfo {
+    struct InterleaveInfo : public IHasDbPrint {
         bool interleaved = false;
         HoleType_t hole_type = INVALID;
         // How many bytes the combination of the match byte and overhead take

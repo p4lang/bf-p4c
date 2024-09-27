@@ -233,7 +233,11 @@ class Profile {
             out << "<unset>";
         }
         out << IndentCtl::endl << "metadata_select=";
-        if (metadata_select.size() > 0) out << metadata_select;
+        if (metadata_select.size() > 0) {
+            for (auto &ms : metadata_select) {
+                out << IndentCtl::endl << ms;
+            }
+        }
         else out << "<unset>";
         out << IndentCtl::unindent;
     }

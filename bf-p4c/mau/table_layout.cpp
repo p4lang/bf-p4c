@@ -1684,7 +1684,7 @@ LayoutOption* LayoutOption::clone() const {
 
 std::ostream &operator<<(std::ostream &out, const LayoutOption &lo) {
     Log::TempIndent indent;
-    out << lo.layout << Log::endl;
+    out << const_cast<IR::MAU::Table::Layout&>(lo.layout) << Log::endl;
     bool empty = true;
     if (lo.way.match_groups || lo.way.entries || lo.way.width || !lo.way_sizes.empty()) {
         empty = false;

@@ -103,7 +103,7 @@ class Node {
  * since Tofino2+ allows initiation of multiple parallel threads of execution
  * via local_exec, global_exec, and long branching.
  */
-class SimplePowerGraph {
+class SimplePowerGraph : public IHasDbPrint {
     std::map<UniqueId, Node *> nodes_ = {};
     std::map<UniqueId, std::set<UniqueId>> pred_ = {};
 
