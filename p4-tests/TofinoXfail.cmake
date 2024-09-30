@@ -280,7 +280,7 @@ p4c_add_xfail_reason("tofino"
 
 p4c_add_xfail_reason("tofino"
   "error: table .* and table .* cannot share .*"
-  testdata/p4_16_samples/issue1566.p4
+  #testdata/p4_16_samples/issue1566.p4
   testdata/p4_16_samples/issue1566-bmv2.p4
   )
 
