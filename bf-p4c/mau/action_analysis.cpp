@@ -466,7 +466,7 @@ bool ActionAnalysis::preorder(const P4::IR::Expression *expr) {
 }
 
 bool ActionAnalysis::preorder(const P4::IR::Mux *mux) {
-    ::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
+    ::P4::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
             "%1%\nConditions in an action must be simple comparisons of an action data "
             "parameter\nTry moving the test out of the action or making it part of the table key",
             mux->srcInfo);
@@ -556,7 +556,7 @@ void ActionAnalysis::verify_conditional_set_without_phv(cstring action_name, Fie
     BUG_CHECK(arg_param.type != ActionParam::PHV, "Conditional write action data field not built "
         "correctly");
     if (arg_param.speciality != ActionParam::NO_SPECIAL) {
-       ::warning("Conditional set instruction parameter %s in instruction %s in action %s "
+       ::P4::warning("Conditional set instruction parameter %s in instruction %s in action %s "
                  "must be from an action argument or constant", arg_param.to_string(),
                  fa.to_string(), action_name);
        warning = true;
@@ -598,7 +598,7 @@ void ActionAnalysis::verify_P4_action_without_phv(cstring action_name) {
                 if (written_fields.find(field) == written_fields.end()) continue;
                 if (written_fields[field].intersects(read_bits)) {
                     if (error_verbose) {
-                        ::warning("Action %s has a read of a field %s "
+                        ::P4::warning("Action %s has a read of a field %s "
                                           "after it already has been written",
                                   action_name, cstring::to_cstring(read));
                     }
@@ -616,7 +616,7 @@ void ActionAnalysis::verify_P4_action_without_phv(cstring action_name) {
         if (written_fields.find(field) != written_fields.end()) {
             if (written_fields[field].intersects(write_bits)) {
                 if (error_verbose) {
-                    ::warning("Action %s has repeated lvalue %s", action_name, field->name);
+                    ::P4::warning("Action %s has repeated lvalue %s", action_name, field->name);
                 }
                 field_action.error_code |= FieldAction::REPEATED_WRITES;
                 LOG4("Error Code Update: REPEATED_WRITES");
@@ -637,7 +637,7 @@ void ActionAnalysis::verify_P4_action_without_phv(cstring action_name) {
                     non_phv_count++;
                 if (non_phv_count > 1) {
                     if (error_verbose) {
-                        ::warning("In action %s, the following instruction has multiple "
+                        ::P4::warning("In action %s, the following instruction has multiple "
                                   "action data parameters: %s",
                                   action_name, cstring::to_cstring(field_action));
                     }
@@ -652,7 +652,7 @@ void ActionAnalysis::verify_P4_action_without_phv(cstring action_name) {
             for (auto read : field_action.reads) {
                 if (read.size() != field_action.write.size()) {
                     if (error_verbose) {
-                        ::warning("In action %s, write %s and read %s sizes do not match up",
+                        ::P4::warning("In action %s, write %s and read %s sizes do not match up",
                                   action_name, cstring::to_cstring(field_action.write),
                                   cstring::to_cstring(read));
                     }
@@ -1296,7 +1296,7 @@ void ActionAnalysis::verify_P4_action_with_phv(cstring action_name) {
         }
 
         if (!same_action && error_verbose) {
-            ::warning("In action %s over container %s, the action has multiple operand types %s",
+            ::P4::warning("In action %s over container %s, the action has multiple operand types %s",
                       action_name, container.toString(), cstring::to_cstring(cont_action));
             warning = true;
         }
@@ -1319,7 +1319,7 @@ void ActionAnalysis::verify_P4_action_with_phv(cstring action_name) {
                 bool init = initialize_alignment(write, read, read_src, cont_action,
                         init_error_message, container, action_name);
                 if (!init && error_verbose) {
-                    ::warning("%1%: %2% %3%", tbl, init_error_message,
+                    ::P4::warning("%1%: %2% %3%", tbl, init_error_message,
                               cstring::to_cstring(cont_action));
                     warning = true;
                 }
@@ -1333,7 +1333,7 @@ void ActionAnalysis::verify_P4_action_with_phv(cstring action_name) {
         cstring error_message;
         bool verify = cont_action.verify_possible(error_message, container, action_name, phv);
         if (!verify && error_verbose) {
-            ::warning("%1%: %2% %3%", tbl, error_message, cstring::to_cstring(cont_action));
+            ::P4::warning("%1%: %2% %3%", tbl, error_message, cstring::to_cstring(cont_action));
             warning = true;
         }
         check_constant_to_actiondata(cont_action, container);

@@ -9,8 +9,10 @@ class ReferenceMap;
 class TypeMap;
 }  // namespace P4
 
+namespace P4 {
 namespace P4V1 {
 class TnaProgramStructure;
+}
 }
 
 namespace BFN {
@@ -40,7 +42,7 @@ namespace BFN {
  */
 struct TranslatePhase0 : public PassManager {
     TranslatePhase0(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
-            P4V1::TnaProgramStructure* s = nullptr);
+            P4::P4V1::TnaProgramStructure* s = nullptr);
 };
 
 typedef std::map<const IR::BFN::TnaParser*, const IR::Type_StructLike*> Phase0CallMap;

@@ -113,7 +113,7 @@ bool AssignActionHandle::ValidateSelectors::ValidateKey::preorder(const P4::IR::
     }
 
     if (sel_key_vec.empty()) {
-        ::error("%s: On Table %s, the Selector %s is provided no keys", sel->srcInfo, tbl->name,
+        ::P4::error("%s: On Table %s, the Selector %s is provided no keys", sel->srcInfo, tbl->name,
                 sel->name);
         return false;
     }
@@ -126,7 +126,7 @@ bool AssignActionHandle::ValidateSelectors::ValidateKey::preorder(const P4::IR::
          * one can only assign a single logical table to a wide hash mod.  Thus, a selector
          * that requires a hash mod cannot be shared
          */
-        ::error("%s: The selector %s cannot be shared between tables %s and %s, because "
+        ::P4::error("%s: The selector %s cannot be shared between tables %s and %s, because "
                 "it requires a max pool size of %d.  In order to share a selector on Barefoot "
                 "HW, the max pool size must be %d", sel->srcInfo, sel->name, tbl->name,
                 self.initial_table.at(sel), sel->max_pool_size,
@@ -152,7 +152,7 @@ bool AssignActionHandle::ValidateSelectors::ValidateKey::preorder(const P4::IR::
     } else {
         auto sel_func_comp = self.selector_keys.at(sel);
         if (!sel_func->equiv(sel_func_comp)) {
-            ::error("%s: The key for selector %s on table %s does not match the key for the "
+            ::P4::error("%s: The key for selector %s on table %s does not match the key for the "
                     "selector on table %s.  Barefoot requires the selector key to be identical "
                     "per selector", sel->srcInfo, sel->name, tbl->name, self.initial_table.at(sel));
         }

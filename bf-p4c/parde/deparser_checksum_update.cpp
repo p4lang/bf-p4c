@@ -11,6 +11,8 @@
 #include "bf-p4c/parde/parser_info.h"
 #include "logging/filelog.h"
 
+using namespace P4;
+
 namespace {
 
 /**
@@ -131,20 +133,20 @@ static bool checksumUpdateSanityCheck(const IR::AssignmentStatement* assignment)
     if (!member || member->member != "update")
         return false;
     if (!destField || !destField->expr->is<IR::HeaderRef>()) {
-        ::error("Destination of checksum calculation must be a header field: %1%",
+        ::P4::error("Destination of checksum calculation must be a header field: %1%",
                 destField);
         return false;
     }
 
     if (destField->type->width_bits() != 16) {
-        ::error("Output of checksum calculation can only be stored in a 16-bit field: %1%",
+        ::P4::error("Output of checksum calculation can only be stored in a 16-bit field: %1%",
                 destField);
         return false;
     }
     checkDestHeader(destField);
     LOG4("checksum update field: " << destField);
     if (methodCall->arguments->size() == 0) {
-        ::error("Insufficient argumentst to method %1%", methodCall);
+        ::P4::error("Insufficient argumentst to method %1%", methodCall);
         return false;
     }
 
@@ -152,14 +154,14 @@ static bool checksumUpdateSanityCheck(const IR::AssignmentStatement* assignment)
         getListExprComponents(*(*methodCall->arguments)[0]->expression);
 
     if (!components || components->empty()) {
-        ::error("Invalid list of fields for checksum calculation: %1%", methodCall);
+        ::P4::error("Invalid list of fields for checksum calculation: %1%", methodCall);
         return false;
     }
 
     for (auto* source : *components) {
         if (auto* member = source->to<IR::Member>()) {
             if (!member->expr->is<IR::HeaderRef>()) {
-                ::error("Invalid field in the checksum calculation: %1%", source);
+                ::P4::error("Invalid field in the checksum calculation: %1%", source);
                 return false;
             }
         } else if (source->is<IR::Constant>()) {
@@ -168,7 +170,7 @@ static bool checksumUpdateSanityCheck(const IR::AssignmentStatement* assignment)
     }
 
     if (components->empty()) {
-        ::error("Expected at least one field in the checksum calculation: %1%",
+        ::P4::error("Expected at least one field in the checksum calculation: %1%",
                 methodCall);
         return false;
     }
@@ -301,7 +303,7 @@ analyzeUpdateChecksumStatement(const IR::AssignmentStatement* assignment,
                         headerToFields[headerName].second[member->member] = offset;
                     }
                 } else {
-                    ::error("Unhandled checksum expression %1%", member);
+                    ::P4::error("Unhandled checksum expression %1%", member);
                 }
             }
 
@@ -320,7 +322,7 @@ analyzeUpdateChecksumStatement(const IR::AssignmentStatement* assignment,
             std::string entry_type = " ";
             if (source->is<IR::TempVar>())
                 entry_type = " local variable ";
-            ::error(ErrorType::ERR_UNSUPPORTED,
+            ::P4::error(ErrorType::ERR_UNSUPPORTED,
                     "%1%: Invalid%2%entry in checksum calculation %3%\n"
                     "  Currently only zero-constants and metadata/headers or their "
                     "fields are supported as entries", methodCall, entry_type, source);
@@ -378,7 +380,7 @@ getUpdateCondition(const IR::Expression* condition) {
             conditionNegated = !conditionNegated;
         return new UpdateConditionInfo(field->to<IR::Member>(), conditionNegated);
     }
-    ::error("Tofino only supports 1-bit checksum update condition in the deparser, "
+    ::P4::error("Tofino only supports 1-bit checksum update condition in the deparser, "
             " in the form of \"cond == 1\", \"cond == 0\", \"cond != 1\", \"cond != 0\". "
             "Please move the update condition into the control flow: %1%", condition);
     return nullptr;
@@ -461,7 +463,7 @@ struct CollectUpdateChecksums : public Inspector {
                     std::stringstream msg;
                     msg << dest << " has an unconditional update checksum operation."
                         << " All other conditional update checksums will be deleted.";
-                    ::warning("%1%", msg.str());
+                    ::P4::warning("%1%", msg.str());
                 }
             }
             checksums[dest->toString()] = csum;

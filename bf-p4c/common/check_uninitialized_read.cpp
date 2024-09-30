@@ -253,7 +253,7 @@ void FindUninitializedAndOverlayedReads::end_apply() {
         ss << " - P4 Language Spec states an uninitialized field can have an unspecified value and"
               " PHV allocation overlays such fields for more efficient packing" << std::endl;
 
-        ::warning(BFN::ErrorType::WARN_UNINIT_OVERLAY, "%s", ss.str());
+        ::P4::warning(BFN::ErrorType::WARN_UNINIT_OVERLAY, "%s", ss.str());
     }
 }
 

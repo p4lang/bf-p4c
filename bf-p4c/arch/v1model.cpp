@@ -371,14 +371,14 @@ class LoadTargetArchitecture : public Inspector {
         // the file and then open it again as an ofstream.
         auto fd = mkstemps(tempPath, 3);
         if (fd < 0) {
-            ::error("Error mkstemp(%1%): %2%", tempPath, strerror(errno));
+            ::P4::error("Error mkstemp(%1%): %2%", tempPath, strerror(errno));
             return;
         }
         // close the file descriptor and open as stream
         close(fd);
         std::ofstream result(tempPath, std::ios::out);
         if (!result.is_open()) {
-            ::error("Failed to open arch include file %1%", tempPath);
+            ::P4::error("Failed to open arch include file %1%", tempPath);
             return;
         }
         for (auto f : filenames) {
@@ -388,7 +388,7 @@ class LoadTargetArchitecture : public Inspector {
                 result << inFile.rdbuf();
                 inFile.close();
             } else {
-                ::error("Failed to open architecture include file %1%", fPath);
+                ::P4::error("Failed to open architecture include file %1%", fPath);
                 result.close();
                 unlink(tempPath);
                 return;
@@ -758,7 +758,7 @@ class AnalyzeProgram : public Inspector {
         if (params->parameters.size() >= 2) {
             structure->user_metadata = node->type->applyParams->parameters.at(2);
         } else {
-            ::error("Parser in v1model must have at least 2 parameters");
+            ::P4::error("Parser in v1model must have at least 2 parameters");
         }
     }
 
@@ -800,7 +800,7 @@ class AnalyzeProgram : public Inspector {
                 << " in the 'main' instance." << std::endl;
             msg << "Did you specify the correct architecture using --arch?";
 
-            ::error("%1%", msg.str());
+            ::P4::error("%1%", msg.str());
             return;
         }
         analyzeArchBlock<IR::P4Parser, IR::ParserBlock>(
@@ -1069,7 +1069,7 @@ class ConstructSymbolTable : public Inspector {
         auto mem = new IR::Member(path, "digest_type");
         unsigned digestId = getIndex(node, digestIndexHashes);
         if (digestId > Device::maxDigestId()) {
-            ::error("Too many digest() calls in %1%", control->name);
+            ::P4::error("Too many digest() calls in %1%", control->name);
             return;
         }
         unsigned bits = static_cast<unsigned>(std::ceil(std::log2(Device::maxDigestId())));
@@ -1385,7 +1385,7 @@ class ConstructSymbolTable : public Inspector {
                                 generatedCloneHeaderTypeName, type_name, {});
                         structure->type_declarations.emplace(header_type->name, header_type);
                     } else {
-                        ::error(ErrorType::ERR_UNEXPECTED,
+                        ::P4::error(ErrorType::ERR_UNEXPECTED,
                                 "clone field list %1% not supported ", fl->expression);
                     }
                 } else if (auto path = fl->expression->to<IR::PathExpression>()) {
@@ -1517,7 +1517,7 @@ class ConstructSymbolTable : public Inspector {
             BUG("Only compile-time constants are supported for hash base offset and max value");
 
         if (pBase->to<IR::Constant>()->asInt() != 0)
-            ::error("The initial offset for a hash calculation function has to be zero");
+            ::P4::error("The initial offset for a hash calculation function has to be zero");
 
         int bit_size = 0;
         if (auto *constant = pMax->to<IR::Constant>()) {
@@ -1609,7 +1609,7 @@ class ConstructSymbolTable : public Inspector {
         auto mem = new IR::Member(path, "resubmit_type");
         unsigned resubmitId = getIndex(node, resubmitIndexHashes);
         if (resubmitId > Device::maxResubmitId()) {
-            ::error("Too many resubmit() calls in %1%", control->name);
+            ::P4::error("Too many resubmit() calls in %1%", control->name);
             return;
         }
         unsigned bits = static_cast<unsigned>(std::ceil(std::log2(Device::maxResubmitId())));
@@ -2260,7 +2260,7 @@ class ConstructSymbolTable : public Inspector {
                 return;
             auto control = findContext<IR::P4Control>();
             if (control == nullptr) {
-                ::error("Unable to reference global instance '%1%' from non-control block. "
+                ::P4::error("Unable to reference global instance '%1%' from non-control block. "
                         "Please check that '%1%' is not a reserved keyword (including in P4-16).",
                         path->name);
                 return;
@@ -2324,7 +2324,7 @@ class ConstructSymbolTable : public Inspector {
                 for (auto e : anno->expr) {
                     auto cst = e->to<IR::Constant>();
                     if (cst == nullptr) {
-                        ::error("%1%: Annotation must be a constant integer", e);
+                        ::P4::error("%1%: Annotation must be a constant integer", e);
                         continue;
                     }
                     unsigned id = cst->asUnsigned();

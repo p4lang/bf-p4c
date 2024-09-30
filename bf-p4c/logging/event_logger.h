@@ -9,6 +9,8 @@
 #include "lib/log.h"
 #include "lib/error_message.h"
 
+namespace P4 {
+
 namespace IR {
 class Node;  // Forward declare IR::Node for debug hook
 }
@@ -19,6 +21,8 @@ class SourceInfo;  // Forward declare Util::SourceInfo for errors/warnings
 
 // Copy typedef of DebugHook so we don't have to depend on ir/ir.h
 typedef std::function<void(const char*, unsigned, const char*, const IR::Node*)> DebugHook;
+
+}  // namespace P4
 
 /**
  *  Custom logger for emitting EventLog for P4I
@@ -148,19 +152,19 @@ class EventLogger {
      *  This function is expected to be called from ErrorReporter
      *  as a custom sink for parser error messages
      */
-    void parserError(const ParserErrorMessage &msg);
+    void parserError(const P4::ParserErrorMessage &msg);
 
     /**
      *  This function is expected to be called from ErrorReporter
      *  as a custom sink for error messages
      */
-    void error(const ErrorMessage &msg);
+    void error(const P4::ErrorMessage &msg);
 
     /**
      *  This function is expected to be called from ErrorReporter
      *  as a custom sink for warning messages
      */
-    void warning(const ErrorMessage &msg);
+    void warning(const P4::ErrorMessage &msg);
 
     /**
      *  This function is expected to be called from LOG_DEBUGn macros
@@ -187,8 +191,8 @@ class EventLogger {
     /**
      *  Get callback for logging changes in pass managers
      */
-    static DebugHook getDebugHook() {
-        return [] (const char *m, unsigned s, const char *p, const IR::Node*) {
+    static P4::DebugHook getDebugHook() {
+        return [] (const char *m, unsigned s, const char *p, const P4::IR::Node*) {
             get().passChange(m, p, s);
         };
     }

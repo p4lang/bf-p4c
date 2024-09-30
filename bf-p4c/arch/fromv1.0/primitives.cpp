@@ -49,7 +49,7 @@ static cstring makeHashCall(ProgramStructure *structure, IR::BlockStatement *blo
     ExpressionConverter conv(structure);
     auto flc = structure->getFieldListCalculation(field_list);
     if (flc == nullptr) {
-        ::error("%1%: Expected a field_list_calculation", field_list);
+        ::P4::error("%1%: Expected a field_list_calculation", field_list);
         return cstring(); }
     auto ttype = IR::Type_Bits::get(flc->output_width);
     cstring temp = structure->makeUniqueName("temp"_cs);
@@ -86,7 +86,7 @@ CONVERT_PRIMITIVE(count_from_hash) {
     else if (auto nr = ref->to<IR::PathExpression>())
         counter = structure->counters.get(nr->path->name);
     if (counter == nullptr) {
-        ::error("Expected a counter reference %1%", ref);
+        ::P4::error("Expected a counter reference %1%", ref);
         return nullptr; }
     auto block = new IR::BlockStatement;
     cstring temp = makeHashCall(structure, block, primitive->operands.at(1));
@@ -109,7 +109,7 @@ static bool makeMeterExecCall(const Util::SourceInfo &srcInfo, ProgramStructure 
     else if (auto nr = mref->to<IR::PathExpression>())
         meter = structure->meters.get(nr->path->name);
     if (meter == nullptr) {
-        ::error("Expected a meter reference %1%", mref);
+        ::P4::error("Expected a meter reference %1%", mref);
         return false; }
     auto meterref = new IR::PathExpression(structure->meters.get(meter));
     auto method = new IR::Member(meterref, structure->v1model.meter.executeMeter.Id());
@@ -283,7 +283,7 @@ CONVERT_PRIMITIVE(modify_field_with_hash_based_offset, 1) {
 
     auto flc = structure->getFieldListCalculation(primitive->operands.at(2));
     if (flc == nullptr) {
-        ::error("%1%: Expected a field_list_calculation", primitive->operands.at(2));
+        ::P4::error("%1%: Expected a field_list_calculation", primitive->operands.at(2));
         return nullptr;
     }
     auto ttype = IR::Type_Bits::get(flc->output_width);
@@ -335,7 +335,7 @@ CONVERT_PRIMITIVE(generate_digest, 1) {
     if (st == nullptr) return nullptr;
     unsigned digestId = getIndex(list, st->digestIndexHashes);
     if (digestId > Device::maxDigestId()) {
-        ::error("Too many digest() calls in %1%", primitive->name);
+        ::P4::error("Too many digest() calls in %1%", primitive->name);
         return nullptr;
     }
     unsigned bits = static_cast<unsigned>(std::ceil(std::log2(Device::maxDigestId())));

@@ -114,7 +114,7 @@ class AddMetadataInitialization : public Transform {
         for (auto slice : dedupFieldsToBeInitialized) {
             auto* prim = fieldToExpr.generateInitInstruction(slice);
             if (!prim) {
-                ::warning("Cannot add initialization for slice");
+                ::P4::warning("Cannot add initialization for slice");
                 continue;
             }
             act->action.push_back(prim);

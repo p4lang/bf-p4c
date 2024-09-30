@@ -605,7 +605,7 @@ const IR::Node* EliminateHeaders::preorder(IR::Argument *arg) {
                 namesUsed[expr->name.name]++;
                 fieldVectorList.push_back(expr);
             } else {
-                ::error(ErrorType::ERR_UNEXPECTED, " unexpected type of parameter %2% in %1%",
+                ::P4::error(ErrorType::ERR_UNEXPECTED, " unexpected type of parameter %2% in %1%",
                         extName, expr->expression);
             }
         }
@@ -653,7 +653,7 @@ const IR::Node* EliminateHeaders::preorder(IR::Argument *arg) {
                 fieldList.push_back(new IR::NamedExpression(f->name, mem)); }
             type_name = st->name;
         } else {
-            ::error(ErrorType::ERR_UNEXPECTED, " unexpected type of parameter %2% in %1%",
+            ::P4::error(ErrorType::ERR_UNEXPECTED, " unexpected type of parameter %2% in %1%",
                         extName, arg);
         }
 

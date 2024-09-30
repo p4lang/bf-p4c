@@ -18,7 +18,7 @@ void MultipleApply::MutuallyExclusiveApplies::postorder(const P4::IR::MAU::Table
         // application is mutually exclusive with all those other applications.
         for (auto other_table : mutex_apply.at(tbl->match_table)) {
             if (!mutex(tbl, other_table)) {
-                ::error("%s: Not all applies of table %s are mutually exclusive",
+                ::P4::error("%s: Not all applies of table %s are mutually exclusive",
                         tbl->srcInfo, tbl->externalName());
                 errors.emplace(tbl->match_table->externalName());
             }
@@ -138,7 +138,7 @@ void MultipleApply::CheckStaticNextTable::postorder(const P4::IR::MAU::Table *tb
         auto& cur_seq = entry.second;
 
         if (canon_tbl->next.count(key) == 0) {
-            ::error("Table %1% has incompatible next-table chains: not all applications of this "
+            ::P4::error("Table %1% has incompatible next-table chains: not all applications of this "
                     "table have a next-table chain for %2%.",
                     tbl->externalName(), key);
             return;
@@ -146,7 +146,7 @@ void MultipleApply::CheckStaticNextTable::postorder(const P4::IR::MAU::Table *tb
 
         auto canon_seq = canon_tbl->next.at(key);
         if (canon_seq->size() != cur_seq->size()) {
-            ::error("Table %1% has incompatible next-table chains: not all applications of this "
+            ::P4::error("Table %1% has incompatible next-table chains: not all applications of this "
                     "table have the same chain length for %2%.",
                     tbl->externalName(), key);
             return;
@@ -156,7 +156,7 @@ void MultipleApply::CheckStaticNextTable::postorder(const P4::IR::MAU::Table *tb
             auto cur_seq_tbl = cur_seq->tables.at(i);
             auto canon_seq_tbl = canon_seq->tables.at(i);
             if (!check_equiv(cur_seq_tbl, canon_seq_tbl)) {
-                ::error("Table %1% has incompatible next-table chains for %2%, differing at "
+                ::P4::error("Table %1% has incompatible next-table chains for %2%, differing at "
                         "position %3%, with tables %4% and %5%", tbl->externalName(), key,
                         i, cur_seq_tbl->externalName(), canon_seq_tbl->externalName());
             }
@@ -169,7 +169,7 @@ void MultipleApply::CheckStaticNextTable::postorder(const P4::IR::MAU::Table *tb
         auto& key = entry.first;
 
         if (tbl->next.count(key) == 0) {
-            ::error("Table %1% has incompatible next-table chains: not all applications of this "
+            ::P4::error("Table %1% has incompatible next-table chains: not all applications of this "
                     "table have a next-table chain for %2%.",
                     tbl->externalName(), key);
             return;
@@ -324,7 +324,7 @@ bool MultipleApply::CheckTopologicalTables::preorder(const P4::IR::MAU::TableSeq
 
             first = false;
         }
-        ::error("%s: The following tables are applied in an inconsistent order on different "
+        ::P4::error("%s: The following tables are applied in an inconsistent order on different "
                 "branches: %s", table->srcInfo, out.str());
 
         // Update tables_reported with the cycle.

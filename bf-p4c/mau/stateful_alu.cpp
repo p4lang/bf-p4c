@@ -795,14 +795,14 @@ bool CreateSaluInstruction::preorder(const P4::IR::AssignmentStatement *as) {
     dest = nullptr;
     opcode = cstring();
     visit(as->left, "left");
-    BUG_CHECK(operands.size() == (etype < OUTPUT) || ::errorCount() > 0, "%1%: recursion failure",
+    BUG_CHECK(operands.size() == (etype < OUTPUT) || ::P4::errorCount() > 0, "%1%: recursion failure",
               as->left);
     assignDone = false;
     if (islvalue(etype))
         error(ErrorType::ERR_UNSUPPORTED, "Can't assign to %s in RegisterAction", as->left);
     else
         visit(as->right);
-    if (::errorCount() == 0 && !assignDone)
+    if (::P4::errorCount() == 0 && !assignDone)
         doAssignment(as->srcInfo);
     operands.clear();
     return false;
@@ -1196,7 +1196,7 @@ bool CreateSaluInstruction::preorder(const P4::IR::MAU::Primitive *prim) {
             dest = nullptr;
             opcode = cstring();
             visit(prim->operands[3], "index");
-            BUG_CHECK(operands.size() == 0 || ::errorCount() > 0, "%1%: recursion failure",
+            BUG_CHECK(operands.size() == 0 || ::P4::errorCount() > 0, "%1%: recursion failure",
                       prim->operands[3]);
             operands.push_back(new P4::IR::MAU::SaluReg(prim->type, "minmax_index"_cs, false));
             createInstruction();
@@ -1212,13 +1212,13 @@ bool CreateSaluInstruction::preorder(const P4::IR::MAU::Primitive *prim) {
             if (auto *di = gr->obj->to<P4::IR::Declaration_Instance>())
                 name = di->name.name;
         if (!name)
-            ::error(ErrorType::ERR_UNKNOWN,
+            ::P4::error(ErrorType::ERR_UNKNOWN,
                 "%1%: cannot retrieve the name of RegisterParam", prim);
         const P4::IR::MAU::SaluRegfileRow *regfile = nullptr;
         if (salu->regfile.count(name) > 0)
             regfile = salu->regfile[name];
         if (!regfile)
-            ::error(ErrorType::ERR_UNKNOWN,
+            ::P4::error(ErrorType::ERR_UNKNOWN,
                 "%1%: no matching RegisterParam in the current stateful ALU", prim);
         if (etype == OUTPUT || etype == VALUE)
             visit(regfile, "prim");
@@ -1417,7 +1417,7 @@ void CreateSaluInstruction::postorder(const P4::IR::LNot *e) {
         if (operands.size() == 1 && is_learn(operands.back())) {
             operands.back() = new P4::IR::LNot(e->srcInfo, operands.back());
             return; }
-        BUG_CHECK(pred_operands.size() >= 1 || ::errorCount() > 0, "%1%: recursion failure", e);
+        BUG_CHECK(pred_operands.size() >= 1 || ::P4::errorCount() > 0, "%1%: recursion failure", e);
         if (pred_operands.size() < 1) return;  // can only happen if there has been an error
         pred_operands.back() = negatePred(pred_operands.back());
         LOG4("LNot rewrite pred_opeands: " << pred_operands.back());
@@ -1429,7 +1429,7 @@ void CreateSaluInstruction::postorder(const P4::IR::LNot *e) {
 void CreateSaluInstruction::postorder(const P4::IR::LAnd *e) {
     if (etype == IF) {
         if (pred_operands.size() == 1) return;  // to deal with learn -- not always correct
-        BUG_CHECK(pred_operands.size() >= 2 || ::errorCount() > 0, "%1%: recursion failure", e);
+        BUG_CHECK(pred_operands.size() >= 2 || ::P4::errorCount() > 0, "%1%: recursion failure", e);
         if (pred_operands.size() < 2) return;  // can only happen if there has been an error
         auto r = pred_operands.back();
         pred_operands.pop_back();
@@ -1442,7 +1442,7 @@ void CreateSaluInstruction::postorder(const P4::IR::LAnd *e) {
 void CreateSaluInstruction::postorder(const P4::IR::LOr *e) {
     if (etype == IF) {
         if (pred_operands.size() == 1) return;  // to deal with learn -- not always correct
-        BUG_CHECK(pred_operands.size() >= 2 || ::errorCount() > 0, "%1%: recursion failure", e);
+        BUG_CHECK(pred_operands.size() >= 2 || ::P4::errorCount() > 0, "%1%: recursion failure", e);
         if (pred_operands.size() < 2) return;  // can only happen if there has been an error
         auto r = pred_operands.back();
         pred_operands.pop_back();
@@ -2463,7 +2463,7 @@ void CheckStatefulAlu::postorder(P4::IR::MAU::StatefulAlu *salu) {
         if (params > 0) {
             msg << "register parameters.";
         }
-        ::error(ErrorType::ERR_OVERLIMIT, msg.str().c_str(), salu);
+        ::P4::error(ErrorType::ERR_OVERLIMIT, msg.str().c_str(), salu);
     }
 }
 

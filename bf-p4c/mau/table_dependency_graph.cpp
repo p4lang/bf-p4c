@@ -666,7 +666,7 @@ void DependencyGraph::to_json(Util::JsonObject* dgsJson, const FlowGraph &fg,
             if (src_gress != tgt_gress) {
                 src_name = source ? source->externalName() : src_name;
                 tgt_name = target ? target->externalName() : tgt_name;
-                ::warning(" Invalid gress on flow graph edges while creating"
+                ::P4::warning(" Invalid gress on flow graph edges while creating"
                     " dependency graph json, source %1%(%2%) and target %3%(%4%)",
                     src_name, toString(src_gress), tgt_name, toString(tgt_gress));
                 continue;

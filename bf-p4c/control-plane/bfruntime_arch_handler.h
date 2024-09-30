@@ -303,11 +303,11 @@ struct ValueSet {
         int64_t size = 0;
         auto sizeConstant = instance->size->to<IR::Constant>();
         if (sizeConstant == nullptr || !sizeConstant->fitsInt()) {
-            ::error("@size should be an integer for declaration %1%", instance);
+            ::P4::error("@size should be an integer for declaration %1%", instance);
             return std::nullopt;
         }
         if (sizeConstant->value < 0) {
-            ::error("@size should be a positive integer for declaration %1%", instance);
+            ::P4::error("@size should be a positive integer for declaration %1%", instance);
             return std::nullopt;
         }
         size = static_cast<int64_t>(sizeConstant->value);
@@ -911,13 +911,13 @@ class BFRuntimeArchHandlerCommon : public P4::ControlPlaneAPI::P4RuntimeArchHand
         auto timeout = table->properties->getProperty("idle_timeout"_cs);
         if (timeout == nullptr) return false;
         if (!timeout->value->is<IR::ExpressionValue>()) {
-            ::error("Unexpected value %1% for idle_timeout on table %2%", timeout, table);
+            ::P4::error("Unexpected value %1% for idle_timeout on table %2%", timeout, table);
             return false;
         }
 
         auto expr = timeout->value->to<IR::ExpressionValue>()->expression;
         if (!expr->is<IR::BoolLiteral>()) {
-            ::error(
+            ::P4::error(
                 "Unexpected non-boolean value %1% for idle_timeout "
                 "property on table %2%",
                 timeout, table);
@@ -1040,7 +1040,7 @@ class BFRuntimeArchHandlerCommon : public P4::ControlPlaneAPI::P4RuntimeArchHand
             decl, [&](const P4::ExternMethod *method) { packCalls.push_back(method); });
         if (packCalls.size() == 0) return std::nullopt;
         if (packCalls.size() > 1) {
-            ::error("Expected single call to pack for digest instance '%1%'", decl);
+            ::P4::error("Expected single call to pack for digest instance '%1%'", decl);
             return std::nullopt;
         }
         LOG4("Found 'pack' method call for digest instance " << decl->controlPlaneName());
@@ -1065,7 +1065,7 @@ class BFRuntimeArchHandlerCommon : public P4::ControlPlaneAPI::P4RuntimeArchHand
             decl, [&](const P4::ExternMethod *method) { hashCalls.push_back(method); });
         if (hashCalls.size() == 0) return std::nullopt;
         if (hashCalls.size() > 1) {
-            ::warning(
+            ::P4::warning(
                 "Expected single call to get for hash instance '%1%'."
                 "Control plane API is not generated for this hash call",
                 decl);
@@ -1467,7 +1467,7 @@ class BFRuntimeArchHandlerCommon : public P4::ControlPlaneAPI::P4RuntimeArchHand
         auto impl = getTableImplementationProperty(table);
         if (impl == nullptr) return std::nullopt;
         if (!impl->value->template is<IR::ExpressionValue>()) {
-            ::error("Expected %1% property value for table %2% to be an expression: %2%",
+            ::P4::error("Expected %1% property value for table %2% to be an expression: %2%",
                     implementationString, table->controlPlaneName(), impl);
             return std::nullopt;
         }
@@ -1519,7 +1519,7 @@ class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<
             if (!param.second) continue;
             auto pipe = param.second;
             if (!pipe->is<IR::PackageBlock>()) {
-                ::error(ErrorType::ERR_INVALID,
+                ::P4::error(ErrorType::ERR_INVALID,
                         "%1% package block. You are compiling for the %2% "
                         "P4 architecture.\n"
                         "Please verify that you included the correct architecture file.",
@@ -1543,7 +1543,7 @@ class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<
                 auto parsers = pkg->findParameterValue(parsersName);
                 BUG_CHECK(parsers, "Expected Block");
                 if (!parsers->is<IR::PackageBlock>()) {
-                    ::error(ErrorType::ERR_INVALID,
+                    ::P4::error(ErrorType::ERR_INVALID,
                             "%1% package block. "
                             "You are compiling for the %2% P4 architecture.\n"
                             "Please verify that you included the correct architecture file.",
@@ -1683,7 +1683,7 @@ class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<
         auto portMetadata = getPortMetadataExtract(externFunction, refMap, typeMap, nullptr);
         if (portMetadata) {
             if (hasUserPortMetadata.count(parserBlock)) {
-                ::error("Cannot have multiple extern calls for %1%",
+                ::P4::error("Cannot have multiple extern calls for %1%",
                         BFN::ExternPortMetadataUnpackString);
                 return;
             }

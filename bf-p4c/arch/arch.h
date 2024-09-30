@@ -124,7 +124,7 @@ struct RemoveExternMethodCallsExcludedByAnnotation : public Transform {
         for (auto* excluded : dontTranslate->expr) {
             auto* excludedMethod = excluded->to<IR::StringLiteral>();
             if (!excludedMethod) {
-                ::error("Non-string argument to @dont_translate_extern_method: "
+                ::P4::error("Non-string argument to @dont_translate_extern_method: "
                         "%1%", excluded);
                 return call;
             }

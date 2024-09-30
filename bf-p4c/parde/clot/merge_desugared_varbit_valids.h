@@ -9,6 +9,8 @@ class PhvInfo;
 class ClotInfo;
 class PragmaAlias;
 
+using namespace P4;
+
 class MergeDesugaredVarbitValids : public PassManager {
     ordered_map<cstring, const IR::Member*> field_expressions;
 

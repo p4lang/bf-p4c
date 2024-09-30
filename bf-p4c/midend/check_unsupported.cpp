@@ -8,7 +8,7 @@ bool CheckUnsupported::preorder(const IR::PathExpression* path_expression) {
     static const IR::Path SAMPLE4(IR::ID("sample4"), false);
 
     if (*path_expression->path == SAMPLE3 || *path_expression->path == SAMPLE4) {
-        ::error(
+        ::P4::error(
             ErrorType::ERR_UNSUPPORTED,
             "Primitive %1% is not supported by the backend",
             path_expression->path);
@@ -25,10 +25,10 @@ bool CheckUnsupported::preorder(const IR::Declaration_Instance *instance) {
         } else if (auto type = instance->type->to<IR::Type_Name>()) {
             type_name = type->path->name;
         } else {
-            ::error("%s: Unexpected type for instance %s", instance->srcInfo, instance->name);
+            ::P4::error("%s: Unexpected type for instance %s", instance->srcInfo, instance->name);
         }
         if (type_name != "Hash") {
-            ::error(ErrorType::ERR_UNSUPPORTED,
+            ::P4::error(ErrorType::ERR_UNSUPPORTED,
                     "%s: @symmetric is only supported by the Hash extern", instance->srcInfo);
             return false;
         }
@@ -122,9 +122,9 @@ void CheckUnsupported::postorder(const IR::P4Table* const table_ptr) {
                 std::string local_string = buf.str();
                 std::string* heap_string = new std::string(local_string);
                 const char* const to_error_with = heap_string->c_str();
-                ::error(to_error_with);
+                ::P4::error(to_error_with);
                 */
-                ::error(/* slightly risky */buf.str().c_str()/* slightly risky */);
+                ::P4::error(/* slightly risky */buf.str().c_str()/* slightly risky */);
             }
         }
     }

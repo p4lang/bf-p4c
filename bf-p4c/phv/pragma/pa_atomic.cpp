@@ -33,8 +33,8 @@ static const std::unordered_set<cstring> pa_atomic_from_arch = {
     "egress::eg_intr_md_from_prsr.parser_err"_cs
 };
 
-bool PragmaAtomic::add_constraint(const IR::BFN::Pipe* pipe,
-        const IR::Expression* expr, cstring field_name) {
+bool PragmaAtomic::add_constraint(const P4::IR::BFN::Pipe* pipe,
+        const P4::IR::Expression* expr, cstring field_name) {
     // check field name
     auto field = phv_i.field(field_name);
     if (!field) {
@@ -44,7 +44,7 @@ bool PragmaAtomic::add_constraint(const IR::BFN::Pipe* pipe,
 
     // Make sure the field can fit into an available container fully
     if (field->size > int(PHV::Size::b32)) {
-        ::warning("@pragma pa_atomic's argument %1% can not be atomic, "
+        ::P4::warning("@pragma pa_atomic's argument %1% can not be atomic, "
                   "because the size of field is greater than the size of "
                   "the largest container", field_name);
         return false;
@@ -57,7 +57,7 @@ bool PragmaAtomic::add_constraint(const IR::BFN::Pipe* pipe,
     return true;
 }
 
-bool PragmaAtomic::preorder(const IR::BFN::Pipe* pipe) {
+bool PragmaAtomic::preorder(const P4::IR::BFN::Pipe* pipe) {
     auto global_pragmas = pipe->global_pragmas;
     for (const auto* annotation : global_pragmas) {
         if (annotation->name.name != PragmaAtomic::name)
@@ -72,8 +72,8 @@ bool PragmaAtomic::preorder(const IR::BFN::Pipe* pipe) {
         const unsigned min_required_arguments = 2;  // gress, field
         unsigned required_arguments = min_required_arguments;
         unsigned expr_index = 0;
-        const IR::StringLiteral *pipe_arg = nullptr;
-        const IR::StringLiteral *gress_arg = nullptr;
+        const P4::IR::StringLiteral *pipe_arg = nullptr;
+        const P4::IR::StringLiteral *gress_arg = nullptr;
 
         if (!PHV::Pragmas::determinePipeGressArgs(exprs, expr_index,
                 required_arguments, pipe_arg, gress_arg)) {
@@ -90,7 +90,7 @@ bool PragmaAtomic::preorder(const IR::BFN::Pipe* pipe) {
             continue;
         }
 
-        auto field_ir = exprs[expr_index++]->to<IR::StringLiteral>();
+        auto field_ir = exprs[expr_index++]->to<P4::IR::StringLiteral>();
 
         cstring field_name = gress_arg->value + "::"_cs + field_ir->value;
         add_constraint(pipe, field_ir, field_name);

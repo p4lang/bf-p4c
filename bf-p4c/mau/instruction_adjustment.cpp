@@ -1508,7 +1508,7 @@ bool AdjustStatefulInstructions::verify_on_search_bus(const P4::IR::MAU::Statefu
             group = byte.loc.group;
             group_set = true;
         } else if (group != byte.loc.group) {
-            ::error("Input %s for a stateful alu %s allocated across multiple groups, and "
+            ::P4::error("Input %s for a stateful alu %s allocated across multiple groups, and "
                      "cannot be resolved", field->name, salu->name);
              return false;
         }
@@ -1521,7 +1521,7 @@ bool AdjustStatefulInstructions::verify_on_search_bus(const P4::IR::MAU::Statefu
 
     int phv_width = salu->source_width();
     if (salu_bytes.popcount() > (phv_width / 8)) {
-        ::error("The input %s to stateful alu %s is allocated to more input xbar bytes than the "
+        ::P4::error("The input %s to stateful alu %s is allocated to more input xbar bytes than the "
                 "width of the ALU and cannot be resolved.", field->name, salu->name);
         return false;
     }
@@ -1529,7 +1529,7 @@ bool AdjustStatefulInstructions::verify_on_search_bus(const P4::IR::MAU::Statefu
     if (!salu_bytes.is_contiguous()) {
         // FIXME -- we've lost the source info on 'field' so can't generate a decent error
         // message here -- should pass in `expr` from the caller to this function.
-        ::error("The input %s to stateful alu %s is not allocated contiguously by byte on the "
+        ::P4::error("The input %s to stateful alu %s is not allocated contiguously by byte on the "
                 "input xbar and cannot be resolved.", field->name, salu->name);
        return false;
     }
@@ -1550,13 +1550,13 @@ bool AdjustStatefulInstructions::verify_on_search_bus(const P4::IR::MAU::Statefu
         valid_start_positions.insert(initial_offset + 12); }
 
     if (valid_start_positions.count(salu_bytes.min().index()) == 0) {
-        ::error("The input %s to stateful alu %s is not allocated in a valid region on the input "
+        ::P4::error("The input %s to stateful alu %s is not allocated in a valid region on the input "
                 "xbar to be a source of an ALU operation", field->name, salu->name);
         return false;
     }
 
     if (!check_bit_positions(salu_inputs, bits, salu_bytes.min().index() * 8)) {
-        ::error("The input %s to stateful alu %s is not allocated contiguously by bit on the "
+        ::P4::error("The input %s to stateful alu %s is not allocated contiguously by bit on the "
                 "input xbar and cannot be resolved.", field->name, salu->name);
         return false;
     }

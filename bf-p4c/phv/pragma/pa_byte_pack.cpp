@@ -40,7 +40,7 @@ optimal packing layouts of metadata fields which are used as match keys.
          even if @auto-init-metadata is enabled.
 5. Compilation will fail if the pramga cannot be satisfied.)";
 
-bool PragmaBytePack::preorder(const IR::BFN::Pipe* pipe) {
+bool PragmaBytePack::preorder(const P4::IR::BFN::Pipe* pipe) {
     auto global_pragmas = pipe->global_pragmas;
 
     for (const auto* annotation : global_pragmas) {
@@ -51,8 +51,8 @@ bool PragmaBytePack::preorder(const IR::BFN::Pipe* pipe) {
         const unsigned min_required_arguments = 2;  // gress, field1....
         unsigned required_arguments = min_required_arguments;
         unsigned expr_index = 0;
-        const IR::StringLiteral* pipe_arg = nullptr;
-        const IR::StringLiteral* gress_arg = nullptr;
+        const P4::IR::StringLiteral* pipe_arg = nullptr;
+        const P4::IR::StringLiteral* gress_arg = nullptr;
 
         if (!PHV::Pragmas::determinePipeGressArgs(exprs, expr_index, required_arguments, pipe_arg,
                                                   gress_arg)) {
@@ -77,7 +77,7 @@ bool PragmaBytePack::preorder(const IR::BFN::Pipe* pipe) {
         pack.src_info = annotation->getSourceInfo();
         gress_arg->value >> pack.packing.gress;
         for (; expr_index < exprs.size(); ++expr_index) {
-            if (const auto* field_ir = exprs[expr_index]->to<IR::StringLiteral>()) {
+            if (const auto* field_ir = exprs[expr_index]->to<P4::IR::StringLiteral>()) {
                 cstring field_name = gress_arg->value + "::"_cs + field_ir->value;
                 const auto* field = phv_i.field(field_name);
                 if (!field) {
@@ -86,7 +86,7 @@ bool PragmaBytePack::preorder(const IR::BFN::Pipe* pipe) {
                     break;
                 }
                 if (!field->metadata && !field->pov) {
-                    ::error(
+                    ::P4::error(
                         "@pa_byte_pack pragma can only be applied on metadata or pov fields, "
                         "but %1% is not.",
                         field->name);
@@ -94,23 +94,23 @@ bool PragmaBytePack::preorder(const IR::BFN::Pipe* pipe) {
                     break;
                 }
                 if (field->parsed()) {
-                    ::warning(
+                    ::P4::warning(
                         "Applying @pa_byte_pack on parsed field %1%. Please make sure that other "
                         "fields in the same byte will be explicitly initialized after parser.",
                         field->name);
                 }
                 pack.packing.layout.push_back(PHV::PackingLayout::FieldRangeOrPadding(
                     {field, le_bitrange(StartLen(0, field->size))}));
-            } else if (const auto* padding_int = exprs[expr_index]->to<IR::Constant>()) {
+            } else if (const auto* padding_int = exprs[expr_index]->to<P4::IR::Constant>()) {
                 int n_bits = padding_int->asInt();
                 if (n_bits <= 0 || n_bits >= 8) {
-                    ::error("Invalid size of padding in @pa_byte_pack pragma: %1%", n_bits);
+                    ::P4::error("Invalid size of padding in @pa_byte_pack pragma: %1%", n_bits);
                     ignore = true;
                     break;
                 }
                 pack.packing.layout.push_back(PHV::PackingLayout::FieldRangeOrPadding(n_bits));
             } else {
-                ::error("Invalid parameter in @pa_byte_pack pragma: %1%",
+                ::P4::error("Invalid parameter in @pa_byte_pack pragma: %1%",
                         exprs[expr_index]->toString());
                 ignore = true;
                 break;
@@ -121,7 +121,7 @@ bool PragmaBytePack::preorder(const IR::BFN::Pipe* pipe) {
         if (!ignore) {
             auto rst = add_packing_constraint(pack);
             if (!rst.ok()) {
-                ::error(cstring(*rst.error + ", %1%"), *pack.src_info);
+                ::P4::error(cstring(*rst.error + ", %1%"), *pack.src_info);
             }
         }
     }

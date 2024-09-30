@@ -2401,7 +2401,7 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, int &furthest_stage) 
                 rv->entries = 1 << t->layout.ixbar_width_bits;
                 // Skip warnings on compiler generated tables
                 if (!t->is_compiler_generated)
-                    ::warning(BFN::ErrorType::WARN_TABLE_PLACEMENT,
+                    ::P4::warning(BFN::ErrorType::WARN_TABLE_PLACEMENT,
                               "Shrinking %1%: with %2% match bits, can only have %3% entries",
                               t, t->layout.ixbar_width_bits, rv->entries);
             }
@@ -2568,7 +2568,7 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, int &furthest_stage) 
         rv->stage = std::max(stage_pragma, rv->stage);
         furthest_stage = std::max(rv->stage, furthest_stage);
     } else if (options.forced_placement && !t->conditional_gateway_only()) {
-        ::warning("%s: Table %s has not been provided a stage even though forced placement of "
+        ::P4::warning("%s: Table %s has not been provided a stage even though forced placement of "
                   "tables is turned on", t->srcInfo, t->name);
     }
 
@@ -4659,7 +4659,7 @@ DecidePlacement::alt_table_placement(const P4::IR::BFN::Pipe *pipe) {
         }
 
         if (!alt_try_place_table && !is_starter_pistol_table(ptName)) {
-            ::warning("Cannot find table called %s(%s) during alt table placement round",
+            ::P4::warning("Cannot find table called %s(%s) during alt table placement round",
                     pt.second->tableName, pt.second->internalTableName);
             continue;
         }
@@ -4738,7 +4738,7 @@ DecidePlacement::alt_table_placement(const P4::IR::BFN::Pipe *pipe) {
         // where table placement deviates from expected based on previous
         // round and not that useful to end user.
         if (alt_stage_to_place != placed->stage) {
-            ::warning(BFN::ErrorType::WARN_TABLE_PLACEMENT,
+            ::P4::warning(BFN::ErrorType::WARN_TABLE_PLACEMENT,
                 "Alt Table Placement: Placed table %s(%s) in stage %d expected placement "
                 "in stage from previous round - %d\n Placement will continue.",
                 placed->name, placed->table->name, placed->stage, alt_stage_to_place);

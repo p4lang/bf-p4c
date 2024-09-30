@@ -17,6 +17,8 @@ class Field;
 
 namespace Constraints {
 
+using namespace P4;
+
 /// Class that captures whether a constraint is present on a field or not.
 /// It also registers the reason for the constraint being added to the field.
 /// reason = 0 necessarily implies the absence of the constraint.

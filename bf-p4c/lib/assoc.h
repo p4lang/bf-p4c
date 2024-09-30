@@ -475,7 +475,7 @@ using non_iterable_map = map<Key, T, Compare, Allocator, Iterable::No>;
 
 template<typename Key, typename T, typename Compare = std::less<Key>,
          typename Allocator = std::allocator<std::pair<const Key, T>>>
-using ordered_map = ::ordered_map<Key, T, Compare, Allocator>;
+using ordered_map = ::P4::ordered_map<Key, T, Compare, Allocator>;
 
 template<typename Key, typename Compare = std::less<Key>,
          typename Allocator = std::allocator<Key>>
@@ -487,7 +487,7 @@ using non_iterable_set = set<Key, Compare, Allocator, Iterable::No>;
 
 template<typename Key, typename Compare = std::less<Key>,
          typename Allocator = std::allocator<Key>>
-using ordered_set = ::ordered_set<Key, Compare, Allocator>;
+using ordered_set = ::P4::ordered_set<Key, Compare, Allocator>;
 
 // Note that in these functions (which correspond to the ones found in p4c/lib/map.h) the use of
 // unstable_iterable is safe as the get functions are doing just lookups. This function basicaly

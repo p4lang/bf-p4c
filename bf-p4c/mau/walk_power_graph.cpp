@@ -181,10 +181,10 @@ void WalkPowerGraph::end_apply(const P4::IR::Node *root) {
             warn_msg += "exceed the published max power.\n";
             warn_msg += "Please make sure this profile is fully tested to confirm ";
             warn_msg += "system functionality under worst case conditions.\n";
-            ::warning("%s", warn_msg);
-            ::warning("%s", error_msg + tls);
+            ::P4::warning("%s", warn_msg);
+            ::P4::warning("%s", error_msg + tls);
         } else {
-            ::error("%s", error_msg + tls);
+            ::P4::error("%s", error_msg + tls);
         }
     }
 }

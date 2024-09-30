@@ -192,7 +192,7 @@ class BFRuntimeSchemaGenerator : public BFRuntimeGenerator {
         const auto& pre = externInstance.preamble();
         ::barefoot::ActionProfile actionProfile;
         if (!externInstance.info().UnpackTo(&actionProfile)) {
-            ::error("Extern instance %1% does not pack an ActionProfile object", pre.name());
+            ::P4::error("Extern instance %1% does not pack an ActionProfile object", pre.name());
             return std::nullopt;
         }
         auto tableIds = collectTableIds(
@@ -206,7 +206,7 @@ class BFRuntimeSchemaGenerator : public BFRuntimeGenerator {
         const auto& pre = externInstance.preamble();
         ::barefoot::Counter counter;
         if (!externInstance.info().UnpackTo(&counter)) {
-            ::error("Extern instance %1% does not pack a Counter object", pre.name());
+            ::P4::error("Extern instance %1% does not pack a Counter object", pre.name());
             return std::nullopt;
         }
         auto unit = static_cast<Counter::Unit>(counter.spec().unit());
@@ -218,7 +218,7 @@ class BFRuntimeSchemaGenerator : public BFRuntimeGenerator {
         const auto& pre = externInstance.preamble();
         ::barefoot::DirectCounter counter;
         if (!externInstance.info().UnpackTo(&counter)) {
-            ::error("Extern instance %1% does not pack a DirectCounter object", pre.name());
+            ::P4::error("Extern instance %1% does not pack a DirectCounter object", pre.name());
             return std::nullopt;
         }
         auto unit = static_cast<Counter::Unit>(counter.spec().unit());
@@ -230,7 +230,7 @@ class BFRuntimeSchemaGenerator : public BFRuntimeGenerator {
         const auto& pre = externInstance.preamble();
         ::barefoot::Meter meter;
         if (!externInstance.info().UnpackTo(&meter)) {
-            ::error("Extern instance %1% does not pack a Meter object", pre.name());
+            ::P4::error("Extern instance %1% does not pack a Meter object", pre.name());
             return std::nullopt;
         }
         auto unit = static_cast<Meter::Unit>(meter.spec().unit());
@@ -243,7 +243,7 @@ class BFRuntimeSchemaGenerator : public BFRuntimeGenerator {
         const auto& pre = externInstance.preamble();
         ::barefoot::DirectMeter meter;
         if (!externInstance.info().UnpackTo(&meter)) {
-            ::error("Extern instance %1% does not pack a Meter object", pre.name());
+            ::P4::error("Extern instance %1% does not pack a Meter object", pre.name());
             return std::nullopt;
         }
         auto unit = static_cast<Meter::Unit>(meter.spec().unit());
@@ -256,7 +256,7 @@ class BFRuntimeSchemaGenerator : public BFRuntimeGenerator {
         const auto& pre = externInstance.preamble();
         ::barefoot::Digest digest;
         if (!externInstance.info().UnpackTo(&digest)) {
-            ::error("Extern instance %1% does not pack a Digest object", pre.name());
+            ::P4::error("Extern instance %1% does not pack a Digest object", pre.name());
             return std::nullopt;
         }
         return Digest{pre.name(), pre.id(), digest.type_spec(), transformAnnotations(pre)};
@@ -267,7 +267,7 @@ class BFRuntimeSchemaGenerator : public BFRuntimeGenerator {
         const auto& pre = externInstance.preamble();
         ::barefoot::Register register_;
         if (!externInstance.info().UnpackTo(&register_)) {
-            ::error("Extern instance %1% does not pack a Register object", pre.name());
+            ::P4::error("Extern instance %1% does not pack a Register object", pre.name());
             return std::nullopt;
         }
         return Register{pre.name(), register_.data_field_name(), pre.id(),
@@ -279,7 +279,7 @@ class BFRuntimeSchemaGenerator : public BFRuntimeGenerator {
         const auto& pre = externInstance.preamble();
         ::barefoot::DirectRegister register_;
         if (!externInstance.info().UnpackTo(&register_)) {
-            ::error("Extern instance %1% does not pack a Register object", pre.name());
+            ::P4::error("Extern instance %1% does not pack a Register object", pre.name());
             return std::nullopt;
         }
         return Register{pre.name(), register_.data_field_name(), pre.id(), 0,

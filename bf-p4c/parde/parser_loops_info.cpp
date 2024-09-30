@@ -20,7 +20,7 @@ namespace BFN {
 bool ParserPragmas::checkNumArgs(cstring pragma, const IR::Vector<IR::Expression>& exprs,
                          unsigned expected) {
     if (exprs.size() != expected) {
-        ::warning("@pragma %1% must have %2% argument, %3% are found, skipped",
+        ::P4::warning("@pragma %1% must have %2% argument, %3% are found, skipped",
                    pragma, expected, exprs.size());
         return false;
     }
@@ -30,7 +30,7 @@ bool ParserPragmas::checkNumArgs(cstring pragma, const IR::Vector<IR::Expression
 
 bool ParserPragmas::checkGress(cstring pragma, const IR::StringLiteral* gress) {
     if (!gress || (gress->value != "ingress" && gress->value != "egress")) {
-        ::warning("@pragma %1% must be applied to ingress/egress", pragma);
+        ::P4::warning("@pragma %1% must be applied to ingress/egress", pragma);
         return false;
     }
     return true;
@@ -67,7 +67,7 @@ bool ParserPragmas::preorder(const IR::Annotation *annot) {
 
         auto shift_amt = exprs[1]->to<IR::Constant>();
         if (!shift_amt || shift_amt->asInt() < 0) {
-            ::warning("@pragma force_shift must have positive shift amount(bits)");
+            ::P4::warning("@pragma force_shift must have positive shift amount(bits)");
             return false;
         }
 
@@ -81,16 +81,16 @@ bool ParserPragmas::preorder(const IR::Annotation *annot) {
 
         auto max_loop = exprs[0]->to<IR::Constant>();
         if (!max_loop || max_loop->asUnsigned() == 0) {
-            ::warning("@pragma max_loop_depth must be greater than one, skipping: %1%", annot);
+            ::P4::warning("@pragma max_loop_depth must be greater than one, skipping: %1%", annot);
             return false;
         }
 
-        ::warning("Parser state %1% will be unrolled up to %2% "
+        ::P4::warning("Parser state %1% will be unrolled up to %2% "
                   "times due to @pragma max_loop_depth.", ps->name, max_loop->asInt());
 
         max_loop_depth[ps] = max_loop->asUnsigned();
     } else if (pragma_name == "dont_unroll") {
-        ::warning("Parser state %1% will not be unrolled because of @pragma dont_unroll",
+        ::P4::warning("Parser state %1% will not be unrolled because of @pragma dont_unroll",
                    ps->name);
 
         dont_unroll.insert(ps->name);

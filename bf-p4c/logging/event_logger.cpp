@@ -56,14 +56,14 @@ string to_string(EventLogger::AllocPhase phase) {
 using Schema = Logging::Event_Log_Schema_Logger;
 typedef std::function<int(const std::string &)> IdGenerator;
 
-static Schema::SourceInfo *getSourceInfo(IdGenerator getId, const Util::SourceInfo &info) {
+static Schema::SourceInfo *getSourceInfo(IdGenerator getId, const P4::Util::SourceInfo &info) {
     return new Schema::SourceInfo(info.getStart().getColumnNumber(),
                                   getId(info.getSourceFile().c_str()), info.toPosition().sourceLine,
                                   info.toSourceFragment().c_str());
 }
 
 static std::vector<Schema::SourceInfo *> getSourceInfos(IdGenerator getId,
-                                                        const std::vector<Util::SourceInfo> &locs) {
+                                                        const std::vector<P4::Util::SourceInfo> &locs) {
     std::vector<Schema::SourceInfo *> result;
 
     for (auto &loc : locs) {
@@ -107,8 +107,8 @@ int EventLogger::getTimeDifference() const { return int(std::time(nullptr) - BEG
 std::string EventLogger::getStartTimestamp() const { return std::to_string(BEGIN_TIME); }
 
 std::ostream &EventLogger::getDebugStream(unsigned level, const std::string &file) const {
-    return ::Log::Detail::fileLogOutput(file.c_str())
-           << ::Log::Detail::OutputLogPrefix(file.c_str(), level);
+    return ::P4::Log::Detail::fileLogOutput(file.c_str())
+           << ::P4::Log::Detail::OutputLogPrefix(file.c_str(), level);
 }
 
 template <typename T>
@@ -210,7 +210,7 @@ void EventLogger::passChange(const std::string &manager, const std::string &pass
     delete pc;  // GC seems to fail to collect on this pointer
 }
 
-void EventLogger::parserError(const ParserErrorMessage &msg) {
+void EventLogger::parserError(const P4::ParserErrorMessage &msg) {
     if (!enabled) return;
     const int id = int(EventType::ParseError);
     auto src = getSourceInfo(std::bind(&EventLogger::getFileNameId, this, std::placeholders::_1),
@@ -220,7 +220,7 @@ void EventLogger::parserError(const ParserErrorMessage &msg) {
     delete pe;  // GC seems to fail to collect on this pointer
 }
 
-void EventLogger::error(const ErrorMessage &msg) {
+void EventLogger::error(const P4::ErrorMessage &msg) {
     if (!enabled) return;
     const int id = int(EventType::Error);
     auto locs = getSourceInfos(std::bind(&EventLogger::getFileNameId, this, std::placeholders::_1),
@@ -231,7 +231,7 @@ void EventLogger::error(const ErrorMessage &msg) {
     delete ce;  // GC seems to fail to collect on this pointer
 }
 
-void EventLogger::warning(const ErrorMessage &msg) {
+void EventLogger::warning(const P4::ErrorMessage &msg) {
     if (!enabled) return;
     const int id = int(EventType::Warning);
     auto locs = getSourceInfos(std::bind(&EventLogger::getFileNameId, this, std::placeholders::_1),

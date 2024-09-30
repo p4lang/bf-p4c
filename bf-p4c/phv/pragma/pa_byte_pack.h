@@ -43,14 +43,14 @@ class PragmaBytePack : public Inspector {
     AddConstraintResult add_packing_constraint(const PackConstraint& packing);
 
     /// clear states.
-    profile_t init_apply(const IR::Node* root) override {
+    profile_t init_apply(const P4::IR::Node* root) override {
         profile_t rv = Inspector::init_apply(root);
         packing_layouts_i.clear();
         return rv;
     }
 
     /// read user-defined pa_byte_pack pragmas.
-    bool preorder(const IR::BFN::Pipe* pipe) override;
+    bool preorder(const P4::IR::BFN::Pipe* pipe) override;
 
  public:
     explicit PragmaBytePack(PhvInfo& phv) : phv_i(phv) {}

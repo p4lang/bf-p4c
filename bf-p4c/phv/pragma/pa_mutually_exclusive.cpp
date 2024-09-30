@@ -28,13 +28,13 @@ const char *PragmaMutuallyExclusive::help =
     "to the corresponding pipeline. If not provided, it is applied to "
     "all pipelines.";
 
-bool PragmaMutuallyExclusive::preorder(const IR::BFN::Pipe* pipe) {
+bool PragmaMutuallyExclusive::preorder(const P4::IR::BFN::Pipe* pipe) {
     auto global_pragmas = pipe->global_pragmas;
     for (const auto& annotation : global_pragmas) {
         if (annotation->name.name != PragmaMutuallyExclusive::name)
             continue;
 
-        const IR::Vector<IR::Expression>& exprs = annotation->expr;
+        const P4::IR::Vector<P4::IR::Expression>& exprs = annotation->expr;
 
         if (!PHV::Pragmas::checkStringLiteralArgs(exprs)) {
             continue;
@@ -43,8 +43,8 @@ bool PragmaMutuallyExclusive::preorder(const IR::BFN::Pipe* pipe) {
         const unsigned min_required_arguments = 3;  // gress, node1, node2
         unsigned required_arguments = min_required_arguments;
         unsigned expr_index = 0;
-        const IR::StringLiteral* pipe_arg = nullptr;
-        const IR::StringLiteral* gress_arg = nullptr;
+        const P4::IR::StringLiteral* pipe_arg = nullptr;
+        const P4::IR::StringLiteral* gress_arg = nullptr;
 
         if (!PHV::Pragmas::determinePipeGressArgs(exprs, expr_index,
                 required_arguments, pipe_arg, gress_arg)) {
@@ -61,8 +61,8 @@ bool PragmaMutuallyExclusive::preorder(const IR::BFN::Pipe* pipe) {
             continue;
         }
 
-        const IR::StringLiteral* node1_ir = exprs[expr_index++]->to<IR::StringLiteral>();
-        const IR::StringLiteral* node2_ir = exprs[expr_index++]->to<IR::StringLiteral>();
+        const P4::IR::StringLiteral* node1_ir = exprs[expr_index++]->to<P4::IR::StringLiteral>();
+        const P4::IR::StringLiteral* node2_ir = exprs[expr_index++]->to<P4::IR::StringLiteral>();
 
         LOG4("@pragma pa_mutually_exclusive's arguments: "
              << (pipe_arg ? pipe_arg->value + ", " : "")

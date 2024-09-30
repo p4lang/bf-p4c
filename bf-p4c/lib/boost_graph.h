@@ -12,6 +12,8 @@
 #include "lib/cstring.h"
 #include "lib/exceptions.h"
 
+using namespace P4;
+
 /// Graph reachability via the Floyd-Warshall algorithm. Absent cycles, vertices are not considered
 /// reachable from themselves.
 template<class Graph>

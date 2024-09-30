@@ -23,7 +23,9 @@
 #include "frontends/common/constantFolding.h"
 #include "lib/big_int_util.h"
 
-namespace P4V1 {
+namespace P4::P4V1 {
+
+using namespace P4;
 
 static const cstring COMPILER_META = "__bfp4c_compiler_generated_meta"_cs;
 
@@ -523,7 +525,7 @@ class ParserCounterSelectCaseConverter : public Transform {
     ParserCounterSelectCaseConverter() {}
 
     void cannotFit(const IR::AssignmentStatement* stmt, const char* what) {
-        ::error("Parser counter %1% amount cannot fit into 8-bit. %2%", what, stmt);
+        ::P4::error("Parser counter %1% amount cannot fit into 8-bit. %2%", what, stmt);
     }
 
     bool isParserCounter(const IR::Member* member) {
@@ -742,7 +744,7 @@ class ParserCounterSelectCaseConverter : public Transform {
                                             new IR::Argument(mask),
                                             new IR::Argument(add) }))); } } } } } }
         if (!methodCall)
-            ::error("Unsupported syntax for parser counter: %1%", stmt);
+            ::P4::error("Unsupported syntax for parser counter: %1%", stmt);
         return methodCall;
     }
 
@@ -753,7 +755,7 @@ class ParserCounterSelectCaseConverter : public Transform {
             if (auto member = select->to<IR::Member>()) {
                 if (isParserCounter(member)) {
                     if (counterIdx >= 0)
-                        ::error("Multiple selects on parser counter in %1%", node);
+                        ::P4::error("Multiple selects on parser counter in %1%", node);
                     counterIdx = i;
                     isPrsrCtr = true;
                 }
@@ -779,7 +781,7 @@ class ParserCounterSelectCaseConverter : public Transform {
                 if (val & 0x80) {
                     isNegative = true;
                 } else if (val) {
-                    ::error("Parser counter only supports test "
+                    ::P4::error("Parser counter only supports test "
                             "of value being zero or negative."); } }
             if (toBool)
                 return new IR::BoolLiteral(~val);
@@ -1441,7 +1443,7 @@ class PostTranslationFix : public PassManager {
     explicit PostTranslationFix(ProgramStructure* s) {
         auto tnaStruct = dynamic_cast<TnaProgramStructure*>(s);
         if (!tnaStruct)
-            ::error("Cannot convert to TnaProgramStructure");
+            ::P4::error("Cannot convert to TnaProgramStructure");
         addPasses({
             new FixExtracts(tnaStruct),
             new FixBridgedIntrinsicMetadata(tnaStruct),

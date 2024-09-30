@@ -41,7 +41,7 @@ bool PardePhvConstraints::preorder(const IR::BFN::Digest* digest) {
         const unsigned digestSizeInBytes = digestSize / 8;
 
         if (digestSizeInBytes > Device::maxDigestSizeInBytes())
-            ::error("Learning quanta requires %1% bytes, which is greater than the maximum "
+            ::P4::error("Learning quanta requires %1% bytes, which is greater than the maximum "
                     "permissible %2% bytes.", digestSizeInBytes, Device::maxDigestSizeInBytes());
 
         if (LOGGING(3)) {
@@ -81,7 +81,7 @@ bool PardePhvConstraints::preorder(const IR::BFN::Digest* digest) {
                           "here cannot be greater than 4.", f->name);
                 if (roundedUpSizeInBytes == 1) {
                     if (!sizePragmas.check_and_add_constraint(f, { PHV::Size::b8})) {
-                        ::error("To fit within learning quanta size constraints, the field %1% must"
+                        ::P4::error("To fit within learning quanta size constraints, the field %1% must"
                                 " occupy an 8-bit container. However, there are conflicting "
                                 "pa_container_size constraints on the field", f->name);
                         continue;
@@ -92,7 +92,7 @@ bool PardePhvConstraints::preorder(const IR::BFN::Digest* digest) {
                     LOG2("\tSetting " << f->name << " to 8-bit container and no-split");
                 } else if (roundedUpSizeInBytes == 2) {
                     if (!sizePragmas.check_and_add_constraint(f, { PHV::Size::b16})) {
-                        ::error("To fit within learning quanta size constraints, the field %1% must"
+                        ::P4::error("To fit within learning quanta size constraints, the field %1% must"
                                 " occupy a 16-bit container. However, there are conficting "
                                 "pa_container_size constraints on the field", f->name);
                         continue;
@@ -107,7 +107,7 @@ bool PardePhvConstraints::preorder(const IR::BFN::Digest* digest) {
                     // and one 8-bit container just to avoid using too many containers of one size.
                     if (!sizePragmas.check_and_add_constraint
                             (f, { PHV::Size::b16, PHV::Size::b8 })) {
-                        ::error("To fit within learning quanta size constraints, the field %1% must"
+                        ::P4::error("To fit within learning quanta size constraints, the field %1% must"
                                 " occupy a 16-bit and an 8-bit container. However, there are "
                                 "conflicting pa_container_size constraints on the field", f->name);
                         continue;
@@ -115,7 +115,7 @@ bool PardePhvConstraints::preorder(const IR::BFN::Digest* digest) {
                     LOG2("\tSetting " << f->name << " to 16-bit and 8-bit containers");
                 } else {
                     if (!sizePragmas.check_and_add_constraint(f, { PHV::Size::b32 })) {
-                        ::error("To fit within learning quanta size constraints, the field %1% must"
+                        ::P4::error("To fit within learning quanta size constraints, the field %1% must"
                                 " occupy a 32-bit container. However, there are conflicting "
                                 "pa_container_size constraints on the field", f->name);
                         continue;
@@ -131,7 +131,7 @@ bool PardePhvConstraints::preorder(const IR::BFN::Digest* digest) {
             // TODO: We do not have the ability to impose the right constraints on non byte
             // aligned fields of size greater than 32b. Maybe, the answer is to replace that single
             // field with multiple slices of the field and impose the constraints on those slices?
-            ::warning("Cannot yet impose constraints on non byte aligned field, %1% greater than "
+            ::P4::warning("Cannot yet impose constraints on non byte aligned field, %1% greater than "
                       "32b.", f->name);
         }
     }

@@ -475,7 +475,7 @@ bool CollectVarbitExtract::preorder(const IR::MethodCallExpression* call) {
                         auto path = headerPath->path->to<IR::Path>();
                         headerName = path->name;
                     } else {
-                        ::error("Unsupported header type %1%", expr);
+                        ::P4::error("Unsupported header type %1%", expr);
                     }
                     enumerate_varbit_field_values(call, state,
                                                   varsize_expr, hdr_type, headerName);
@@ -512,7 +512,7 @@ bool CollectVarbitExtract::preorder(const IR::MethodCallExpression* call) {
             }
         } else if (auto path = call->method->to<IR::PathExpression>()) {
             if (path->path->name == "verify") {
-                ::warning("Parser \"verify\" is currently unsupported %s", call->srcInfo);
+                ::P4::warning("Parser \"verify\" is currently unsupported %s", call->srcInfo);
             }
        }
     }
@@ -1083,7 +1083,7 @@ void RewriteVarbitUses::find_and_replace_setinvalid(const IR::AssignmentStatemen
     if (auto expr = left->expr->to<IR::Member>()) {
         if (varbit_hdr_instance_to_header_types.count(expr->member)) {
             if (right->asInt() == 1) {
-                ::error("Cannot set a header %1% with varbit field as valid", expr);
+                ::P4::error("Cannot set a header %1% with varbit field as valid", expr);
             }
             for (auto &hdr : varbit_hdr_instance_to_header_types.at(expr->member)) {
                 component.push_back(create_valid_statement(hdr.second, expr->expr, false));
@@ -1211,7 +1211,7 @@ bool RewriteVarbitUses::preorder(IR::StructExpression* list) {
         if (auto member = c->to<IR::Member>()) {
             if (member->type->is<IR::Type_Varbits>()) {
                 if (has_varbit)
-                    ::error("More than one varbit expression in %1%", list);
+                    ::P4::error("More than one varbit expression in %1%", list);
                 if (deparser) {
                     has_varbit = true;
                     auto path = member->expr->to<IR::Member>();
@@ -1292,7 +1292,7 @@ bool RewriteVarbitUses::preorder(IR::StructExpression* list) {
                             list->components = filter_post_header_fields(components);
                     }
                 } else if (type_args.size() > 1) {
-                    ::error("More than one type in %1%", list);
+                    ::P4::error("More than one type in %1%", list);
                 }
             }
         }

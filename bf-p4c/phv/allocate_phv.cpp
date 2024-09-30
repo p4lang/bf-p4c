@@ -511,7 +511,7 @@ void print_or_throw_slicing_error(const PHV::AllocUtils& utils, const PHV::Super
             sep = ", ";
         }
         ss << "\n" << sc;
-        ::error("%1%", ss.str());
+        ::P4::error("%1%", ss.str());
     } else if (n_slicing_tried == 0) {
         auto diagnose_info = SuperClusterActionDiagnoseInfo(sc);
         if (diagnose_info.scCannotBeSplitFurther) {
@@ -519,7 +519,7 @@ void print_or_throw_slicing_error(const PHV::AllocUtils& utils, const PHV::Super
             bool diagnosed = utils.actions.diagnoseSuperCluster(diagnose_info.sliceListsOfInterest,
                                                                 diagnose_info.fieldAlignments, ss);
             if (diagnosed) {
-                ::error("%1%", ss.str());
+                ::P4::error("%1%", ss.str());
             } else {
                 // SuperCluster can't be split any further, but it's not because
                 // of field type or packing in actions (since diagnoseSuperCluster
@@ -558,7 +558,7 @@ void print_or_throw_slicing_error(const PHV::AllocUtils& utils, const PHV::Super
                                       "largest PHV containers."
                                    << "\n\n\t" << *list;
                                 LOG_DEBUG3(ss);
-                                ::error("%1%", ss.str());
+                                ::P4::error("%1%", ss.str());
                                 return;
                             }
                         }
@@ -577,7 +577,7 @@ void print_or_throw_slicing_error(const PHV::AllocUtils& utils, const PHV::Super
         });
         ss << std::endl;
 
-        ::error("%1%", ss.str());
+        ::P4::error("%1%", ss.str());
     }
 }
 
@@ -3923,7 +3923,7 @@ std::list<PHV::SuperCluster*> PHV::AllocUtils::create_strided_clusters(
             strided_group = strided_headers.get_strided_group(sl.field());
             if (!strided_group) continue;
             if (slices.size() != 1) {
-                ::error(
+                ::P4::error(
                     "Field %1% requires strided allocation"
                     " but has conflicting constraints on it.",
                     sl.field()->name);
@@ -4172,7 +4172,7 @@ AllocResult AllocatePHV::brute_force_alloc(
             if (new_result.status == AllocResultCode::SUCCESS) {
                 result = new_result;
             } else {
-                ::warning("found a unallocatable slice list: %1%",
+                ::P4::warning("found a unallocatable slice list: %1%",
                           cstring::to_cstring(unallocatable_lists.front()));
             }
         }
@@ -4294,7 +4294,7 @@ bool AllocatePHV::diagnoseSuperCluster(const PHV::SuperCluster* sc, const PHV::A
     std::stringstream ss;
     bool diagnosed =
         utils.actions.diagnoseSuperCluster(info.sliceListsOfInterest, info.fieldAlignments, ss);
-    if (diagnosed) ::error("%1%", ss.str());
+    if (diagnosed) ::P4::error("%1%", ss.str());
     return diagnosed;
 }
 
@@ -4501,7 +4501,7 @@ void AllocatePHV::formatAndThrowError(
     msg << "PHV allocation was not successful "
         << "(" << unallocated_slices << " field slices remaining)" << std::endl;
     LOG_DEBUG1(msg.str());
-    ::error("PHV allocation was not successful\n"
+    ::P4::error("PHV allocation was not successful\n"
             "%1% field slices remain unallocated\n"
             "%2%", unallocated_slices, errorMessage.str());
 }
@@ -4552,7 +4552,7 @@ void AllocatePHV::formatAndThrowUnsat(const std::list<const PHV::SuperCluster*>&
         << "(" << unsat.size() << " set" << (unsat.size() == 1 ? "" : "s")
         << " of unsatisfiable constraints remaining)" << std::endl;
     LOG_DEBUG3(msg.str());
-    ::error("%1%", msg.str());
+    ::P4::error("%1%", msg.str());
 }
 
 BruteForceAllocationStrategy::BruteForceAllocationStrategy(const cstring name,
@@ -5864,10 +5864,10 @@ const IR::Node* IncrementalPHVAllocation::apply_visitor(const IR::Node* root, co
     } else {
         // Did we already tried without temporary creation during table allocation? If so, fail.
         if (settings_i.limit_tmp_creation) {
-            ::error("failed to allocate temp vars created by table placement");
+            ::P4::error("failed to allocate temp vars created by table placement");
             for (const auto* sc : result.remaining_clusters) {
                 sc->forall_fieldslices([](const PHV::FieldSlice& fs) {
-                    ::error("unallocated: %1%", cstring::to_cstring(fs));
+                    ::P4::error("unallocated: %1%", cstring::to_cstring(fs));
                 });
             }
         } else {

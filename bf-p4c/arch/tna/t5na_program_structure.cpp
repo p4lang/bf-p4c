@@ -188,7 +188,7 @@ void T5naProgramStructure::createControls() {
         }
         // Check for unsupported ingress/egress sharing
         if (isIngressControl && isEgressControl) {
-            ::error("%1%: Control used as both Ingress and Egress, this is impossible"
+            ::P4::error("%1%: Control used as both Ingress and Egress, this is impossible"
                     " on T5NA because Ingress does not have inout headers.", c);
         }
 

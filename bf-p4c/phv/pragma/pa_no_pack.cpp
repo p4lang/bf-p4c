@@ -16,7 +16,7 @@ const char *PragmaNoPack::help =
     "Compiler will ignore invalid pa_no_pack pragma(s) if two fields must be allocated to"
     "one container because of constraints, e.g. header fields in a same byte.";
 
-bool PragmaNoPack::preorder(const IR::BFN::Pipe* pipe) {
+bool PragmaNoPack::preorder(const P4::IR::BFN::Pipe* pipe) {
     auto global_pragmas = pipe->global_pragmas;
 
     for (const auto* annotation : global_pragmas) {
@@ -27,8 +27,8 @@ bool PragmaNoPack::preorder(const IR::BFN::Pipe* pipe) {
         const unsigned min_required_arguments = 3;  // gress, field1, field2....
         unsigned required_arguments = min_required_arguments;
         unsigned expr_index = 0;
-        const IR::StringLiteral *pipe_arg = nullptr;
-        const IR::StringLiteral *gress_arg = nullptr;
+        const P4::IR::StringLiteral *pipe_arg = nullptr;
+        const P4::IR::StringLiteral *gress_arg = nullptr;
 
         if (!PHV::Pragmas::determinePipeGressArgs(exprs, expr_index,
                 required_arguments, pipe_arg, gress_arg)) {
@@ -46,9 +46,9 @@ bool PragmaNoPack::preorder(const IR::BFN::Pipe* pipe) {
         }
 
         // Extract the rest of the arguments
-        std::vector<const IR::StringLiteral*> field_irs;
+        std::vector<const P4::IR::StringLiteral*> field_irs;
         for (; expr_index < exprs.size(); ++expr_index) {
-            const IR::StringLiteral* name = exprs[expr_index]->to<IR::StringLiteral>();
+            const P4::IR::StringLiteral* name = exprs[expr_index]->to<P4::IR::StringLiteral>();
             field_irs.push_back(name);
         }
 

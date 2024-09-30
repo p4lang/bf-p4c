@@ -73,7 +73,7 @@ cstring keyAnnotationName(const P4::IR::MAU::TableKey* table_key, cstring table_
                 auto newAnnName = s.substr(0, sm.position(0));
                 if (!table_name.isNullOrEmpty())
                     // TODO: It would be nice to report srcInfo here.
-                    ::warning(BFN::ErrorType::WARN_SUBSTITUTION,
+                    ::P4::warning(BFN::ErrorType::WARN_SUBSTITUTION,
                               "%1%: Table key name not supported. "
                               "Replacing \"%2%\" with \"%3%\".", table_name, annName, newAnnName);
                 annName = newAnnName;
@@ -3252,7 +3252,7 @@ bool MauAsmOutput::EmitAttached::preorder(const P4::IR::MAU::Counter *counter) {
         out << indent << "bytecount_adjust: " << bytecount_adjust << std::endl;
     if (counter->true_egress_accounting) {
         if (teop == 4)
-            ::error("Ran out of tEOP buses for true egress accounting: %1%", counter);
+            ::P4::error("Ran out of tEOP buses for true egress accounting: %1%", counter);
         out << indent << "teop: " << teop++ << std::endl;
     }
     out << indent << "format: {";
@@ -3304,7 +3304,7 @@ bool MauAsmOutput::EmitAttached::preorder(const P4::IR::MAU::Meter *meter) {
     out << indent << "type: " << imp_type << std::endl;
     if (meter->true_egress_accounting) {
         if (teop == 4)
-            ::error("Ran out of tEOP buses for true egress accounting: %1%", meter);
+            ::P4::error("Ran out of tEOP buses for true egress accounting: %1%", meter);
         out << indent << "teop: " << teop++ << std::endl;
     }
     if (imp_type == "wred") {

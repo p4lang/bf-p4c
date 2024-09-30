@@ -44,11 +44,11 @@ void ValidateActions::end_apply() {
             "Instruction selection creates an instruction that the rest of the compiler cannot "
             "correctly interpret");
     if (error_found) {
-        ::error(error_message);
+        ::P4::error(error_message);
     } else if (warning_found) {
         if (stop_compiler)
-            ::error(error_message);
+            ::P4::error(error_message);
         else
-            ::warning(error_message);
+            ::P4::warning(error_message);
     }
 }

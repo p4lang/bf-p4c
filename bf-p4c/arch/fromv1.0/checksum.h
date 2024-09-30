@@ -70,11 +70,11 @@ static bool analyzeChecksumCall(const IR::MethodCallStatement *statement, cstrin
 
     auto bl = condition->to<IR::BoolLiteral>();
     if (which == "verify_checksum" && !nominalCondition && (!bl || bl->value != true))
-        ::error("Tofino does not support conditional checksum verification: %1%", destField);
+        ::P4::error("Tofino does not support conditional checksum verification: %1%", destField);
 
     auto algorithm = (*methodCall->arguments)[3]->expression->to<IR::Member>();
     if (!algorithm || (algorithm->member != "csum16"))
-        ::error("Tofino only supports \"csum16\" for checksum calculation: %1%", destField);
+        ::P4::error("Tofino only supports \"csum16\" for checksum calculation: %1%", destField);
 
     return true;
 }
@@ -143,7 +143,7 @@ getChecksumUpdateLocations(const IR::MethodCallExpression* call,
             else if (gress->value == "ingress_and_egress")
                 updateLocations = { INGRESS, EGRESS };
             else
-                ::error("Invalid use of @pragma %1%, valid value "
+                ::P4::error("Invalid use of @pragma %1%, valid value "
                     " is ingress/egress/ingress_and_egress", pragma);
         }
     }

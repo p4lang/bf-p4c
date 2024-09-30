@@ -5,6 +5,8 @@
 #include "bf-p4c/phv/phv_fields.h"
 #include "lib/indent.h"
 
+using namespace P4;
+
 namespace ActionData {
 
 size_t slot_type_to_bits(SlotType_t slot_type) {
@@ -1247,7 +1249,7 @@ const RamSection *ALUOperation::create_meter_color_RamSection() const {
     }
 
     if (calculated_right_shift != 0 && _constraint != DEPOSIT_FIELD)
-        ::error("Meter color from %1% in action %2% requires a stricter alignment with its "
+        ::P4::error("Meter color from %1% in action %2% requires a stricter alignment with its "
                 "destination", meter_name, _action_name);
 
     // Padding the unused bits rest with all meter color padding

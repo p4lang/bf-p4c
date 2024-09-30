@@ -18,15 +18,15 @@
 
 namespace BFN {
 
-using BlockInfoMapping = std::multimap<const IR::Node*, BlockInfo>;
+using BlockInfoMapping = std::multimap<const P4::IR::Node*, BlockInfo>;
 
-static bool isExtern(const IR::Member* method, std::string externName) {
-    if (auto pe = method->expr->to<IR::PathExpression>()) {
-        if (auto type = pe->type->to<IR::Type_SpecializedCanonical>()) {
-            if (auto baseType = type->baseType->to<IR::Type_Extern>())
+static bool isExtern(const P4::IR::Member* method, std::string externName) {
+    if (auto pe = method->expr->to<P4::IR::PathExpression>()) {
+        if (auto type = pe->type->to<P4::IR::Type_SpecializedCanonical>()) {
+            if (auto baseType = type->baseType->to<P4::IR::Type_Extern>())
                 if (baseType->name.name == externName)
                     return true;
-        } else if (auto type = pe->type->to<IR::Type_Extern>()) {
+        } else if (auto type = pe->type->to<P4::IR::Type_Extern>()) {
             if (type->name.name == externName)
                 return true;
         }
@@ -42,11 +42,11 @@ struct GetHeaderStackIndex : public Inspector {
     explicit GetHeaderStackIndex(cstring hdr, bool ignore_valid = false) :
         header(hdr), ignore_valid(ignore_valid) { }
 
-    bool preorder(const IR::HeaderStackItemRef* ref) override {
+    bool preorder(const P4::IR::HeaderStackItemRef* ref) override {
         if (ignore_valid) {
-            auto stmt = findContext<IR::AssignmentStatement>();
+            auto stmt = findContext<P4::IR::AssignmentStatement>();
             if (stmt) {
-                auto lhs = stmt->left->to<IR::Member>();
+                auto lhs = stmt->left->to<P4::IR::Member>();
                 // Ignore any prior change to $valid
                 if (lhs && lhs->member == "$valid") {
                     return false;
@@ -59,23 +59,23 @@ struct GetHeaderStackIndex : public Inspector {
         auto hdr = hdrRef->name;
 
         if (hdr == header) {
-            auto index = ref->index()->to<IR::Constant>();
+            auto index = ref->index()->to<P4::IR::Constant>();
             rv = index->asUnsigned();
         }
 
         return false;
     }
 
-    void postorder(const IR::MethodCallStatement* statement) override {
+    void postorder(const P4::IR::MethodCallStatement* statement) override {
         auto* call = statement->methodCall;
-        if (auto* method = call->method->to<IR::Member>()) {
+        if (auto* method = call->method->to<P4::IR::Member>()) {
             if (method->member == "extract") {
                 auto dest = (*call->arguments)[0]->expression;
-                auto hdr = dest->to<IR::HeaderRef>();
+                auto hdr = dest->to<P4::IR::HeaderRef>();
                 BUG_CHECK(hdr, "%1%: not a header reference in extract", statement);
 
-                if (!hdr->is<IR::HeaderStackItemRef>()) {
-                    if (header == hdr->to<IR::ConcreteHeaderRef>()->ref->name) {
+                if (!hdr->is<P4::IR::HeaderStackItemRef>()) {
+                    if (header == hdr->to<P4::IR::ConcreteHeaderRef>()->ref->name) {
                         rv = 0;
                     }
                 }
@@ -89,10 +89,10 @@ struct GetHeaderStackIndex : public Inspector {
 struct AncestorStates {
     /// We maintain the visited states in a stack as we visit
     /// in a DFS order.
-    std::vector<IR::BFN::ParserState*> stack;
+    std::vector<P4::IR::BFN::ParserState*> stack;
 
     /// Encounter this state, push to stack.
-    void push(IR::BFN::ParserState* state) {
+    void push(P4::IR::BFN::ParserState* state) {
         stack.push_back(state);
     }
 
@@ -102,7 +102,7 @@ struct AncestorStates {
         stack.pop_back();
     }
 
-    bool visited(const IR::BFN::ParserState* state) const {
+    bool visited(const P4::IR::BFN::ParserState* state) const {
         return std::find(stack.begin(), stack.end(), state) != stack.end();
     }
 
@@ -132,24 +132,24 @@ struct AncestorStates {
     }
 };
 
-const IR::Expression* stripReinterpret(const IR::Expression* rhs) {
-    while (auto reimp = rhs->to<IR::BFN::ReinterpretCast>())
+const P4::IR::Expression* stripReinterpret(const P4::IR::Expression* rhs) {
+    while (auto reimp = rhs->to<P4::IR::BFN::ReinterpretCast>())
         rhs = reimp->expr;
     return rhs;
 }
 
 struct AssignOr {
     AssignOr() = default;
-    AssignOr(const IR::Operation_Binary* bin, const IR::Expression* val) : bin(bin), val(val) { }
-    const IR::Operation_Binary* bin = nullptr;
-    const IR::Expression* val = nullptr;
+    AssignOr(const P4::IR::Operation_Binary* bin, const P4::IR::Expression* val) : bin(bin), val(val) { }
+    const P4::IR::Operation_Binary* bin = nullptr;
+    const P4::IR::Expression* val = nullptr;
     explicit operator bool() const { return bool(bin); }
 };
 
-AssignOr getAssignOr(const IR::Expression* lhs, const IR::Expression* rhs) {
-    auto bin = rhs->to<IR::Operation_Binary>();
-    if (bin && (rhs->is<IR::BOr>() || rhs->is<IR::LOr>())) {
-        const IR::Expression *val = nullptr;
+AssignOr getAssignOr(const P4::IR::Expression* lhs, const P4::IR::Expression* rhs) {
+    auto bin = rhs->to<P4::IR::Operation_Binary>();
+    if (bin && (rhs->is<P4::IR::BOr>() || rhs->is<P4::IR::LOr>())) {
+        const P4::IR::Expression *val = nullptr;
         if (bin->left->equiv(*lhs)) {
             val = stripReinterpret(bin->right);
         } else if (bin->right->equiv(*lhs)) {
@@ -161,9 +161,9 @@ AssignOr getAssignOr(const IR::Expression* lhs, const IR::Expression* rhs) {
 }
 
 using ChecksumOffsetMap = std::unordered_map<cstring, std::unordered_map<cstring, int>>;
-using ExtractedFieldsMap = ordered_map<const IR::Member*, const IR::BFN::PacketRVal*>;
-using BitOffsetMap = std::unordered_map<const IR::MethodCallExpression*, unsigned>;
-using ChecksumInstrMap = std::unordered_map<cstring, const IR::MethodCallExpression*>;
+using ExtractedFieldsMap = ordered_map<const P4::IR::Member*, const P4::IR::BFN::PacketRVal*>;
+using BitOffsetMap = std::unordered_map<const P4::IR::MethodCallExpression*, unsigned>;
+using ChecksumInstrMap = std::unordered_map<cstring, const P4::IR::MethodCallExpression*>;
 
 /// Converts frontend parser IR into backend IR
 class GetBackendParser {
@@ -171,28 +171,28 @@ class GetBackendParser {
     explicit GetBackendParser(P4::TypeMap *typeMap,
                               P4::ReferenceMap *refMap,
                               ParseTna* arch,
-                              const IR::BFN::TnaParser* parser) :
+                              const P4::IR::BFN::TnaParser* parser) :
             typeMap(typeMap), refMap(refMap), arch(arch), parser(parser),
             parserLoopsInfo(refMap, parser, parserPragmas) {
         parser->apply(parserPragmas);
     }
 
-    const IR::BFN::Parser* createBackendParser();
+    const P4::IR::BFN::Parser* createBackendParser();
 
-    void addTransition(IR::BFN::ParserState* state, match_t matchVal, int shift, cstring nextState,
-                       const IR::P4ValueSet* valueSet = nullptr);
+    void addTransition(P4::IR::BFN::ParserState* state, match_t matchVal, int shift, cstring nextState,
+                       const P4::IR::P4ValueSet* valueSet = nullptr);
 
  private:
-    IR::BFN::ParserState* convertBody(IR::BFN::ParserState* state);
+    P4::IR::BFN::ParserState* convertBody(P4::IR::BFN::ParserState* state);
 
-    IR::BFN::ParserState* convertState(cstring name, bool& isLoopState);
+    P4::IR::BFN::ParserState* convertState(cstring name, bool& isLoopState);
 
-    void applyRewrite(IR::BFN::ParserState* state, Transform& rewrite);
-    void rewriteChecksums(IR::BFN::Parser* parser, IR::BFN::ParserState* startState);
+    void applyRewrite(P4::IR::BFN::ParserState* state, Transform& rewrite);
+    void rewriteChecksums(P4::IR::BFN::Parser* parser, P4::IR::BFN::ParserState* startState);
 
     cstring
-    getName(const IR::ParserState* state) {
-        auto anno = state->getAnnotation(IR::Annotation::nameAnnotation);
+    getName(const P4::IR::ParserState* state) {
+        auto anno = state->getAnnotation(P4::IR::Annotation::nameAnnotation);
         cstring name = (anno != nullptr) ? anno->getName() : state->name.name;
         return name.startsWith(".") ? name.substr(1) : name;
     }
@@ -201,7 +201,7 @@ class GetBackendParser {
     // Therefore, the program "start" state may not be the true start state.
     // For TNA, the program "start" state is the start state.
     cstring
-    getStateName(const IR::ParserState* state) {
+    getStateName(const P4::IR::ParserState* state) {
         if (BackendOptions().arch == "v1model") {
             auto stateName = getName(state);
             p4StateNameToStateName.emplace(state->name, stateName);
@@ -220,11 +220,11 @@ class GetBackendParser {
         }
     }
 
-    const IR::Node* rewriteSelectExpr(const IR::Expression* selectExpr, int bitShift,
+    const P4::IR::Node* rewriteSelectExpr(const P4::IR::Expression* selectExpr, int bitShift,
                                       nw_bitrange& bitrange);
 
-    std::map<cstring, IR::BFN::ParserState*>    backendStates;
-    std::map<IR::BFN::ParserState*, const IR::ParserState*> origP4States;
+    std::map<cstring, P4::IR::BFN::ParserState*>    backendStates;
+    std::map<P4::IR::BFN::ParserState*, const P4::IR::ParserState*> origP4States;
 
     std::map<cstring, unsigned>                 max_loop_depth;   // state name to depth
     std::map<cstring, cstring>                  p4StateNameToStateName;
@@ -232,27 +232,27 @@ class GetBackendParser {
     P4::TypeMap*      typeMap;
     P4::ReferenceMap* refMap;
     ParseTna*         arch;
-    const IR::BFN::TnaParser* parser;
+    const P4::IR::BFN::TnaParser* parser;
 
     ParserPragmas parserPragmas;
     ParserLoopsInfo parserLoopsInfo;
 
-    std::vector<std::vector<const IR::BFN::ParserState*>> backendLoops;
+    std::vector<std::vector<const P4::IR::BFN::ParserState*>> backendLoops;
     // used to keep track of visiter ancestor states at the current state
     AncestorStates ancestors;
     // maps below are used in both RewriteParserStatements and RewriteParserChecksums, they are
     // defined here so we can pass them to both passes
-    std::unordered_map<const IR::BFN::ParserState*, ExtractedFieldsMap> extractedFields;
+    std::unordered_map<const P4::IR::BFN::ParserState*, ExtractedFieldsMap> extractedFields;
     BitOffsetMap bitOffsets;
 };
 
 /// Resolves the "next" and "last" stack references according to the spec.
-/// Call this on the frontend IR::ParserState node; will resolve all
-/// IR::BFN::UnresolvedHeaderStackIndex into concrete indices.
+/// Call this on the frontend P4::IR::ParserState node; will resolve all
+/// P4::IR::BFN::UnresolvedHeaderStackIndex into concrete indices.
 struct ResolveHeaderStackIndex : public Transform {
-    IR::BFN::ParserState* state;
-    const std::map<cstring, IR::BFN::ParserState*> backendStates;
-    const ordered_map<cstring, const IR::ParserState*>* topoAncestors = nullptr;
+    P4::IR::BFN::ParserState* state;
+    const std::map<cstring, P4::IR::BFN::ParserState*> backendStates;
+    const ordered_map<cstring, const P4::IR::ParserState*>* topoAncestors = nullptr;
     std::set<cstring> stridedStates;
     P4ParserGraphs* pg = nullptr;
     AncestorStates* ancestors = nullptr;
@@ -264,18 +264,18 @@ struct ResolveHeaderStackIndex : public Transform {
 
     bool stackOutOfBound = false;
 
-    ResolveHeaderStackIndex(IR::BFN::ParserState* s, AncestorStates* ans) :
+    ResolveHeaderStackIndex(P4::IR::BFN::ParserState* s, AncestorStates* ans) :
         state(s), ancestors(ans) { }
 
-    ResolveHeaderStackIndex(IR::BFN::ParserState* s,
-            const std::map<cstring, IR::BFN::ParserState*>& bs,
-            const ordered_map<cstring, const IR::ParserState*>* ans,
+    ResolveHeaderStackIndex(P4::IR::BFN::ParserState* s,
+            const std::map<cstring, P4::IR::BFN::ParserState*>& bs,
+            const ordered_map<cstring, const P4::IR::ParserState*>* ans,
             P4ParserGraphs* pg) :
         state(s), backendStates(bs), topoAncestors(ans), pg(pg) { }
 
-    bool isStackOutOfBound(const IR::HeaderStackItemRef* ref, int index) {
-        auto stackSize = ref->base()->type->to<IR::Type_Stack>()
-                                     ->size->to<IR::Constant>()->asInt();
+    bool isStackOutOfBound(const P4::IR::HeaderStackItemRef* ref, int index) {
+        auto stackSize = ref->base()->type->to<P4::IR::Type_Stack>()
+                                     ->size->to<P4::IR::Constant>()->asInt();
 
         return index < 0 || index >= stackSize;
     }
@@ -285,8 +285,8 @@ struct ResolveHeaderStackIndex : public Transform {
     // state that extracts the same header stack in every path. The function recursively
     // looks through each path and determines if the given state is the closest state that extracts
     // the same header stack.
-    bool addPrecedingExtractIdx(const IR::ParserState* state,
-                    std::map<int, std::set<const IR::ParserState*>>& indexToState,
+    bool addPrecedingExtractIdx(const P4::IR::ParserState* state,
+                    std::map<int, std::set<const P4::IR::ParserState*>>& indexToState,
                     cstring header) {
         GetHeaderStackIndex getHeaderStackIndex(header);
         state->apply(getHeaderStackIndex);
@@ -309,7 +309,7 @@ struct ResolveHeaderStackIndex : public Transform {
     }
 
     int getCurrentIndexFromTopoAncestors(cstring header) {
-        std::map<int, std::set<const IR::ParserState*>> indexToState;
+        std::map<int, std::set<const P4::IR::ParserState*>> indexToState;
         for (auto &anc : *topoAncestors) {
             addPrecedingExtractIdx(anc.second, indexToState, header);
         }
@@ -361,15 +361,15 @@ struct ResolveHeaderStackIndex : public Transform {
         return currentIndex;
     }
 
-    IR::Node* postorder(IR::MethodCallStatement* statement) override {
+    P4::IR::Node* postorder(P4::IR::MethodCallStatement* statement) override {
         auto* call = statement->methodCall;
-        if (auto* method = call->method->to<IR::Member>()) {
+        if (auto* method = call->method->to<P4::IR::Member>()) {
             if (method->member == "extract") {
                 auto dest = (*call->arguments)[0]->expression;
-                auto hdr = dest->to<IR::HeaderRef>();
+                auto hdr = dest->to<P4::IR::HeaderRef>();
 
-                if (!hdr->is<IR::HeaderStackItemRef>()) {
-                    auto header = hdr->to<IR::ConcreteHeaderRef>()->ref->name;
+                if (!hdr->is<P4::IR::HeaderStackItemRef>()) {
+                    auto header = hdr->to<P4::IR::ConcreteHeaderRef>()->ref->name;
 
                     int currentIndex = getCurrentIndex(header);
 
@@ -384,9 +384,9 @@ struct ResolveHeaderStackIndex : public Transform {
         return statement;
     }
 
-    IR::Node* preorder(IR::BFN::UnresolvedHeaderStackIndex* unresolved) override {
-        auto ref = findContext<IR::HeaderStackItemRef>();
-        auto state = findContext<IR::ParserState>();
+    P4::IR::Node* preorder(P4::IR::BFN::UnresolvedHeaderStackIndex* unresolved) override {
+        auto ref = findContext<P4::IR::HeaderStackItemRef>();
+        auto state = findContext<P4::IR::ParserState>();
         auto header = ref->baseRef()->name;
 
         int currentIndex = getCurrentIndex(header);
@@ -403,12 +403,12 @@ struct ResolveHeaderStackIndex : public Transform {
 
         resolvedHeaders.insert(header);
 
-        auto resolved = new IR::Constant(currentIndex);
+        auto resolved = new P4::IR::Constant(currentIndex);
 
-        auto statement = findContext<IR::MethodCallStatement>();
+        auto statement = findContext<P4::IR::MethodCallStatement>();
         if (statement) {
             auto call = statement->methodCall;
-            if (auto method = call->method->to<IR::Member>()) {
+            if (auto method = call->method->to<P4::IR::Member>()) {
                 // "next" is "automatically advanced on each successful call to extract"
                 if (method->member == "extract" && unresolved->index == "next") {
                     headerToCurrentIndex[header]++;
@@ -427,17 +427,17 @@ struct ResolveHeaderStackIndex : public Transform {
 // This should be done for state that is marked as strided.
 struct ResetHeaderStackIndex : public Transform {
     int currentIndex = 0;
-    IR::Node* preorder(IR::BFN::UnresolvedHeaderStackIndex* unresolved) override {
-        auto ref = findContext<IR::HeaderStackItemRef>();
-        auto state = findContext<IR::ParserState>();
+    P4::IR::Node* preorder(P4::IR::BFN::UnresolvedHeaderStackIndex* unresolved) override {
+        auto ref = findContext<P4::IR::HeaderStackItemRef>();
+        auto state = findContext<P4::IR::ParserState>();
         auto header = ref->baseRef()->name;
-        IR::Constant* resolved = nullptr;
+        P4::IR::Constant* resolved = nullptr;
         if (unresolved->index == "last") {
-            resolved = new IR::Constant(currentIndex - 1);
+            resolved = new P4::IR::Constant(currentIndex - 1);
         } else if (unresolved->index == "next") {
-            resolved = new IR::Constant(currentIndex++);
+            resolved = new P4::IR::Constant(currentIndex++);
         } else {
-            ::error("Unhandled header stack reference");
+            ::P4::error("Unhandled header stack reference");
         }
         LOG4("resolved " << header << " stack index " << unresolved->index
                          << " to " << resolved << " in state " << state->name);
@@ -445,7 +445,7 @@ struct ResetHeaderStackIndex : public Transform {
     }
 };
 
-const IR::BFN::Parser*
+const P4::IR::BFN::Parser*
 GetBackendParser::createBackendParser() {
     // 1. create backend states
 
@@ -455,7 +455,7 @@ GetBackendParser::createBackendParser() {
         if (state->name == "accept" || state->name == "reject")
             continue;
 
-        auto backendState = new IR::BFN::ParserState(state,
+        auto backendState = new P4::IR::BFN::ParserState(state,
                                    createThreadName(parser->thread, stateName),
                                    parser->thread);
 
@@ -473,7 +473,7 @@ GetBackendParser::createBackendParser() {
         }
         if (auto dontmerge = state->getAnnotation("dontmerge"_cs)) {
             if (dontmerge->expr.size()) {
-                auto gress = dontmerge->expr[0]->to<IR::StringLiteral>();
+                auto gress = dontmerge->expr[0]->to<P4::IR::StringLiteral>();
                 if (gress->value == toString(parser->thread)) {
                     backendState->dontMerge = true;
                 }
@@ -489,7 +489,7 @@ GetBackendParser::createBackendParser() {
     if (!pg.has_loops(parser)) {
         auto topo = pg.topological_sort(parser);
 
-        std::map<cstring, const IR::ParserState*> resolved_map;
+        std::map<cstring, const P4::IR::ParserState*> resolved_map;
 
         for (auto name : topo) {
             if (name == "accept" || name == "reject")
@@ -498,7 +498,7 @@ GetBackendParser::createBackendParser() {
             if (backendStates.count(name)) {
                 auto* state = backendStates[name];
 
-                ordered_map<cstring, const IR::ParserState*> ancestors;
+                ordered_map<cstring, const P4::IR::ParserState*> ancestors;
 
                 for (auto anc : pg.get_all_ancestors(state->p4State())) {
                     if (resolved_map.count(anc->name))
@@ -508,7 +508,7 @@ GetBackendParser::createBackendParser() {
                 ResolveHeaderStackIndex resolveHeaderStackIndex(state, backendStates,
                                                                        &ancestors, &pg);
                 auto resolved = state->p4State()->apply(resolveHeaderStackIndex)
-                                     ->to<IR::ParserState>();
+                                     ->to<P4::IR::ParserState>();
                 if (resolveHeaderStackIndex.stackOutOfBound) {
                     LOG4("stack out of bound at " << state->name);
                     resolved = nullptr;
@@ -518,7 +518,7 @@ GetBackendParser::createBackendParser() {
                 for (auto stridedState : resolveHeaderStackIndex.stridedStates) {
                     if (stridedState == name) continue;
                     auto resolved_stride = (*backendStates.at(stridedState)->p4States.begin())
-                                          ->apply(ResetHeaderStackIndex())->to<IR::ParserState>();
+                                          ->apply(ResetHeaderStackIndex())->to<P4::IR::ParserState>();
                     resolved_map[resolved_stride->name] = resolved_stride;
                 }
             }
@@ -536,15 +536,15 @@ GetBackendParser::createBackendParser() {
     // 3. now convert states and stitch them together
 
     bool isLoopState = false;
-    IR::BFN::ParserState* startState = convertState(getStateName("start"_cs), isLoopState);
+    P4::IR::BFN::ParserState* startState = convertState(getStateName("start"_cs), isLoopState);
 
     BlockInfoMapping* binfo = &arch->toBlockInfo;
-    IR::ID multiParserName;
+    P4::IR::ID multiParserName;
     if (binfo) {
         auto bitr = binfo->begin();
         while (bitr != binfo->end()) {
             auto b = *bitr;
-            auto bparser = b.first->to<IR::P4Parser>();
+            auto bparser = b.first->to<P4::IR::P4Parser>();
             if (bparser && (bparser->name.originalName == parser->name) &&
                 (b.second.gress == parser->thread)) {
                 if (!b.second.parser_instance_name.isNullOrEmpty())
@@ -556,14 +556,14 @@ GetBackendParser::createBackendParser() {
         }
     }
 
-    IR::ID parserName = parser->name;
+    P4::IR::ID parserName = parser->name;
     if (arch->hasMultipleParsers) {
         BUG_CHECK(!multiParserName.toString().isNullOrEmpty(),
                 "No multi parser block name generated for parser %1%", parser->name);
         parserName = multiParserName;
     }
 
-    auto* backendParser = new IR::BFN::Parser(parser->thread, startState, parserName,
+    auto* backendParser = new P4::IR::BFN::Parser(parser->thread, startState, parserName,
                                               parser->phase0, parser->portmap);
     rewriteChecksums(backendParser, startState);
 
@@ -583,15 +583,15 @@ GetBackendParser::createBackendParser() {
     return backendParser;
 }
 
-void GetBackendParser::addTransition(IR::BFN::ParserState* state, match_t matchVal,
-                                     int shift, cstring nextState, const IR::P4ValueSet* valueSet) {
+void GetBackendParser::addTransition(P4::IR::BFN::ParserState* state, match_t matchVal,
+                                     int shift, cstring nextState, const P4::IR::P4ValueSet* valueSet) {
     LOG4("addTransition: " << state->name << " -> " << nextState);
 
-    IR::BFN::ParserMatchValue* match_value_ir = nullptr;
+    P4::IR::BFN::ParserMatchValue* match_value_ir = nullptr;
     if (valueSet) {
-        // Convert IR::Constant to unsigned int.
+        // Convert P4::IR::Constant to unsigned int.
         size_t sz = 0;
-        auto sizeConstant = valueSet->size->to<IR::Constant>();
+        auto sizeConstant = valueSet->size->to<P4::IR::Constant>();
         if (sizeConstant == nullptr || !sizeConstant->fitsUint())
             ::fatal_error("parser value set should have an unsigned integer as size %1%", valueSet);
         sz = sizeConstant->asUnsigned();
@@ -600,16 +600,16 @@ void GetBackendParser::addTransition(IR::BFN::ParserState* state, match_t matchV
         // overriding the pvs name with the name in the annotation.
         cstring valueSetName;
         if (auto anno = valueSet->annotations->getSingle("pd_pvs_name"_cs)) {
-            auto name = anno->expr.at(0)->to<IR::StringLiteral>();
+            auto name = anno->expr.at(0)->to<P4::IR::StringLiteral>();
             valueSetName = name->value;
         } else {
             valueSetName = valueSet->controlPlaneName();
         }
-        match_value_ir = new IR::BFN::ParserPvsMatchValue(valueSetName, sz);
+        match_value_ir = new P4::IR::BFN::ParserPvsMatchValue(valueSetName, sz);
     } else {
-        match_value_ir = new IR::BFN::ParserConstMatchValue(matchVal);
+        match_value_ir = new P4::IR::BFN::ParserConstMatchValue(matchVal);
     }
-    auto* transition = new IR::BFN::Transition(match_value_ir, shift, nullptr);
+    auto* transition = new P4::IR::BFN::Transition(match_value_ir, shift, nullptr);
 
     ancestors.push(state);
 
@@ -631,16 +631,16 @@ void GetBackendParser::addTransition(IR::BFN::ParserState* state, match_t matchV
 /// If the input is not such an expression the result will contain nullptr as
 /// the first member of the tuple.
 std::optional<nw_bitrange>
-lookaheadToExtractRange(P4::TypeMap* typeMap, const IR::Expression* expr, int currentBit,
+lookaheadToExtractRange(P4::TypeMap* typeMap, const P4::IR::Expression* expr, int currentBit,
                         bool *partial_hdr_err_proc) {
     *partial_hdr_err_proc = false;
-    if (auto* call = expr->to<IR::MethodCallExpression>()) {
+    if (auto* call = expr->to<P4::IR::MethodCallExpression>()) {
         bool is_lookahead = false;
-        if (auto* mem = call->method->to<IR::Member>()) {
+        if (auto* mem = call->method->to<P4::IR::Member>()) {
             if (mem->member == "lookahead") {
                 is_lookahead = true;
             }
-        } else if (auto* pathex = call->method->to<IR::PathExpression>()) {
+        } else if (auto* pathex = call->method->to<P4::IR::PathExpression>()) {
             if (pathex->path->name == "lookahead_greedy") {
                 is_lookahead = true;
                 *partial_hdr_err_proc = true;
@@ -663,13 +663,13 @@ lookaheadToExtractRange(P4::TypeMap* typeMap, const IR::Expression* expr, int cu
                 return nw_bitrange(StartLen(currentBit, width));
         }
 
-    } else if (auto* slice = expr->to<IR::Slice>()) {
+    } else if (auto* slice = expr->to<P4::IR::Slice>()) {
         auto range = lookaheadToExtractRange(typeMap, slice->e0, currentBit,
                                              partial_hdr_err_proc);
         if (!range)
             return std::nullopt;
 
-        BUG_CHECK(slice->e0->type->is<IR::Type_Bits>(), "%1%: Cannot slice non-bit type %2%",
+        BUG_CHECK(slice->e0->type->is<P4::IR::Type_Bits>(), "%1%: Cannot slice non-bit type %2%",
                   slice, slice->e0->type);
         int src_width = typeMap->widthBits(slice->e0->type, expr, false);
         BUG_CHECK(src_width == range->hi - range->lo + 1,
@@ -680,14 +680,14 @@ lookaheadToExtractRange(P4::TypeMap* typeMap, const IR::Expression* expr, int cu
         nw_bitrange lookaheadInterval = sliceRange.toOrder<Endian::Network>(src_width);
         return lookaheadInterval.shiftedByBits(currentBit);
 
-    } else if (auto* member = expr->to<IR::Member>()) {
+    } else if (auto* member = expr->to<P4::IR::Member>()) {
         auto range = lookaheadToExtractRange(typeMap, member->expr, currentBit,
                                              partial_hdr_err_proc);
         if (!range)
             return std::nullopt;
 
         auto type = member->expr->type;
-        auto composite = type->to<IR::Type_StructLike>();
+        auto composite = type->to<P4::IR::Type_StructLike>();
         BUG_CHECK(composite, "Invalid type %1% of %2%", type->toString(), member->expr);
         unsigned offset = 0;
 
@@ -698,28 +698,28 @@ lookaheadToExtractRange(P4::TypeMap* typeMap, const IR::Expression* expr, int cu
         }
         BUG("%1%: did not find field %2% in type %3%", expr, member->member, type->toString());
 
-    } else if (auto *stack = expr->to<IR::HeaderStackItemRef>()) {
+    } else if (auto *stack = expr->to<P4::IR::HeaderStackItemRef>()) {
         auto range = lookaheadToExtractRange(typeMap, stack->base(), currentBit,
                                              partial_hdr_err_proc);
         if (!range)
             return std::nullopt;
 
-        auto index = stack->index()->to<IR::Constant>();
+        auto index = stack->index()->to<P4::IR::Constant>();
         if (!index) {
-            ::error(ErrorType::ERR_UNSUPPORTED,
+            ::P4::error(ErrorType::ERR_UNSUPPORTED,
                     "%1%: header stack index must be constant in lookahead", expr);
             return std::nullopt;
         }
         BUG_CHECK(index->fitsUint64(), "%1%: Invalid index for header stack lookahead", expr);
         auto index_val = index->asUint64();
-        auto stack_type = stack->base()->type->to<IR::Type_Stack>();
+        auto stack_type = stack->base()->type->to<P4::IR::Type_Stack>();
         auto elem_type = stack->type;
         BUG_CHECK(stack_type, "%1%: Invalid type for header stack: %2%",
                   expr, stack->base()->type);
         auto elem_size = typeMap->widthBits(elem_type, expr, false);
         BUG_CHECK(elem_size > 0, "%1%: Stack elem in lookahead does not have size", expr);
         if (index_val >= stack_type->getSize()) {
-            ::error(ErrorType::ERR_EXPRESSION, "%1%: Index ouf of bounds for stack size %2%",
+            ::P4::error(ErrorType::ERR_EXPRESSION, "%1%: Index ouf of bounds for stack size %2%",
                     index, stack_type->getSize());
             return std::nullopt;
         }
@@ -730,13 +730,13 @@ lookaheadToExtractRange(P4::TypeMap* typeMap, const IR::Expression* expr, int cu
     return std::nullopt;
 }
 
-const IR::BFN::PacketRVal*
-resolveLookahead(P4::TypeMap* typeMap, const IR::Expression* expr, int currentBit) {
+const P4::IR::BFN::PacketRVal*
+resolveLookahead(P4::TypeMap* typeMap, const P4::IR::Expression* expr, int currentBit) {
     bool partial_hdr_err_proc = false;
     auto range = lookaheadToExtractRange(typeMap, expr, currentBit, &partial_hdr_err_proc);
     if (!range)
         return nullptr;
-    return new IR::BFN::PacketRVal(*range, partial_hdr_err_proc);
+    return new P4::IR::BFN::PacketRVal(*range, partial_hdr_err_proc);
 }
 
 /// Rewrites frontend parser IR statements to the backend ones.
@@ -754,32 +754,32 @@ struct RewriteParserStatements : public Transform {
     int bitTotalShift() const { return currentBit; }
 
  private:
-    const IR::Vector<IR::BFN::ParserPrimitive>*
-    rewriteExtract(const IR::Expression *dest, Util::SourceInfo srcInfo,
+    const P4::IR::Vector<P4::IR::BFN::ParserPrimitive>*
+    rewriteExtract(const P4::IR::Expression *dest, Util::SourceInfo srcInfo,
                    bool partial_hdr_err_proc) {
-        auto* hdr = dest->to<IR::HeaderRef>();
-        auto* hdr_type = hdr->type->to<IR::Type_StructLike>();
+        auto* hdr = dest->to<P4::IR::HeaderRef>();
+        auto* hdr_type = hdr->type->to<P4::IR::Type_StructLike>();
 
         auto header = hdr->baseRef()->name;
 
         if (gress == EGRESS &&
             hdr_type->getAnnotation("not_extracted_in_egress"_cs) != nullptr) {
-            ::warning("Ignoring egress extract of @not_extracted_in_egress "
+            ::P4::warning("Ignoring egress extract of @not_extracted_in_egress "
                       "header: %1%", dest);
             return nullptr;
         }
 
         // Generate an extract operation for each field.
-        auto* rv = new IR::Vector<IR::BFN::ParserPrimitive>;
+        auto* rv = new P4::IR::Vector<P4::IR::BFN::ParserPrimitive>;
         for (auto field : hdr_type->fields) {
-            if (field->type->is<IR::Type::Varbits>())
+            if (field->type->is<P4::IR::Type::Varbits>())
                 BUG("Extraction to varbit field should have been de-sugared in midend.");
 
-            auto* fref = new IR::Member(field->type, hdr, field->name);
+            auto* fref = new P4::IR::Member(field->type, hdr, field->name);
             auto width = field->type->width_bits();
-            auto* rval = new IR::BFN::PacketRVal(StartLen(currentBit, width),
+            auto* rval = new P4::IR::BFN::PacketRVal(StartLen(currentBit, width),
                                                  partial_hdr_err_proc);
-            auto* extract = new IR::BFN::Extract(srcInfo, fref, rval);
+            auto* extract = new P4::IR::BFN::Extract(srcInfo, fref, rval);
 
             LOG5("add extract: " << extract);
 
@@ -788,8 +788,8 @@ struct RewriteParserStatements : public Transform {
             extractedFields[fref] = rval;
         }
 
-        if (auto* cf = hdr->to<IR::ConcreteHeaderRef>()) {
-            if (cf->ref->to<IR::Metadata>())
+        if (auto* cf = hdr->to<P4::IR::ConcreteHeaderRef>()) {
+            if (cf->ref->to<P4::IR::Metadata>())
                 return rv;
         }
 
@@ -800,32 +800,32 @@ struct RewriteParserStatements : public Transform {
                  "A non-byte-aligned header type reached the backend");
 
         // Generate an extract operation for the POV bit.
-        auto* type = IR::Type::Bits::get(1);
-        auto* validBit = new IR::Member(type, hdr, "$valid");
+        auto* type = P4::IR::Type::Bits::get(1);
+        auto* validBit = new P4::IR::Member(type, hdr, "$valid");
 
-        auto* extractValidBit = new IR::BFN::Extract(srcInfo, validBit,
-                        new IR::BFN::ConstantRVal(type, 1));
+        auto* extractValidBit = new P4::IR::BFN::Extract(srcInfo, validBit,
+                        new P4::IR::BFN::ConstantRVal(type, 1));
         LOG5("add extract: " << extractValidBit);
         rv->push_back(extractValidBit);
         return rv;
     }
 
-    const IR::Vector<IR::BFN::ParserPrimitive>*
-    rewriteExtractCall(IR::MethodCallStatement* statement) {
+    const P4::IR::Vector<P4::IR::BFN::ParserPrimitive>*
+    rewriteExtractCall(P4::IR::MethodCallStatement* statement) {
         return rewriteExtract( (*statement->methodCall->arguments)[0]->expression,
                                 statement->srcInfo,
                                 false);
     }
 
-    const IR::Vector<IR::BFN::ParserPrimitive>*
-    rewriteExtractGreedyCall(IR::MethodCallStatement* statement) {
+    const P4::IR::Vector<P4::IR::BFN::ParserPrimitive>*
+    rewriteExtractGreedyCall(P4::IR::MethodCallStatement* statement) {
         return rewriteExtract( (*statement->methodCall->arguments)[1]->expression,
                                 statement->srcInfo,
                                 true);
     }
 
-    const IR::Vector<IR::BFN::ParserPrimitive>*
-    rewriteAdvance(IR::MethodCallStatement* statement) {
+    const P4::IR::Vector<P4::IR::BFN::ParserPrimitive>*
+    rewriteAdvance(P4::IR::MethodCallStatement* statement) {
         auto* call = statement->methodCall;
 
         auto bits = (*call->arguments)[0]->expression;
@@ -833,13 +833,13 @@ struct RewriteParserStatements : public Transform {
         BUG_CHECK(call->arguments->size() == 1,
                   "Wrong number of arguments for method call: %1%", statement);
 
-        if (!bits->is<IR::Constant>()) {
+        if (!bits->is<P4::IR::Constant>()) {
             ::fatal_error("Advancing by a non-constant distance is not supported on "
                     "%1%: %2%", Device::name(), bits);
             return nullptr;
         }
 
-        auto bitOffset = bits->to<IR::Constant>()->asInt();
+        auto bitOffset = bits->to<P4::IR::Constant>()->asInt();
         if (bitOffset < 0) {
             ::fatal_error("Advancing by a negative distance is not supported on "
                     "%1%: %2%", Device::name(), bits);
@@ -850,57 +850,57 @@ struct RewriteParserStatements : public Transform {
         return nullptr;
     }
 
-    IR::BFN::ParserPrimitive*
-    rewriteParserCounterSet(IR::MethodCallStatement* statement, bool push_stack = false) {
+    P4::IR::BFN::ParserPrimitive*
+    rewriteParserCounterSet(P4::IR::MethodCallStatement* statement, bool push_stack = false) {
         auto* call = statement->methodCall;
-        auto* method = call->method->to<IR::Member>();
+        auto* method = call->method->to<P4::IR::Member>();
 
-        auto* path = method->expr->to<IR::PathExpression>()->path;
+        auto* path = method->expr->to<P4::IR::PathExpression>()->path;
         cstring declName = path->name;
 
         if ((*call->arguments).size() == 1 || (push_stack && (*call->arguments).size() == 2)) {
-            if (auto* imm = (*call->arguments)[0]->expression->to<IR::Constant>()) {
+            if (auto* imm = (*call->arguments)[0]->expression->to<P4::IR::Constant>()) {
                 // load immediate
-                auto* load = new IR::BFN::ParserCounterLoadImm(declName);
+                auto* load = new P4::IR::BFN::ParserCounterLoadImm(declName);
                 load->imm = imm->asInt();
                 load->push = push_stack;
                 if ((*call->arguments).size() == 2) {
                     load->update_with_top = (*call->arguments)[1]->expression
-                                              ->to<IR::BoolLiteral>()->value;
+                                              ->to<P4::IR::BoolLiteral>()->value;
                 }
                 return load;
             } else if (auto* rval = resolveLookahead(typeMap,
                                  (*call->arguments)[0]->expression, currentBit)) {
                 // load field (from match register)
-                auto* load = new IR::BFN::ParserCounterLoadPkt(declName,
-                                                           new IR::BFN::SavedRVal(rval));
+                auto* load = new P4::IR::BFN::ParserCounterLoadPkt(declName,
+                                                           new P4::IR::BFN::SavedRVal(rval));
                 load->push = push_stack;
                 if ((*call->arguments).size() == 2) {
                     load->update_with_top = (*call->arguments)[1]->expression
-                                              ->to<IR::BoolLiteral>()->value;
+                                              ->to<P4::IR::BoolLiteral>()->value;
                 }
                 return load;
-            } else if (auto* member = (*call->arguments)[0]->expression->to<IR::Member>()) {
+            } else if (auto* member = (*call->arguments)[0]->expression->to<P4::IR::Member>()) {
                 // load field (from match register)
-                auto* load = new IR::BFN::ParserCounterLoadPkt(declName,
-                                                           new IR::BFN::SavedRVal(member));
+                auto* load = new P4::IR::BFN::ParserCounterLoadPkt(declName,
+                                                           new P4::IR::BFN::SavedRVal(member));
                 load->push = push_stack;
                 if ((*call->arguments).size() == 2) {
                     load->update_with_top = (*call->arguments)[1]->expression
-                                              ->to<IR::BoolLiteral>()->value;
+                                              ->to<P4::IR::BoolLiteral>()->value;
                 }
                 return load;
-            } else if (auto* concat = (*call->arguments)[0]->expression->to<IR::Concat>()) {
-                auto* ext = concat->left->to<IR::Constant>();
+            } else if (auto* concat = (*call->arguments)[0]->expression->to<P4::IR::Concat>()) {
+                auto* ext = concat->left->to<P4::IR::Constant>();
                 if (ext && ext->asInt() == 0) {
-                    if (auto* field = concat->right->to<IR::Member>()) {
+                    if (auto* field = concat->right->to<P4::IR::Member>()) {
                         // load field (from match register)
-                        auto* load = new IR::BFN::ParserCounterLoadPkt(declName,
-                                                            new IR::BFN::SavedRVal(field));
+                        auto* load = new P4::IR::BFN::ParserCounterLoadPkt(declName,
+                                                            new P4::IR::BFN::SavedRVal(field));
                         load->push = push_stack;
                         if ((*call->arguments).size() == 2) {
                             load->update_with_top = (*call->arguments)[1]->expression
-                                                      ->to<IR::BoolLiteral>()->value;
+                                                      ->to<P4::IR::BoolLiteral>()->value;
                         }
                         return load;
                     }
@@ -909,20 +909,20 @@ struct RewriteParserStatements : public Transform {
         } else if ((*call->arguments).size() == 5 ||
                    (push_stack && (*call->arguments).size() == 6)) {
             // load field (from match register)
-            const IR::Expression* field =
+            const P4::IR::Expression* field =
                 resolveLookahead(typeMap, (*call->arguments)[0]->expression, currentBit);
 
             if (!field)
-                field = (*call->arguments)[0]->expression->to<IR::Member>();
+                field = (*call->arguments)[0]->expression->to<P4::IR::Member>();
 
-            auto* max = (*call->arguments)[1]->expression->to<IR::Constant>();
-            auto* rotate = (*call->arguments)[2]->expression->to<IR::Constant>();
-            auto* mask = (*call->arguments)[3]->expression->to<IR::Constant>();
-            auto* add = (*call->arguments)[4]->expression->to<IR::Constant>();
+            auto* max = (*call->arguments)[1]->expression->to<P4::IR::Constant>();
+            auto* rotate = (*call->arguments)[2]->expression->to<P4::IR::Constant>();
+            auto* mask = (*call->arguments)[3]->expression->to<P4::IR::Constant>();
+            auto* add = (*call->arguments)[4]->expression->to<P4::IR::Constant>();
 
             if (field && max && rotate && mask && add) {
-                auto* load = new IR::BFN::ParserCounterLoadPkt(declName,
-                                                               new IR::BFN::SavedRVal(field));
+                auto* load = new P4::IR::BFN::ParserCounterLoadPkt(declName,
+                                                               new P4::IR::BFN::SavedRVal(field));
 
                 load->max = max->asInt();
                 load->rotate = rotate->asInt();
@@ -932,7 +932,7 @@ struct RewriteParserStatements : public Transform {
 
                 if ((*call->arguments).size() == 6) {
                     load->update_with_top = (*call->arguments)[5]->expression
-                                              ->to<IR::BoolLiteral>()->value;
+                                              ->to<P4::IR::BoolLiteral>()->value;
                 }
 
                 return load;
@@ -943,15 +943,15 @@ struct RewriteParserStatements : public Transform {
         return nullptr;
     }
 
-    const IR::Vector<IR::BFN::ParserPrimitive>*
-    rewriteParserCounterCall(IR::MethodCallStatement* statement) {
+    const P4::IR::Vector<P4::IR::BFN::ParserPrimitive>*
+    rewriteParserCounterCall(P4::IR::MethodCallStatement* statement) {
         auto* call = statement->methodCall;
-        auto* method = call->method->to<IR::Member>();
+        auto* method = call->method->to<P4::IR::Member>();
 
-        auto* path = method->expr->to<IR::PathExpression>()->path;
+        auto* path = method->expr->to<P4::IR::PathExpression>()->path;
         cstring declName = path->name;
 
-        auto* rv = new IR::Vector<IR::BFN::ParserPrimitive>;
+        auto* rv = new P4::IR::Vector<P4::IR::BFN::ParserPrimitive>;
 
         if (Device::currentDevice() == Device::TOFINO &&
             (method->member == "push" || method->member == "pop")) {
@@ -962,8 +962,8 @@ struct RewriteParserStatements : public Transform {
             auto set = rewriteParserCounterSet(statement, method->member == "push");
             rv->push_back(set);
         } else if (method->member == "increment") {
-            auto* value = (*call->arguments)[0]->expression->to<IR::Constant>();
-            auto* inc = new IR::BFN::ParserCounterIncrement(declName);
+            auto* value = (*call->arguments)[0]->expression->to<P4::IR::Constant>();
+            auto* inc = new P4::IR::BFN::ParserCounterIncrement(declName);
             if (!value) {
                 ::fatal_error("Parser counter increment argument is not a constant integer: %1%",
                               statement);
@@ -971,16 +971,16 @@ struct RewriteParserStatements : public Transform {
             inc->value = value->asInt();
             rv->push_back(inc);
         } else if (method->member == "decrement") {
-            auto value = (*call->arguments)[0]->expression->to<IR::Constant>();
+            auto value = (*call->arguments)[0]->expression->to<P4::IR::Constant>();
             if (!value) {
                 ::fatal_error("Parser counter decrement argument is not a constant integer: %1%",
                               statement);
             }
-            auto* dec = new IR::BFN::ParserCounterDecrement(declName);
+            auto* dec = new P4::IR::BFN::ParserCounterDecrement(declName);
             dec->value = value->asInt();
             rv->push_back(dec);
         } else if (method->member == "pop") {
-            auto* pop = new IR::BFN::ParserCounterPop(declName);
+            auto* pop = new P4::IR::BFN::ParserCounterPop(declName);
             rv->push_back(pop);
         } else {
             BUG("Unhandled parser counter call: %1%", statement);
@@ -990,25 +990,25 @@ struct RewriteParserStatements : public Transform {
     }
 
 
-    const IR::Vector<IR::BFN::ParserPrimitive>*
-    rewriteParserPriorityCall(IR::MethodCallStatement* statement) {
+    const P4::IR::Vector<P4::IR::BFN::ParserPrimitive>*
+    rewriteParserPriorityCall(P4::IR::MethodCallStatement* statement) {
         auto* call = statement->methodCall;
-        auto* method = call->method->to<IR::Member>();
+        auto* method = call->method->to<P4::IR::Member>();
 
-        auto* rv = new IR::Vector<IR::BFN::ParserPrimitive>;
+        auto* rv = new P4::IR::Vector<P4::IR::BFN::ParserPrimitive>;
 
         if (method->member == "set") {
-            auto priority = (*call->arguments)[0]->expression->to<IR::Constant>();
-            rv->push_back(new IR::BFN::ParserPrioritySet(priority->asInt()));
+            auto priority = (*call->arguments)[0]->expression->to<P4::IR::Constant>();
+            rv->push_back(new P4::IR::BFN::ParserPrioritySet(priority->asInt()));
         }
 
         return rv;
     }
 
-    const IR::Vector<IR::BFN::ParserPrimitive>*
-    preorder(IR::MethodCallStatement* statement) override {
+    const P4::IR::Vector<P4::IR::BFN::ParserPrimitive>*
+    preorder(P4::IR::MethodCallStatement* statement) override {
         auto* call = statement->methodCall;
-        if (auto* method = call->method->to<IR::Member>()) {
+        if (auto* method = call->method->to<P4::IR::Member>()) {
             if (isExtern(method, "Checksum")) {
                 // checksums are rewritten in RewriteParserChecksums, we save the bit offset for
                 // subtract_all_and_deposit()
@@ -1023,12 +1023,12 @@ struct RewriteParserStatements : public Transform {
             } else if (method->member == "advance") {
                 return rewriteAdvance(statement);
             }
-        } else if (auto* method = call->method->to<IR::PathExpression>()) {
+        } else if (auto* method = call->method->to<P4::IR::PathExpression>()) {
             if (method->path->name == "extract_greedy") {
                 return rewriteExtractGreedyCall(statement);
             } else if (method->path->name == "verify") {
                 // TODO allow this to go through to enable more testing
-                ::warning("Parser \"verify\" is currently unsupported %s", statement->srcInfo);
+                ::P4::warning("Parser \"verify\" is currently unsupported %s", statement->srcInfo);
                 return nullptr;
             }
         }
@@ -1037,37 +1037,37 @@ struct RewriteParserStatements : public Transform {
         return nullptr;
     }
 
-    bool canEvaluateInParser(const IR::Expression* expression) const {
+    bool canEvaluateInParser(const P4::IR::Expression* expression) const {
         // We can't evaluate complex expressions on current hardware.
-        return expression->is<IR::Constant>() ||
-               expression->is<IR::BoolLiteral>() ||
-               expression->is<IR::PathExpression>() ||
-               expression->is<IR::Member>() ||
-               expression->is<IR::HeaderStackItemRef>() ||
-               expression->is<IR::TempVar>() ||
-               expression->is<IR::MethodCallExpression>();  // verify checksum
+        return expression->is<P4::IR::Constant>() ||
+               expression->is<P4::IR::BoolLiteral>() ||
+               expression->is<P4::IR::PathExpression>() ||
+               expression->is<P4::IR::Member>() ||
+               expression->is<P4::IR::HeaderStackItemRef>() ||
+               expression->is<P4::IR::TempVar>() ||
+               expression->is<P4::IR::MethodCallExpression>();  // verify checksum
     }
 
-    const IR::BFN::Extract*
-    createBitwiseOrExtract(const IR::Expression* dest,
-                           const IR::Expression* src,
+    const P4::IR::BFN::Extract*
+    createBitwiseOrExtract(const P4::IR::Expression* dest,
+                           const P4::IR::Expression* src,
                            Util::SourceInfo srcInfo) {
-        IR::BFN::Extract* e = nullptr;
+        P4::IR::BFN::Extract* e = nullptr;
 
-        if (auto c = src->to<IR::Constant>()) {
-            e = new IR::BFN::Extract(srcInfo, dest, new IR::BFN::ConstantRVal(c));
+        if (auto c = src->to<P4::IR::Constant>()) {
+            e = new P4::IR::BFN::Extract(srcInfo, dest, new P4::IR::BFN::ConstantRVal(c));
         } else {
-            e = new IR::BFN::Extract(srcInfo, dest, new IR::BFN::SavedRVal(src));
+            e = new P4::IR::BFN::Extract(srcInfo, dest, new P4::IR::BFN::SavedRVal(src));
         }
 
-        e->write_mode = IR::BFN::ParserWriteMode::BITWISE_OR;
+        e->write_mode = P4::IR::BFN::ParserWriteMode::BITWISE_OR;
 
         return e;
     }
 
-    bool processChecksum(const IR::Expression* rhs) const {
-        if (auto mc = rhs->to<IR::MethodCallExpression>()) {
-            if (auto* method = mc->method->to<IR::Member>()) {
+    bool processChecksum(const P4::IR::Expression* rhs) const {
+        if (auto mc = rhs->to<P4::IR::MethodCallExpression>()) {
+            if (auto* method = mc->method->to<P4::IR::Member>()) {
                 if (isExtern(method, "Checksum")) {
                     // we save the bit offset for get that is not preceded by subtract
                     bitOffsets[mc] = currentBit;
@@ -1078,12 +1078,12 @@ struct RewriteParserStatements : public Transform {
         return false;
     }
 
-    const IR::BFN::ParserPrimitive* preorder(IR::AssignmentStatement* s) override {
-        if (s->left->type->is<IR::Type::Varbits>())
+    const P4::IR::BFN::ParserPrimitive* preorder(P4::IR::AssignmentStatement* s) override {
+        if (s->left->type->is<P4::IR::Type::Varbits>())
             BUG("Extraction to varbit field should have been de-sugared in midend.");
 
         auto lhs = s->left;
-        // no bits are lost by throwing away IR::BFN::ReinterpretCast.
+        // no bits are lost by throwing away P4::IR::BFN::ReinterpretCast.
         auto rhs = stripReinterpret(s->right);
 
         if (processChecksum(rhs)) {
@@ -1092,32 +1092,32 @@ struct RewriteParserStatements : public Transform {
         }
 
         if (auto rval = resolveLookahead(typeMap, rhs, currentBit)) {
-            auto e = new IR::BFN::Extract(s->srcInfo, lhs, rval);
+            auto e = new P4::IR::BFN::Extract(s->srcInfo, lhs, rval);
             LOG5("add extract (lookahead): " << e);
             return e;
         }
 
-        if (auto mem = lhs->to<IR::Member>()) {
+        if (auto mem = lhs->to<P4::IR::Member>()) {
             if (mem->member == "ingress_parser_err" || mem->member == "egress_parser_err")
                 return nullptr;
         }
 
-        if (rhs->is<IR::Constant>() || rhs->is<IR::BoolLiteral>()) {
-            auto* rhsConst = rhs->to<IR::Constant>();
+        if (rhs->is<P4::IR::Constant>() || rhs->is<P4::IR::BoolLiteral>()) {
+            auto* rhsConst = rhs->to<P4::IR::Constant>();
             if (!rhsConst)  // boolean
-                rhsConst = new IR::Constant(rhs->to<IR::BoolLiteral>()->value ? 1 : 0);
-            auto extract = new IR::BFN::Extract(s->srcInfo, s->left,
-                     new IR::BFN::ConstantRVal(rhsConst->type,
+                rhsConst = new P4::IR::Constant(rhs->to<P4::IR::BoolLiteral>()->value ? 1 : 0);
+            auto extract = new P4::IR::BFN::Extract(s->srcInfo, s->left,
+                     new P4::IR::BFN::ConstantRVal(rhsConst->type,
                              rhsConst->value));
             LOG5("add extract: " << extract);
             return extract;
         }
 
         // Allow slices if we'd allow the expression being sliced.
-        if (auto* slice = rhs->to<IR::Slice>()) {
+        if (auto* slice = rhs->to<P4::IR::Slice>()) {
             if (canEvaluateInParser(slice->e0)) {
-                auto e = new IR::BFN::Extract(s->srcInfo, lhs,
-                                            new IR::BFN::SavedRVal(rhs));
+                auto e = new P4::IR::BFN::Extract(s->srcInfo, lhs,
+                                            new P4::IR::BFN::SavedRVal(rhs));
                 LOG5("add extract: " << e);
                 return e;
             }
@@ -1140,13 +1140,13 @@ struct RewriteParserStatements : public Transform {
             return nullptr;
         }
 
-        auto a = new IR::BFN::Extract(s->srcInfo, s->left,
-                                    new IR::BFN::SavedRVal(rhs));
+        auto a = new P4::IR::BFN::Extract(s->srcInfo, s->left,
+                                    new P4::IR::BFN::SavedRVal(rhs));
         LOG5("add extract: " << a);
         return a;
     }
 
-    const IR::Expression* preorder(IR::Statement* s) override {
+    const P4::IR::Expression* preorder(P4::IR::Statement* s) override {
         BUG("Unhandled statement kind: %1%", s);
     }
 
@@ -1168,7 +1168,7 @@ struct RewriteParserStatements : public Transform {
  */
 struct RewriteParserChecksums : public Transform {
     RewriteParserChecksums(const cstring& stateName,
-                           const ordered_set<const IR::BFN::ParserState*>& ancestors,
+                           const ordered_set<const P4::IR::BFN::ParserState*>& ancestors,
                            ChecksumOffsetMap& declNameToOffset,
                            ordered_map<cstring, int>& stateChecksumOffset,
                            const ExtractedFieldsMap& extractedFields,
@@ -1188,14 +1188,14 @@ struct RewriteParserChecksums : public Transform {
  private:
     // check if member is header/payload checksum field itself
     // (annotated with @header_checksum/@payload_checksum)
-    bool isChecksumField(const IR::Member* member, const cstring &which) const {
-        const IR::HeaderOrMetadata* header = nullptr;
-        if (auto headerRef = member->expr->to<IR::ConcreteHeaderRef>()) {
+    bool isChecksumField(const P4::IR::Member* member, const cstring &which) const {
+        const P4::IR::HeaderOrMetadata* header = nullptr;
+        if (auto headerRef = member->expr->to<P4::IR::ConcreteHeaderRef>()) {
             header = headerRef->baseRef();
-        } else if (auto headerRef = member->expr->to<IR::HeaderStackItemRef>()) {
+        } else if (auto headerRef = member->expr->to<P4::IR::HeaderStackItemRef>()) {
             header = headerRef->baseRef();
         } else {
-            ::error("Unhandled checksum expression %1%", member);
+            ::P4::error("Unhandled checksum expression %1%", member);
         }
         for (auto field : header->type->fields) {
             if (field->name == member->member) {
@@ -1207,14 +1207,14 @@ struct RewriteParserChecksums : public Transform {
     }
 
     int getHeaderEndPos() const {
-        auto v = lastChecksumSubtract->source->to<IR::BFN::PacketRVal>();
+        auto v = lastChecksumSubtract->source->to<P4::IR::BFN::PacketRVal>();
         int lastBitSubtract = v->range.toUnit<RangeUnit::Bit>().hi;
         if (lastBitSubtract % 8 != 7) {
             ::fatal_error("Checksum subtract ends at non-byte-aligned field %1%",
                           lastSubtractField);
         }
 
-        auto* headerRef = lastSubtractField->expr->to<IR::ConcreteHeaderRef>();
+        auto* headerRef = lastSubtractField->expr->to<P4::IR::ConcreteHeaderRef>();
         auto header = headerRef->baseRef();
         int endPos = 0;
         for (auto field : header->type->fields) {
@@ -1262,10 +1262,10 @@ struct RewriteParserChecksums : public Transform {
         }
     }
 
-    const IR::Vector<IR::BFN::ParserPrimitive>*
-    rewriteChecksumAddOrSubtract(const IR::MethodCallExpression* call) {
-        auto* method = call->method->to<IR::Member>();
-        auto* path = method->expr->to<IR::PathExpression>()->path;
+    const P4::IR::Vector<P4::IR::BFN::ParserPrimitive>*
+    rewriteChecksumAddOrSubtract(const P4::IR::MethodCallExpression* call) {
+        auto* method = call->method->to<P4::IR::Member>();
+        auto* path = method->expr->to<P4::IR::PathExpression>()->path;
         cstring declName = path->name;
 
         auto& totalOffset = declNameToOffset[stateName][declName];
@@ -1281,29 +1281,29 @@ struct RewriteParserChecksums : public Transform {
                 << (isAdd ? "an add" : "a subtract")
                 << " instruction with a constant argument 8w0 in a preceding state to make the "
                    "checksum always operate on either an odd or an even number of bytes.";
-            ::error(ErrorType::ERR_UNSUPPORTED, msg.str().c_str(), call);
+            ::P4::error(ErrorType::ERR_UNSUPPORTED, msg.str().c_str(), call);
         }
         auto src = (*call->arguments)[0]->expression;
-        IR::Vector<IR::Expression> srcList;
-        if (src->is<IR::ListExpression>() || src->is<IR::StructExpression>()) {
+        P4::IR::Vector<P4::IR::Expression> srcList;
+        if (src->is<P4::IR::ListExpression>() || src->is<P4::IR::StructExpression>()) {
             srcList = *getListExprComponents(*src);
         } else {
             srcList.push_back(src);
         }
 
-        auto rv = new IR::Vector<IR::BFN::ParserPrimitive>;
-        IR::Vector<IR::Expression> list;
+        auto rv = new P4::IR::Vector<P4::IR::BFN::ParserPrimitive>;
+        P4::IR::Vector<P4::IR::Expression> list;
         for (auto srcComp : srcList) {
-            if (auto member = srcComp->to<IR::Member>()) {
+            if (auto member = srcComp->to<P4::IR::Member>()) {
                 list.push_back(member);
-            } else if (auto constant = srcComp->to<IR::Constant>()) {
+            } else if (auto constant = srcComp->to<P4::IR::Constant>()) {
                 list.push_back(constant);
             }
         }
 
         for (auto expr : list) {
             bool swap = false;
-            if (auto* constant = expr->to<IR::Constant>()) {
+            if (auto* constant = expr->to<P4::IR::Constant>()) {
                 if (constant->asInt() != 0) {
                    P4C_UNIMPLEMENTED(
                    "Non-zero constant entry is not supported in checksum calculation %1%", expr);
@@ -1312,19 +1312,19 @@ struct RewriteParserChecksums : public Transform {
                 totalOffset += constant->type->width_bits();
                 continue;
             }
-            auto member = expr->to<IR::Member>();
+            auto member = expr->to<P4::IR::Member>();
             BUG_CHECK(member != nullptr,
                       "Invalid field in the checksum calculation : %1%",
                       expr->srcInfo);
-            auto hdr = member->expr->to<IR::HeaderRef>();
+            auto hdr = member->expr->to<P4::IR::HeaderRef>();
             BUG_CHECK(hdr != nullptr,
                       "Invalid field in the checksum calculation."
                       " Expecting a header field : %1%", member->srcInfo);
-            auto hdr_type = hdr->type->to<IR::Type_StructLike>();
+            auto hdr_type = hdr->type->to<P4::IR::Type_StructLike>();
             BUG_CHECK(hdr_type != nullptr,
                       "Header type isn't a structlike: %1%", hdr_type);
 
-            const IR::BFN::PacketRVal* rval = nullptr;
+            const P4::IR::BFN::PacketRVal* rval = nullptr;
             for (auto kv : extractedFields) {
                 auto* extracted = kv.first;
                 if (member->member == extracted->member &&
@@ -1350,11 +1350,11 @@ struct RewriteParserChecksums : public Transform {
             stateOffset += rval->range.size();
             if (isAdd) {
                 bool isChecksum = isChecksumField(member, "header_checksum"_cs);
-                auto* add = new IR::BFN::ChecksumAdd(declName, rval, swap, isChecksum);
+                auto* add = new P4::IR::BFN::ChecksumAdd(declName, rval, swap, isChecksum);
                 rv->push_back(add);
             } else {
                 bool isChecksum = isChecksumField(member, "payload_checksum"_cs);
-                auto* subtract = new IR::BFN::ChecksumSubtract(declName, rval,
+                auto* subtract = new P4::IR::BFN::ChecksumSubtract(declName, rval,
                                                                swap, isChecksum);
                 lastChecksumSubtract = subtract;
                 lastSubtractField = member;
@@ -1367,41 +1367,41 @@ struct RewriteParserChecksums : public Transform {
         return rv;
     }
 
-    const IR::Vector<IR::BFN::ParserPrimitive>*
-    rewriteChecksumVerify(const IR::MethodCallExpression* call) {
-        auto* method = call->method->to<IR::Member>();
-        auto* path = method->expr->to<IR::PathExpression>()->path;
+    const P4::IR::Vector<P4::IR::BFN::ParserPrimitive>*
+    rewriteChecksumVerify(const P4::IR::MethodCallExpression* call) {
+        auto* method = call->method->to<P4::IR::Member>();
+        auto* path = method->expr->to<P4::IR::PathExpression>()->path;
         cstring declName = path->name;
 
-        auto* rv = new IR::Vector<IR::BFN::ParserPrimitive>;
-        rv->push_back(new IR::BFN::ChecksumVerify(call->getSourceInfo(), declName));
+        auto* rv = new P4::IR::Vector<P4::IR::BFN::ParserPrimitive>;
+        rv->push_back(new P4::IR::BFN::ChecksumVerify(call->getSourceInfo(), declName));
         return rv;
     }
 
-    const IR::Vector<IR::BFN::ParserPrimitive>*
-    rewriteSubtractAllAndDeposit(const IR::MethodCallExpression* call) {
-        auto* method = call->method->to<IR::Member>();
-        auto* path = method->expr->to<IR::PathExpression>()->path;
+    const P4::IR::Vector<P4::IR::BFN::ParserPrimitive>*
+    rewriteSubtractAllAndDeposit(const P4::IR::MethodCallExpression* call) {
+        auto* method = call->method->to<P4::IR::Member>();
+        auto* path = method->expr->to<P4::IR::PathExpression>()->path;
         cstring declName = path->name;
-        auto* rv = new IR::Vector<IR::BFN::ParserPrimitive>;
+        auto* rv = new P4::IR::Vector<P4::IR::BFN::ParserPrimitive>;
         auto deposit = (*call->arguments)[0]->expression;
-        auto mem = deposit->to<IR::Member>();
+        auto mem = deposit->to<P4::IR::Member>();
         const auto it = bitOffsets.find(call);
         BUG_CHECK(it != bitOffsets.end(), "Bit offset for %1% not available", call);
         // This can create negative endPos, which means that the csum computation
         // should have ended a byte earlier
         // This will be taken care of later by Find/RemoveNegativeDeposits
-        auto endByte = new IR::BFN::PacketRVal(StartLen(it->second - 8, 8), false);
-        auto get = new IR::BFN::ChecksumResidualDeposit(call->getSourceInfo(), declName,
-                                              new IR::BFN::FieldLVal(mem), endByte);
+        auto endByte = new P4::IR::BFN::PacketRVal(StartLen(it->second - 8, 8), false);
+        auto get = new P4::IR::BFN::ChecksumResidualDeposit(call->getSourceInfo(), declName,
+                                              new P4::IR::BFN::FieldLVal(mem), endByte);
         rv->push_back(get);
         return rv;
     }
 
-    const IR::Vector<IR::BFN::ParserPrimitive>*
-    rewriteChecksumCall(IR::MethodCallStatement* statement) {
+    const P4::IR::Vector<P4::IR::BFN::ParserPrimitive>*
+    rewriteChecksumCall(P4::IR::MethodCallStatement* statement) {
         auto* call = statement->methodCall;
-        auto* method = call->method->to<IR::Member>();
+        auto* method = call->method->to<P4::IR::Member>();
 
         if (method->member == "add" || method->member == "subtract") {
             return rewriteChecksumAddOrSubtract(call);
@@ -1416,10 +1416,10 @@ struct RewriteParserChecksums : public Transform {
         return nullptr;
     }
 
-    const IR::Vector<IR::BFN::ParserPrimitive>*
-    preorder(IR::MethodCallStatement* statement) override {
+    const P4::IR::Vector<P4::IR::BFN::ParserPrimitive>*
+    preorder(P4::IR::MethodCallStatement* statement) override {
         auto* call = statement->methodCall;
-        if (auto* method = call->method->to<IR::Member>()) {
+        if (auto* method = call->method->to<P4::IR::Member>()) {
             if (isExtern(method, "Checksum")) {
                 return rewriteChecksumCall(statement);
             }
@@ -1428,21 +1428,21 @@ struct RewriteParserChecksums : public Transform {
         return nullptr;
     }
 
-    IR::BFN::ParserChecksumWritePrimitive*
-    rewriteChecksum(const IR::Expression *lhs, const IR::MethodCallExpression *mc) {
-        auto* method = mc->method->to<IR::Member>();
+    P4::IR::BFN::ParserChecksumWritePrimitive*
+    rewriteChecksum(const P4::IR::Expression *lhs, const P4::IR::MethodCallExpression *mc) {
+        auto* method = mc->method->to<P4::IR::Member>();
         if (!method || !isExtern(method, "Checksum"))
             return nullptr;
 
-        auto* path = method->expr->to<IR::PathExpression>()->path;
+        auto* path = method->expr->to<P4::IR::PathExpression>()->path;
         cstring declName = path->name;
 
         if (method->member == "verify") {
-            auto verify = new IR::BFN::ChecksumVerify(mc->getSourceInfo(), declName);
-            verify->dest = new IR::BFN::FieldLVal(lhs->getSourceInfo(), lhs);
+            auto verify = new P4::IR::BFN::ChecksumVerify(mc->getSourceInfo(), declName);
+            verify->dest = new P4::IR::BFN::FieldLVal(lhs->getSourceInfo(), lhs);
             return verify;
         } else if (method->member == "get") {
-            ::warning(
+            ::P4::warning(
                 "checksum.get() will deprecate in future versions. Please use"
                 " void subtract_all_and_deposit(bit<16>) instead");
             int endPos = 0;
@@ -1459,41 +1459,41 @@ struct RewriteParserChecksums : public Transform {
                 // This will be taken care of later by Find/RemoveNegativeDeposits
                 endPos = it->second - 8;
             }
-            auto endByte = new IR::BFN::PacketRVal(StartLen(endPos, 8), false);
-            auto get = new IR::BFN::ChecksumResidualDeposit(mc->getSourceInfo(),
-                declName, new IR::BFN::FieldLVal(lhs->getSourceInfo(), lhs), endByte);
+            auto endByte = new P4::IR::BFN::PacketRVal(StartLen(endPos, 8), false);
+            auto get = new P4::IR::BFN::ChecksumResidualDeposit(mc->getSourceInfo(),
+                declName, new P4::IR::BFN::FieldLVal(lhs->getSourceInfo(), lhs), endByte);
             return get;
         }
         return nullptr;
     }
 
-    const IR::BFN::ParserPrimitive*
-    preorder(IR::AssignmentStatement* s) override {
-        if (s->left->type->is<IR::Type::Varbits>())
+    const P4::IR::BFN::ParserPrimitive*
+    preorder(P4::IR::AssignmentStatement* s) override {
+        if (s->left->type->is<P4::IR::Type::Varbits>())
             BUG("Extraction to varbit field should have been de-sugared in midend.");
 
         auto lhs = s->left;
-        // no bits are lost by throwing away IR::BFN::ReinterpretCast.
+        // no bits are lost by throwing away P4::IR::BFN::ReinterpretCast.
         auto rhs = stripReinterpret(s->right);
 
-        if (auto mc = rhs->to<IR::MethodCallExpression>()) {
+        if (auto mc = rhs->to<P4::IR::MethodCallExpression>()) {
             if (auto* checksum = rewriteChecksum(lhs, mc))
                 return checksum;
         }
 
         // a = a | b, a = a || b
         if (auto aor = getAssignOr(lhs, rhs)) {
-            if (auto mc = aor.val->to<IR::MethodCallExpression>()) {
+            if (auto mc = aor.val->to<P4::IR::MethodCallExpression>()) {
                 if (auto checksum = rewriteChecksum(lhs, mc)) {
-                    if (rhs->is<IR::LOr>() && aor.val == stripReinterpret(aor.bin->right)) {
-                        ::warning(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
+                    if (rhs->is<P4::IR::LOr>() && aor.val == stripReinterpret(aor.bin->right)) {
+                        ::P4::warning(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
                                   "%1%This logical OR cannot be implemented with short-circuiting "
                                   "semantics on Tofino. The checksum calculation will be performed "
                                   "in all cases. You can silence this warning by swapping the "
                                   "operands.",
                                   aor.bin->getSourceInfo());
                     }
-                    checksum->write_mode = IR::BFN::ParserWriteMode::BITWISE_OR;
+                    checksum->write_mode = P4::IR::BFN::ParserWriteMode::BITWISE_OR;
                     LOG5("add checksum verify: " << checksum);
                     return checksum;
                 }
@@ -1503,13 +1503,13 @@ struct RewriteParserChecksums : public Transform {
         return nullptr;
     }
 
-    const IR::Expression* preorder(IR::Statement* s) override {
+    const P4::IR::Expression* preorder(P4::IR::Statement* s) override {
         BUG("Unhandled statement kind: %1%", s);
     }
 
     const cstring stateName;
     // States that directly precede this one
-    const ordered_set<const IR::BFN::ParserState*>& ancestors;
+    const ordered_set<const P4::IR::BFN::ParserState*>& ancestors;
     // A bit offset counter for each checksum operation in each state, calculated across states
     ChecksumOffsetMap& declNameToOffset;
     // bit offset counter for each checksum operation within current state
@@ -1519,23 +1519,23 @@ struct RewriteParserChecksums : public Transform {
     // Bit offsets saved by RewriteParserStatements
     const BitOffsetMap& bitOffsets;
 
-    const IR::Member* lastSubtractField = nullptr;
-    const IR::BFN::ChecksumSubtract* lastChecksumSubtract = nullptr;
+    const P4::IR::Member* lastSubtractField = nullptr;
+    const P4::IR::BFN::ChecksumSubtract* lastChecksumSubtract = nullptr;
     // Checksums operations that will error if another add() or subtract() is called
     std::unordered_set<cstring>& errors;
     // Map from declaration name to checksum instructions for error reporting
     ChecksumInstrMap& checksumInstrMap;
 };
 
-static match_t buildListMatch(const IR::Vector<IR::Expression> *list,
-                              const IR::Vector<IR::Expression> select) {
+static match_t buildListMatch(const P4::IR::Vector<P4::IR::Expression> *list,
+                              const P4::IR::Vector<P4::IR::Expression> select) {
     match_t     rv;
     auto sel_el = select.begin();
     for (auto el : *list) {
-        if (!el->is<IR::DefaultExpression>()) {
+        if (!el->is<P4::IR::DefaultExpression>()) {
             BUG_CHECK(el->type == (*sel_el)->type ||
-                      (el->type->is<IR::Type_Set>() &&
-                       el->type->to<IR::Type_Set>()->elementType == (*sel_el)->type),
+                      (el->type->is<P4::IR::Type_Set>() &&
+                       el->type->to<P4::IR::Type_Set>()->elementType == (*sel_el)->type),
                       "select type mismatch"); }
         int width = (*sel_el)->type->width_bits();
         rv.word0 <<= width;
@@ -1543,15 +1543,15 @@ static match_t buildListMatch(const IR::Vector<IR::Expression> *list,
         uintmax_t mask = -1, v;
         mask = ~(mask << width);
         LOG3("el: " << el);
-        if (auto k = el->to<IR::Constant>()) {
+        if (auto k = el->to<P4::IR::Constant>()) {
             v = k->asUnsigned();
-        } else if (auto mval = el->to<IR::Mask>()) {
-            v = mval->right->to<IR::Constant>()->asUnsigned();
+        } else if (auto mval = el->to<P4::IR::Mask>()) {
+            v = mval->right->to<P4::IR::Constant>()->asUnsigned();
             rv.word0 |= mask & ~v;
             rv.word1 |= mask & ~v;
             mask &= v;
-            v = mval->left->to<IR::Constant>()->asUnsigned();
-        } else if (el->is<IR::DefaultExpression>()) {
+            v = mval->left->to<P4::IR::Constant>()->asUnsigned();
+        } else if (el->is<P4::IR::DefaultExpression>()) {
             mask = v = 0;
         } else {
             BUG("Invalid select case expression %1%", el); }
@@ -1562,46 +1562,46 @@ static match_t buildListMatch(const IR::Vector<IR::Expression> *list,
     return rv;
 }
 
-static void checkParserMatchBits(const IR::Expression* expr) {
+static void checkParserMatchBits(const P4::IR::Expression* expr) {
     if (expr->type->width_bits() > Device::maxParserMatchBits())
         ::fatal_error("%s: unsupported %d-bit select (only %d-bit select is supported currently)",
                       expr, expr->type->width_bits(), Device::maxParserMatchBits());
 }
 
-static match_t buildMatch(int match_size, const IR::Expression *key,
-                          const IR::Vector<IR::Expression> &selectExprs) {
+static match_t buildMatch(int match_size, const P4::IR::Expression *key,
+                          const P4::IR::Vector<P4::IR::Expression> &selectExprs) {
     LOG3("key: " << key);
-    if (key->is<IR::DefaultExpression>())
+    if (key->is<P4::IR::DefaultExpression>())
         return match_t::dont_care(match_size);
-    else if (auto k = key->to<IR::Constant>()) {
+    else if (auto k = key->to<P4::IR::Constant>()) {
         checkParserMatchBits(key);
         return match_t(match_size, k->asUnsigned(), ~((~uintmax_t(0)) << match_size));
-    } else if (auto mask = key->to<IR::Mask>())
-        return match_t(match_size, mask->left->to<IR::Constant>()->asUnsigned(),
-                                   mask->right->to<IR::Constant>()->asUnsigned());
-    else if (key->is<IR::ListExpression>() || key->is<IR::StructExpression>())
+    } else if (auto mask = key->to<P4::IR::Mask>())
+        return match_t(match_size, mask->left->to<P4::IR::Constant>()->asUnsigned(),
+                                   mask->right->to<P4::IR::Constant>()->asUnsigned());
+    else if (key->is<P4::IR::ListExpression>() || key->is<P4::IR::StructExpression>())
         return buildListMatch(getListExprComponents(*key), selectExprs);
     else
         BUG("Invalid select case expression %1%", key);
     return match_t();
 }
 
-const IR::Node*
-GetBackendParser::rewriteSelectExpr(const IR::Expression* selectExpr, int bitShift,
+const P4::IR::Node*
+GetBackendParser::rewriteSelectExpr(const P4::IR::Expression* selectExpr, int bitShift,
                                     nw_bitrange& bitrange) {
-    if (auto* cast = selectExpr->to<IR::Cast>()) {
-        if (auto* call = cast->expr->to<IR::MethodCallExpression>()) {
-            if (auto* method = call->method->to<IR::Member>()) {
+    if (auto* cast = selectExpr->to<P4::IR::Cast>()) {
+        if (auto* call = cast->expr->to<P4::IR::MethodCallExpression>()) {
+            if (auto* method = call->method->to<P4::IR::Member>()) {
                 if (isExtern(method, "ParserCounter")) {
-                    auto* path = method->expr->to<IR::PathExpression>()->path;
+                    auto* path = method->expr->to<P4::IR::PathExpression>()->path;
                     cstring declName = path->name;
 
                     if (method->member == "is_zero") {
-                        return new IR::BFN::Select(
-                            new IR::BFN::ParserCounterIsZero(declName), call);
+                        return new P4::IR::BFN::Select(
+                            new P4::IR::BFN::ParserCounterIsZero(declName), call);
                     } else if (method->member == "is_negative") {
-                        return new IR::BFN::Select(
-                            new IR::BFN::ParserCounterIsNegative(declName), call);
+                        return new P4::IR::BFN::Select(
+                            new P4::IR::BFN::ParserCounterIsNegative(declName), call);
                     } else {
                         ::fatal_error("Illegal parser counter expression: %1%", selectExpr);
                     }
@@ -1611,12 +1611,12 @@ GetBackendParser::rewriteSelectExpr(const IR::Expression* selectExpr, int bitShi
     }
 
     if (auto rval = resolveLookahead(typeMap, selectExpr, bitShift)) {
-        auto select = new IR::BFN::Select(new IR::BFN::SavedRVal(rval), selectExpr);
+        auto select = new P4::IR::BFN::Select(new P4::IR::BFN::SavedRVal(rval), selectExpr);
         bitrange = rval->range;
         return select;
     }
 
-    BUG_CHECK(!selectExpr->is<IR::Constant>(), "%1% constant selection expression %2% "
+    BUG_CHECK(!selectExpr->is<P4::IR::Constant>(), "%1% constant selection expression %2% "
                                                "should have been eliminated by now. "
                                                "please make sure there's a key in the "
                                                "Keyset expressions matches %3%. Or add a "
@@ -1626,18 +1626,18 @@ GetBackendParser::rewriteSelectExpr(const IR::Expression* selectExpr, int bitShi
     // We can split a Concat into multiple selects. Note that this is quite
     // unlike a Slice; the Concat operands may not even be adjacent in the input
     // buffer, so this is really two primitive select operations.
-    if (auto* concat = selectExpr->to<IR::Concat>()) {
-        auto* rv = new IR::Vector<IR::BFN::Select>;
+    if (auto* concat = selectExpr->to<P4::IR::Concat>()) {
+        auto* rv = new P4::IR::Vector<P4::IR::BFN::Select>;
         rv->pushBackOrAppend(rewriteSelectExpr(concat->left, bitShift, bitrange));
         rv->pushBackOrAppend(rewriteSelectExpr(concat->right, bitShift, bitrange));
         return rv;
     }
 
     // SavedRVal will need to receive a register allocation
-    return new IR::BFN::Select(new IR::BFN::SavedRVal(selectExpr), selectExpr);
+    return new P4::IR::BFN::Select(new P4::IR::BFN::SavedRVal(selectExpr), selectExpr);
 }
 
-IR::BFN::ParserState* GetBackendParser::convertState(cstring name, bool& isLoopState) {
+P4::IR::BFN::ParserState* GetBackendParser::convertState(cstring name, bool& isLoopState) {
     LOG4("convert state: " << name);
 
     if (name == "accept" || name == "reject")
@@ -1655,7 +1655,7 @@ IR::BFN::ParserState* GetBackendParser::convertState(cstring name, bool& isLoopS
             isLoopState = true;
 
             const auto begin = std::find(ancestors.stack.begin(), ancestors.stack.end(), state);
-            const std::vector<const IR::BFN::ParserState*> loop(begin, ancestors.stack.end());
+            const std::vector<const P4::IR::BFN::ParserState*> loop(begin, ancestors.stack.end());
             backendLoops.push_back(loop);
 
             return state;
@@ -1685,7 +1685,7 @@ IR::BFN::ParserState* GetBackendParser::convertState(cstring name, bool& isLoopS
             // state, which we'll convert again.
             auto newName = cstring::make_unique(backendStates, unrolledName);
 
-            state = new IR::BFN::ParserState(origP4States.at(state),
+            state = new P4::IR::BFN::ParserState(origP4States.at(state),
                                              createThreadName(state->gress, newName),
                                              state->gress);
             backendStates[newName] = state;
@@ -1700,10 +1700,10 @@ IR::BFN::ParserState* GetBackendParser::convertState(cstring name, bool& isLoopS
     return convertBody(state);
 }
 
-IR::BFN::ParserState* GetBackendParser::convertBody(IR::BFN::ParserState* state) {
+P4::IR::BFN::ParserState* GetBackendParser::convertBody(P4::IR::BFN::ParserState* state) {
     ResolveHeaderStackIndex resolveHeaderStackIndex(state, &ancestors);
     auto resolved =
-        state->p4State()->apply(resolveHeaderStackIndex)->to<IR::ParserState>();
+        state->p4State()->apply(resolveHeaderStackIndex)->to<P4::IR::ParserState>();
 
     if (resolveHeaderStackIndex.stackOutOfBound) {
         LOG4("stack out of bound at " << state->name);
@@ -1727,7 +1727,7 @@ IR::BFN::ParserState* GetBackendParser::convertBody(IR::BFN::ParserState* state)
 
     if (parserPragmas.force_shift.count(state->p4State())) {
         bitShift = parserPragmas.force_shift.at(state->p4State());
-        ::warning("state %1% will shift %2% bits because of @pragma force_shift",
+        ::P4::warning("state %1% will shift %2% bits because of @pragma force_shift",
                   state->name, bitShift);
     }
 
@@ -1750,13 +1750,13 @@ IR::BFN::ParserState* GetBackendParser::convertBody(IR::BFN::ParserState* state)
     }
 
     // case 3: unconditional transition, e.g. accept/reject
-    if (auto* path = state->p4State()->selectExpression->to<IR::PathExpression>()) {
+    if (auto* path = state->p4State()->selectExpression->to<P4::IR::PathExpression>()) {
         addTransition(state, match_t(), shift, path->path->name);
         return state;
     }
 
     // case 4: we have a select expression. Lower it to Tofino IR.
-    auto* p4Select = state->p4State()->selectExpression->to<IR::SelectExpression>();
+    auto* p4Select = state->p4State()->selectExpression->to<P4::IR::SelectExpression>();
 
     BUG_CHECK(p4Select, "Invalid select expression %1%",
               state->p4State()->selectExpression);
@@ -1775,9 +1775,9 @@ IR::BFN::ParserState* GetBackendParser::convertBody(IR::BFN::ParserState* state)
     // Generate the outgoing transitions.
     for (auto selectCase : selectCases) {
         // parser_value_set shows up as a path expression in the select case.
-        if (auto path = selectCase->keyset->to<IR::PathExpression>()) {
+        if (auto path = selectCase->keyset->to<P4::IR::PathExpression>()) {
             auto decl = refMap->getDeclaration(path->path, true);
-            auto pvs = decl->to<IR::P4ValueSet>();
+            auto pvs = decl->to<P4::IR::P4ValueSet>();
             CHECK_NULL(pvs);
             addTransition(state, match_t::dont_care(matchSize),
                           shift, selectCase->state->path->name, pvs);
@@ -1790,10 +1790,10 @@ IR::BFN::ParserState* GetBackendParser::convertBody(IR::BFN::ParserState* state)
     return state;
 }
 
-void GetBackendParser::applyRewrite(IR::BFN::ParserState* state, Transform& rewrite) {
+void GetBackendParser::applyRewrite(P4::IR::BFN::ParserState* state, Transform& rewrite) {
     for (auto* statement : state->p4State()->components) {
         // Checksum add might have added a BlockStatement
-        if (auto* bs = statement->to<IR::BlockStatement>()) {
+        if (auto* bs = statement->to<P4::IR::BlockStatement>()) {
             for (auto* s : bs->components) {
                 state->statements.pushBackOrAppend(s->apply(rewrite));
             }
@@ -1803,7 +1803,7 @@ void GetBackendParser::applyRewrite(IR::BFN::ParserState* state, Transform& rewr
     }
 }
 
-void GetBackendParser::rewriteChecksums(IR::BFN::Parser* parser, IR::BFN::ParserState* startState) {
+void GetBackendParser::rewriteChecksums(P4::IR::BFN::Parser* parser, P4::IR::BFN::ParserState* startState) {
     CollectParserInfo cpi;
     parser->apply(cpi);
     const auto& graph = cpi.graph(startState);
@@ -1811,11 +1811,11 @@ void GetBackendParser::rewriteChecksums(IR::BFN::Parser* parser, IR::BFN::Parser
 
     std::unordered_set<cstring> checksumErrors;
     ChecksumOffsetMap declNameToOffset;
-    std::unordered_map<const IR::BFN::ParserState*, ordered_map<cstring, int>> offsetsPerState;
+    std::unordered_map<const P4::IR::BFN::ParserState*, ordered_map<cstring, int>> offsetsPerState;
     ChecksumInstrMap checksums;
     for (auto* state : topoSort) {
         const auto preds = graph.predecessors().find(state);
-        ordered_set<const IR::BFN::ParserState*> ancestors;
+        ordered_set<const P4::IR::BFN::ParserState*> ancestors;
         if (preds != graph.predecessors().end()) {
             ancestors = preds->second;
         }
@@ -1827,7 +1827,7 @@ void GetBackendParser::rewriteChecksums(IR::BFN::Parser* parser, IR::BFN::Parser
         // Using const_cast because CollectParserInfo always stores pointers to const.
         // rewriteChecksums() does not promise to keep anything const via its parameters and the
         // CollectParserInfo object is used only locally, so this should not cause any trouble.
-        applyRewrite(const_cast<IR::BFN::ParserState*>(state), rpc);
+        applyRewrite(const_cast<P4::IR::BFN::ParserState*>(state), rpc);
     }
 
     for (const auto loop : backendLoops) {
@@ -1852,13 +1852,13 @@ void GetBackendParser::rewriteChecksums(IR::BFN::Parser* parser, IR::BFN::Parser
                 msg << "] which makes it impossible to implement on Tofino. Consider adding an add "
                        "/ subtract instruction with a constant argument 8w0 in one of the states "
                        "in the loop to make the checksum operate on an even number of bytes.";
-                ::error(ErrorType::ERR_UNSUPPORTED, msg.str().c_str(), checksums[kv.first]);
+                ::P4::error(ErrorType::ERR_UNSUPPORTED, msg.str().c_str(), checksums[kv.first]);
             }
         }
     }
 }
 
-void ExtractParser::postorder(const IR::BFN::TnaParser* parser) {
+void ExtractParser::postorder(const P4::IR::BFN::TnaParser* parser) {
     GetBackendParser gp(typeMap, refMap, arch, parser);
     auto backendParser = gp.createBackendParser();
     rv->thread[parser->thread].parsers.push_back(backendParser);
@@ -1872,13 +1872,13 @@ void ExtractParser::end_apply() {
     Logging::FileLog::close(parserLog);
 }
 
-/// TODO: This pass must be applied to IR::BFN::Pipe. It modifies the
+/// TODO: This pass must be applied to P4::IR::BFN::Pipe. It modifies the
 /// ingress and egress parser to insert parser state that deals with tofino
 /// intrinsic metadata and resubmit/mirror metadata. It does not have to be
 /// in the backend though. The compiler should be able to insert placeholder
 /// parser state in the midend instead, and let the backend to insert the
 /// intrinsic metadata extraction logic based on the target device (tofino/jbay).
-ProcessParde::ProcessParde(const IR::BFN::Pipe* rv, bool useV1model) :
+ProcessParde::ProcessParde(const P4::IR::BFN::Pipe* rv, bool useV1model) :
     Logging::PassManager("parser"_cs, Logging::Mode::AUTO) {
     setName("ProcessParde"_cs);
     addPasses({

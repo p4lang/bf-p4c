@@ -927,7 +927,7 @@ class AllocatePHV : public Visitor {
     static bool diagnoseFailures(const std::list<const PHV::SuperCluster *>& unallocated,
                                  const PHV::AllocUtils &utils);
 
-    /** Throw a pretty-printed ::error when allocation fails due to resource constraints.
+    /** Throw a pretty-printed ::P4::error when allocation fails due to resource constraints.
      */
     static void formatAndThrowError(const PHV::Allocation& alloc,
                                     const std::list<const PHV::SuperCluster *>& unallocated);

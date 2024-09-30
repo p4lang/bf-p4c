@@ -145,7 +145,7 @@ unsigned int ComputeLoweredDeparserIR::getChecksumUnit(bool nested) {
     if (Device::pardeSpec().numDeparserInvertChecksumUnits() == 4) {
         if (nested) {
             if (nested_unit == Device::pardeSpec().numDeparserInvertChecksumUnits()) {
-                ::error("Too many nested checksums");
+                ::P4::error("Too many nested checksums");
             }
             return nested_unit++;
         } else {
@@ -360,7 +360,7 @@ bool ComputeLoweredDeparserIR::preorder(const IR::BFN::Deparser* deparser) {
         const auto* pipe = findContext<IR::BFN::Pipe>();
         auto* tmMeta = getMetadataType(pipe, "ingress_intrinsic_metadata_for_tm");
         if (!tmMeta) {
-            ::warning("ig_intr_md_for_tm not defined in ingress control block");
+            ::P4::warning("ig_intr_md_for_tm not defined in ingress control block");
         } else {
             for (auto &fname : Device::get().pardeSpec().mdpValidVecFields()) {
                 const IR::Expression* exp = nullptr;

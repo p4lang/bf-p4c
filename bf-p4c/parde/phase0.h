@@ -8,6 +8,6 @@
 #include "lib/cstring.h"
 #include "lib/hex.h"
 
-std::ostream& operator<<(std::ostream& out, const IR::BFN::Phase0* p0);
+std::ostream& operator<<(std::ostream& out, const P4::IR::BFN::Phase0* p0);
 
 #endif /* BF_P4C_PARDE_PHASE0_H_ */

@@ -17,7 +17,7 @@ class PragmaDoNotUseClot : public Inspector {
     const PhvInfo& phv_info;
     ordered_set<const PHV::Field*> do_not_use_clot;
 
-    profile_t init_apply(const IR::Node* root) override {
+    profile_t init_apply(const P4::IR::Node* root) override {
         profile_t rv = Inspector::init_apply(root);
         do_not_use_clot.clear();
         return rv;
@@ -26,7 +26,7 @@ class PragmaDoNotUseClot : public Inspector {
     /**
      * @brief Get global pragma do_not_use_clot.
      */
-    bool preorder(const IR::BFN::Pipe* pipe) override;
+    bool preorder(const P4::IR::BFN::Pipe* pipe) override;
 
  public:
     explicit PragmaDoNotUseClot(const PhvInfo& phv_info) : phv_info(phv_info) { }

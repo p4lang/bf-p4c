@@ -37,7 +37,7 @@ void RegisterReadWrite::CheckRegisterActions::end_apply() {
                     actions_str += sep + action->externalName();
                     sep = ", ";
                 }
-                ::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
+                ::P4::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
                     "%1%: too many actions access the Register\n"
                     "The target architecture limits the number of actions accessing "
                     "a single register to %2%.\n"
@@ -51,7 +51,7 @@ void RegisterReadWrite::CheckRegisterActions::end_apply() {
                     actions_str += sep + action->externalName();
                     sep = ", ";
                 }
-                ::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
+                ::P4::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
                     "%1%: too many RegisterActions attached to the Register\n"
                     "The target architecture limits the number of RegisterActions attached "
                     "to a single Register to %2%.\n"
@@ -555,7 +555,7 @@ void RegisterReadWrite::CollectRegisterReadsWrites::end_apply() {
                 reg_type_spec->arguments->at(0)->getNode(), true);
             auto width = reg_type_type->width_bits();
             if (first_width != width)
-                ::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
+                ::P4::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
                     "%1%: widths of all registers used within a single action have to "
                     "be the same. Widths of the following registers differ:\n%2%%3%",
                     action, first_reg, reg);
@@ -576,7 +576,7 @@ void RegisterReadWrite::CollectRegisterReadsWrites::end_apply() {
                 } else {
                     auto *addr = mce->arguments->at(0)->expression;
                     if (!first_addr->equiv(*addr))
-                        ::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
+                        ::P4::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
                             "%1%: uses of all registers within a single action have to "
                             "use the same addressing. The following uses differ:\n%2%%3%",
                             action, first_addr, addr);

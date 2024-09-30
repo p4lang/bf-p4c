@@ -25,7 +25,7 @@ const char *PragmaSolitary::help = "@pragma pa_solitary [pipe] gress instance_na
     "indicated field is a packet field and the packet field bit width is "
     "not a multiple of eight or the field is not byte aligned.";
 
-bool PragmaSolitary::preorder(const IR::BFN::Pipe* pipe) {
+bool PragmaSolitary::preorder(const P4::IR::BFN::Pipe* pipe) {
     auto global_pragmas = pipe->global_pragmas;
     for (const auto* annotation : global_pragmas) {
         if (annotation->name.name != PragmaSolitary::name)
@@ -40,8 +40,8 @@ bool PragmaSolitary::preorder(const IR::BFN::Pipe* pipe) {
         const unsigned min_required_arguments = 2;  // gress, field
         unsigned required_arguments = min_required_arguments;
         unsigned expr_index = 0;
-        const IR::StringLiteral *pipe_arg = nullptr;
-        const IR::StringLiteral *gress_arg = nullptr;
+        const P4::IR::StringLiteral *pipe_arg = nullptr;
+        const P4::IR::StringLiteral *gress_arg = nullptr;
 
         if (!PHV::Pragmas::determinePipeGressArgs(exprs, expr_index,
                 required_arguments, pipe_arg, gress_arg)) {
@@ -58,7 +58,7 @@ bool PragmaSolitary::preorder(const IR::BFN::Pipe* pipe) {
             continue;
         }
 
-        auto field_ir = exprs[expr_index++]->to<IR::StringLiteral>();
+        auto field_ir = exprs[expr_index++]->to<P4::IR::StringLiteral>();
 
         // check field name
         auto field_name = gress_arg->value + "::" + field_ir->value;
@@ -72,7 +72,7 @@ bool PragmaSolitary::preorder(const IR::BFN::Pipe* pipe) {
         if (field->exact_containers() && (field->size != int(PHV::Size::b8)
                                           && field->size != int(PHV::Size::b16)
                                           && field->size != int(PHV::Size::b32))) {
-            ::warning("@pragma pa_solitary's argument %1% can not be solitary, "
+            ::P4::warning("@pragma pa_solitary's argument %1% can not be solitary, "
                       "because it is a deparsed header field"
                       " and it is not container-sized ", field_name);
             continue; }

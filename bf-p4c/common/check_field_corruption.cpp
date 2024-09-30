@@ -179,7 +179,7 @@ void CheckFieldCorruption::end_apply() {
 #if HAVE_FLATROCK
                 // FIXME: flatrock egress intrinsic is always initialized.
                 if (Device::currentDevice() == Device::FLATROCK) {
-                    ::warning("Checking uninitialized read not implemented");
+                    ::P4::warning("Checking uninitialized read not implemented");
                     continue;
                 }
 #endif
@@ -190,7 +190,7 @@ void CheckFieldCorruption::end_apply() {
                           "metadata cannot reach here");
             }
             if (uninit && pkt_extract) {
-                    ::warning(
+                    ::P4::warning(
                         "%s is read in %s, but it is totally or partially uninitialized after "
                         "being corrupted by a parser extraction to the same container(s)",
                         field.name, use.first);

@@ -11,6 +11,7 @@
 #include "bf-p4c/ir/gress.h"
 #include "bf-p4c/parde/parde_visitor.h"
 
+namespace P4 {
 namespace IR {
 
 namespace BFN {
@@ -23,24 +24,25 @@ class P4Control;
 class P4Parser;
 
 }  // namespace IR
+}  // namespace P4
 
 namespace BFN {
 
 /**
  * @ingroup parde
- * @brief Transforms midend parser IR::BFN::TnaParser into backend parser IR::BFN::Parser
+ * @brief Transforms midend parser P4::IR::BFN::TnaParser into backend parser P4::IR::BFN::Parser
  */
 class ExtractParser : public ParserInspector {
     Logging::FileLog *parserLog = nullptr;
 
  public:
     explicit ExtractParser(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
-            IR::BFN::Pipe *rv, ParseTna *arch)
+            P4::IR::BFN::Pipe *rv, ParseTna *arch)
         : refMap(refMap), typeMap(typeMap), rv(rv), arch(arch) { setName("ExtractParser"); }
-    void postorder(const IR::BFN::TnaParser* parser) override;
+    void postorder(const P4::IR::BFN::TnaParser* parser) override;
     void end_apply() override;
 
-    profile_t init_apply(const IR::Node *root) override {
+    profile_t init_apply(const P4::IR::Node *root) override {
         if (BackendOptions().verbose > 0)
             parserLog = new Logging::FileLog(rv->canon_id(), "parser.log"_cs);
         return ParserInspector::init_apply(root);
@@ -49,15 +51,15 @@ class ExtractParser : public ParserInspector {
  private:
     P4::ReferenceMap *refMap;
     P4::TypeMap *typeMap;
-    IR::BFN::Pipe *rv;
+    P4::IR::BFN::Pipe *rv;
     ParseTna *arch;
 };
 
-/// Process IR::BFN::Parser and IR::BFN::Deparser to resolve header stack and add shim
-/// for intrinsic metadata, must be applied to IR::BFN::Parser and IR::BFN::Deparser.
+/// Process P4::IR::BFN::Parser and P4::IR::BFN::Deparser to resolve header stack and add shim
+/// for intrinsic metadata, must be applied to P4::IR::BFN::Parser and P4::IR::BFN::Deparser.
 class ProcessParde : public Logging::PassManager {
  public:
-    ProcessParde(const IR::BFN::Pipe *rv, bool useTna);
+    ProcessParde(const P4::IR::BFN::Pipe *rv, bool useTna);
 };
 
 }  // namespace BFN

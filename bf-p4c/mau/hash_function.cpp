@@ -85,7 +85,7 @@ static bool direct_crc_string_conversion(bfn_hash_algorithm_ *hash_alg,
         try {
             hash_alg->poly = stoll(alg_name.substr(pos + 5), nullptr, 0);
         } catch (std::exception &e) {
-            ::error("%s: String after poly_ cannot fit within a long long", srcInfo);
+            ::P4::error("%s: String after poly_ cannot fit within a long long", srcInfo);
             return false;
         }
     } else {
@@ -103,7 +103,7 @@ static bool direct_crc_string_conversion(bfn_hash_algorithm_ *hash_alg,
         try {
             hash_alg->init = stoll(alg_name.substr(pos + 5), nullptr, 0);
         } catch (std::exception &e) {
-            ::error("%s: String after init_ cannot fit within a long long", srcInfo);
+            ::P4::error("%s: String after init_ cannot fit within a long long", srcInfo);
             return false;
         }
     } else {
@@ -114,14 +114,14 @@ static bool direct_crc_string_conversion(bfn_hash_algorithm_ *hash_alg,
         try {
             hash_alg->final_xor = stoll(alg_name.substr(pos + 10), nullptr, 0);
         } catch (std::exception &e) {
-            ::error("%s: String after final_xor_ cannot fit within a long long", srcInfo);
+            ::P4::error("%s: String after final_xor_ cannot fit within a long long", srcInfo);
             return false;
         }
     } else if ((pos = alg_name.find("xout_")) != std::string::npos) {
         try {
             hash_alg->final_xor = stoll(alg_name.substr(pos + 5), nullptr, 0);
         } catch (std::exception &e) {
-            ::error("%s: String after xout_ cannot fit within a long long", srcInfo);
+            ::P4::error("%s: String after xout_ cannot fit within a long long", srcInfo);
             return false;
         }
     } else {
@@ -237,14 +237,14 @@ const P4::IR::Expression *P4::IR::MAU::HashFunction::convertHashAlgorithmInner(
     } else if (direct_crc_string_conversion(&hash_alg, alg_name, srcInfo)) {
         char *error_message;
         if (!verify_algorithm(&hash_alg, &error_message)) {
-            ::error("%s: Crc algorithm %s incorrect for the following reason : %s",
+            ::P4::error("%s: Crc algorithm %s incorrect for the following reason : %s",
                    srcInfo, algorithm.name, error_message);
             return nullptr;
         } else {
             detected_algorithm = CRC;
         }
     } else {
-        ::error("%s: Unrecognized algorithm for a hash expression: %s", srcInfo, algorithm.name);
+        ::P4::error("%s: Unrecognized algorithm for a hash expression: %s", srcInfo, algorithm.name);
         return nullptr;
     }
 
@@ -366,7 +366,7 @@ const P4::IR::MethodCallExpression *P4::IR::MAU::HashFunction::hash_to_mce(const
 
     const P4::IR::MethodCallExpression *mce = nullptr;
     if (conv_e == nullptr || (mce = conv_e->to<P4::IR::MethodCallExpression>()) == nullptr) {
-        ::error("%s: Cannot properly set up the hash function on the hash matrix : %s",
+        ::P4::error("%s: Cannot properly set up the hash function on the hash matrix : %s",
                 e->srcInfo, error_alg_name);
         return nullptr;
     }

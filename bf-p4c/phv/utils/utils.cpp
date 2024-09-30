@@ -1266,7 +1266,7 @@ void PHV::AlignedCluster::initialize_constraints() {
                 msg << "    " << slice << std::endl;
             msg << "Consider using @in_hash { ... } annotation around statements containing "
                    "the fields mentioned above." << std::endl;
-            ::error("%1%", msg.str());
+            ::P4::error("%1%", msg.str());
         } else if (!alignment_i && s_alignment) {
             alignment_i = s_alignment;
         }

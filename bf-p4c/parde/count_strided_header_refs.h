@@ -3,6 +3,8 @@
 
 #include "ir/visitor.h"
 
+using namespace P4;
+
 struct CountStridedHeaderRefs : public Inspector {
     std::map<cstring, std::set<unsigned>> header_stack_to_indices;
 

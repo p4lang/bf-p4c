@@ -30,7 +30,7 @@ class PragmaContainerSize : public Inspector {
     // field_layouts_i = {f1: [8, 8, 8, 8]}.
     ordered_map<const PHV::Field*, std::vector<int>> field_layouts_i;
 
-    profile_t init_apply(const IR::Node* root) override {
+    profile_t init_apply(const P4::IR::Node* root) override {
         profile_t rv = Inspector::init_apply(root);
         pa_container_sizes_i.clear();
         field_layouts_i.clear();
@@ -38,7 +38,7 @@ class PragmaContainerSize : public Inspector {
     }
 
     /// Get global pragma pa_container_size.
-    bool preorder(const IR::BFN::Pipe* pipe) override;
+    bool preorder(const P4::IR::BFN::Pipe* pipe) override;
 
     /// Populate field_layouts_i based on pa_container_sizes_i.
     void end_apply() override;

@@ -57,7 +57,7 @@ const P4::IR::Node* BackendConstantFolding::postorder(P4::IR::Slice* e) {
     const P4::IR::Expression* msb = getConstant(e->e1);
     const P4::IR::Expression* lsb = getConstant(e->e2);
     if (msb == nullptr || lsb == nullptr) {
-        ::error("%1%: bit indexes must be compile-time constants", e);
+        ::P4::error("%1%: bit indexes must be compile-time constants", e);
         return e;
     }
 
@@ -67,24 +67,24 @@ const P4::IR::Node* BackendConstantFolding::postorder(P4::IR::Slice* e) {
 
     auto cmsb = msb->to<P4::IR::Constant>();
     if (cmsb == nullptr) {
-        ::error(ErrorType::ERR_EXPECTED, "%1%: an integer value", msb);
+        ::P4::error(ErrorType::ERR_EXPECTED, "%1%: an integer value", msb);
         return e;
     }
     auto clsb = lsb->to<P4::IR::Constant>();
     if (clsb == nullptr) {
-        ::error(ErrorType::ERR_EXPECTED, "%1%: an integer value", lsb);
+        ::P4::error(ErrorType::ERR_EXPECTED, "%1%: an integer value", lsb);
         return e;
     }
     auto cbase = e0->to<P4::IR::Constant>();
     if (cbase == nullptr) {
-        ::error(ErrorType::ERR_EXPECTED, "%1%: an integer value", e->e0);
+        ::P4::error(ErrorType::ERR_EXPECTED, "%1%: an integer value", e->e0);
         return e;
     }
 
     int m = cmsb->asInt();
     int l = clsb->asInt();
     if (m < l) {
-        ::error("%1%: bit slicing should be specified as [msb:lsb]", e);
+        ::P4::error("%1%: bit slicing should be specified as [msb:lsb]", e);
         return e;
     }
 

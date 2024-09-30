@@ -11,6 +11,8 @@ class AttachedMemory;  // forward declaration
 }
 }  // 
 
+using namespace P4;
+
 // Table Placement needs to communicate infomation about attached tables (how many entries
 // are being placed in the current stage and whether more will be in a later stage) to Memory
 // allocation, IXBar allocation, and table layout.  It does so via an attached_entries_t

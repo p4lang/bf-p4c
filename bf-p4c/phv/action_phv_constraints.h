@@ -14,6 +14,8 @@
 #include "bf-p4c/phv/analysis/pack_conflicts.h"
 #include "bf-p4c/phv/utils/utils.h"
 
+using ::P4::operator<<;
+
 struct ActionPhvConstraintLogging {
     int error;
 };

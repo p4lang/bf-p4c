@@ -467,14 +467,14 @@ void TableSummary::postorder(const P4::IR::BFN::Pipe *pipe) {
             tableAlloc[tableNames[entry.second.first]].insert(minStage);
             internalTableAlloc[tableINames[entry.second.first]].insert(minStage);
         } else {
-            ::warning("Source of merged gateway does not have stage allocated"); } }
+            ::P4::warning("Source of merged gateway does not have stage allocated"); } }
 
     const auto print_table_placement_errors = [&]() {
         for (auto &msg : tablePlacementErrors) {
             if (msg.second)
-                ::error(msg.first);
+                ::P4::error(msg.first);
             else
-                ::warning(msg.first);
+                ::P4::warning(msg.first);
         }
     };
 
@@ -635,7 +635,7 @@ void TableSummary::postorder(const P4::IR::BFN::Pipe *pipe) {
                     pipe->canon_name(), tablePlacementErrors.size());
             } else if (maxStage > deviceStages) {
                 // Warning to not error out and allow bfa / logs generation
-                ::warning(
+                ::P4::warning(
                     "table allocation (alt-phv-alloc enabled) failed to allocate tables "
                     "for pipe '%1%' within %2% stages. Allocation state: %3%, "
                     "stage used: %4%, table placement warnings and errors seen: %5%",

@@ -15,14 +15,14 @@ bool PHV::Pragmas::gressValid(cstring gress) {
  * @returns true if valid combination of pipe and gress arguments is found,
  *          false otherwise.
  */
-bool PHV::Pragmas::determinePipeGressArgs(const IR::Vector<IR::Expression>& exprs,
+bool PHV::Pragmas::determinePipeGressArgs(const P4::IR::Vector<P4::IR::Expression>& exprs,
         unsigned& expr_index, unsigned& required_args,
-        const IR::StringLiteral*& pipe_arg, const IR::StringLiteral*& gress_arg) {
+        const P4::IR::StringLiteral*& pipe_arg, const P4::IR::StringLiteral*& gress_arg) {
     if (exprs.empty()) {
         return false;
     }
     // At least one argument is present, ensured by grammar
-    auto arg0 = exprs.at(expr_index++)->to<IR::StringLiteral>();
+    auto arg0 = exprs.at(expr_index++)->to<P4::IR::StringLiteral>();
 
     // Determine whether the name of a pipe is present
     if (gressValid(arg0->value)) {
@@ -34,16 +34,16 @@ bool PHV::Pragmas::determinePipeGressArgs(const IR::Vector<IR::Expression>& expr
         required_args++;
         if (exprs.size() > 1) {
             // Ensure there is another argument
-            gress_arg = exprs.at(expr_index++)->to<IR::StringLiteral>();
+            gress_arg = exprs.at(expr_index++)->to<P4::IR::StringLiteral>();
             if (!gressValid(gress_arg->value)) {
-                ::warning(ErrorType::WARN_UNKNOWN,
+                ::P4::warning(ErrorType::WARN_UNKNOWN,
                     "%1%: Found invalid gress argument. Ignoring pragma.", gress_arg);
                 return false;
             }
         }
     } else {
         // The first argument is not gress neither pipe
-        ::warning(ErrorType::WARN_UNKNOWN,
+        ::P4::warning(ErrorType::WARN_UNKNOWN,
             "%1%: Found invalid gress or pipe argument. Ignoring pragma.", arg0);
         return false;
     }
@@ -56,10 +56,10 @@ bool PHV::Pragmas::determinePipeGressArgs(const IR::Vector<IR::Expression>& expr
  * @returns true if all arguments of the pragma are string literals,
  *          false otherwise.
  */
-bool PHV::Pragmas::checkStringLiteralArgs(const IR::Vector<IR::Expression>& exprs) {
+bool PHV::Pragmas::checkStringLiteralArgs(const P4::IR::Vector<P4::IR::Expression>& exprs) {
     for (auto& expr : exprs) {
-        if (!expr->is<IR::StringLiteral>()) {
-            ::warning(ErrorType::WARN_INVALID,
+        if (!expr->is<P4::IR::StringLiteral>()) {
+            ::P4::warning(ErrorType::WARN_INVALID,
                 "%1%: Found a non-string literal argument. Ignoring pragma.", expr);
             return false;
         }
@@ -77,12 +77,12 @@ bool PHV::Pragmas::checkStringLiteralArgs(const IR::Vector<IR::Expression>& expr
  * @param[in] pragma_args_wo_pipe Arguments of the pragma excluding pipe argument
  * @return Returns true if suitable number of arguments is passed, false otherwise.
  */
-bool PHV::Pragmas::checkNumberArgs(const IR::Annotation* annotation,
+bool PHV::Pragmas::checkNumberArgs(const P4::IR::Annotation* annotation,
         unsigned required_args, const unsigned min_required_args, bool exact_number_of_args,
         cstring pragma_name, cstring pragma_args_wo_pipe) {
     auto& exprs = annotation->expr;
     if ((exact_number_of_args && exprs.size() != required_args) || exprs.size() < required_args) {
-        ::warning(ErrorType::WARN_INVALID, "%1%: Invalid number of arguments. "
+        ::P4::warning(ErrorType::WARN_INVALID, "%1%: Invalid number of arguments. "
                   "With `pipe' and `gress' arguments, pragma @%2% requires %3% "
                   "%4%arguments (`pipe', %5%%6%). "
                   "Without `pipe' argument, pragma @%2% requires %7% "
@@ -109,8 +109,8 @@ bool PHV::Pragmas::checkNumberArgs(const IR::Annotation* annotation,
  * @return Returns true if the pragma should be applied in the specified pipe,
  *         false otherwise.
  */
-bool PHV::Pragmas::checkPipeApplication(const IR::Annotation *annotation,
-        const IR::BFN::Pipe* pipe, const IR::StringLiteral *pipe_arg) {
+bool PHV::Pragmas::checkPipeApplication(const P4::IR::Annotation *annotation,
+        const P4::IR::BFN::Pipe* pipe, const P4::IR::StringLiteral *pipe_arg) {
     if (pipe_arg && pipe->canon_name() && pipe_arg->value != pipe->canon_name()) {
         LOG4("Skipping pragma " << cstring::to_cstring(annotation)
             << " at the pipe `" << pipe->canon_name() << "'.");
@@ -125,8 +125,8 @@ bool PHV::Pragmas::checkPipeApplication(const IR::Annotation *annotation,
  * @param[in] expr Expression IR with source info.
  * @param[in] field_name If @p expr is null, use this argument as the field name.
  */
-void PHV::Pragmas::reportNoMatchingPHV(const IR::BFN::Pipe* pipe,
-        const IR::Expression* expr, cstring field_name) {
+void PHV::Pragmas::reportNoMatchingPHV(const P4::IR::BFN::Pipe* pipe,
+        const P4::IR::Expression* expr, cstring field_name) {
     if (expr) {
         // DO NOT print extremely long expression.
         std::string expr_str = expr->toString().c_str();
@@ -136,11 +136,11 @@ void PHV::Pragmas::reportNoMatchingPHV(const IR::BFN::Pipe* pipe,
         }
         if (pipe && pipe->canon_name()) {
             // If the pipe is named
-            ::warning(ErrorType::WARN_INVALID,
+            ::P4::warning(ErrorType::WARN_INVALID,
                 "%1%: No matching PHV field in the pipe `%2%'. Ignoring pragma.",
                       expr_str, pipe->canon_name());
         } else {
-            ::warning(ErrorType::WARN_INVALID,
+            ::P4::warning(ErrorType::WARN_INVALID,
                 "%1%: No matching PHV field. Ignoring pragma.",
                 expr_str);
         }
@@ -148,11 +148,11 @@ void PHV::Pragmas::reportNoMatchingPHV(const IR::BFN::Pipe* pipe,
         // No source info available
         if (pipe && pipe->canon_name()) {
             // If the pipe is named
-            ::warning(ErrorType::WARN_INVALID,
+            ::P4::warning(ErrorType::WARN_INVALID,
                 "No matching PHV field `%1' in the pipe `%2%'. Ignoring pragma.",
                 field_name, pipe->canon_name());
         } else {
-            ::warning(ErrorType::WARN_INVALID,
+            ::P4::warning(ErrorType::WARN_INVALID,
                 "No matching PHV field `%1%'. Ignoring pragma.",
                 field_name);
         }

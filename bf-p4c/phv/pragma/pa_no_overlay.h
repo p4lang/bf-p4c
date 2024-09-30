@@ -20,15 +20,15 @@ class PragmaNoOverlay : public Inspector {
     /// cannot be overlaid with each other.
     SymBitMatrix   mutually_inclusive;
 
-    profile_t init_apply(const IR::Node* root) override {
+    profile_t init_apply(const P4::IR::Node* root) override {
         profile_t rv = Inspector::init_apply(root);
         no_overlay.clear();
         mutually_inclusive.clear();
         return rv;
     }
 
-    bool preorder(const IR::BFN::Pipe* pipe) override;
-    bool preorder(const IR::MAU::Instruction* inst) override;
+    bool preorder(const P4::IR::BFN::Pipe* pipe) override;
+    bool preorder(const P4::IR::MAU::Instruction* inst) override;
 
  public:
     explicit PragmaNoOverlay(PhvInfo& phv) : phv_i(phv) { }

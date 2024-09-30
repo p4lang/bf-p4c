@@ -312,7 +312,7 @@ const IR::P4Table* SplitAlpm::create_preclassifier_table(const IR::P4Table* tbl,
     IR::Vector<IR::KeyElement> keys;
     for (auto f : tbl->getKey()->keyElements) {
         if (f->matchType->path->name == "ternary")
-            ::error(ErrorType::ERR_UNSUPPORTED, "Ternary match key %1% not supported in table %2%",
+            ::P4::error(ErrorType::ERR_UNSUPPORTED, "Ternary match key %1% not supported in table %2%",
                     f->expression, tbl->name);
         if (f->matchType->path->name == "lpm") {
             auto k = new IR::KeyElement(f->annotations, f->expression,
@@ -396,7 +396,7 @@ bool SplitAlpm::values_through_pragmas(const IR::P4Table *tbl,
         if (valid_partition_values.find(alg_lpm_partitions_value) != valid_partition_values.end()) {
             number_partitions = static_cast<int>(pragma_val->value);
         } else {
-            ::error("Unsupported %s value of %s for table %s."
+            ::P4::error("Unsupported %s value of %s for table %s."
                             "\n  Allowed values are 1024, 2048, 4096, and 8192.",
                     ALGORITHMIC_LPM_PARTITIONS, pragma_val->value, tbl->name);
         }
@@ -413,13 +413,13 @@ bool SplitAlpm::values_through_pragmas(const IR::P4Table *tbl,
         if (alg_lpm_subtrees_value <= 10) {
             number_subtrees_per_partition = alg_lpm_subtrees_value;
         } else {
-            ::error("Unsupported %s value of %s for table %s."
+            ::P4::error("Unsupported %s value of %s for table %s."
                             "\n  Allowed values are in the range [1:10].",
                     ALGORITHMIC_LPM_SUBTREES_PER_PARTITION, pragma_val->value, tbl->name);
         }
     }
 
-    return ::errorCount() == 0;
+    return ::P4::errorCount() == 0;
 }
 
 bool SplitAlpm::values_through_impl(const IR::P4Table *tbl,
@@ -486,11 +486,11 @@ bool SplitAlpm::values_through_impl(const IR::P4Table *tbl,
     if (alpm == std::nullopt)
         return false;
     if (alpm->type->name != "Alpm") {
-        ::error("Unexpected extern %1% on 'alpm' property, only ALPM is allowed",
+        ::P4::error("Unexpected extern %1% on 'alpm' property, only ALPM is allowed",
                 alpm->type->name);
         return false; }
     if (found_in_implementation) {
-        ::warning("Alpm already found on 'implementation' table property,"
+        ::P4::warning("Alpm already found on 'implementation' table property,"
                 " ignored the 'alpm' property");
         return false; }
     extract_alpm_config_from_property(alpm);
@@ -532,7 +532,7 @@ bool SplitAlpm::pragma_exclude_msbs(const IR::P4Table* tbl,
         if (an->name != ALGORITHMIC_LPM_ATCAM_EXCLUDE_FIELD_MSBS)
             continue;
         if (an->expr.size() != 1 && an->expr.size() != 2) {
-            ::error("Invalid %s pragma on table %s.\n Expected field name "
+            ::P4::error("Invalid %s pragma on table %s.\n Expected field name "
                     "and optional msb bits %s",
                 ALGORITHMIC_LPM_ATCAM_EXCLUDE_FIELD_MSBS, tbl->name, an->expr); }
         cstring fname;
@@ -542,14 +542,14 @@ bool SplitAlpm::pragma_exclude_msbs(const IR::P4Table* tbl,
             fname = an->expr.at(0)->toString();
         }
         if (field_name_to_width.find(fname) == field_name_to_width.end()) {
-            ::error("Invalid %s pragma on table %s.\n Field %s is not part of the table key.",
+            ::P4::error("Invalid %s pragma on table %s.\n Field %s is not part of the table key.",
                     ALGORITHMIC_LPM_ATCAM_EXCLUDE_FIELD_MSBS, tbl->name, fname);
         } else if (field_name_is_partition_index.count(fname) != 0) {
-            ::error("Invalid %s pragma on table %s.\n Pragma cannot be used on "
+            ::P4::error("Invalid %s pragma on table %s.\n Pragma cannot be used on "
                     "the table's partition index '%s'.",
                     ALGORITHMIC_LPM_ATCAM_EXCLUDE_FIELD_MSBS, tbl->name, fname);
         } else if (field_name_cnt.at(fname) != 1) {
-            ::error("Invalid %s pragma on table %s.\n Pragma cannot be used when "
+            ::P4::error("Invalid %s pragma on table %s.\n Pragma cannot be used when "
                     "different slices of field '%s' are used.",
                     ALGORITHMIC_LPM_ATCAM_EXCLUDE_FIELD_MSBS, tbl->name, fname);
         }
@@ -577,7 +577,7 @@ bool SplitAlpm::pragma_exclude_msbs(const IR::P4Table* tbl,
             fields_to_exclude.emplace(fname, msb_bits_to_exclude);
         }
         if (msb_error) {
-            ::error("Invalid %s pragma on table %s.\n "
+            ::P4::error("Invalid %s pragma on table %s.\n "
                     "  Invalid most significant bits to exclude value of '%s'.\n"
                     "%s",
                     ALGORITHMIC_LPM_ATCAM_EXCLUDE_FIELD_MSBS, tbl->name, an->expr[0],
@@ -585,7 +585,7 @@ bool SplitAlpm::pragma_exclude_msbs(const IR::P4Table* tbl,
         }
     }
 
-    return ::errorCount() == 0;
+    return ::P4::errorCount() == 0;
 }
 
 const IR::Node* SplitAlpm::postorder(IR::P4Table* tbl) {
@@ -732,7 +732,7 @@ const IR::Node* SplitAlpm::postorder(IR::SwitchStatement* statement) {
         //
         auto tableName = apply->object->getName().name;
         if (preclassifier_tables.count(tableName) == 0) {
-            ::error("Unable to find member table %1%", tableName);
+            ::P4::error("Unable to find member table %1%", tableName);
             return statement; }
         auto preclassifier_table = preclassifier_tables.at(tableName);
         auto preclassifier_apply = gen_apply(preclassifier_table);
@@ -765,7 +765,7 @@ void CollectAlpmInfo::postorder(const IR::P4Table* tbl) {
     // for backward compatibility, also check the 'alpm' property
     auto alpm = getExternInstanceFromProperty(tbl, "alpm"_cs, refMap, typeMap);
     if (alpm != std::nullopt) {
-        ::warning(ErrorType::WARN_DEPRECATED, "table property 'alpm' is deprecated,"
+        ::P4::warning(ErrorType::WARN_DEPRECATED, "table property 'alpm' is deprecated,"
                 " use 'implementation' instead.");
         alpm_table.insert(tbl->name); }
 
@@ -781,7 +781,7 @@ void CollectAlpmInfo::postorder(const IR::P4Table* tbl) {
             if (pragma_val->value)
                 alpm_table.insert(tbl->name);
         } else {
-            ::error("%s: Please provide a valid alpm for table %s", tbl->srcInfo, tbl->name);
+            ::P4::error("%s: Please provide a valid alpm for table %s", tbl->srcInfo, tbl->name);
         }
     }
 
@@ -789,7 +789,7 @@ void CollectAlpmInfo::postorder(const IR::P4Table* tbl) {
     if (alpm_table.count(tbl->name) != 0) {
         for (auto key : tbl->getKey()->keyElements) {
             if (key->matchType->path->toString() == "ternary") {
-                ::error(ErrorType::ERR_UNSUPPORTED,
+                ::P4::error(ErrorType::ERR_UNSUPPORTED,
                         "ternary match %s in ALPM table %s is not supported",
                         key->expression, tbl->name);
                 break;

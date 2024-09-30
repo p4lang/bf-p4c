@@ -6,6 +6,8 @@ namespace solver {
 
 namespace symbolic_bitvec {
 
+using namespace P4;
+
 Expr::Expr(const Expr *left, const Expr *right, ExprNodeType type, BitID value) :
                                                         left{left},
                                                         right{right},

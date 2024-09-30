@@ -18,6 +18,8 @@
 
 namespace {
 
+using namespace P4;
+
 // return a solver based on contaienr type.
 solver::ActionSolverBase* make_solver(const PHV::Container& c) {
     switch (c.type().kind()) {
@@ -737,7 +739,7 @@ bool ActionPhvConstraints::early_check_ok(const IR::MAU::Action* act) {
         }
         slicesConsidered.insert(slices_in_same_byte.begin(), slices_in_same_byte.end());
     }
-    if (!rv) ::error("%1%", error_msg.str());
+    if (!rv) ::P4::error("%1%", error_msg.str());
     return rv;
 }
 
@@ -1222,7 +1224,7 @@ ActionPhvConstraints::container_operation_type(
             type_of_operation |= OperandInfo::PART_OF_CONTAINER;
             observed_fields.insert(slice.field());
         } else {
-            ::warning("Detected a write that is neither move nor whole container "
+            ::P4::warning("Detected a write that is neither move nor whole container "
                     "operation.");
         }
     }
@@ -2486,10 +2488,10 @@ CanPackReturnType ActionPhvConstraints::check_and_generate_conditional_constrain
                 auto boost_bitpos = constraint_tracker.can_be_both_sources(
                     slices, kv_unallocated.second, packing_slice);
                 if (boost_bitpos == std::nullopt) {
-                    LOG5("\t\t\tPacking failed because "
-                         << packing_slice
-                         << " would (conservatively) need to be aligned at more than one position: "
-                         << cstring::to_cstring(req_alignment));
+                    // LOG5("\t\t\tPacking failed because "
+                    //      << packing_slice
+                    //      << " would (conservatively) need to be aligned at more than one position: "
+                    //      << P4::cstring::to_cstring(req_alignment));
                     return std::make_tuple(CanPackErrorCode::MULTIPLE_ALIGNMENTS, std::nullopt);
                 }
                 bitPosition = *boost_bitpos;

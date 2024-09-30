@@ -154,7 +154,7 @@ TypeSpecParser TypeSpecParser::make(const p4configv1::P4Info& p4info,
             auto e = fSpec.serializable_enum().name();
             auto typeEnum = enums.find(e);
             if (typeEnum == enums.end()) {
-                ::error("Enum type '%1%' not found in typeInfo for '%2%' '%3%'",
+                ::P4::error("Enum type '%1%' not found in typeInfo for '%2%' '%3%'",
                         e, instanceType, instanceName);
                 return;
             }
@@ -171,7 +171,7 @@ TypeSpecParser TypeSpecParser::make(const p4configv1::P4Info& p4info,
         }
 
         if (!type) {
-            ::error("Error when generating BF-RT info for '%1%' '%2%': "
+            ::P4::error("Error when generating BF-RT info for '%1%' '%2%': "
                     "packed type is too complex",
                     instanceType, instanceName);
             return;
@@ -227,7 +227,7 @@ TypeSpecParser TypeSpecParser::make(const p4configv1::P4Info& p4info,
             fields.push_back({prefix + member.name() + suffix, id++, type});
         }
     } else {
-        ::error("Error when generating BF-RT info for '%1%' '%2%': "
+        ::P4::error("Error when generating BF-RT info for '%1%' '%2%': "
                 "only structs, headers, tuples, bitstrings and "
                 "serializable enums are currently supported types",
                 instanceType, instanceName);
@@ -685,7 +685,7 @@ BFRuntimeGenerator::makeActionSpecs(const p4configv1::Table& table,
     for (const auto& action_ref : table.action_refs()) {
         auto* action = Standard::findAction(p4info, action_ref.id());
         if (action == nullptr) {
-            ::error("Invalid action id '%1%'", action_ref.id());
+            ::P4::error("Invalid action id '%1%'", action_ref.id());
             continue;
         }
         auto* spec = new Util::JsonObject();
@@ -703,7 +703,7 @@ BFRuntimeGenerator::makeActionSpecs(const p4configv1::Table& table,
                 spec->emplace("action_scope"_cs, "DefaultOnly"_cs);
                 break;
             default:
-                ::error("Invalid action ref scope '%1%' in P4Info", int(action_ref.scope()));
+                ::P4::error("Invalid action ref scope '%1%' in P4Info", int(action_ref.scope()));
                 break;
         }
         auto* annotations = transformAnnotations(
@@ -767,7 +767,7 @@ void BFRuntimeGenerator::addDirectResources(const p4configv1::Table& table,
             addMeterDataFields(dataJson, *meter);
             attributesJson->append("MeterByteCountAdjust"_cs);
         } else {
-            ::error("Unknown direct resource id '%1%'", directResId);
+            ::P4::error("Unknown direct resource id '%1%'", directResId);
             continue;
         }
     }
@@ -820,7 +820,7 @@ BFRuntimeGenerator::addMatchTables(Util::JsonArray* tablesJson) const {
                     break;
             }
             if (matchType == std::nullopt) {
-                ::error("Unsupported match type for BF-RT: %1%", int(mf.match_type()));
+                ::P4::error("Unsupported match type for BF-RT: %1%", int(mf.match_type()));
                 continue;
             }
             if (*matchType == "Ternary" || *matchType == "Range" || *matchType == "Optional")
@@ -864,7 +864,7 @@ BFRuntimeGenerator::addMatchTables(Util::JsonArray* tablesJson) const {
 
             // Control plane requires there's no duplicate key in one table.
             if (dupKey.count(keyName) != 0) {
-              ::error("Key \"%s\" is duplicate in Table \"%s\". It doesn't meet BFRT's "
+              ::P4::error("Key \"%s\" is duplicate in Table \"%s\". It doesn't meet BFRT's "
               "requirements.\n" "Please using @name annotation for the duplicate key names",
               keyName, pre.name());
               return;

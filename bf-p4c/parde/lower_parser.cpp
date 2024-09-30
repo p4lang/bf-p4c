@@ -62,6 +62,8 @@
 
 namespace Parde::Lowered {
 
+using namespace P4;
+
 /**
  * \ingroup LowerParserIR
  * \brief The pass that replaces an IR::BRN::Parser node with an IR::BFN::LoweredParser node.
@@ -482,7 +484,7 @@ class WarnTernaryMatchFields : public MauInspector {
                    << "\nConsider including in the match key an additional metadata"
                    << " field that indicates whether the field has been assigned.";
 
-                ::warning("%1%", ss.str());
+                ::P4::warning("%1%", ss.str());
             }
         }
     }

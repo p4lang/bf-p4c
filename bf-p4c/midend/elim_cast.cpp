@@ -147,7 +147,7 @@ const IR::Node* SimplifyNestedCasts::preorder(IR::Cast* expression) {
 
     // stop if more than two levels of nested casts.
     if (secondCast->expr->is<IR::Cast>()) {
-        ::error("Expression %1% is too complex to handle, "
+        ::P4::error("Expression %1% is too complex to handle, "
                 "consider simplifying the nested casts.", expression);
         return expression; }
 
@@ -177,7 +177,7 @@ const IR::Node* SimplifyNestedCasts::preorder(IR::Cast* expression) {
                srcType->width_bits() > innerExpr->type->width_bits()) {
         return new IR::Cast(dstType, innerExpr);
     } else {
-        ::error("Expression %1% is too complex to handle, "
+        ::P4::error("Expression %1% is too complex to handle, "
                 "consider simplifying the nested casts.", expression); }
 
     return expression;

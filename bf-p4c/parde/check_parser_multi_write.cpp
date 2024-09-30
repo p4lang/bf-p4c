@@ -257,7 +257,7 @@ struct InferWriteMode : public ParserTransform {
             // allowed
             // JIRA-DOC: (see P4C-2293).
             if (Device::currentDevice() == Device::TOFINO)
-                ::warning(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
+                ::P4::warning(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
                           "Extract %1% in state %2% is postdominated by extracts of the same "
                           "field.", write->getWriteDest()->field, state->name);
             return true;
@@ -270,7 +270,7 @@ struct InferWriteMode : public ParserTransform {
             // allowed
             // JIRA-DOC: (see P4C-2293).
             if (Device::currentDevice() == Device::TOFINO)
-                ::warning(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
+                ::P4::warning(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
                           "Extract %1% in state %2% is postdominated by extracts of the same field "
                           "within a loopback from %3% to %4%.",
                           write->getWriteDest()->field, state->name, lb.second->name,
@@ -349,7 +349,7 @@ struct InferWriteMode : public ParserTransform {
                 // if one of the deposits can reach the other, we have a problem
                 if (ps == qs || parser_info.graph(parser).is_reachable(ps, qs)
                     || parser_info.graph(parser).is_reachable(qs, ps))
-                    ::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
+                    ::P4::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
                             "%1%%2%It is not possible to deposit multiple checksum "
                             "residuals into field %3% in states %4% and %5%. "
                             "Either make sure the states in which you deposit cannot reach one "
@@ -400,7 +400,7 @@ struct InferWriteMode : public ParserTransform {
             } else {
                 auto ps = field_to_states.write_to_state.at(or_counter_example->curr);
 
-                ::warning(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
+                ::P4::warning(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
                         "Tofino does not support clear-on-write semantic on re-assignment to "
                         "field %1% in parser state %2%. Try to use advance() to skip over the"
                         "re-assigned values and only extract them once.",
@@ -411,7 +411,7 @@ struct InferWriteMode : public ParserTransform {
         } else {
             auto ps = field_to_states.write_to_state.at(clow_counter_example->curr);
 
-            ::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
+            ::P4::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
                     "Inconsistent parser write semantic for field %1% in parser state %2%.",
                     dest->name, ps->name);
             print(clow_counter_example);
@@ -533,7 +533,7 @@ struct InferWriteMode : public ParserTransform {
             LOG3("Setting write mode of " << checksum_write << " to " << it->second);
             auto verify = checksum_write->to<IR::BFN::ChecksumVerify>();
             if (verify && it->second == WrMode::CLEAR_ON_WRITE) {
-                ::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
+                ::P4::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
                         "%1%Using checksum verify in direct assignment to set %2% is not "
                         "supported when the left-hand side of the assignment can be written "
                         "multiple times for one packet. "
@@ -766,7 +766,7 @@ void CheckWriteModeConsistency::check_and_adjust(
     modes << ".";
 
     BUG_CHECK(inconsistent_index >= 1, "Inconsistent index should never be < 1");
-    ::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
+    ::P4::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
             "%3%%4%%1% and %2% share the same byte on the wire but"
             " have conflicting parser write semantics.\n    %5%",
             phv.field(extracts[inconsistent_index - 1]->dest->field)->name,

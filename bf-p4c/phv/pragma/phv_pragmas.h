@@ -26,17 +26,17 @@ constexpr const char* DISABLE_DEPARSE_ZERO = "pa_disable_deparse_0_optimization"
 class Pragmas : public PassManager {
  public:
     static bool gressValid(cstring gress);
-    static bool determinePipeGressArgs(const IR::Vector<IR::Expression>& exprs,
+    static bool determinePipeGressArgs(const P4::IR::Vector<P4::IR::Expression>& exprs,
         unsigned& expr_index, unsigned& required_args,
-        const IR::StringLiteral*& pipe_arg, const IR::StringLiteral*& gress_arg);
-    static bool checkStringLiteralArgs(const IR::Vector<IR::Expression>& exprs);
-    static bool checkNumberArgs(const IR::Annotation* annotation,
+        const P4::IR::StringLiteral*& pipe_arg, const P4::IR::StringLiteral*& gress_arg);
+    static bool checkStringLiteralArgs(const P4::IR::Vector<P4::IR::Expression>& exprs);
+    static bool checkNumberArgs(const P4::IR::Annotation* annotation,
         unsigned required_args, const unsigned min_required_args, bool exact_number_of_args,
         cstring pragma_name, cstring pragma_args_wo_pipe);
-    static bool checkPipeApplication(const IR::Annotation *annotation,
-        const IR::BFN::Pipe* pipe, const IR::StringLiteral *pipe_arg);
-    static void reportNoMatchingPHV(const IR::BFN::Pipe* pipe,
-        const IR::Expression* expr, cstring field_name = ""_cs);
+    static bool checkPipeApplication(const P4::IR::Annotation *annotation,
+        const P4::IR::BFN::Pipe* pipe, const P4::IR::StringLiteral *pipe_arg);
+    static void reportNoMatchingPHV(const P4::IR::BFN::Pipe* pipe,
+        const P4::IR::Expression* expr, cstring field_name = ""_cs);
 
  private:
     PragmaContainerSize         pa_container_sizes_i;

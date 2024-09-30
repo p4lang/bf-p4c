@@ -1827,7 +1827,7 @@ void IXBar::determine_proxy_hash_alg(const PhvInfo &phv, const P4::IR::MAU::Tabl
     if (auto s = annot->getSingle("proxy_hash_algorithm"_cs)) {
         auto pragma_val = s->expr.at(0)->to<P4::IR::StringLiteral>();
         if (pragma_val == nullptr) {
-            ::error(ErrorType::ERR_INVALID,
+            ::P4::error(ErrorType::ERR_INVALID,
                     "proxy_hash_algorithm pragma on table %1% must be a string", tbl);
         } else if (alloc.proxy_hash_key_use.algorithm.setup(pragma_val)) {
             hash_function_found = true;
@@ -1841,7 +1841,7 @@ void IXBar::determine_proxy_hash_alg(const PhvInfo &phv, const P4::IR::MAU::Tabl
     }
 
     if (alloc.proxy_hash_key_use.algorithm.type == P4::IR::MAU::HashFunction::IDENTITY)
-        ::error(ErrorType::ERR_UNSUPPORTED,
+        ::P4::error(ErrorType::ERR_UNSUPPORTED,
                 "A proxy hash table with an identity algorithm is not supported, as specified "
                 "on table %1%.  Using a normal exact match table.", tbl);
 
@@ -2634,7 +2634,7 @@ bool IXBar::allocSelector(const P4::IR::MAU::Selector *as, const P4::IR::MAU::Ta
     if (mah.algorithm.size_from_algorithm()) {
         if (mode_width_bits > mah.algorithm.size) {
             // FIXME: Debatably be moved to an error, but have to wait on a p4-tests update
-            ::warning(ErrorType::WARN_OVERFLOW,
+            ::P4::warning(ErrorType::WARN_OVERFLOW,
                       "%1%: The algorithm for selector %2% has a size of %3% bits, when the mode "
                       "selected requires %4% bits. Padding with zeros.",
                       as, as->name, mah.algorithm.size, mode_width_bits);
@@ -2660,7 +2660,7 @@ bool IXBar::allocSelector(const P4::IR::MAU::Selector *as, const P4::IR::MAU::Ta
 
         if (bits_seen < mode_width_bits) {
             // FIXME: See above at previous FIXME
-            ::warning(ErrorType::WARN_OVERFLOW,
+            ::P4::warning(ErrorType::WARN_OVERFLOW,
                       "%1%: The identity hash for selector %2% has a size of %3% bits, "
                       "when the mode selected required %4% bits. Padding with zeros.",
                       as, as->name, bits_seen, mode_width_bits);
@@ -3731,7 +3731,7 @@ bitvec IXBar::determine_final_xor(const P4::IR::MAU::HashFunction *hf,
         if (entry->is<P4::IR::Constant>()) {
             hash_input.type = ixbar_input_type::tCONST;
             if (!entry->to<P4::IR::Constant>()->fitsUint64())
-                ::error(ErrorType::ERR_OVERLIMIT, "The size of constant %1% is too large, "
+                ::P4::error(ErrorType::ERR_OVERLIMIT, "The size of constant %1% is too large, "
                         "the maximum supported size is 64 bit", entry);
             hash_input.u.constant = entry->to<P4::IR::Constant>()->asUint64();
         } else {

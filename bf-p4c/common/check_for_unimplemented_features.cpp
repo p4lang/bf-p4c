@@ -22,6 +22,6 @@ bool CheckOperations::isModBitMask(const P4::IR::MAU::Primitive* prim) const {
 
 bool CheckOperations::preorder(const P4::IR::MAU::Primitive* prim) {
     if (isModBitMask(prim))
-        ::error("The following operation is not yet supported: %1%", prim->srcInfo);
+        ::P4::error("The following operation is not yet supported: %1%", prim->srcInfo);
     return true;
 }

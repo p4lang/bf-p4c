@@ -9,12 +9,14 @@
  * \brief Extracts checksum from translated checksum extern.
  */
 
+namespace P4 {
 namespace IR {
 namespace BFN {
 class Pipe;
 }  // namespace BFN
 class P4Control;
 }  // namespace IR
+}  // namespace P4
 
 namespace BFN {
 
@@ -36,8 +38,8 @@ namespace BFN {
  *     }
  *
  */
-IR::BFN::Pipe*
-extractChecksumFromDeparser(const IR::BFN::TnaDeparser* deparser,
-                            IR::BFN::Pipe* pipe);
+P4::IR::BFN::Pipe*
+extractChecksumFromDeparser(const P4::IR::BFN::TnaDeparser* deparser,
+                            P4::IR::BFN::Pipe* pipe);
 }  // namespace BFN
 #endif /* BF_P4C_PARDE_DEPARSER_CHECKSUM_UPDATE_H_ */

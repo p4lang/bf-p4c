@@ -299,7 +299,7 @@ struct MoveBridgeMetadataAssignment : public Transform {
                 body->components.push_back(new IR::AssignmentStatement(newLeftMember,
                                                                           newRightMember));
             } else {
-                ::error("Bridge metadata assignment in Ingress Deparser do not have metadata"
+                ::P4::error("Bridge metadata assignment in Ingress Deparser do not have metadata"
                          " fields as operands %1%", stmt);
             }
         }

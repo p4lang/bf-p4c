@@ -11,8 +11,8 @@
 
 namespace PHV {
 
-using ActionSet = SmallSet<const IR::MAU::Action*>;
-using UnitSet = SmallSet<const IR::BFN::Unit*>;
+using ActionSet = SmallSet<const P4::IR::MAU::Action*>;
+using UnitSet = SmallSet<const P4::IR::BFN::Unit*>;
 using RefsMap = ordered_map<cstring, FieldUse>;
 
 class DarkInitPrimitive;

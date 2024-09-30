@@ -501,10 +501,10 @@ bool GreedyAllocator::allocate(std::list<SuperCluster *> clusters_input,
         if (nonfatal) {
             kit_i.mau.get_table_summary()->stop_table_replay_fitting();
         } else {
-            ::error(
+            ::P4::error(
                 "GreedyAllocation failed because these clusters have unsatisfiable constraints.");
             for (const auto& sc : invalid_clusters) {
-                ::error("unsat cluster: %1%", cstring::to_cstring(sc));
+                ::P4::error("unsat cluster: %1%", cstring::to_cstring(sc));
             }
             return false;
         }
@@ -577,7 +577,7 @@ bool GreedyAllocator::allocate(std::list<SuperCluster *> clusters_input,
             if (nonfatal) {
                 kit_i.mau.get_table_summary()->stop_table_replay_fitting();
             } else {
-                ::error("Failed to allocate stride cluster: %1%, because %2%",
+                ::P4::error("Failed to allocate stride cluster: %1%, because %2%",
                         cstring::to_cstring(sc),
                         rst.err_str());
             }
@@ -662,10 +662,10 @@ bool GreedyAllocator::allocate(std::list<SuperCluster *> clusters_input,
         if (nonfatal) {
             kit_i.mau.get_table_summary()->stop_table_replay_fitting();
         } else {
-            ::error("PHV fitting failed, %1% clusters cannot be allocated.",
+            ::P4::error("PHV fitting failed, %1% clusters cannot be allocated.",
                     unallocated.size());
             for (const auto& kv : unallocated) {
-                ::error("Cannot allocated %1%, because %2%", cstring::to_cstring(kv.first),
+                ::P4::error("Cannot allocated %1%, because %2%", cstring::to_cstring(kv.first),
                         kv.second->str());
             }
         }

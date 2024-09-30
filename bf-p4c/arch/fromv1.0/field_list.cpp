@@ -19,17 +19,17 @@ const IR::Node *P4V1::FieldListConverter::convertFieldList(const IR::Node *node)
     for (auto anno : fl->annotations->annotations) {
         if (anno->name == pragma_string) {
             if (anno->expr.size() != 3)
-                ::error("Invalid pragma specification -- ", pragma_string);
+                ::P4::error("Invalid pragma specification -- ", pragma_string);
 
             if (!anno->expr[0]->is<IR::StringLiteral>())
-                ::error("Invalid field in pragma specification -- ", anno->expr[0]);
+                ::P4::error("Invalid field in pragma specification -- ", anno->expr[0]);
 
             auto field = anno->expr[0]->to<IR::StringLiteral>()->value;
             if (!anno->expr[1]->is<IR::Constant>() || !anno->expr[2]->is<IR::Constant>())
-                ::error("Invalid slice bit position(s) in pragma specification -- ", pragma_string);
+                ::P4::error("Invalid slice bit position(s) in pragma specification -- ", pragma_string);
 
             if (sliced_fields.count(field))
-                ::error("Duplicate slice definition for field ", field);
+                ::P4::error("Duplicate slice definition for field ", field);
             sliced_fields.insert(field);
 
             auto msb = anno->expr[1]->to<IR::Constant>()->asInt();
@@ -57,7 +57,7 @@ const IR::Node *P4V1::FieldListConverter::convertFieldList(const IR::Node *node)
                 auto lo = slice.second.second;
 
                 if (lo > hi || hi > f->type->width_bits() || lo < 0)
-                    ::error("Invalid field slice %1%[%2%:%3%]", f, hi, lo);
+                    ::P4::error("Invalid field slice %1%[%2%:%3%]", f, hi, lo);
 
                 f_slice = new IR::Slice(f, hi, lo);
                 break; } }

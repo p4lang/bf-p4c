@@ -43,7 +43,7 @@ void ValidateAttachedOfSingleTable::free_address(const P4::IR::MAU::AttachedMemo
         << " and location " << ba->addr_location << " on table " << tbl->name);
     if (users[type] != nullptr) {
         if (!compatible(users[type], ba))
-            ::error(ErrorType::ERR_INVALID,
+            ::P4::error(ErrorType::ERR_INVALID,
                     "overlap. Both %1% and %2% require the %3% address hardware, and cannot be on "
                     "the same table %4%.",
                     am, users[type]->attached->name, addr_type_name(type), tbl->externalName());
@@ -53,7 +53,7 @@ void ValidateAttachedOfSingleTable::free_address(const P4::IR::MAU::AttachedMemo
 
     if (!am->direct) {
         if (am->size <= 0) {
-            ::error(ErrorType::ERR_NOT_FOUND,
+            ::P4::error(ErrorType::ERR_NOT_FOUND,
                     "indirect attached table %1%. Does not have a size.", am);
             return;
         }
@@ -72,7 +72,7 @@ void ValidateAttachedOfSingleTable::free_address(const P4::IR::MAU::AttachedMemo
     if (ba->pfe_location == P4::IR::MAU::PfeLocation::OVERHEAD) {
         if (from_hash) {
             if (!tbl->has_match_data()) {
-                ::error(ErrorType::ERR_INVALID,
+                ::P4::error(ErrorType::ERR_INVALID,
                         "When an attached memory %1% is addressed by hash and requires "
                         "per action enabling, then the table %2% must have match data",
                          am, tbl->externalName());
@@ -85,7 +85,7 @@ void ValidateAttachedOfSingleTable::free_address(const P4::IR::MAU::AttachedMemo
     if (type == METER && ba->type_location == P4::IR::MAU::TypeLocation::OVERHEAD) {
         if (from_hash) {
             if (!tbl->has_match_data()) {
-                ::error(ErrorType::ERR_INVALID,
+                ::P4::error(ErrorType::ERR_INVALID,
                         "When an attached memory %1% is addressed by hash and requires "
                         "multiple meter_type, then the table %2% must have match data",
                         am, tbl->externalName());

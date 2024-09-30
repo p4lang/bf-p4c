@@ -30,7 +30,7 @@ class DefaultNext : public MauInspector, public NextTable, BFN::ControlFlowVisit
                 // Disabling for JBay, really only used for the characterize power, and necessary
                 // to run until that pass is converted to a ControlFlowVisitor
                 if (!possible_nexts.at(prev).count(tbl) && long_branch_disabled) {
-                    ::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "%1% is applied in multiple "
+                    ::P4::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "%1% is applied in multiple "
                             "places, and the next-table information cannot correctly propagate "
                             "through this multiple application", prev);
                     if (errors) errors->insert(prev->externalName()); } }
@@ -82,7 +82,7 @@ class DefaultNext : public MauInspector, public NextTable, BFN::ControlFlowVisit
         if (long_branch_disabled) {
             for (auto prev : prev_tbls) {
                 if (possible_nexts.count(prev)) {
-                    ::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "%1% is applied in multiple "
+                    ::P4::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "%1% is applied in multiple "
                             "places, and the next-table information cannot correctly propagate "
                             "through this multiple application", prev);
                     if (errors) errors->insert(prev->externalName()); } } } }

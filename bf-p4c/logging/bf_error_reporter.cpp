@@ -150,12 +150,12 @@ BfErrorReporter::CheckResult BfErrorReporter::verify_checks() const {
     if (!unexpected_errors.empty()) {
         std::string msg = "The following errors were not expected:\n";
         msg = std::accumulate(unexpected_errors.begin(), unexpected_errors.end(), msg);
-        ::error(ErrorType::ERR_UNEXPECTED, msg.c_str());
+        ::P4::error(ErrorType::ERR_UNEXPECTED, msg.c_str());
     }
     for (const auto &[line, v] : checks) {
         for (const auto &check : v) {
             if (!check.matched) {
-                ::error(ErrorType::ERR_NOT_FOUND,
+                ::P4::error(ErrorType::ERR_NOT_FOUND,
                         "Unmatched check: Expected %1% message \"%2%\"%3% not reported.",
                         (check.type == ErrorMessage::MessageType::Error) ? "error" : "warning",
                         check.msg, (line == NO_SOURCE) ? "" : " at line " + std::to_string(line));

@@ -493,7 +493,7 @@ void FinalizePhysicalLiverange::end_apply() {
                         //           from_table->name, from, from_table->stage(), to_table->name,
                         //           to, to_table->stage());
                         if (!tb_mutex_i(from_table, to_table)) {
-                            ::warning(
+                            ::P4::warning(
                                 "Overlaying slices with overlapped live range are not allowed to "
                                 "be accessed by non-mutex tables. table %1% reads %2% "
                                 "at stage %3%, while table %4% writes %5% at stage %6%."

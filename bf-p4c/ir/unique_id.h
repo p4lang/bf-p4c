@@ -10,7 +10,7 @@ class JSONGenerator;
 class JSONLoader;
 }
 
-using namespace P4;
+namespace P4 {
 
 /** The purpose of this class is to provide a unique identification of an BackendAttached table
  *  per IR::MAU::Table object.  The only way to guarantee to uniqueness is both by name and
@@ -170,4 +170,7 @@ class UniqueId {
 };
 
 std::ostream &operator <<(std::ostream &out, const UniqueId &ui);
+
+}  // namespace P4
+
 #endif /* EXTENSIONS_BF_P4C_IR_UNIQUE_ID_H_ */

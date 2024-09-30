@@ -40,7 +40,7 @@ const char *PragmaAlias::help =
     "but one of those pragmas, and emits a warning for all the other pragmas "
     "that are not enforced.";
 
-Visitor::profile_t PragmaAlias::init_apply(const IR::Node* root) {
+Visitor::profile_t PragmaAlias::init_apply(const P4::IR::Node* root) {
     aliasMap.clear();
     fieldsWithExpressions.clear();
     fieldsWithAliasingSrc.clear();
@@ -48,7 +48,7 @@ Visitor::profile_t PragmaAlias::init_apply(const IR::Node* root) {
     return Inspector::init_apply(root);
 }
 
-bool PragmaAlias::preorder(const IR::Expression* expr) {
+bool PragmaAlias::preorder(const P4::IR::Expression* expr) {
     const PHV::Field* f = phv_i.field(expr);
     if (!f) return true;
     fieldsWithExpressions[f->id] = true;
@@ -118,7 +118,7 @@ std::optional<std::pair<const PHV::Field*, const PHV::Field*>> PragmaAlias::mayA
                 field1->pov && field2->pov)) {
         // When the aliasing relationship is between a metadata and a header field, the header field
         // is chosen as the alias destination. When the aliasing relationship is between two
-        // metadata fields and one of those metadata fields is not used in an IR::Expression object,
+        // metadata fields and one of those metadata fields is not used in an P4::IR::Expression object,
         // then the other metadata field is chosen as the alias destination.
         bool field1Expr = fieldsWithExpressions[field1->id];
         bool field2Expr = fieldsWithExpressions[field2->id];
@@ -193,7 +193,7 @@ bool PragmaAlias::addAlias(const PHV::Field* f1, const PHV::Field* f2,
     return true;
 }
 
-void PragmaAlias::postorder(const IR::BFN::Pipe* pipe) {
+void PragmaAlias::postorder(const P4::IR::BFN::Pipe* pipe) {
     auto global_pragmas = pipe->global_pragmas;
     for (const auto* annotation : global_pragmas) {
         if (annotation->name.name != PragmaAlias::name)
@@ -209,8 +209,8 @@ void PragmaAlias::postorder(const IR::BFN::Pipe* pipe) {
         const unsigned min_required_arguments = 3;  // gress, field1, field2, ...
         unsigned required_arguments = min_required_arguments;
         unsigned expr_index = 0;
-        const IR::StringLiteral *pipe_arg = nullptr;
-        const IR::StringLiteral *gress_arg = nullptr;
+        const P4::IR::StringLiteral *pipe_arg = nullptr;
+        const P4::IR::StringLiteral *gress_arg = nullptr;
 
         if (!PHV::Pragmas::determinePipeGressArgs(exprs, expr_index,
                 required_arguments, pipe_arg, gress_arg)) {
@@ -228,9 +228,9 @@ void PragmaAlias::postorder(const IR::BFN::Pipe* pipe) {
         }
 
         // Extract the rest of the arguments
-        std::vector<const IR::StringLiteral*> field_irs;
+        std::vector<const P4::IR::StringLiteral*> field_irs;
         for (; expr_index < exprs.size(); ++expr_index) {
-            const IR::StringLiteral* name = exprs[expr_index]->to<IR::StringLiteral>();
+            const P4::IR::StringLiteral* name = exprs[expr_index]->to<P4::IR::StringLiteral>();
             field_irs.push_back(name);
         }
 

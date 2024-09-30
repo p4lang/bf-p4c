@@ -107,7 +107,7 @@ bool verifySymmetricHashPairs(
 
         if (!(annot->expr.size() == 2 && annot->expr.at(0)->is<P4::IR::StringLiteral>()
               && annot->expr.at(1)->is<P4::IR::StringLiteral>())) {
-            ::error("%1%: The symmetric annotation requires two string inputs", annot->srcInfo);
+            ::P4::error("%1%: The symmetric annotation requires two string inputs", annot->srcInfo);
             continue;
         }
 
@@ -119,13 +119,13 @@ bool verifySymmetricHashPairs(
         auto field1 = phv.field(gress_str + sl1->value);
 
         if (field0 == nullptr || field1 == nullptr) {
-            ::error("%1%: The key %2% in the symmetric annotation is not recognized as a PHV "
+            ::P4::error("%1%: The key %2% in the symmetric annotation is not recognized as a PHV "
                     "field", annot->srcInfo, ((field0 == nullptr) ? sl0->value : sl1->value));
             continue;
         }
 
         if (field0 == field1) {
-            ::error("%1%: A field %2% cannot be symmetric to itself", annot->srcInfo, sl0->value);
+            ::P4::error("%1%: A field %2% cannot be symmetric to itself", annot->srcInfo, sl0->value);
             continue;
         }
 
@@ -156,21 +156,21 @@ bool verifySymmetricHashPairs(
         }
 
         if (key_pos0 == field_list.end() || key_pos1 == field_list.end()) {
-            ::error("%1%: The key %2% in the symmetric annotation does not appear within the "
+            ::P4::error("%1%: The key %2% in the symmetric annotation does not appear within the "
                 "field list", annot->srcInfo,
                 ((key_pos0 == field_list.end()) ? sl0->value : sl1->value));
             continue;
         }
 
         if (!(symmetric_fields.count(fs0) == 0 && symmetric_fields.count(fs1) == 0)) {
-            ::error("%1%: The key %2% in the symmetric annotation has already been declared "
+            ::P4::error("%1%: The key %2% in the symmetric annotation has already been declared "
                     "symmetric with another field.  Please use it only once", annot->srcInfo,
                     (symmetric_fields.count(fs0) == 0) ? sl0->value : sl1->value);
             continue;
         }
 
         if (bits0.size() != bits1.size()) {
-            ::error("%1%: The two symmetric fields are not the same size", annot->srcInfo);
+            ::P4::error("%1%: The two symmetric fields are not the same size", annot->srcInfo);
             continue;
         }
         symmetric_fields.insert(fs0);
@@ -186,7 +186,7 @@ bool verifySymmetricHashPairs(
 
     if (contains_symmetric) {
         if (hf.type != P4::IR::MAU::HashFunction::CRC) {
-            ::error("%1%: Currently in p4c, symmetric hash is only supported to work with CRC "
+            ::P4::error("%1%: Currently in p4c, symmetric hash is only supported to work with CRC "
                     "algorithms", annotations->srcInfo);
             return false;
         }
@@ -207,7 +207,7 @@ bool BuildP4HashFunction::InsideHashGenExpr::preorder(const P4::IR::MAU::FieldLi
 }
 
 bool BuildP4HashFunction::InsideHashGenExpr::preorder(const P4::IR::MAU::ActionArg *aa) {
-    ::error("%s: Action Data Argument %s cannot be used in a hash generation expression.  "
+    ::P4::error("%s: Action Data Argument %s cannot be used in a hash generation expression.  "
             "Data plane values and constants only", aa->srcInfo, aa->name);
     return false;
 }
@@ -346,7 +346,7 @@ void BuildP4HashFunction::end_apply() {
                 it = _func->inputs.erase(it);
                 it--;
             } else {
-                ::error("Overlapping field %s in hash not supported with the hashing algorithm",
+                ::P4::error("Overlapping field %s in hash not supported with the hashing algorithm",
                     field->name);
             }
         }

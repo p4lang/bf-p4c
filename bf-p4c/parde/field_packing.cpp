@@ -6,6 +6,8 @@
 
 namespace BFN {
 
+using namespace P4;
+
 void FieldPacking::appendField(const IR::Expression* field, unsigned width, gress_t gress) {
     appendField(field, cstring(), width, gress);
 }

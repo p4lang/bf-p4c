@@ -24,14 +24,14 @@ const char *PragmaNoOverlay::help =
     " other field in the group."
     "The gress value can be either ingress or egress. ";
 
-bool PragmaNoOverlay::preorder(const IR::MAU::Instruction* inst) {
+bool PragmaNoOverlay::preorder(const P4::IR::MAU::Instruction* inst) {
     // TODO: Until we handle concat operations in the backend properly (by adding metadata
     // fields with concat operations to a slice list, also containing padding fields that must be
     // initialized to 0), we have to disable overlay for any field used in concat operations (concat
     // operations that survive in the backend).
     if (inst->operands.empty()) return true;
     for (auto* operand : inst->operands) {
-        if (!operand->is<IR::Concat>()) continue;
+        if (!operand->is<P4::IR::Concat>()) continue;
         const PHV::Field* f = phv_i.field(operand);
         if (f) {
             no_overlay.insert(f);
@@ -42,7 +42,7 @@ bool PragmaNoOverlay::preorder(const IR::MAU::Instruction* inst) {
     return true;
 }
 
-bool PragmaNoOverlay::preorder(const IR::BFN::Pipe* pipe) {
+bool PragmaNoOverlay::preorder(const P4::IR::BFN::Pipe* pipe) {
     auto global_pragmas = pipe->global_pragmas;
     for (const auto* annotation : global_pragmas) {
         if (annotation->name.name != PragmaNoOverlay::name)
@@ -57,8 +57,8 @@ bool PragmaNoOverlay::preorder(const IR::BFN::Pipe* pipe) {
         const unsigned min_required_arguments = 2;  // gress, field
         unsigned required_arguments = min_required_arguments;
         unsigned expr_index = 0;
-        const IR::StringLiteral *pipe_arg = nullptr;
-        const IR::StringLiteral *gress_arg = nullptr;
+        const P4::IR::StringLiteral *pipe_arg = nullptr;
+        const P4::IR::StringLiteral *gress_arg = nullptr;
 
         if (!PHV::Pragmas::determinePipeGressArgs(exprs, expr_index,
                 required_arguments, pipe_arg, gress_arg)) {
@@ -76,9 +76,9 @@ bool PragmaNoOverlay::preorder(const IR::BFN::Pipe* pipe) {
         }
 
         // Extract the rest of the arguments
-        std::vector<const IR::StringLiteral*> field_irs;
+        std::vector<const P4::IR::StringLiteral*> field_irs;
         for (; expr_index < exprs.size(); ++expr_index) {
-            const IR::StringLiteral* name = exprs[expr_index]->to<IR::StringLiteral>();
+            const P4::IR::StringLiteral* name = exprs[expr_index]->to<P4::IR::StringLiteral>();
             field_irs.push_back(name);
         }
 

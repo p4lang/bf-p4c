@@ -12,6 +12,8 @@
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/phv/pragma/pa_alias.h"
 
+using namespace P4;
+
 /**
  * Identify headers corresponding to varbit fields that were injected during varbit header
  * desugaring. Create aliases for the validity bits for slices of the same header placed in CLOTs.

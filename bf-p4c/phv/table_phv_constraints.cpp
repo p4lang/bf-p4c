@@ -69,7 +69,7 @@ TernaryMatchKeyConstraints::calculateTernaryMatchKeyConstraints(const IR::MAU::T
           ((totalBitsUsed / BITS_IN_BYTE) + 1)));
 
     if (totalBitsUsed > MAX_TERNARY_MATCH_KEY_BITS) {
-        ::error("Ternary table %1% uses %2%b as ternary match key. Maximum number of bits "
+        ::P4::error("Ternary table %1% uses %2%b as ternary match key. Maximum number of bits "
                 "allowed is %3%b.\nRewrite your program to use fewer ternary match key bits."
                 "\nTable %1% cannot fit within a single input crossbar in an MAU stage.",
                 tbl->name, totalBitsUsed, MAX_TERNARY_MATCH_KEY_BITS);

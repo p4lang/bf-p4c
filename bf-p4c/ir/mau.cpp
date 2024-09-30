@@ -746,7 +746,7 @@ bool IR::MAU::Table::getAnnotation(cstring name, bool &val) const {
         if (iVal == 1) {
             val = true;
         } else if (iVal != 0) {
-            ::warning(::BFN::ErrorType::WARN_PRAGMA_USE,
+            ::P4::warning(::BFN::ErrorType::WARN_PRAGMA_USE,
                 "Annotation %1% on table %2% ignored because parameter %3% is invalid. "
                 "Only the values 0 and 1 are valid.", name, externalName(), iVal);
             return false;
@@ -790,7 +790,7 @@ int IR::MAU::Table::get_placement_priority_int() const {
         for (auto *expr : annot->expr) {
             if (auto constant = expr->to<IR::Constant>()) {
                 if (val_set)
-                    ::error(ErrorType::ERR_INVALID, "Invalid %1%: Only one integer value is "
+                    ::P4::error(ErrorType::ERR_INVALID, "Invalid %1%: Only one integer value is "
                             "allowed for a placement_priority on table %2% for its global score",
                             annot, externalName());
                 val = constant->asInt();
@@ -847,7 +847,7 @@ int IR::MAU::Table::get_provided_stage(int geq_stage, int *req_entries, int *fla
         if (intvals < 1 || intvals > 2)
             valid_pragma = false;
         if (!valid_pragma)
-            ::error(ErrorType::ERR_INVALID, "Invalid %1%: Stage pragma provided can have only "
+            ::P4::error(ErrorType::ERR_INVALID, "Invalid %1%: Stage pragma provided can have only "
                     "one or two constant parameters >= 0", annot);
         return valid_pragma;
     };

@@ -57,7 +57,7 @@ bool JbayPhvAnalysis::preorder(const IR::MAU::TableKey* read) {
     const PHV::Field* f = phv.field(read->expr);
     BUG_CHECK(tbl != nullptr, "No associated table found for PHV analysis - %1%", read->expr);
     if (!f)
-        ::warning("\t\tField read not found: %1% in table: %2%", read->expr, tbl->name);
+        ::P4::warning("\t\tField read not found: %1% in table: %2%", read->expr, tbl->name);
     fieldUsesMap[f] |= IPXBAR;
     tableMatches[tableStack.back()].insert(f);
     fieldUses[f][dg.min_stage(tbl)] |= MATCH;
@@ -79,7 +79,7 @@ bool JbayPhvAnalysis::preorder(const IR::MAU::Action* act) {
 
 void JbayPhvAnalysis::postorder(const IR::MAU::Table* tbl) {
     if (tbl != tableStack.back())
-        ::warning("Popping a different table to the one encountered in postorder");
+        ::P4::warning("Popping a different table to the one encountered in postorder");
     tableStack.pop_back();
 }
 
@@ -276,7 +276,7 @@ size_t JbayPhvAnalysis::aluUseBits() {
             rv += f.size;
             fieldUsesMap[&f] |= ALU;
         } else {
-            ::warning("\tUnreferenced field used in ALU: %1%", f.name); } }
+            ::P4::warning("\tUnreferenced field used in ALU: %1%", f.name); } }
     return rv;
 }
 
@@ -289,7 +289,7 @@ size_t JbayPhvAnalysis::aluUseBitsHeader() const {
         if (uses.is_referenced(&f))
             rv += f.size;
         else
-            ::warning("\tUnreferenced field used in ALU: %1%", f.name); }
+            ::P4::warning("\tUnreferenced field used in ALU: %1%", f.name); }
     return rv;
 }
 
@@ -302,7 +302,7 @@ size_t JbayPhvAnalysis::aluUseBitsMetadata() const {
         if (uses.is_referenced(&f))
             rv += f.size;
         else
-            ::warning("\tUnreferenced field used in ALU: %1%", f.name); }
+            ::P4::warning("\tUnreferenced field used in ALU: %1%", f.name); }
     return rv;
 }
 
@@ -324,7 +324,7 @@ size_t JbayPhvAnalysis::aluUseBitsPOV() const {
         if (uses.is_referenced(&f))
             rv += f.size;
         else
-            ::warning("\tUnreferenced field used in ALU: %1%", f.name); }
+            ::P4::warning("\tUnreferenced field used in ALU: %1%", f.name); }
     return rv;
 }
 
@@ -528,7 +528,7 @@ void JbayPhvAnalysis::printCandidacy(int maxStages) {
             } else if (alloc & TPHV) {
                 ssRow << " T |";
             } else {
-                ::warning("Don't see an allocation for this field"); } }
+                ::P4::warning("Don't see an allocation for this field"); } }
         ssRow << " " << (boost::format("%3d") % f.first->size) << "b |\t" << f.first->name;
         LOG4(ssRow.str()); }
     LOG4("Number of Fields: " << numFields);

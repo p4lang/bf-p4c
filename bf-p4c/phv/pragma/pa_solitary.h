@@ -7,7 +7,7 @@
 class PragmaSolitary : public Inspector {
     PhvInfo& phv_i;
 
-    bool preorder(const IR::BFN::Pipe* pipe) override;
+    bool preorder(const P4::IR::BFN::Pipe* pipe) override;
  public:
     explicit PragmaSolitary(PhvInfo& phv) : phv_i(phv) { }
 

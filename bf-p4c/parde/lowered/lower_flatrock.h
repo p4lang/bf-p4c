@@ -149,7 +149,7 @@ class ComputeFlatrockParserIR : public ParserInspector {
         } else {
             if (pov_flags_byte.size() == Flatrock::PARSER_FLAGS_WIDTH) {
                 // TODO try to add some source info to this error message
-                ::error(ErrorType::ERR_UNSUPPORTED,
+                ::P4::error(ErrorType::ERR_UNSUPPORTED,
                         "Compiler could not allocate resources for all headers "
                         "used in the program");
             }

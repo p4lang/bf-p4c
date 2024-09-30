@@ -45,7 +45,7 @@ void IgnoreTableDeps::end_apply() {
             } else if (external_name_to_table.count("."_cs + pragma_val)) {
                 ign_tbl = external_name_to_table.at("." + pragma_val);
             } else {
-                ::warning(BFN::ErrorType::WARN_PRAGMA_USE, "%1%: The ignore_table_dependency "
+                ::P4::warning(BFN::ErrorType::WARN_PRAGMA_USE, "%1%: The ignore_table_dependency "
                    "value %2% on table %3% does not have a corresponding backend match",
                    tbl, pragma_val, tbl->externalName());
                 continue;
@@ -217,7 +217,7 @@ bool SharedIndirectAttachedAnalysis::preorder(const P4::IR::MAU::AttachedMemory 
             continue;
         // Stateful Register can be shared across actions
         } else if (!am->to<P4::IR::MAU::StatefulAlu>()) {
-           ::error("%1% and %2% cannot share %3% because use of the %3% is not "
+           ::P4::error("%1% and %2% cannot share %3% because use of the %3% is not "
                     "mutually exclusive", tbl, am_tbl, am);
         }
     }

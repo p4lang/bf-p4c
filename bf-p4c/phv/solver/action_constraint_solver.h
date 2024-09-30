@@ -9,9 +9,10 @@
 #include "lib/ordered_map.h"
 #include "bf-p4c/phv/solver/symbolic_bitvec.h"
 
-using namespace P4::literals;
-
 namespace solver {
+
+using namespace P4::literals;
+using namespace P4;
 
 /// ContainerID is a cstring that uniquely represents a container.
 /// Empty string is reserved to represent const or action data.

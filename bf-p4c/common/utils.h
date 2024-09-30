@@ -34,14 +34,14 @@ void end_fatal_error();
 /// Report an error with the given message and exit.
 template <typename... T>
 inline void fatal_error(const char* format, T... args) {
-    ::error(format, args...);
+    ::P4::error(format, args...);
     end_fatal_error();
 }
 
 /// Report an error with the error type and given message and exit.
 template <typename... T>
 inline void fatal_error(int kind, const char* format, T... args) {
-    ::error(kind, format, args...);
+    ::P4::error(kind, format, args...);
     end_fatal_error();
 }
 

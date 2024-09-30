@@ -28,6 +28,7 @@
 #include "p4/config/v1/p4types.pb.h"
 #pragma GCC diagnostic pop
 
+using namespace P4;
 using namespace P4::literals;
 
 namespace p4configv1 = ::p4::config::v1;
@@ -52,7 +53,7 @@ static constexpr P4Id getIdPrefix(P4Id id) {
     return ((id >> 24) & 0xff);
 }
 
-Util::JsonObject* findJsonTable(Util::JsonArray* tablesJson, cstring tblName);
+P4::Util::JsonObject* findJsonTable(P4::Util::JsonArray* tablesJson, cstring tblName);
 
 // See https://stackoverflow.com/a/33799784/4538702
 static std::string escapeJson(const std::string& s) {
@@ -79,8 +80,8 @@ static std::string escapeJson(const std::string& s) {
     return o.str();
 }
 
-static Util::JsonObject* transformAnnotation(const std::string& annotation) {
-    auto* annotationJson = new Util::JsonObject();
+static P4::Util::JsonObject* transformAnnotation(const std::string& annotation) {
+    auto* annotationJson = new P4::Util::JsonObject();
     // TODO: annotation string will need to be parsed so we can have it
     // in key/value format here.
     annotationJson->emplace("name"_cs, escapeJson(annotation));
@@ -88,14 +89,14 @@ static Util::JsonObject* transformAnnotation(const std::string& annotation) {
 }
 
 template <typename It>
-static Util::JsonArray* transformAnnotations(const It& first, const It& last) {
-    auto* annotations = new Util::JsonArray();
+static P4::Util::JsonArray* transformAnnotations(const It& first, const It& last) {
+    auto* annotations = new P4::Util::JsonArray();
     for (auto it = first; it != last; it++)
         annotations->append(transformAnnotation(*it));
     return annotations;
 }
 
-static Util::JsonArray* transformAnnotations(const p4configv1::Preamble& pre) {
+static P4::Util::JsonArray* transformAnnotations(const p4configv1::Preamble& pre) {
     return transformAnnotations(pre.annotations().begin(), pre.annotations().end());
 }
 
@@ -135,11 +136,11 @@ const p4configv1::DirectMeter* findDirectMeter(const p4configv1::P4Info& p4info,
 
 }  // namespace Standard
 
-Util::JsonObject* makeTypeInt(cstring type, cstring mask = ""_cs);
+P4::Util::JsonObject* makeTypeInt(cstring type, cstring mask = ""_cs);
 
 template <typename T, typename std::enable_if<std::is_integral<T>::value, int>::type = 0>
-static Util::JsonObject* makeTypeInt(cstring type, T defaultValue, cstring mask = ""_cs) {
-    auto* typeObj = new Util::JsonObject();
+static P4::Util::JsonObject* makeTypeInt(cstring type, T defaultValue, cstring mask = ""_cs) {
+    auto* typeObj = new P4::Util::JsonObject();
     typeObj->emplace("type"_cs, type);
     typeObj->emplace("default_value"_cs, defaultValue);
     if (!mask.isNullOrEmpty())
@@ -147,17 +148,17 @@ static Util::JsonObject* makeTypeInt(cstring type, T defaultValue, cstring mask 
     return typeObj;
 }
 
-Util::JsonObject* makeTypeBool(std::optional<bool> defaultValue = std::nullopt);
+P4::Util::JsonObject* makeTypeBool(std::optional<bool> defaultValue = std::nullopt);
 
-Util::JsonObject* makeTypeBytes(int width,
+P4::Util::JsonObject* makeTypeBytes(int width,
                                        std::optional<int64_t> defaultValue = std::nullopt,
                                        cstring mask = ""_cs);
 
-Util::JsonObject* makeTypeEnum(const std::vector<cstring>& choices,
+P4::Util::JsonObject* makeTypeEnum(const std::vector<cstring>& choices,
                                std::optional<cstring> defaultValue = std::nullopt);
 
-void addSingleton(Util::JsonArray* dataJson,
-                  Util::JsonObject* dataField, bool mandatory, bool readOnly);
+void addSingleton(P4::Util::JsonArray* dataJson,
+                  P4::Util::JsonObject* dataField, bool mandatory, bool readOnly);
 
 template <typename It>
 static std::vector<P4Id> collectTableIds(const p4configv1::P4Info& p4info,
@@ -166,7 +167,7 @@ static std::vector<P4Id> collectTableIds(const p4configv1::P4Info& p4info,
     for (auto it = first; it != last; it++) {
         auto* table = Standard::findTable(p4info, *it);
         if (table == nullptr) {
-            ::error("Invalid table id '%1%'", *it);
+            ::P4::error("Invalid table id '%1%'", *it);
             continue;
         }
         tableIds.push_back(*it);
@@ -182,7 +183,7 @@ class TypeSpecParser {
     struct Field {
         cstring name;
         P4Id id;
-        Util::JsonObject* type;
+        P4::Util::JsonObject* type;
     };
 
     using Fields = std::vector<Field>;
@@ -216,7 +217,7 @@ class BFRuntimeGenerator {
         : p4info(p4info) { }
 
     /// Generates the schema as a Json object for the provided P4Info instance.
-    virtual const Util::JsonObject* genSchema() const;
+    virtual const P4::Util::JsonObject* genSchema() const;
 
     /// Generates BF-RT JSON schema from P4Info protobuf message and writes it to
     /// the @p destination stream.
@@ -269,7 +270,7 @@ class BFRuntimeGenerator {
         P4Id id;
         int64_t size;
         Unit unit;
-        Util::JsonArray* annotations;
+        P4::Util::JsonArray* annotations;
 
         static std::optional<Counter>
         from(const p4configv1::Counter& counterInstance);
@@ -286,7 +287,7 @@ class BFRuntimeGenerator {
         int64_t size;
         Unit unit;
         Type type;
-        Util::JsonArray* annotations;
+        P4::Util::JsonArray* annotations;
 
         static std::optional<Meter> from(const p4configv1::Meter& meterInstance);
         static std::optional<Meter> fromDirect(const p4configv1::DirectMeter& meterInstance);
@@ -299,7 +300,7 @@ class BFRuntimeGenerator {
         P4Id id;
         int64_t size;
         std::vector<P4Id> tableIds;
-        Util::JsonArray* annotations;
+        P4::Util::JsonArray* annotations;
         static P4Id makeActProfId(P4Id implementationId);
         static std::optional<ActionProf> from(const p4configv1::P4Info& p4info,
                                     const p4configv1::ActionProfile& actionProfile);
@@ -310,7 +311,7 @@ class BFRuntimeGenerator {
         std::string name;
         P4Id id;
         p4configv1::P4DataTypeSpec typeSpec;
-        Util::JsonArray* annotations;
+        P4::Util::JsonArray* annotations;
 
         static std::optional<Digest>
         from(const p4configv1::Digest& digest);
@@ -323,27 +324,27 @@ class BFRuntimeGenerator {
         P4Id id;
         int64_t size;
         p4configv1::P4DataTypeSpec typeSpec;
-        Util::JsonArray* annotations;
+        P4::Util::JsonArray* annotations;
 
         // static std::optional<Register>
         // from(const p4configv1::ExternInstance& externInstance);
     };
 
-    void addMatchTables(Util::JsonArray* tablesJson) const;
-    virtual void addActionProfs(Util::JsonArray* tablesJson) const;
+    void addMatchTables(P4::Util::JsonArray* tablesJson) const;
+    virtual void addActionProfs(P4::Util::JsonArray* tablesJson) const;
     virtual bool addActionProfIds(const p4configv1::Table& table,
-                            Util::JsonObject* tableJson) const;
-    void addCounters(Util::JsonArray* tablesJson) const;
-    void addMeters(Util::JsonArray* tablesJson) const;
+                            P4::Util::JsonObject* tableJson) const;
+    void addCounters(P4::Util::JsonArray* tablesJson) const;
+    void addMeters(P4::Util::JsonArray* tablesJson) const;
 
-    void addCounterCommon(Util::JsonArray* tablesJson, const Counter& counter) const;
-    void addMeterCommon(Util::JsonArray* tablesJson, const Meter& meter) const;
-    void addRegisterCommon(Util::JsonArray* tablesJson, const Register& meter) const;
-    void addActionProfCommon(Util::JsonArray* tablesJson, const ActionProf& actionProf) const;
-    void addLearnFilters(Util::JsonArray* learnFiltersJson) const;
-    void addLearnFilterCommon(Util::JsonArray* learnFiltersJson, const Digest& digest) const;
-    virtual void addDirectResources(const p4configv1::Table& table, Util::JsonArray* dataJson,
-            Util::JsonArray* operationsJson, Util::JsonArray* attributesJson,
+    void addCounterCommon(P4::Util::JsonArray* tablesJson, const Counter& counter) const;
+    void addMeterCommon(P4::Util::JsonArray* tablesJson, const Meter& meter) const;
+    void addRegisterCommon(P4::Util::JsonArray* tablesJson, const Register& meter) const;
+    void addActionProfCommon(P4::Util::JsonArray* tablesJson, const ActionProf& actionProf) const;
+    void addLearnFilters(P4::Util::JsonArray* learnFiltersJson) const;
+    void addLearnFilterCommon(P4::Util::JsonArray* learnFiltersJson, const Digest& digest) const;
+    virtual void addDirectResources(const p4configv1::Table& table, P4::Util::JsonArray* dataJson,
+            P4::Util::JsonArray* operationsJson, P4::Util::JsonArray* attributesJson,
             P4Id maxActionParamId = 0) const;
 
     virtual std::optional<bool> actProfHasSelector(P4Id actProfId) const;
@@ -352,7 +353,7 @@ class BFRuntimeGenerator {
     /// set to the maximum assigned id for an action parameter across all
     /// actions. This is useful if other table data fields (e.g. direct register
     /// fields) need to receive a distinct id in the same space.
-    Util::JsonArray* makeActionSpecs(const p4configv1::Table& table,
+    P4::Util::JsonArray* makeActionSpecs(const p4configv1::Table& table,
                                      P4Id* maxActionParamId = nullptr) const;
     virtual std::optional<Counter> getDirectCounter(P4Id counterId) const;
     virtual std::optional<Meter> getDirectMeter(P4Id meterId) const;
@@ -365,7 +366,7 @@ class BFRuntimeGenerator {
     /// starting at @p idOffset. Field names are taken from the P4 program
     /// when possible; for tuples they are autogenerated (f1, f2, ...) unless
     /// supplied through @p fieldNames.
-    void transformTypeSpecToDataFields(Util::JsonArray* fieldsJson,
+    void transformTypeSpecToDataFields(P4::Util::JsonArray* fieldsJson,
                                        const p4configv1::P4DataTypeSpec& typeSpec,
                                        cstring instanceType,
                                        cstring instanceName,
@@ -374,35 +375,35 @@ class BFRuntimeGenerator {
                                        cstring suffix = ""_cs,
                                        P4Id idOffset = 1) const;
 
-    static void addMeterDataFields(Util::JsonArray* dataJson, const Meter& meter);
-    static Util::JsonObject* makeCommonDataField(P4Id id, cstring name,
-                                                 Util::JsonObject* type, bool repeated,
-                                                 Util::JsonArray* annotations = nullptr);
+    static void addMeterDataFields(P4::Util::JsonArray* dataJson, const Meter& meter);
+    static P4::Util::JsonObject* makeCommonDataField(P4Id id, cstring name,
+                                                 P4::Util::JsonObject* type, bool repeated,
+                                                 P4::Util::JsonArray* annotations = nullptr);
 
-    static Util::JsonObject* makeContainerDataField(P4Id id, cstring name,
-                                                    Util::JsonArray* items, bool repeated,
-                                                    Util::JsonArray* annotations = nullptr);
+    static P4::Util::JsonObject* makeContainerDataField(P4Id id, cstring name,
+                                                    P4::Util::JsonArray* items, bool repeated,
+                                                    P4::Util::JsonArray* annotations = nullptr);
 
-    static void addActionDataField(Util::JsonArray* dataJson, P4Id id, const std::string& name,
-                                   bool mandatory, bool read_only, Util::JsonObject* type,
-                                   Util::JsonArray* annotations = nullptr);
+    static void addActionDataField(P4::Util::JsonArray* dataJson, P4Id id, const std::string& name,
+                                   bool mandatory, bool read_only, P4::Util::JsonObject* type,
+                                   P4::Util::JsonArray* annotations = nullptr);
 
-    static void addKeyField(Util::JsonArray* dataJson, P4Id id, cstring name,
-                            bool mandatory, cstring matchType, Util::JsonObject* type,
-                            Util::JsonArray* annotations = nullptr);
+    static void addKeyField(P4::Util::JsonArray* dataJson, P4Id id, cstring name,
+                            bool mandatory, cstring matchType, P4::Util::JsonObject* type,
+                            P4::Util::JsonArray* annotations = nullptr);
 
-    static void addCounterDataFields(Util::JsonArray* dataJson, const Counter& counter);
+    static void addCounterDataFields(P4::Util::JsonArray* dataJson, const Counter& counter);
 
-    static Util::JsonObject* initTableJson(const std::string& name, P4Id id, cstring tableType,
-                                           int64_t size, Util::JsonArray* annotations = nullptr);
+    static P4::Util::JsonObject* initTableJson(const std::string& name, P4Id id, cstring tableType,
+                                           int64_t size, P4::Util::JsonArray* annotations = nullptr);
 
 
-    static void addToDependsOn(Util::JsonObject* tableJson, P4Id id);
+    static void addToDependsOn(P4::Util::JsonObject* tableJson, P4Id id);
 
     /// Add register data fields to the JSON data array for a BFRT table. Field
     /// ids are assigned incrementally starting at @p idOffset, which is 1 by
     /// default.
-    void addRegisterDataFields(Util::JsonArray* dataJson,
+    void addRegisterDataFields(P4::Util::JsonArray* dataJson,
                                const Register& register_,
                                P4Id idOffset = 1) const;
 

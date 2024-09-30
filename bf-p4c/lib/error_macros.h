@@ -2,10 +2,10 @@
 #define EXTENSIONS_BF_P4C_LIB_ERROR_MACROS_H_
 
 /// Report an error if condition e is false.
-#define ERROR_CHECK(e, ...) do { if (!(e)) ::error(__VA_ARGS__); } while (0)
+#define ERROR_CHECK(e, ...) do { if (!(e)) ::P4::error(__VA_ARGS__); } while (0)
 
 /// Report a warning if condition e is false.
-#define WARN_CHECK(e, ...) do { if (!(e)) ::warning(__VA_ARGS__); } while (0)
+#define WARN_CHECK(e, ...) do { if (!(e)) ::P4::warning(__VA_ARGS__); } while (0)
 
 
 /// Trigger a diagnostic message which is treated as a warning by default.

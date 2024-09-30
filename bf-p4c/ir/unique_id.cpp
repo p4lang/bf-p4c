@@ -3,6 +3,8 @@
 #include "ir/json_generator.h"
 #include "ir/json_loader.h"
 
+namespace P4 {
+
 static const char *attached_id_to_str[] = {
     "", "tind", "idletime", "stats", "meter", "selector", "salu", "action_data"
 };
@@ -97,3 +99,5 @@ std::ostream &operator <<(std::ostream &out, const UniqueId &ui) {
     out << ui.build_name();
     return out;
 }
+
+}  // namespace P4

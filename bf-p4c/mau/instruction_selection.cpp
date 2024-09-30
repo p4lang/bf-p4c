@@ -521,7 +521,7 @@ const P4::IR::Node *Synth2PortSetup::postorder(P4::IR::MAU::Primitive *prim) {
         auto at_mem = glob->obj->to<P4::IR::MAU::AttachedMemory>();
         auto u_id = at_mem->unique_id();
         if (per_flow_enables.count(u_id) > 0) {
-            ::error("%s: An attached table can only be executed once per action", prim->srcInfo);
+            ::P4::error("%s: An attached table can only be executed once per action", prim->srcInfo);
         }
         per_flow_enables.insert(u_id);
         if (meter_type != P4::IR::MAU::MeterType::UNUSED)
@@ -792,7 +792,7 @@ void DoInstructionSelection::limitWidth(const P4::IR::Expression *e) {
     unsigned short max_size = static_cast<unsigned short>(
             *Device::phvSpec().containerSizes().rbegin());
     if (bits && bits->width_bits() > max_size) {
-        ::error(ErrorType::ERR_OVERLIMIT,
+        ::P4::error(ErrorType::ERR_OVERLIMIT,
                 "%1%: Saturating arithmetic operators may not exceed "
                 "maximum PHV container width (%2%b)",
                 e->srcInfo, max_size);
@@ -1552,7 +1552,7 @@ void StatefulAttachmentSetup::Scan::setup_index_operand(const P4::IR::Expression
         if (expressions.size() == 1) {
             simpl_expr = expressions.at(0);
         } else {
-            ::error("Complex expression is not yet supported: %1%", index_expr);
+            ::P4::error("Complex expression is not yet supported: %1%", index_expr);
             return;
         }
     } else {
@@ -1588,7 +1588,7 @@ void StatefulAttachmentSetup::Scan::setup_index_operand(const P4::IR::Expression
             both_hash_and_index = true;
         self.addressed_by_hash.insert(index_check);
     } else if (!simpl_expr->is<P4::IR::Constant>() && !simpl_expr->is<P4::IR::MAU::ActionArg>()) {
-        ::error("%s: The index is too complex for the primitive to be handled.",
+        ::P4::error("%s: The index is too complex for the primitive to be handled.",
              call->prim->srcInfo);
     } else {
         if (self.addressed_by_hash.count(index_check))
@@ -1597,7 +1597,7 @@ void StatefulAttachmentSetup::Scan::setup_index_operand(const P4::IR::Expression
     }
 
     if (both_hash_and_index) {
-        ::error("%s: The attached %s is addressed by both hash and index in %s, "
+        ::P4::error("%s: The attached %s is addressed by both hash and index in %s, "
                 "which cannot be supported.", call->prim->srcInfo, synth2port, tbl); }
 
     StatefulCallKey sck = std::make_pair(call, tbl);
@@ -1649,7 +1649,7 @@ void StatefulAttachmentSetup::Scan::postorder(const P4::IR::MAU::Table *tbl) {
             if (static_cast<int>(prim->operands.size()) > index_op)
                 setup_index_operand(prim->operands[index_op], synth2port, tbl, call);
             else
-                ::error("%s: Indirect attached object %s requires an index to address, as it "
+                ::P4::error("%s: Indirect attached object %s requires an index to address, as it "
                         "isn't directly addressed from the match entry", prim->srcInfo,
                          synth2port->name);
         }
@@ -1982,7 +1982,7 @@ struct StatefulConflict {
         // note: source info objects are not printed as part of the message, they only give the
         // context below the error message -- we use them for the last two arguments to avoid
         // polluting the error message and to give the right context
-        ::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
+        ::P4::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
             "The action %1% indexes %2% with %3% but it also indexes %4% with %5%.%6%%7%", act,
             calls[0]->attached_callee->toString(), calls[0]->index->toString(),
             calls[1]->attached_callee->toString(), calls[1]->index->toString(),
@@ -2068,11 +2068,11 @@ bool SetupAttachedAddressing::ScanTables::preorder(const P4::IR::MAU::Table *tbl
         "with the same expression across all actions they are used in.\n"
         "You can also try to distribute individual indirect externs into separate tables.";
     if (stats_issues.size() > 0) {
-        ::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, common_msg, tbl,
+        ::P4::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, common_msg, tbl,
             boost::algorithm::join(stats_issues, "\n  "));
     }
     if (meter_issues.size() > 0) {
-        ::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, common_msg, tbl,
+        ::P4::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, common_msg, tbl,
             boost::algorithm::join(meter_issues, "\n  "));
     }
     if (state_issues.size() > 0) {
@@ -2080,7 +2080,7 @@ bool SetupAttachedAddressing::ScanTables::preorder(const P4::IR::MAU::Table *tbl
         for (const auto &entry : state_issues)
             entry.fill_conflict_names(error_exts);
 
-        ::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, common_msg, tbl,
+        ::P4::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, common_msg, tbl,
             boost::algorithm::join(error_exts, ", ") + " (see following errors for details).");
         for (const auto &entry : state_issues)
             entry.emitError();
@@ -2317,7 +2317,7 @@ void BackendCopyPropagation::update(const P4::IR::MAU::Instruction *instr, const
         // overlapping ranges for copy propagation are too difficult to handle for the
         // first pass. Just try to handle overlapping set instr now.
         } else if ((!it->dest_bits.intersectWith(bits).empty()) && (instr->name != "set")) {
-            ::error("%s: Currently the field %s[%d:%d] in action %s is assigned in a "
+            ::P4::error("%s: Currently the field %s[%d:%d] in action %s is assigned in a "
                     "way too complex for the compiler to currently handle.  Please consider "
                     "simplifying this action around this parameter", instr->srcInfo,
                     field->name, bits.hi, bits.lo, act->name);
@@ -2393,7 +2393,7 @@ const P4::IR::Expression *BackendCopyPropagation::propagate(const P4::IR::MAU::I
             mask_bits.clrrange(range.lo, range.size());
             LOG4("BackendCopyProp: created slice: " << split_set->back());
         } else {
-           ::error("%s: Currently the field %s[%d:%d] in action %s is read in a way "
+           ::P4::error("%s: Currently the field %s[%d:%d] in action %s is read in a way "
                    "too complex for the compiler to currently handle.  Please consider "
                    "simplifying this action around this parameter", instr->srcInfo,
                    field->name, bits.hi, bits.lo, act->name);
@@ -2505,7 +2505,7 @@ bool VerifyInstructionParams::preorder(const P4::IR::Expression* expr_) {
         // Overlapping set will be handled in the EliminateAllButLastWrite pass
         if (instruction->name != "set") {
             const auto* act_(findContext<P4::IR::MAU::Action>());
-            ::error(ErrorType::ERR_UNSUPPORTED,
+            ::P4::error(ErrorType::ERR_UNSUPPORTED,
                     "%1%: action spanning multiple stages. "
                     "Operations on operand %3% (%4%[%5%..%6%]) in action %2% require multiple "
                     "stages for a single action. We currently support only single stage actions. "
@@ -2668,7 +2668,7 @@ bool EliminateAllButLastWrite::Scan::preorder(const P4::IR::MAU::Instruction *in
     if (field == nullptr) {
         auto *act = findContext<P4::IR::MAU::Action>();
         BUG_CHECK(act != nullptr, "No associated action found for instruction - %1%", instr);
-        ::error("%s: A write of an instruction in action %s is not a PHV field", instr->srcInfo,
+        ::P4::error("%s: A write of an instruction in action %s is not a PHV field", instr->srcInfo,
                 act->name);
         return false;
     }
@@ -2710,7 +2710,7 @@ const P4::IR::Node *EliminateAllButLastWrite::Update::preorder(P4::IR::MAU::Inst
     le_bitrange bits = { 0, 0 };
     auto field = self.phv.field(write, &bits);
     if (field == nullptr) {
-        ::error("%s: A write of an instruction in action %s is not a PHV field", instr->srcInfo,
+        ::P4::error("%s: A write of an instruction in action %s is not a PHV field", instr->srcInfo,
                 current_af->name);
         return instr;
     }
@@ -2794,7 +2794,7 @@ bool ArithCompareAdjustment::Scan::preorder(const P4::IR::MAU::Instruction *inst
         if (!write_field && !field) {
             auto act = findContext<P4::IR::MAU::Action>();
             BUG_CHECK(act != nullptr, "No associated action found for instruction - %1%", instr);
-            ::error("%sA write of an instruction in action %s is not a PHV field", instr->srcInfo,
+            ::P4::error("%sA write of an instruction in action %s is not a PHV field", instr->srcInfo,
                     act->name);
             return false;
         }
@@ -3026,7 +3026,7 @@ void GuaranteeHashDistSize::Scan::postorder(const P4::IR::MAU::Instruction *inst
         return;
 
     if (instr->name != "set")
-        ::error("%1%: Currently cannot handle a non-assignment hash function in an action "
+        ::P4::error("%1%: Currently cannot handle a non-assignment hash function in an action "
                 "where the hash size is not the same size as the write operand", instr);
     else
         self.hash_dist_instrs.insert(instr);

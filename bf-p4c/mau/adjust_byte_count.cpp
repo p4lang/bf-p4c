@@ -84,7 +84,7 @@ bool AdjustByteCountSetup::Scan::preorder(const P4::IR::MAU::Primitive *prim) {
 
         auto adjust_byte_count_op = prim->operands.at(idx)->to<P4::IR::Constant>();
         if (!adjust_byte_count_op) {
-            ::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
+            ::P4::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
                 "Adjust byte count operand on primitive %1% "
                 "does not resolve to a constant value", prim);
             return false;
@@ -95,7 +95,7 @@ bool AdjustByteCountSetup::Scan::preorder(const P4::IR::MAU::Primitive *prim) {
         if (self.adjust_byte_counts.count(obj) > 0) {
             auto exp_count = self.adjust_byte_counts[obj];
             if (adjust_byte_count != exp_count) {
-                ::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
+                ::P4::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
                     "All '%1%' method calls on '%2%' do not have the same"
                     "  value for argument (adjust_byte_count) %2%", prim,
                     obj);

@@ -130,7 +130,7 @@ class TransformTnatoT5na : public PassManager {
                      structure->correspondingIngress[egressName] != ingress) ||
                     (structure->correspondingIngress.count(egressDeparserName) &&
                      structure->correspondingIngress[egressDeparserName] != ingress)) {
-                    ::error("T5NA translation from TNA does not support egress deparser/egress"
+                    ::P4::error("T5NA translation from TNA does not support egress deparser/egress"
                             " used with multiple different ingresses.");
                 }
                 auto eDecl = refMap->getDeclaration(
@@ -140,7 +140,7 @@ class TransformTnatoT5na : public PassManager {
                 CHECK_NULL(egress);
                 if (structure->correspondingEgress.count(ingressName) &&
                     structure->correspondingEgress[ingressName] != egress) {
-                    ::error("T5NA translation from TNA does not support ingress"
+                    ::P4::error("T5NA translation from TNA does not support ingress"
                             " used with multiple different egresses.");
                 }
                 structure->correspondingIngress[egressName] = ingress;
@@ -149,7 +149,7 @@ class TransformTnatoT5na : public PassManager {
             } else if (name == "Switch") {
                 structure->mainInstance = node;
             } else if (name == "MultiParserSwitch") {
-                ::error("T5NA does not support MultiParserSwitch");
+                ::P4::error("T5NA does not support MultiParserSwitch");
             }
         }
 

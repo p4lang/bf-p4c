@@ -69,7 +69,7 @@ bool BFN::CheckExternValidity::preorder(const IR::MethodCallExpression* expr) {
         // emitted field list must be a header
         if (!structAllowed.count(externName) &&
             !cannoType->is<IR::Type_Header>()) {
-            ::error(ErrorType::ERR_TYPE_ERROR, "The parameter %1% in %2% must be a header, "
+            ::P4::error(ErrorType::ERR_TYPE_ERROR, "The parameter %1% in %2% must be a header, "
                     "not a %3%. You may need to specify the type parameter T on %2%", param,
                     expr, cannoType);
             return false; }
@@ -143,7 +143,7 @@ bool BFN::CheckDirectExternsOnTables::preorder(IR::P4Table* table) {
                 }
 
                 if (missingExtern) {
-                    ::error(ErrorType::ERR_TYPE_ERROR,
+                    ::P4::error(ErrorType::ERR_TYPE_ERROR,
                         "Direct Extern - '%2%' of type '%1%' is used in action "
                         "'%3%' but not specified as a '%4%' property on the "
                         "actions table '%5%'. Please add it to the table to "

@@ -55,7 +55,7 @@ void BuildMutex::end_apply() {
         CHECK_NULL(f1);
         if (neverOverlay[*it1]) {
             if (f1->overlayable) {
-                ::warning("Ignoring pa_no_overlay for padding field %1%", f1->name);
+                ::P4::warning("Ignoring pa_no_overlay for padding field %1%", f1->name);
             } else {
                 LOG5("Excluding field from overlay: " << phv.field(*it1));
                 continue;
@@ -69,7 +69,7 @@ void BuildMutex::end_apply() {
             CHECK_NULL(f2);
             if (neverOverlay[*it2]) {
                 if (f2->overlayable) {
-                    ::warning("Ignoring pa_no_overlay for padding field %1%", f2->name);
+                    ::P4::warning("Ignoring pa_no_overlay for padding field %1%", f2->name);
                 } else {
                     LOG5("Excluding field from overlay: " << phv.field(*it2));
                     continue;

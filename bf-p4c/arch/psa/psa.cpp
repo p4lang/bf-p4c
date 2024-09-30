@@ -372,7 +372,7 @@ class TranslateProgram : public Inspector {
         } else {
             auto error_idx = 12 + structure->error_to_constant.size();
             if (error_idx > 15) {
-                ::error("Cannot accomodate custom error %1%", errorName);
+                ::P4::error("Cannot accomodate custom error %1%", errorName);
             } else {
                 structure->error_to_constant[errorName] = error_idx;
                 return error_idx;
@@ -938,14 +938,14 @@ class LoadTargetArchitecture : public Inspector {
         // the file and then open it again as an ofstream.
         auto fd = mkstemps(tempPath, 3);
         if (fd < 0) {
-            ::error("Error mkstemp(%1%): %2%", tempPath, strerror(errno));
+            ::P4::error("Error mkstemp(%1%): %2%", tempPath, strerror(errno));
             return;
         }
         // close the file descriptor and open as stream
         close(fd);
         std::ofstream result(tempPath, std::ios::out);
         if (!result.is_open()) {
-            ::error("Failed to open arch include file %1%", tempPath);
+            ::P4::error("Failed to open arch include file %1%", tempPath);
             return;
         }
         for (auto f : filenames) {
@@ -955,7 +955,7 @@ class LoadTargetArchitecture : public Inspector {
                 result << inFile.rdbuf();
                 inFile.close();
             } else {
-                ::error("Failed to open architecture include file %1%", fPath);
+                ::P4::error("Failed to open architecture include file %1%", fPath);
                 result.close();
                 unlink(tempPath);
                 return;
@@ -1030,7 +1030,7 @@ struct CreateErrorStates : public Transform {
             } else if (expr->is<IR::Neq>()) {
                 (member != constant).match(expr);
             } else {
-                ::error("Verify statement not supported %1%", stmt);
+                ::P4::error("Verify statement not supported %1%", stmt);
             }
             auto errorState = create_error_state(state, error_idx, metaParam);
             newStates[parser->thread].insert(errorState);

@@ -7,14 +7,18 @@
 #include "bf-p4c/ir/bitrange.h"
 #include "bf-p4c/ir/gress.h"
 
+namespace P4 {
 namespace IR {
 namespace BFN {
 class ParserState;
 }  // namespace BFN
 class Expression;
 }  // namespace IR
+}  // namespace P4
 
 namespace BFN {
+
+using namespace P4;
 
 /**
  * A field packing format, consisting of a sequence of spans of bits which are

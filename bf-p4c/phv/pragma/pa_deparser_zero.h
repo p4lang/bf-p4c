@@ -23,8 +23,8 @@ class PragmaDeparserZero : public Inspector {
     /// List of fields for which the deparse zero optimization has to be disabled.
     ordered_set<const PHV::Field*> disableDeparseZeroFields;
 
-    profile_t init_apply(const IR::Node* root) override;
-    bool preorder(const IR::BFN::Pipe* pipe) override;
+    profile_t init_apply(const P4::IR::Node* root) override;
+    bool preorder(const P4::IR::BFN::Pipe* pipe) override;
     void end_apply() override;
 
  public:

@@ -8,7 +8,7 @@ PragmaDeparserZero::supported_pragmas = new std::vector<std::string>{
     PHV::pragma::DISABLE_DEPARSE_ZERO
 };
 
-Visitor::profile_t PragmaDeparserZero::init_apply(const IR::Node* root) {
+Visitor::profile_t PragmaDeparserZero::init_apply(const P4::IR::Node* root) {
     notParsedFields.clear();
     notDeparsedFields.clear();
     disableDeparseZeroFields.clear();
@@ -18,7 +18,7 @@ Visitor::profile_t PragmaDeparserZero::init_apply(const IR::Node* root) {
     return Inspector::init_apply(root);
 }
 
-bool PragmaDeparserZero::preorder(const IR::BFN::Pipe* pipe) {
+bool PragmaDeparserZero::preorder(const P4::IR::BFN::Pipe* pipe) {
     auto global_pragmas = pipe->global_pragmas;
     for (const auto* annotation : global_pragmas) {
         std::string pragma_name = annotation->name.name.string();
@@ -29,27 +29,27 @@ bool PragmaDeparserZero::preorder(const IR::BFN::Pipe* pipe) {
 
         auto& exprs = annotation->expr;
 
-        const IR::StringLiteral *pipe_arg = nullptr;
+        const P4::IR::StringLiteral *pipe_arg = nullptr;
         if (exprs.at(0)) {
             // If pipe is not present, the first argument is nullptr
-            pipe_arg = exprs.at(0)->to<IR::StringLiteral>();
+            pipe_arg = exprs.at(0)->to<P4::IR::StringLiteral>();
             if (!pipe_arg) {
-                ::warning(ErrorType::WARN_INVALID,
+                ::P4::warning(ErrorType::WARN_INVALID,
                     "%1%: Found a non-string literal argument `pipe'. Ignoring pragma.",
                     exprs.at(0));
                 continue;
             }
         }
-        auto gress_arg = exprs.at(1)->to<IR::StringLiteral>();
+        auto gress_arg = exprs.at(1)->to<P4::IR::StringLiteral>();
         if (!gress_arg) {
-            ::warning(ErrorType::WARN_INVALID,
+            ::P4::warning(ErrorType::WARN_INVALID,
                 "%1%: Found a non-string literal argument `gress'. Ignoring pragma.",
                 exprs.at(1));
             continue;
         }
-        auto field_ir = exprs.at(2)->to<IR::StringLiteral>();
+        auto field_ir = exprs.at(2)->to<P4::IR::StringLiteral>();
         if (!field_ir) {
-            ::warning(ErrorType::WARN_INVALID,
+            ::P4::warning(ErrorType::WARN_INVALID,
                 "%1%: Found a non-string literal argument `field'. Ignoring pragma.",
                 exprs.at(2));
             continue;

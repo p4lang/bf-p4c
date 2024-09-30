@@ -15,9 +15,9 @@ const IR::Type* TypeInference::setTypeType(const IR::Type* type, bool learn) {
         // Learn the new type
         if (canon != typeToCanonicalize && learn) {
             TypeInference tc(typeMap, true);
-            unsigned e = ::errorCount();
+            unsigned e = ::P4::errorCount();
             (void)canon->apply(tc);
-            if (::errorCount() > e)
+            if (::P4::errorCount() > e)
                 return nullptr;
         }
         auto tt = new IR::Type_Type(canon);
@@ -41,7 +41,7 @@ const IR::Node* TypeInference::postorder(IR::BFN::ReinterpretCast *expression) {
         !castType->is<IR::Type_Boolean>() &&
         !castType->is<IR::Type_Newtype>() &&
         !castType->is<IR::Type_SerEnum>()) {
-        ::error("%1%: cast not supported", expression->destType);
+        ::P4::error("%1%: cast not supported", expression->destType);
         return expression;
     }
     setType(expression, castType);
@@ -59,7 +59,7 @@ const IR::Node* TypeInference::postorder(IR::BFN::SignExtend *expression) {
     if (sourceType == nullptr || castType == nullptr)
         return expression;
     if (!castType->is<IR::Type_Bits>()) {
-        ::error("%1%: cast not supported", expression->destType);
+        ::P4::error("%1%: cast not supported", expression->destType);
         return expression;
     }
     setType(expression, castType);

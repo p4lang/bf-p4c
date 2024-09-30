@@ -238,7 +238,7 @@ void TableLayout::check_for_ternary(P4::IR::MAU::Table::Layout &layout, const P4
     auto annot = tbl->match_table->getAnnotations();
     if (auto s = annot->getSingle("ternary"_cs)) {
         if (s->expr.size() <= 0) {
-            ::warning(BFN::ErrorType::WARN_PRAGMA_USE,
+            ::P4::warning(BFN::ErrorType::WARN_PRAGMA_USE,
                       "Pragma ternary ignored for table %1% because value is undefined", tbl);
         } else {
             auto *pragma_val = s->expr.at(0)->to<P4::IR::Constant>();
@@ -247,7 +247,7 @@ void TableLayout::check_for_ternary(P4::IR::MAU::Table::Layout &layout, const P4
             if (pragma_val->asInt() == 1)
                 layout.ternary = true;
             else
-                ::warning(BFN::ErrorType::WARN_PRAGMA_USE,
+                ::P4::warning(BFN::ErrorType::WARN_PRAGMA_USE,
                           "Pragma ternary ignored for table %1% because value is not 1", tbl);
         }
     } else {
@@ -276,7 +276,7 @@ void DoTableLayout::check_for_proxy_hash(P4::IR::MAU::Table::Layout &layout,
     auto annot = tbl->match_table->getAnnotations();
     if (auto s = annot->getSingle("proxy_hash_width"_cs)) {
         if (s->expr.size() <= 0) {
-            ::warning(BFN::ErrorType::WARN_PRAGMA_USE,
+            ::P4::warning(BFN::ErrorType::WARN_PRAGMA_USE,
                       "Proxy hash pragma ignored for table %1% because value is undefined.",
                       tbl);
         } else {
@@ -312,7 +312,7 @@ bool DoTableLayout::check_for_versioning(const P4::IR::MAU::Table *tbl) {
             if (bl) {
                 rv = bl->value;
             } else {
-                ::error("%1% requires_versioning property on table %2% is only allowed to be "
+                ::P4::error("%1% requires_versioning property on table %2% is only allowed to be "
                      "a boolean variable", prop, tbl->name);
             }
         }
@@ -325,7 +325,7 @@ bool DoTableLayout::check_for_versioning(const P4::IR::MAU::Table *tbl) {
             if (pragma_val && (pragma_val->asInt() == 1 || pragma_val->asInt() == 0)) {
                 rv = pragma_val->asInt() == 0;
             } else {
-               ::error("%1% the no_versioning pragma on table %2% is only allowed a 1 or 0 "
+               ::P4::error("%1% the no_versioning pragma on table %2% is only allowed a 1 or 0 "
                    "option", s, tbl->name);
             }
         }
@@ -494,7 +494,7 @@ void DoTableLayout::setup_match_layout(P4::IR::MAU::Table::Layout &layout, const
 #else
     if (!layout.requires_versioning && !layout.ternary)
 #endif
-        ::error("%1%: Tables, such as %2% that do not require versioning must be allocated to "
+        ::P4::error("%1%: Tables, such as %2% that do not require versioning must be allocated to "
                 "the TCAM array", tbl, tbl->name);
 
     safe_vector<int> byte_sizes;
@@ -676,7 +676,7 @@ int LayoutChoices::get_pack_pragma_val(const P4::IR::MAU::Table *tbl,
         if (pragma_val) {
             pack_val = pragma_val->asInt();
             if (pack_val < MIN_PACK || pack_val > MAX_PACK) {
-                ::warning(ErrorType::WARN_INVALID,
+                ::P4::warning(ErrorType::WARN_INVALID,
                           "%1%: The provide pack pragma value for table %2% is %3%, when the "
                           "compiler only supports pack values between %4% and %5%",
                           tbl, tbl->externalName(), pack_val, MIN_PACK, MAX_PACK);
@@ -686,7 +686,7 @@ int LayoutChoices::get_pack_pragma_val(const P4::IR::MAU::Table *tbl,
     }
 
     if (pack_val > 0 && layout_proto.sel_len_bits > 0 && pack_val != 1) {
-        ::error(ErrorType::ERR_INVALID,
+        ::P4::error(ErrorType::ERR_INVALID,
                 "table %1%. It has a pack value of %2% provided, but also uses a wide selector, "
                 "which requires a pack of 1.", tbl, pack_val);
         return 0;
@@ -1086,7 +1086,7 @@ bool DoTableLayout::preorder(P4::IR::MAU::Table *tbl) {
                 if (dkm == 1) {
                     tbl->dynamic_key_masks = true;
                 } else {
-                    ::warning(ErrorType::WARN_INVALID,
+                    ::P4::warning(ErrorType::WARN_INVALID,
                               "%1%: The dynammic_table_key_masks pragma value for table %2% is %3%"
                               ", when the compiler only supports value of 1",
                               tbl, tbl->externalName(), dkm);
@@ -1315,20 +1315,20 @@ void AssignCounterLRTValues::ComputeLRT::calculate_lrt_threshold_and_interval(
                     "lrt_enable pragma on counter %1%. Does not have a value.", cntr);
         auto pragma_val = s->expr.at(0)->to<P4::IR::Constant>();
         if (pragma_val == nullptr) {
-            ::error(ErrorType::ERR_INVALID,
+            ::P4::error(ErrorType::ERR_INVALID,
                     "lrt_enable value on counter %1%. It is not a constant.", cntr);
             return;
         }
         auto real_val = pragma_val->asInt();
         if (real_val == 0) return;  // disabled
         if (real_val != 1) {
-            ::error(ErrorType::ERR_INVALID,
+            ::P4::error(ErrorType::ERR_INVALID,
                     "lrt_enable value on counter %1%.", cntr);
             return;
         }
         lrt_enabled = true;
         if (cntr->min_width >= 64) {
-            ::error(ErrorType::ERR_INVALID,
+            ::P4::error(ErrorType::ERR_INVALID,
                     "LR(t). Cannot be used on 64 bit counter %1%.", cntr);
             return;
         }
@@ -1340,13 +1340,13 @@ void AssignCounterLRTValues::ComputeLRT::calculate_lrt_threshold_and_interval(
         if (s) {
             auto lrt_val = s->expr.at(0)->to<P4::IR::Constant>();
             if (lrt_val == nullptr) {
-                ::error(ErrorType::ERR_INVALID,
+                ::P4::error(ErrorType::ERR_INVALID,
                         "lrt_scale value on counter %1%. It is not a constant.", cntr);
                 return;
             }
             lrt_scale = lrt_val->asInt();
             if (lrt_scale <= 0) {
-                ::error(ErrorType::ERR_INVALID, "lrt_scale value on counter %1%.", cntr);
+                ::P4::error(ErrorType::ERR_INVALID, "lrt_scale value on counter %1%.", cntr);
                 return;
             }
         }
@@ -1376,7 +1376,7 @@ void AssignCounterLRTValues::ComputeLRT::calculate_lrt_threshold_and_interval(
         if (Device::currentDevice() == Device::FLATROCK)
             return;
 #endif  /* HAVE_FLATROCK */
-        ::error(ErrorType::ERR_NOT_FOUND,
+        ::P4::error(ErrorType::ERR_NOT_FOUND,
                 "Unable to find memory allocation for counter %1% that was "
                 "accessed by %2%", cntr->name, tbl->externalName());
         return;
@@ -1494,7 +1494,7 @@ void RandomExternUsedOncePerAction::postorder(const P4::IR::MAU::RandomNumber *r
     RandKey key = std::make_pair(tbl, act);
     auto &externs = rand_extern_per_action[key];
     if (externs.count(rn))
-        ::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "%1%: Random number extern %2% is used "
+        ::P4::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "%1%: Random number extern %2% is used "
                 "more than one time in action %3%, table %4%, which is currently unsupported "
                 "by p4c.  Please use a random extern only once per action", rn, rn->name,
                 act->name, tbl->name);
@@ -1533,7 +1533,7 @@ bool ProhibitAtcamWideSelectors::preorder(const P4::IR::MAU::Selector *as) {
     auto tbl = findContext<P4::IR::MAU::Table>();
     CHECK_NULL(tbl);
     if (as->max_pool_size > StageUseEstimate::SINGLE_RAMLINE_POOL_SIZE && tbl->layout.atcam) {
-        ::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
+        ::P4::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
                 "ATCAM table %2% cannot have selector %1%.  An ATCAM table may require "
                 "multiple logical tables, and a selector that has a max pool size greater "
                 "than %3%, (in this instance %4%), the selector can only belong to a single "
@@ -1616,7 +1616,7 @@ bool MeterColorMapramAddress::DetermineMeterReqs::preorder(const P4::IR::MAU::Me
         possible -= occ_pos->second;
 
     if (possible.empty()) {
-        ::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
+        ::P4::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
                 "The meter '%1%' requires %2% stats address bus to return a color value, and no "
                 "bus is available.", mtr, need_stats ? "a" : "either an idletime or"); }
     self.possible_addresses[mtr] = possible;
@@ -1652,11 +1652,11 @@ void CheckPlacementPriorities::end_apply() {
         for (auto pri : entry.second) {
             auto other_entry = placement_priorities.find(pri);
             if (other_entry == placement_priorities.end()) {
-                ::warning("The placement_priority %1% on table %2% cannot find the associated "
+                ::P4::warning("The placement_priority %1% on table %2% cannot find the associated "
                     "table", entry.first, pri);
                 continue;
             } else if (other_entry->second.count(entry.first)) {
-                ::error("Tables %1% and %2% have both been prioritized over each other, which "
+                ::P4::error("Tables %1% and %2% have both been prioritized over each other, which "
                     "is nonsensical.", entry.first, pri);
             }
         }

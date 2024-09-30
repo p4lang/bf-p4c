@@ -7,7 +7,7 @@
 #include "lib/cstring.h"
 #include "lib/indent.h"
 
-std::ostream& operator<<(std::ostream& out, const IR::BFN::Phase0* p0) {
+std::ostream& operator<<(std::ostream& out, const P4::IR::BFN::Phase0* p0) {
     if (p0 == nullptr) return out;
     indent_t indent(1);
     out <<   indent << "phase0_match " << p0->tableName << ":" << std::endl;
@@ -47,7 +47,7 @@ std::ostream& operator<<(std::ostream& out, const IR::BFN::Phase0* p0) {
         if (isPadding)
             packing->appendPadding(field->type->width_bits());
         else
-            packing->appendField(new IR::StringLiteral(field->name),
+            packing->appendField(new P4::IR::StringLiteral(field->name),
                                  field->name,
                                  field->type->width_bits());
     }

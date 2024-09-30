@@ -42,7 +42,7 @@ const char *PragmaNoInit::help = "@pragma pa_no_init [pipe] gress inst_name.fiel
     "Use this pragma with care.  If that unexpected "
     "control flow path is exercised, the field will have an unknown value.";
 
-bool PragmaNoInit::preorder(const IR::BFN::Pipe* pipe) {
+bool PragmaNoInit::preorder(const P4::IR::BFN::Pipe* pipe) {
     auto global_pragmas = pipe->global_pragmas;
     for (const auto* annotation : global_pragmas) {
         if (annotation->name.name != PragmaNoInit::name)
@@ -57,8 +57,8 @@ bool PragmaNoInit::preorder(const IR::BFN::Pipe* pipe) {
         const unsigned min_required_arguments = 2;  // gress, field
         unsigned required_arguments = min_required_arguments;
         unsigned expr_index = 0;
-        const IR::StringLiteral *pipe_arg = nullptr;
-        const IR::StringLiteral *gress_arg = nullptr;
+        const P4::IR::StringLiteral *pipe_arg = nullptr;
+        const P4::IR::StringLiteral *gress_arg = nullptr;
 
         if (!PHV::Pragmas::determinePipeGressArgs(exprs, expr_index,
                 required_arguments, pipe_arg, gress_arg)) {
@@ -75,7 +75,7 @@ bool PragmaNoInit::preorder(const IR::BFN::Pipe* pipe) {
             continue;
         }
 
-        auto field_ir = exprs[expr_index++]->to<IR::StringLiteral>();
+        auto field_ir = exprs[expr_index++]->to<P4::IR::StringLiteral>();
 
         auto field_name = gress_arg->value + "::" + field_ir->value;
         const PHV::Field* field = phv_i.field(field_name);
@@ -85,7 +85,7 @@ bool PragmaNoInit::preorder(const IR::BFN::Pipe* pipe) {
         }
 
         if (!field->metadata) {
-            ::warning("@pragma pa_no_init ignored for non-metadata field %1%", field_name);
+            ::P4::warning("@pragma pa_no_init ignored for non-metadata field %1%", field_name);
             continue;
         }
 

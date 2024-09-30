@@ -46,12 +46,12 @@ class HashMaskAnnotations {
     bitvec getBitvec(const P4::IR::Annotation* annotation) {
         bitvec rv;
         if (annotation->expr.size() != 1) {
-            ::error("%1% should contain a constant", annotation);
+            ::P4::error("%1% should contain a constant", annotation);
             return rv;
         }
         auto constant = annotation->expr[0]->to<P4::IR::Constant>();
         if (constant == nullptr) {
-            ::error("%1% should contain a constant", annotation);
+            ::P4::error("%1% should contain a constant", annotation);
             return rv;
         }
         int64_t c = constant->asUint64();

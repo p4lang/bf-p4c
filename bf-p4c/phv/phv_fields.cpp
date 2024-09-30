@@ -1497,7 +1497,7 @@ struct ComputeFieldAlignments : public Inspector {
 
         auto* fieldInfo = phv.field(lval->field);
         if (!fieldInfo) {
-            ::warning(BFN::ErrorType::WARN_PHV_ALLOCATION, "No allocation for field %1%",
+            ::P4::warning(BFN::ErrorType::WARN_PHV_ALLOCATION, "No allocation for field %1%",
                       extract->dest);
             return false;
         }
@@ -1567,7 +1567,7 @@ struct ComputeFieldAlignments : public Inspector {
 
             auto* fieldInfo = phv.field(emit->source->field);
             if (!fieldInfo) {
-                ::warning(BFN::ErrorType::WARN_PHV_ALLOCATION, "No allocation for field %1%",
+                ::P4::warning(BFN::ErrorType::WARN_PHV_ALLOCATION, "No allocation for field %1%",
                           emit->source);
                 currentBit = 0;
                 continue;

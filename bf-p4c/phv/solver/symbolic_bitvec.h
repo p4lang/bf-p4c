@@ -10,6 +10,8 @@ namespace solver {
 
 namespace symbolic_bitvec {
 
+using namespace P4;
+
 /// BitID encodes a symbolic bit
 /// < 0  illegal
 ///   0  represents the const zero.

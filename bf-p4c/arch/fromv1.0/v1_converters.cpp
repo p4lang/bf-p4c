@@ -615,9 +615,9 @@ const IR::Node* PathExpressionConverter::postorder(IR::Member *node) {
         } else if (otherMap.count(MetadataField{pathname, membername, type->size})) {
             auto wasReported = reportedErrors.insert(PathAndMember(pathname, membername));
             if (wasReported.second)
-                ::error("%1% is not accessible in the %2% pipe", node, toString(thread));
+                ::P4::error("%1% is not accessible in the %2% pipe", node, toString(thread));
         } else if (pathname == "standard_metadata") {
-            ::error("standard_metadata field %1% cannot be translated, you "
+            ::P4::error("standard_metadata field %1% cannot be translated, you "
                     "cannot use it in your program", node);
         }
     }

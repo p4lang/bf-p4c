@@ -82,7 +82,7 @@ struct BFRuntimeSchemaGenerator::ActionSelector {
         const auto& pre = externInstance.preamble();
         ::barefoot::ActionSelector actionSelector;
         if (!externInstance.info().UnpackTo(&actionSelector)) {
-            ::error("Extern instance %1% does not pack an ActionSelector object", pre.name());
+            ::P4::error("Extern instance %1% does not pack an ActionSelector object", pre.name());
             return std::nullopt;
         }
         auto selectorId = makeBFRuntimeId(pre.id(), ::barefoot::P4Ids::ACTION_SELECTOR);
@@ -111,7 +111,7 @@ struct BFRuntimeSchemaGenerator::ValueSet {
         const auto& pre = externInstance.preamble();
         ::barefoot::ValueSet valueSet;
         if (!externInstance.info().UnpackTo(&valueSet)) {
-            ::error("Extern instance %1% does not pack a value set object", pre.name());
+            ::P4::error("Extern instance %1% does not pack a value set object", pre.name());
             return std::nullopt;
         }
         return ValueSet{pre.name(), pre.id(), valueSet.type_spec(), valueSet.size(),
@@ -133,7 +133,7 @@ struct BFRuntimeSchemaGenerator::Lpf {
         const auto& pre = externInstance.preamble();
         ::barefoot::Lpf lpf;
         if (!externInstance.info().UnpackTo(&lpf)) {
-            ::error("Extern instance %1% does not pack a Lpf object", pre.name());
+            ::P4::error("Extern instance %1% does not pack a Lpf object", pre.name());
             return std::nullopt;
         }
         return Lpf{pre.name(), pre.id(), lpf.size(), transformAnnotations(pre)};
@@ -144,7 +144,7 @@ struct BFRuntimeSchemaGenerator::Lpf {
         const auto& pre = externInstance.preamble();
         ::barefoot::DirectLpf lpf;
         if (!externInstance.info().UnpackTo(&lpf)) {
-            ::error("Extern instance %1% does not pack a Lpf object", pre.name());
+            ::P4::error("Extern instance %1% does not pack a Lpf object", pre.name());
             return std::nullopt;
         }
         return Lpf{pre.name(), pre.id(), 0, transformAnnotations(pre)};
@@ -165,7 +165,7 @@ struct BFRuntimeSchemaGenerator::RegisterParam {
         const auto& pre = externInstance.preamble();
         ::barefoot::RegisterParam register_param_;
         if (!externInstance.info().UnpackTo(&register_param_)) {
-            ::error("Extern instance %1% does not pack a RegisterParam object", pre.name());
+            ::P4::error("Extern instance %1% does not pack a RegisterParam object", pre.name());
             return std::nullopt;
         }
         return RegisterParam{pre.name(),
@@ -190,7 +190,7 @@ struct BFRuntimeSchemaGenerator::PortMetadata {
         const auto& pre = externInstance.preamble();
         ::barefoot::PortMetadata portMetadata;
         if (!externInstance.info().UnpackTo(&portMetadata)) {
-            ::error("Extern instance %1% does not pack a PortMetadata object", pre.name());
+            ::P4::error("Extern instance %1% does not pack a PortMetadata object", pre.name());
             return std::nullopt;
         }
         return PortMetadata{pre.id(), pre.name(),
@@ -239,7 +239,7 @@ struct BFRuntimeSchemaGenerator::DynHash {
         const auto& pre = externInstance.preamble();
         ::barefoot::DynHash dynHash;
         if (!externInstance.info().UnpackTo(&dynHash)) {
-            ::error("Extern instance %1% does not pack a PortMetadata object", pre.name());
+            ::P4::error("Extern instance %1% does not pack a PortMetadata object", pre.name());
             return std::nullopt;
         }
         std::vector<hashField> hfInfo;
@@ -278,7 +278,7 @@ struct BFRuntimeSchemaGenerator::Snapshot {
         const auto& pre = externInstance.preamble();
         ::barefoot::Snapshot snapshot;
         if (!externInstance.info().UnpackTo(&snapshot)) {
-            ::error("Extern instance %1% does not pack a Snapshot object", pre.name());
+            ::P4::error("Extern instance %1% does not pack a Snapshot object", pre.name());
             return std::nullopt;
         }
         std::string name = snapshot.pipe() + ".snapshot";
@@ -306,7 +306,7 @@ struct BFRuntimeSchemaGenerator::ParserChoices {
         const auto& pre = externInstance.preamble();
         ::barefoot::ParserChoices parserChoices;
         if (!externInstance.info().UnpackTo(&parserChoices)) {
-            ::error("Extern instance %1% does not pack a ParserChoices object", pre.name());
+            ::P4::error("Extern instance %1% does not pack a ParserChoices object", pre.name());
             return std::nullopt;
         }
         std::string name;
@@ -338,7 +338,7 @@ struct BFRuntimeSchemaGenerator::Wred {
         const auto& pre = externInstance.preamble();
         ::barefoot::Wred wred;
         if (!externInstance.info().UnpackTo(&wred)) {
-            ::error("Extern instance %1% does not pack a Wred object", pre.name());
+            ::P4::error("Extern instance %1% does not pack a Wred object", pre.name());
             return std::nullopt;
         }
         return Wred{pre.name(), pre.id(), wred.size(), transformAnnotations(pre)};
@@ -349,7 +349,7 @@ struct BFRuntimeSchemaGenerator::Wred {
         const auto& pre = externInstance.preamble();
         ::barefoot::DirectWred wred;
         if (!externInstance.info().UnpackTo(&wred)) {
-            ::error("Extern instance %1% does not pack a Wred object", pre.name());
+            ::P4::error("Extern instance %1% does not pack a Wred object", pre.name());
             return std::nullopt;
         }
         return Wred{pre.name(), pre.id(), 0, transformAnnotations(pre)};
@@ -501,7 +501,7 @@ BFRuntimeSchemaGenerator::addActionProfIds(const p4configv1::Table& table,
     if (implementationId > 0) {
         auto hasSelector = actProfHasSelector(implementationId);
         if (hasSelector == std::nullopt) {
-            ::error("Invalid implementation id in p4info: %1%", implementationId);
+            ::P4::error("Invalid implementation id in p4info: %1%", implementationId);
             return false;
         }
         cstring tableType = ""_cs;
@@ -579,7 +579,7 @@ void BFRuntimeSchemaGenerator::addDirectResources(const p4configv1::Table& table
         } else if (auto lpf = getDirectWred(directResId)) {
             addWredDataFields(dataJson);
         } else {
-            ::error("Unknown direct resource id '%1%'", directResId);
+            ::P4::error("Unknown direct resource id '%1%'", directResId);
             continue;
         }
     }

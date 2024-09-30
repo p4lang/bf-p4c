@@ -45,7 +45,7 @@ static std::pair<unsigned, unsigned> getAlignLoHi(const IR::Member* member) {
 }
 
 void ParserCounterConverter::cannotFit(const IR::AssignmentStatement* stmt, const char* what) {
-    ::error("Parser counter %1% amount cannot fit into 8-bit. %2%", what, stmt);
+    ::P4::error("Parser counter %1% amount cannot fit into 8-bit. %2%", what, stmt);
 }
 
 const IR::Node* ParserCounterConverter::postorder(IR::AssignmentStatement* ) {
@@ -146,7 +146,7 @@ const IR::Node* ParserCounterConverter::postorder(IR::AssignmentStatement* ) {
     }
 
     if (!methodCall)
-        ::error("Unsupported syntax for parser counter: %1%", stmt);
+        ::P4::error("Unsupported syntax for parser counter: %1%", stmt);
 
     return methodCall;
 }
@@ -163,7 +163,7 @@ struct ParserCounterSelectCaseConverter : Transform {
             if (auto member = select->to<IR::Member>()) {
                 if (isParserCounter(member)) {
                     if (counterIdx >= 0)
-                        ::error("Multiple selects on parser counter in %1%", node);
+                        ::P4::error("Multiple selects on parser counter in %1%", node);
                     counterIdx = i;
                 }
             }
@@ -184,7 +184,7 @@ struct ParserCounterSelectCaseConverter : Transform {
                 if (val & 0x80) {
                     isNegative = true;
                 } else if (val) {
-                    ::error("Parser counter only supports test of value being zero or negative.");
+                    ::P4::error("Parser counter only supports test of value being zero or negative.");
                 }
             }
 

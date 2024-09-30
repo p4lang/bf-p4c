@@ -47,7 +47,7 @@ getExternInstanceFromPropertyByTypeName(const IR::P4Table* table,
     auto property = table->properties->getProperty(propertyName);
     if (property == nullptr) return std::nullopt;
     if (!property->value->is<IR::ExpressionValue>()) {
-        ::error(ErrorType::ERR_EXPECTED,
+        ::P4::error(ErrorType::ERR_EXPECTED,
                 "Expected %1% property value for table %2% to be an expression: %3%",
                 propertyName, table->controlPlaneName(), property);
         return std::nullopt;
@@ -59,14 +59,14 @@ getExternInstanceFromPropertyByTypeName(const IR::P4Table* table,
         if (isConstructedInPlace) *isConstructedInPlace = expr->is<IR::ConstructorCallExpression>();
         if (expr->is<IR::ConstructorCallExpression>()
                 && property->getAnnotation(IR::Annotation::nameAnnotation) == nullptr) {
-            ::error(ErrorType::ERR_UNSUPPORTED,
+            ::P4::error(ErrorType::ERR_UNSUPPORTED,
                     "Table '%1%' has an anonymous table property '%2%' with no name annotation, "
                     "which is not supported by P4Runtime", table->controlPlaneName(), propertyName);
         }
         auto name = property->controlPlaneName();
         auto externInstance = P4::ExternInstance::resolve(expr, refMap, typeMap, name);
         if (!externInstance) {
-            ::error(ErrorType::ERR_INVALID,
+            ::P4::error(ErrorType::ERR_INVALID,
                     "Expected %1% property value for table %2% to resolve to an "
                     "extern instance: %3%", propertyName, table->controlPlaneName(),
                     property);
@@ -88,7 +88,7 @@ getExternInstanceFromPropertyByTypeName(const IR::P4Table* table,
         return std::nullopt;
 
     if (rv.size() > 1) {
-        ::error(ErrorType::ERR_UNSUPPORTED,
+        ::P4::error(ErrorType::ERR_UNSUPPORTED,
                 "Table '%1%' has more than one extern with type '%2%' attached to "
                 "property '%3%', which is not supported by Tofino", table->controlPlaneName(),
                 externTypeName, propertyName);
@@ -108,7 +108,7 @@ getExternInstanceFromProperty(const IR::P4Table* table,
     auto property = table->properties->getProperty(propertyName);
     if (property == nullptr) return std::nullopt;
     if (!property->value->is<IR::ExpressionValue>()) {
-        ::error("Expected %1% property value for table %2% to be an expression: %3%",
+        ::P4::error("Expected %1% property value for table %2% to be an expression: %3%",
                 propertyName, table->controlPlaneName(), property);
         return std::nullopt;
     }
@@ -117,7 +117,7 @@ getExternInstanceFromProperty(const IR::P4Table* table,
     auto name = property->controlPlaneName();
     auto externInstance = P4::ExternInstance::resolve(expr, refMap, typeMap, name);
     if (!externInstance) {
-        ::error("Expected %1% property value for table %2% to resolve to an "
+        ::P4::error("Expected %1% property value for table %2% to resolve to an "
                 "extern instance: %3%", propertyName, table->controlPlaneName(),
                 property);
         return std::nullopt; }
@@ -131,7 +131,7 @@ getExpressionFromProperty(const IR::P4Table* table,
     auto property = table->properties->getProperty(propertyName);
     if (property == nullptr) return std::nullopt;
     if (!property->value->is<IR::ExpressionValue>()) {
-        ::error("Expected %1% property value for table %2% to be an expression: %3%",
+        ::P4::error("Expected %1% property value for table %2% to be an expression: %3%",
                 propertyName, table->controlPlaneName(), property);
         return std::nullopt;
     }

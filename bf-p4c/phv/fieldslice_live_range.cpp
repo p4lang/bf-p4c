@@ -361,7 +361,7 @@ void FieldSliceLiveRangeDB::DBSetter::update_live_range_info(const PHV::FieldSli
         // There could be a table that has a dominating write of this read in control flow
         // but because of ignore_table_dependency pragma, the write table is placed after
         // the read table. Then we need to find write of the read earlier in the pipeline.
-        ::warning(
+        ::P4::warning(
             "Because of ignore_table_dependency pragma, for %1% field, the read in stage %2% "
             "cannot source its definition of the write in stage %3%. Unexpected value might be "
             "read and physical live range analysis will set its liverange to the whole pipeline,"

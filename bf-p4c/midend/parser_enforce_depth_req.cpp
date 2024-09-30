@@ -217,7 +217,7 @@ class IdentifyPadRequirements : public Inspector {
         if (!callsMethod) {
             LOG1("Not padding parser " << prsr->externalName() << ": parser doesn't do anything");
         } else if (maxDepth > maxDepthAllowed && !BackendOptions().disable_parse_max_depth_limit) {
-            ::error(
+            ::P4::error(
                 "Parser %1%: longest path through parser (%2%B) exceeds maximum parse depth (%3%B)",
                 prsr->externalName(), maxDepth, maxDepthAllowed);
         } else if (minDepth < minDepthAllowed) {
@@ -237,7 +237,7 @@ class IdentifyPadRequirements : public Inspector {
 
             // Verify that we're not already using the counter
             if (counterInUse && hdrTypeIsStruct)
-                ::error(
+                ::P4::error(
                     "Can't enforce minimum parse depth for parser %1% because parser "
                     "counter is already used. You must manually enforce minimum (%2%B) / maximum "
                     "(%3%B) parse depths in the parse graph.",
@@ -339,7 +339,7 @@ class IdentifyPadRequirements : public Inspector {
                     LOG3("Advance in state " << state->externalName() << ": " << c->asInt() << "b");
                     currStateSize += c->asInt();
                 } else {
-                    ::error(
+                    ::P4::error(
                         "Variable-length advance statement found in state %1% of parser %2%. "
                         "Please manually enforce minimum (%3%B) / maximum (%4%B) parse depths in "
                         "the parse graph.",
@@ -593,7 +593,7 @@ class AddParserPad : public Modifier {
                          !BackendOptions().disable_parse_min_depth_limit;
         }
         if (hasPadReq && BackendOptions().arch == "psa")
-            ::error(
+            ::P4::error(
                 "Can't enforce minimum parse depth for PSA programs. You must manually enforce the "
                 "minimum parse depth in parse graphs.");
         return hasPadReq;
@@ -646,7 +646,7 @@ class AddParserPad : public Modifier {
             prsrCtrExtern = getOriginal<IR::Type_Extern>();
             // Identify P4-14 ParserCounter: it has a type parameter
             if (te->typeParameters && te->typeParameters->size())
-                ::error(
+                ::P4::error(
                     "Can't enforce minimum parse depth for programs with \"extern "
                     "ParserCounter<W>\". You must manually enforce the minimum parse depth.");
         } else if (te->name == "packet_in") {
@@ -830,7 +830,7 @@ class AddParserPad : public Modifier {
         if (tofArch.count(BackendOptions().arch))
             argsToCheck = {std::make_pair(0, 0), std::make_pair(3, 2)};
         else
-            ::error("Unsupported architecture \"%1%\" for parser minimum depth enforcement",
+            ::P4::error("Unsupported architecture \"%1%\" for parser minimum depth enforcement",
                     BackendOptions().arch);
 
         if (auto *di = getParent<IR::Declaration_Instance>()) {

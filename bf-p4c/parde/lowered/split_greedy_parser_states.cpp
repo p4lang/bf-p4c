@@ -255,7 +255,7 @@ IR::BFN::ParserState* SplitGreedyParserStates::postorder(IR::BFN::ParserState* s
 
     while (!state_pkt_too_short_verify(state, select_args_incompatible)) {
         if (select_args_incompatible) {
-            ::error(ErrorType::ERR_UNSUPPORTED,
+            ::P4::error(ErrorType::ERR_UNSUPPORTED,
                     "Mixing non-greedy and greedy extracted fields in select "
                     "statement is unsupported.");
         } else {

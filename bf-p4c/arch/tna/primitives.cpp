@@ -290,7 +290,7 @@ CONVERT_PRIMITIVE(invalidate, 1) {
     ExpressionConverter conv(structure);
     auto arg = conv.convert(primitive->operands.at(0));
     if (arg->is<IR::Constant>())
-        ::error("Expected a field reference %1%", arg);
+        ::P4::error("Expected a field reference %1%", arg);
     return new IR::MethodCallStatement(primitive->srcInfo,
             IR::ID(primitive->srcInfo, "invalidate"_cs), { new IR::Argument(arg) });
 }
@@ -322,7 +322,7 @@ static bool makeTnaMeterExecCall(const Util::SourceInfo &srcInfo, ProgramStructu
     else if (auto nr = mref->to<IR::PathExpression>())
         meter = structure->meters.get(nr->path->name);
     if (meter == nullptr) {
-        ::error("Expected a meter reference %1%", mref);
+        ::P4::error("Expected a meter reference %1%", mref);
         return false; }
     auto meterref = new IR::PathExpression(structure->meters.get(meter));
     auto method = new IR::Member(meterref, "execute");
@@ -358,7 +358,7 @@ CONVERT_PRIMITIVE(count_from_hash, 2) {
     else if (auto nr = ref->to<IR::PathExpression>())
         counter = structure->counters.get(nr->path->name);
     if (counter == nullptr) {
-        ::error("Expected a counter reference %1%", ref);
+        ::P4::error("Expected a counter reference %1%", ref);
         return nullptr; }
     cstring temp = structure->makeUniqueName("temp"_cs);
     auto block = P4V1::generate_hash_block_statement(structure, primitive, temp, conv, 2);
@@ -595,7 +595,7 @@ CONVERT_PRIMITIVE(sample_e2e, 1) {
     (void)primitive;
 
     if (using_tna_arch()) {
-        ::error(
+        ::P4::error(
             ErrorType::ERR_UNSUPPORTED,
             "sample_e2e primitive is not currently supported by the TNA architecture");
     }

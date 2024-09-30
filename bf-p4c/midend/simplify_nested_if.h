@@ -112,18 +112,18 @@ class UniqueAndValidDest : public SimplifyComplexConditionPolicy {
         BFN::PathLinearizer path;
         dest->apply(path);
         if (!path.linearPath) {
-            ::error("Destination %1% is too complex ", dest);
+            ::P4::error("Destination %1% is too complex ", dest);
             return false; }
 
         auto* param = BFN::getContainingParameter(*path.linearPath, refMap);
         auto* paramType = typeMap->getType(param);
         if (!BFN::isIntrinsicMetadataType(paramType)) {
-            ::error("Destination %1% must be intrinsic metadata ", dest);
+            ::P4::error("Destination %1% must be intrinsic metadata ", dest);
             return false; }
 
         if (auto mem = path.linearPath->components[0]->to<IR::Member>()) {
             if (!valid_fields->count(mem->member.name)) {
-                ::error("Invalid field name %1%, the valid fields to use are "
+                ::P4::error("Invalid field name %1%, the valid fields to use are "
                         "digest_type, resubmit_type and mirror_type"); } }
 
         unique_fields.insert(path.linearPath->to_cstring());

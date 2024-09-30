@@ -18,7 +18,7 @@
 
 namespace ActionData {
 
-using ::operator<<;  // avoid overload hiding issues
+using ::P4::operator<<;  // avoid overload hiding issues
 
 // MASK is currently not used, but maybe will be in order to reduce the size of the JSON
 // If MASK is used, then the equiv_cond will have to change

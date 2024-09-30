@@ -62,7 +62,7 @@ bool CheckRegisterActions::preorder(const IR::Declaration_Instance* di) {
         emitTypeError = (regActionEntryWidth * (1LL << indexDiff)) != regEntryWidth;
 
     if (emitTypeError)
-        ::error("RegisterAction %1% does not match the type of register it uses", di->name);
+        ::P4::error("RegisterAction %1% does not match the type of register it uses", di->name);
 
     return false;
 }

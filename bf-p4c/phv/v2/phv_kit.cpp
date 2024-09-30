@@ -307,7 +307,7 @@ std::list<PHV::SuperCluster*> PhvKit::create_strided_clusters(
             strided_group = strided_headers.get_strided_group(sl.field());
             if (!strided_group) continue;
             if (slices.size() != 1) {
-                ::error(
+                ::P4::error(
                     "Field %1% requires strided allocation"
                     " but has conflicting constraints on it.",
                     sl.field()->name);

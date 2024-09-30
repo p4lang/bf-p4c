@@ -797,7 +797,7 @@ const char * PhvLogging::containerType(const PHV::Container c) const {
     if (c.is(PHV::Kind::tagalong)) return "tagalong";
     if (c.is(PHV::Kind::mocha)) return "mocha";
     if (c.is(PHV::Kind::dark)) return "dark";
-    ::error("Unsupported PHV container type for %1%", c);
+    ::P4::error("Unsupported PHV container type for %1%", c);
     return "normal";
 }
 
@@ -830,7 +830,7 @@ const char * PhvLogging::getDeparserAccessType(const PHV::Field* f) const {
     if (f->metadata && f->deparsed()) return "bridge";
     if (f->metadata && !f->deparsed()) return "none";
     if (!f->metadata) return "pkt";
-    ::error("Unsupported deparser access type for %1%", f->name);
+    ::P4::error("Unsupported deparser access type for %1%", f->name);
     return "none";
 }
 

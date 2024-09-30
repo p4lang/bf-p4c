@@ -145,7 +145,7 @@ static void debug_hook(const char *parent, unsigned idx, const char *pass, const
         const int pipeId = n->to<IR::BFN::Pipe>()->canon_id();
         Logging::FileLog fileLog(pipeId, "backend_passes.log"_cs);
         LOG5("PASS: " << pass << " [" << parent << " (" << idx << ")]:");
-        ::dump(std::clog, n);
+        ::P4::dump(std::clog, n);
     } else {
         LOG4(pass << " [" << parent << " (" << idx << ")]:" << indent << endl <<
              *n << unindent << endl); }

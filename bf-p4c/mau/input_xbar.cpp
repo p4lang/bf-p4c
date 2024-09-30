@@ -748,7 +748,7 @@ void IXBar::FieldManagement::end_apply() {
                 it = field_list_order.erase(it);
                 it--;
             } else {
-                ::error(ErrorType::ERR_INVALID,
+                ::P4::error(ErrorType::ERR_INVALID,
                         "Overlapping field %2% in table %1% not supported with the hashing "
                         "algorithm", tbl, field->name);
             }

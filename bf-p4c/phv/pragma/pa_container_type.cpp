@@ -46,7 +46,7 @@ const char* PragmaContainerType::help =
     "This specifies that the field hdr.data.f1 in the ingress pipe should be placed "
     "in a normal container.";
 
-bool PragmaContainerType::add_constraint(const IR::BFN::Pipe* pipe, const IR::Expression* expr,
+bool PragmaContainerType::add_constraint(const P4::IR::BFN::Pipe* pipe, const P4::IR::Expression* expr,
                                          cstring field_name, PHV::Kind kind) {
     // check field name
     PHV::Field* field = phv_i.field(field_name);
@@ -64,7 +64,7 @@ bool PragmaContainerType::add_constraint(const IR::BFN::Pipe* pipe, const IR::Ex
         field->set_mocha_candidate(false);
         field->set_dark_candidate(false);
     } else if (kind == PHV::Kind::tagalong) {
-        ::warning("@prama pa_container_type currently does not support tagalong containers, "
+        ::P4::warning("@prama pa_container_type currently does not support tagalong containers, "
                   "skipped", field_name);
         return false;
     }
@@ -72,7 +72,7 @@ bool PragmaContainerType::add_constraint(const IR::BFN::Pipe* pipe, const IR::Ex
     return true;
 }
 
-bool PragmaContainerType::preorder(const IR::BFN::Pipe* pipe) {
+bool PragmaContainerType::preorder(const P4::IR::BFN::Pipe* pipe) {
     auto global_pragmas = pipe->global_pragmas;
     for (const auto* annotation : global_pragmas) {
         if (annotation->name.name != PragmaContainerType::name)
@@ -87,8 +87,8 @@ bool PragmaContainerType::preorder(const IR::BFN::Pipe* pipe) {
         const unsigned min_required_arguments = 3;  // gress, field, type
         unsigned required_arguments = min_required_arguments;
         unsigned expr_index = 0;
-        const IR::StringLiteral *pipe_arg = nullptr;
-        const IR::StringLiteral *gress_arg = nullptr;
+        const P4::IR::StringLiteral *pipe_arg = nullptr;
+        const P4::IR::StringLiteral *gress_arg = nullptr;
 
         if (!PHV::Pragmas::determinePipeGressArgs(exprs, expr_index,
                 required_arguments, pipe_arg, gress_arg)) {
@@ -105,14 +105,14 @@ bool PragmaContainerType::preorder(const IR::BFN::Pipe* pipe) {
             continue;
         }
 
-        auto field_ir = exprs[expr_index++]->to<IR::StringLiteral>();
-        auto container_type = exprs[expr_index++]->to<IR::StringLiteral>();
+        auto field_ir = exprs[expr_index++]->to<P4::IR::StringLiteral>();
+        auto container_type = exprs[expr_index++]->to<P4::IR::StringLiteral>();
 
         auto field_name = gress_arg->value + "::" + field_ir->value;
         LOG1("Adding container type " << container_type->value << " for " << field_name);
         auto kind = str_to_kind(container_type->value);
         if (!kind) {
-            ::warning(
+            ::P4::warning(
                 "@pragma pa_container_type's argument %1% does not match any valid container "
                 "types, skipped",
                 field_name);

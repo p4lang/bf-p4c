@@ -10,10 +10,10 @@
 
 namespace {
 
-std::optional<PHV::Size> convert_to_phv_size(const IR::Constant* ir) {
+std::optional<PHV::Size> convert_to_phv_size(const P4::IR::Constant* ir) {
     int rst = ir->asInt();
     if (rst != 8 && rst != 16 && rst != 32) {
-        ::warning("@pragma pa_container_size's third argument "
+        ::P4::warning("@pragma pa_container_size's third argument "
                   "must be one of {8, 16, 32}, but  %1% is not, skipped", rst);
         return std::nullopt; }
     return std::make_optional(static_cast<PHV::Size>(rst));
@@ -40,7 +40,7 @@ ordered_map<const PHV::Field*, std::vector<int>> compute_field_layouts(
                 rst[field].push_back(static_cast<int>(sz));
             }
             if (sum < field->size) {
-                ::warning(
+                ::P4::warning(
                     "@pragma pa_container_size %1% has "
                     "sum of sizes that is less than the field size",
                     field->name);
@@ -89,7 +89,7 @@ const char *PragmaContainerSize::help =
     "to the corresponding pipeline. If not provided, it is applied to "
     "all pipelines.";
 
-bool PragmaContainerSize::preorder(const IR::BFN::Pipe* pipe) {
+bool PragmaContainerSize::preorder(const P4::IR::BFN::Pipe* pipe) {
     auto global_pragmas = pipe->global_pragmas;
     for (const auto* annotation : global_pragmas) {
         if (annotation->name.name != PragmaContainerSize::name) continue;
@@ -99,8 +99,8 @@ bool PragmaContainerSize::preorder(const IR::BFN::Pipe* pipe) {
         const unsigned min_required_arguments = 3;  // gress, field, size1, ...
         unsigned required_arguments = min_required_arguments;
         unsigned expr_index = 0;
-        const IR::StringLiteral* pipe_arg = nullptr;
-        const IR::StringLiteral* gress_arg = nullptr;
+        const P4::IR::StringLiteral* pipe_arg = nullptr;
+        const P4::IR::StringLiteral* gress_arg = nullptr;
 
         if (!PHV::Pragmas::determinePipeGressArgs(exprs, expr_index, required_arguments, pipe_arg,
                                                   gress_arg)) {
@@ -117,9 +117,9 @@ bool PragmaContainerSize::preorder(const IR::BFN::Pipe* pipe) {
             continue;
         }
 
-        auto field_ir = exprs[expr_index]->to<IR::StringLiteral>();
+        auto field_ir = exprs[expr_index]->to<P4::IR::StringLiteral>();
         if (!field_ir) {
-            ::warning(ErrorType::WARN_INVALID,
+            ::P4::warning(ErrorType::WARN_INVALID,
                       "%1%: Found a non-string literal argument `field'. Ignoring pragma.",
                       exprs[expr_index]);
             continue;
@@ -135,15 +135,15 @@ bool PragmaContainerSize::preorder(const IR::BFN::Pipe* pipe) {
         }
 
         if (pa_container_sizes_i.count(field)) {
-            ::warning("overriding @pragma pa_container_size %1%", field->name);
+            ::P4::warning("overriding @pragma pa_container_size %1%", field->name);
         }
         pa_container_sizes_i[field] = {};
 
         bool failed = false;
         for (; expr_index < exprs.size(); ++expr_index) {
-            auto container_size_ir = exprs[expr_index]->to<IR::Constant>();
+            auto container_size_ir = exprs[expr_index]->to<P4::IR::Constant>();
             if (!container_size_ir) {
-                ::warning(ErrorType::WARN_INVALID,
+                ::P4::warning(ErrorType::WARN_INVALID,
                           "%1%: Found a non-integer literal argument `size'. Ignoring pragma.",
                           exprs[expr_index]);
                 failed = true;
@@ -277,7 +277,7 @@ bool PragmaContainerSize::check_and_add_constraint(
     }
 
     if (!sameAsExisting) {
-       ::warning("@pragma pa_container_size already specified for field %1% %2%.",
+       ::P4::warning("@pragma pa_container_size already specified for field %1% %2%.",
                  field->name, printSizeConstraints(existingSizePragmas));
        return false;
     }

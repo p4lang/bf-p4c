@@ -57,10 +57,12 @@ static void erase_unused_next(P4::IR::MAU::Table *tbl) {
             ++it; }
 }
 
-std::ostream &operator<<(std::ostream &out, const std::pair<const IR::Expression *, cstring> &p) {
+namespace P4 {
+std::ostream &operator<<(std::ostream &out, const std::pair<const P4::IR::Expression *, cstring> &p) {
     if (p.first) out << *p.first << " => ";
     out << (p.second ? p.second : "_");
     return out;
+}
 }
 
 const P4::IR::MAU::Table *SplitComplexGateways::preorder(P4::IR::MAU::Table *tbl) {

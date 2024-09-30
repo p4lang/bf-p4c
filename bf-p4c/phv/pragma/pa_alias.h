@@ -43,20 +43,20 @@ class PragmaAlias : public Inspector, public Pragma::PrettyPrint {
     PragmaNoOverlay& no_overlay;
 
     /// All PHV::Field objects that have expressions associated with them.
-    /// This is used to replace IR::Expression objects for aliased fields later.
+    /// This is used to replace P4::IR::Expression objects for aliased fields later.
     bitvec fieldsWithExpressions;
     /// All fields involved in aliasing operations as a source
     bitvec fieldsWithAliasingSrc;
     /// All fields involved in aliasing operations as a destination
     bitvec fieldsWithAliasingDst;
 
-    profile_t init_apply(const IR::Node* root) override;
+    profile_t init_apply(const P4::IR::Node* root) override;
 
-    /// Get all fields with IR::Expression objects associated with them.
-    bool preorder(const IR::Expression* expr) override;
+    /// Get all fields with P4::IR::Expression objects associated with them.
+    bool preorder(const P4::IR::Expression* expr) override;
 
     /// Get global pragma pa_alias.
-    void postorder(const IR::BFN::Pipe* pipe) override;
+    void postorder(const P4::IR::BFN::Pipe* pipe) override;
 
  public:
     explicit PragmaAlias(PhvInfo& phv, PragmaNoOverlay& no_ovrl) :

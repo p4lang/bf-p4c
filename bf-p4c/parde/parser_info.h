@@ -763,6 +763,7 @@ class ParserGraphImpl : public DirectedGraph {
     assoc::map<int, const State*> _id_to_state;
 };
 
+namespace P4 {
 namespace IR {
 namespace BFN {
 
@@ -775,6 +776,7 @@ using LoweredParserGraph = ParserGraphImpl<IR::BFN::LoweredParser,
                                            IR::BFN::LoweredParserMatch>;
 }  // namespace BFN
 }  // namespace IR
+}  // namespace P4
 
 template <class Parser, class State, class Transition>
 class CollectParserInfoImpl : public PardeInspector {

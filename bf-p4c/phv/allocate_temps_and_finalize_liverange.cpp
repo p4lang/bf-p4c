@@ -142,7 +142,7 @@ AllocateTempsAndFinalizeLiverange::AllocateTempsAndFinalizeLiverange(
             new VisitFunctor([get_temp_vars, &phv]() {
                 auto rst = allocate_temp_vars(phv, get_temp_vars());
                 if (!rst.ok) {
-                    ::error("Failed to allocated temp vars: %1%", rst.err.str());
+                    ::P4::error("Failed to allocated temp vars: %1%", rst.err.str());
                 }
             }),
             // TODO: even if temp var allocation does not introduce

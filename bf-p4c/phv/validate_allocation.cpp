@@ -238,7 +238,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
                     BUG("Inconsistent thread count?");
             }
 
-            ::error("Container %1% is assigned to both INGRESS and EGRESS. %2%", container,
+            ::P4::error("Container %1% is assigned to both INGRESS and EGRESS. %2%", container,
                     message.str());
         }
 
@@ -281,7 +281,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
                             message << "        " << slice.field() << " " << slice.field_slice()
                                     << std::endl;
                     }
-                    ::error(
+                    ::P4::error(
                         "Containers are in the same deparser group but assigned fields of "
                         "both INGRESS and EGRESS:\n%1%",
                         message.str());
@@ -321,7 +321,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
                 le_bitrange sourceFieldBits;
                 auto* sourceField = phv.field(source->field->field, &sourceFieldBits);
                 if (!sourceField) {
-                    ::error("No PHV allocation for field used in computed "
+                    ::P4::error("No PHV allocation for field used in computed "
                             "checksum: %1%", source->field);
                     continue;
                 }
@@ -373,7 +373,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
         le_bitrange povFieldBits;
         auto* povField = phv.field(povFieldSource->field, &povFieldBits);
         if (!povField) {
-            ::error("No PHV allocation for field used as a POV bit in the "
+            ::P4::error("No PHV allocation for field used as a POV bit in the "
                     "deparser: %1%", povFieldSource->field);
             return;
         }
@@ -663,7 +663,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Pipe* pipe) {
 
         auto* field = phv.field(lval->field, &bits);
         if (!field) {
-            ::error("No PHV allocation for field extracted by the "
+            ::P4::error("No PHV allocation for field extracted by the "
                     "parser: %1%", lval);
             return;
         }
@@ -832,7 +832,7 @@ bool ValidateAllocation::preorder(const IR::BFN::Digest* digest) {
                     get_correct_containers(field);
                 }
             }
-            ::error(
+            ::P4::error(
                 "Size of learning quanta is %1% bytes, greater than the maximum allowed %2% "
                 "bytes.\nCompiler will improve allocation of learning fields in future releases.\n"
                 "Temporary fix: try to apply @pa_container_size pragma to small fields allocated "

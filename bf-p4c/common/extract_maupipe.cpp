@@ -42,12 +42,12 @@ static int getConstant(const P4::IR::Argument* arg) {
 
 static big_int getBigConstant(const P4::IR::Annotation* annotation) {
     if (annotation->expr.size() != 1) {
-        ::error("%1% should contain a constant", annotation);
+        ::P4::error("%1% should contain a constant", annotation);
         return 0;
     }
     auto constant = annotation->expr[0]->to<P4::IR::Constant>();
     if (constant == nullptr) {
-        ::error("%1% should contain a constant", annotation);
+        ::P4::error("%1% should contain a constant", annotation);
         return 0;
     }
     return constant->value;
@@ -56,32 +56,32 @@ static big_int getBigConstant(const P4::IR::Annotation* annotation) {
 static int64_t getConstant(const P4::IR::Annotation* annotation,
                            int64_t min = INT_MIN, uint64_t max = INT_MAX) {
     if (annotation->expr.size() != 1) {
-        ::error("%1% should contain a constant", annotation);
+        ::P4::error("%1% should contain a constant", annotation);
         return 0;
     }
     auto constant = annotation->expr[0]->to<P4::IR::Constant>();
     if (constant == nullptr) {
-        ::error("%1% should contain a constant", annotation);
+        ::P4::error("%1% should contain a constant", annotation);
         return 0;
     }
     int64_t rv = constant->asUint64();
     if (max <= INT64_MAX || min < 0) {
         if (rv < min || (rv >= 0 && uint64_t(rv) > max))
-            ::error("%1% out of range", annotation);
+            ::P4::error("%1% out of range", annotation);
     } else {
         if (uint64_t(rv) < uint64_t(min) || uint64_t(rv) > max)
-            ::error("%1% out of range", annotation); }
+            ::P4::error("%1% out of range", annotation); }
     return rv;
 }
 
 static cstring getString(const P4::IR::Annotation* annotation) {
     if (annotation->expr.size() != 1) {
-        ::error("%1% should contain a string", annotation);
+        ::P4::error("%1% should contain a string", annotation);
         return ""_cs;
     }
     auto str = annotation->expr[0]->to<P4::IR::StringLiteral>();
     if (str == nullptr) {
-        ::error("%1% should contain a string", annotation);
+        ::P4::error("%1% should contain a string", annotation);
         return ""_cs;
     }
     return str->value;
@@ -506,13 +506,13 @@ static int getSingleAnnotationValue(const cstring name, const P4::IR::MAU::Table
                         "does not have a value", name, table->srcInfo, table->name);
             auto pragma_val =  s->expr.at(0)->to<P4::IR::Constant>();
             if (pragma_val == nullptr) {
-                ::error("%s: The %s pragma value on table %s is not a constant",
+                ::P4::error("%s: The %s pragma value on table %s is not a constant",
                         name, table->srcInfo, table->name);
                 return -2;
             }
             int value = pragma_val->asInt();
             if (value < 0) {
-                ::error("%s: The %s pragma value on table %s cannot be less than zero.",
+                ::P4::error("%s: The %s pragma value on table %s cannot be less than zero.",
                         name, table->srcInfo, table->name);
                 return -3;
             }
@@ -525,7 +525,7 @@ static int getSingleAnnotationValue(const cstring name, const P4::IR::MAU::Table
 static void getCRCPolynomialFromExtern(const P4::ExternInstance& instance,
         P4::IR::MAU::HashFunction& hashFunc) {
     if (instance.type->name != "CRCPolynomial") {
-        ::error("Expected CRCPolynomial extern instance %1%", instance.type->name);
+        ::P4::error("Expected CRCPolynomial extern instance %1%", instance.type->name);
         return; }
     auto coeffValue = instance.substitution.lookupByName("coeff"_cs)->expression;
     BUG_CHECK(coeffValue->to<P4::IR::Constant>(), "Non-constant coeff");
@@ -555,12 +555,12 @@ static void check_true_egress_accounting(const T* ctr, const P4::IR::MAU::Table 
     CHECK_NULL(match_table);
 
     if (match_table->gress != EGRESS) {
-        ::error(ErrorType::ERR_INVALID,
+        ::P4::error(ErrorType::ERR_INVALID,
             "%1%: True egress accounting is only available on egress.", ctr);
     }
     if (ctr->type != P4::IR::MAU::DataAggregation::BOTH &&
         ctr->type != P4::IR::MAU::DataAggregation::BYTES) {
-        ::error(ErrorType::ERR_INVALID,
+        ::P4::error(ErrorType::ERR_INVALID,
             "%1%: True egress accounting is only valid for counting bytes", ctr);
     }
 }
@@ -569,11 +569,11 @@ static int get_meter_color(const P4::IR::Argument* arg) {
     auto expr = arg->expression;
 
     if (!expr->is<P4::IR::Constant>())
-        ::error(ErrorType::ERR_INVALID, "Invalid meter color value. "
+        ::P4::error(ErrorType::ERR_INVALID, "Invalid meter color value. "
                                     "Value must be constant: %1%", expr);
     auto value = arg->expression->to<P4::IR::Constant>()->asInt();
     if (value < 0 || value > 255)
-        ::error(ErrorType::ERR_OVERLIMIT, "Meter color value out of range. "
+        ::P4::error(ErrorType::ERR_OVERLIMIT, "Meter color value out of range. "
                                   "Value must be in the range of 0-255: %1%", expr);
     return value;
 }
@@ -613,7 +613,7 @@ static P4::IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
                 max_group_size = pragma_max_group_size;
                 // max ram words is 992, max members per word is 120
                 if (max_group_size < 1 || max_group_size > (992*120)) {
-                    ::error("%s: The selector_max_group_size pragma value on table %s is "
+                    ::P4::error("%s: The selector_max_group_size pragma value on table %s is "
                             "not between %d and %d.", match_table->srcInfo,
                             match_table->name, 1, 992*120); } }
             // Check for number of max groups pragma.
@@ -622,7 +622,7 @@ static P4::IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
             if (pragma_num_max_groups != -1) {
                 num_groups = pragma_num_max_groups;
                 if (num_groups < 1) {
-                    ::error("%s: The selector_num_max_groups pragma value on table %s is "
+                    ::P4::error("%s: The selector_num_max_groups pragma value on table %s is "
                             "not greater than or equal to 1.", match_table->srcInfo,
                              match_table->name); } }
             // Check for selector_enable_scramble pragma.
@@ -634,7 +634,7 @@ static P4::IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
                 } else if (pragma_sps_en == 1) {
                     sps_scramble = true;
                 } else {
-                  ::error("%s: The selector_enable_scramble pragma value on table %s is "
+                  ::P4::error("%s: The selector_enable_scramble pragma value on table %s is "
                           "only allowed to be 0 or 1.", match_table->srcInfo,
                            match_table->name);
                 }
@@ -654,7 +654,7 @@ static P4::IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
                 else if (arg->expression->to<P4::IR::Member>()->member.name == "RESILIENT")
                     sel->mode = P4::IR::MAU::SelectorMode::RESILIENT;
                 else
-                    ::error("%1%: Selector mode of %2% must be either FAIR or RESILIENT",
+                    ::P4::error("%1%: Selector mode of %2% must be either FAIR or RESILIENT",
                         sel->srcInfo, sel->name);
             } else if (p->name == "hash") {
                 auto inst = P4::ExternInstance::resolve(arg->expression, refMap, typeMap);
@@ -680,18 +680,18 @@ static P4::IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
                 max_group_size = getConstant(arg);
                 // max ram words is 992, max members per word is 120
                 if (max_group_size < 1 || max_group_size > (992*120)) {
-                    ::error("%s: The max_group_size value on ActionSelector %s is "
+                    ::P4::error("%s: The max_group_size value on ActionSelector %s is "
                             "not between %d and %d.", srcInfo, name, 1, 992*120); }
             } else if (p->name == "num_groups") {
                 num_groups = getConstant(arg);
                 if (num_groups < 1) {
-                    ::error("%s: The selector_num_max_groups pragma value on table %s is "
+                    ::P4::error("%s: The selector_num_max_groups pragma value on table %s is "
                             "not greater than or equal to 1.", srcInfo, name); }
             } else if (p->name == "action_profile") {
                 if (auto path = arg->expression->to<P4::IR::PathExpression>()) {
                     auto af = P4::ExternInstance::resolve(path, refMap, typeMap);
                     if (af == std::nullopt) {
-                        ::error("Expected %1% for ActionSelector %2% to resolve to an "
+                        ::P4::error("Expected %1% for ActionSelector %2% to resolve to an "
                                 "ActionProfile extern instance", arg, name); }
                     auto ap = new P4::IR::MAU::ActionData(srcInfo, P4::IR::ID(*af->name));
                     ap->direct = false;
@@ -779,11 +779,11 @@ static P4::IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
             if (!expr) continue;
             if (p->name == "size") {
                 if (!expr->is<P4::IR::Constant>())
-                    ::error(ErrorType::ERR_INVALID, "Invalid Meter size %1%", expr);
+                    ::P4::error(ErrorType::ERR_INVALID, "Invalid Meter size %1%", expr);
                 mtr->size = expr->to<P4::IR::Constant>()->asInt();
             } else if (p->name == "type") {
                 if (!expr->is<P4::IR::Member>())
-                    ::error(ErrorType::ERR_INVALID, "Invalid Meter type %1%, must be"
+                    ::P4::error(ErrorType::ERR_INVALID, "Invalid Meter type %1%, must be"
                                                     "PACKETS or BYTES", expr);
                 mtr->settype(arg->expression->as<P4::IR::Member>().member.name);
             } else if (p->name == "red") {
@@ -1301,19 +1301,19 @@ bool AttachTables::InitializeRegisterParams::preorder(const P4::IR::MAU::Primiti
             if (auto *reg_decl_path = reg_act_decl_arg0_expr->to<P4::IR::PathExpression>())
                 reg_decl = getDeclInst(self.refMap, reg_decl_path);
         } else {
-            ::error(ErrorType::ERR_UNSUPPORTED,
+            ::P4::error(ErrorType::ERR_UNSUPPORTED,
                 "%1%: RegisterParam cannot be used outside RegisterAction", prim);
         }
     }
     if (reg_decl == nullptr)
-        ::error(ErrorType::ERR_UNSUPPORTED,
+        ::P4::error(ErrorType::ERR_UNSUPPORTED,
             "%1%: RegisterParam can be used only in RegisterAction or within Register.write", prim);
     if (self.salu_inits.count(reg_decl) > 0) {
         auto *salu = self.salu_inits.at(reg_decl);
         if (param_salus.count(reg_param_decl) > 0) {
             auto *previous_salu = param_salus.at(reg_param_decl);
             if (previous_salu != salu)
-                ::error(ErrorType::ERR_UNSUPPORTED,
+                ::P4::error(ErrorType::ERR_UNSUPPORTED,
                     "%1%: RegisterParam cannot be used with multiple Registers", prim);
         } else {
             param_salus[reg_param_decl] = salu;
@@ -1338,7 +1338,7 @@ void AttachTables::InitializeRegisterParams::end_apply() {
         auto *bits = initial_expr_type->to<P4::IR::Type_Bits>();
         if (!bits || (bits->width_bits() != 8 && bits->width_bits() != 16
                       && bits->width_bits() != 32)) {
-            ::error(ErrorType::ERR_UNSUPPORTED, "%1%: Unsupported RegisterParam type %2%. "
+            ::P4::error(ErrorType::ERR_UNSUPPORTED, "%1%: Unsupported RegisterParam type %2%. "
                 "Supported types are bit<8>, int<8>, bit<16>, int<16>, bit<32>, and int<32>.",
                 decl, initial_expr_type);
         }
@@ -1600,7 +1600,7 @@ class GetBackendTables : public MauInspector {
                 else if (b_and->right->is<P4::IR::Constant>())
                     mask = make_mask(b_and, b_and->left, b_and->right->to<P4::IR::Constant>());
                 else
-                    ::error("%s: mask %s must have a constant operand to be used as a table key",
+                    ::P4::error("%s: mask %s must have a constant operand to be used as a table key",
                              b_and->srcInfo, b_and);
                 if (mask == nullptr)
                     continue;
@@ -1807,7 +1807,7 @@ class ExtractMetadata : public Inspector {
                     break;
                 }
             } else {
-                ::error("Unsupported parameter type %1%", param->type);
+                ::P4::error("Unsupported parameter type %1%", param->type);
             }
         }
         return retval;
@@ -1874,10 +1874,10 @@ ProcessBackendPipe::ProcessBackendPipe(P4::ReferenceMap *refMap, P4::TypeMap *ty
 cstring BackendConverter::getPipelineName(const P4::IR::P4Program* program, int index) {
     auto mainDecls = program->getDeclsByName("main"_cs)->toVector();
     if (mainDecls.size() == 0) {
-        ::error("No main declaration in the program");
+        ::P4::error("No main declaration in the program");
         return nullptr;
     } else if (mainDecls.size() > 1) {
-        ::error("Multiple main declarations in the program");
+        ::P4::error("Multiple main declarations in the program");
         return nullptr; }
     auto decl = mainDecls.at(0);
     if (auto di = decl->to<P4::IR::Declaration_Instance>()) {
@@ -1955,7 +1955,7 @@ bool BackendConverter::preorder(const P4::IR::P4Program* program) {
 
         for (auto gress : gresses) {
             if (!threads.count(gress)) {
-                ::error("Unable to find thread %1%", arch_pipe.names.front());
+                ::P4::error("Unable to find thread %1%", arch_pipe.names.front());
                 return false; }
             auto thread = threads.at(gress);
             thread = thread->apply(*simplifyReferences);

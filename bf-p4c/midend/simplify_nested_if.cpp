@@ -56,7 +56,7 @@ void DoSimplifyNestedIf::addInArray(std::vector<int>* typeVec,
         if ((expr == constant).match(cond)) {
             typeVec->at(constant->asInt()) = 1;
         } else {
-            ::error("If statement is too complex to handle.%1% \n Supported if condition :"
+            ::P4::error("If statement is too complex to handle.%1% \n Supported if condition :"
             " if (digest/mirror/resubmit_type == constant)", ifstmt->srcInfo);
         }
     }

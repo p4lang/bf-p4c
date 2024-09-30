@@ -287,13 +287,13 @@ class CreateSaluApplyFunction : public Inspector {
             IR::Path *var = nullptr;
             if (attr->name == "condition_lo") {
                 if (self.cond_lo == nullptr) {
-                    ::error("condition_lo used and not specified %s", *self.applyLoc);
+                    ::P4::error("condition_lo used and not specified %s", *self.applyLoc);
                     return new IR::BoolLiteral(false);
                 }
                 return self.cond_lo;
             } else if (attr->name == "condition_hi") {
                 if (self.cond_hi == nullptr) {
-                    ::error("condition_hi used and not specified %s", *self.applyLoc);
+                    ::P4::error("condition_hi used and not specified %s", *self.applyLoc);
                     return new IR::BoolLiteral(false);
                 }
                 return self.cond_hi;

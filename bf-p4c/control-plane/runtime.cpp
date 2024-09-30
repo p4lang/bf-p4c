@@ -22,7 +22,7 @@ bool CheckReservedNames::preorder(const IR::Type_ArchBlock* b) {
     LOG3(" Checking block " << b);
     auto name = b->name.toString();
     if (reservedNames.count(name) > 0)
-        ::error("Block name in p4 cannot contain BF-RT reserved name (%s) : %s",
+        ::P4::error("Block name in p4 cannot contain BF-RT reserved name (%s) : %s",
                 name, b->toString());
     return false;
 }
@@ -41,7 +41,7 @@ bool SetDefaultSize::preorder(IR::P4Table *table) {
         if (warn) {
             auto hidden = table->getAnnotation("hidden"_cs);
             if (!hidden)
-                ::warning("No size defined for table '%s', setting default size to %d",
+                ::P4::warning("No size defined for table '%s', setting default size to %d",
                         table->name, defaultSize);
         }
         table->properties = properties;
@@ -117,7 +117,7 @@ void generateRuntime(const IR::P4Program* program,
             p4RuntimeSerializer->serializeP4RuntimeIfRequired(p4Runtime, options);
             LOG1_UNINDENT;
         }
-        if (::errorCount() > 0) return;
+        if (::P4::errorCount() > 0) return;
     }
 
     // Generate BFRT json o/p
@@ -126,7 +126,7 @@ void generateRuntime(const IR::P4Program* program,
         std::ofstream outFile(schemaFilePath);
 
         if (!outFile.is_open()) {
-            ::error("Couldn't open BF-RT schema file: %1%", schemaFilePath.string());
+            ::P4::error("Couldn't open BF-RT schema file: %1%", schemaFilePath.string());
             return;
         }
         std::ostream& out = outFile;
@@ -146,7 +146,7 @@ void generateRuntime(const IR::P4Program* program,
         bfrt->serializeBFRuntimeSchema(&out);
         LOG1_UNINDENT;
 
-        if (::errorCount() > 0) return;
+        if (::P4::errorCount() > 0) return;
     }
 }
 

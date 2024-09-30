@@ -89,7 +89,7 @@ class DoRemoveActionParametersTofino : public P4::DoRemoveActionParameters {
 
                     auto arg = substitution.lookup(p);
                     if (arg == nullptr) {
-                        ::error("action %1%: parameter %2% must be bound", invocation, p);
+                        ::P4::error("action %1%: parameter %2% must be bound", invocation, p);
                         continue;
                     }
 

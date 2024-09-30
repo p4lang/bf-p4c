@@ -1459,7 +1459,7 @@ ConstraintSolver::solve(
         std::vector<std::pair<unsigned, std::string>> placement;
         for (auto f : fs.second) {
             if (!offsets.count(f->name.c_str()))
-                ::error("Cannot find field name %1%", f->name.c_str());
+                ::P4::error("Cannot find field name %1%", f->name.c_str());
             auto offset = offsets.at(f->name.c_str());
             placement.push_back(std::make_pair(offset, f->name.c_str()));
         }
@@ -2407,7 +2407,7 @@ bool ExtractBridgeInfo::preorder(const P4::IR::P4Program* program) {
         std::vector<gress_t> gresses = {INGRESS, EGRESS};
         for (auto gress : gresses) {
             if (!arch->pipelines.getPipeline(npipe).threads.count(gress)) {
-                ::error("Unable to find thread %1%", npipe);
+                ::P4::error("Unable to find thread %1%", npipe);
                 return false; }
             auto thread = arch->pipelines.getPipeline(npipe).threads.at(gress);
             thread = thread->apply(*simplifyReferences);

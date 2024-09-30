@@ -76,7 +76,7 @@ class Clot final : public LiftCompare<Clot> {
     /// The gress to which this CLOT is assigned.
     gress_t gress;
 
-    const IR::BFN::FieldLVal* pov_bit = nullptr;
+    const P4::IR::BFN::FieldLVal* pov_bit = nullptr;
 
     std::optional<unsigned> stack_depth = std::nullopt;
 

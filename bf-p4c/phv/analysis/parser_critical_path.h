@@ -82,7 +82,7 @@ class CollectUserSpecifiedCriticalStates : public Inspector {
                     if (exprs.size() == 1) {
                         auto gress = exprs[0]->to<IR::StringLiteral>();
                         if (!gress) {
-                            ::error("Invalid use of %1%, correct usage is: "
+                            ::P4::error("Invalid use of %1%, correct usage is: "
                                          "@pragma critical [ingress/egress]", annot);
                         }
 

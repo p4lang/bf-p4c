@@ -97,7 +97,7 @@ struct FindPhase0Table : public Inspector {
     static constexpr int phase0TableSize = 288;
 
     FindPhase0Table(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
-            P4V1::TnaProgramStructure* structure)
+            P4::P4V1::TnaProgramStructure* structure)
         : refMap(refMap), typeMap(typeMap), structure(structure) { }
 
     std::optional<Phase0TableMetadata> phase0;
@@ -261,19 +261,19 @@ struct FindPhase0Table : public Inspector {
     bool hasNoSideEffects(const IR::P4Table* table, cstring &errStr) const {
         // Actions profiles aren't allowed.
         errStr = "Action profiles not allowed on phase 0 table"_cs;
-        auto implProp = P4V1::V1Model::instance.tableAttributes
+        auto implProp = P4::P4V1::V1Model::instance.tableAttributes
                                                .tableImplementation.name;
         if (table->properties->getProperty(implProp) != nullptr) return false;
 
         errStr = "Counters not allowed on phase 0 table"_cs;
         // Counters aren't allowed.
-        auto counterProp = P4V1::V1Model::instance.tableAttributes
+        auto counterProp = P4::P4V1::V1Model::instance.tableAttributes
                                                   .counters.name;
         if (table->properties->getProperty(counterProp) != nullptr) return false;
 
         // Meters aren't allowed.
         errStr = "Meters not allowed on phase 0 table"_cs;
-        auto meterProp = P4V1::V1Model::instance.tableAttributes
+        auto meterProp = P4::P4V1::V1Model::instance.tableAttributes
                                                 .meters.name;
         if (table->properties->getProperty(meterProp) != nullptr) return false;
 
@@ -531,7 +531,7 @@ struct FindPhase0Table : public Inspector {
 
     P4::ReferenceMap* refMap;
     P4::TypeMap* typeMap;
-    P4V1::TnaProgramStructure* structure;
+    P4::P4V1::TnaProgramStructure* structure;
 };
 
 /// Generate the phase 0 program features based upon the Phase0TableMetadata
@@ -694,7 +694,7 @@ struct RewritePhase0IfPresent : public Transform {
 }  // namespace
 
 TranslatePhase0::TranslatePhase0(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
-        P4V1::TnaProgramStructure* structure) {
+        P4::P4V1::TnaProgramStructure* structure) {
     auto* findPhase0Table = new FindPhase0Table(refMap, typeMap, structure);
     addPasses({
         findPhase0Table,

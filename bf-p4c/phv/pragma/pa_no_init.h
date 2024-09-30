@@ -19,7 +19,7 @@ class PragmaNoInit : public Inspector {
     /// Used to print logging messages
     ordered_set<const PHV::Field*> fields;
 
-    profile_t init_apply(const IR::Node* root) override {
+    profile_t init_apply(const P4::IR::Node* root) override {
         profile_t rv = Inspector::init_apply(root);
         fields.clear();
         return rv;
@@ -27,7 +27,7 @@ class PragmaNoInit : public Inspector {
 
     bool add_constraint(cstring field_name);
 
-    bool preorder(const IR::BFN::Pipe* pipe) override;
+    bool preorder(const P4::IR::BFN::Pipe* pipe) override;
 
  public:
     explicit PragmaNoInit(const PhvInfo& phv) : phv_i(phv) { }

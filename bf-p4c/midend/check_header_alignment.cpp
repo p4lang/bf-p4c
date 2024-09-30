@@ -19,7 +19,7 @@ bool CheckPadAssignment::preorder(const IR::AssignmentStatement* statement) {
     auto field = header_type->getField(member->member.name);
     if (field && field->getAnnotation("padding"_cs)) {
         if (statement->srcInfo.isValid())
-            ::warning(ErrorType::WARN_UNUSED, "%1%: Padding fields do not need to be explicitly "
+            ::P4::warning(ErrorType::WARN_UNUSED, "%1%: Padding fields do not need to be explicitly "
                       "set. Also, setting these fields can introduce PHV constraints the compiler "
                       "may not be able to resolve.", statement);
     }

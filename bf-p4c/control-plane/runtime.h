@@ -3,9 +3,13 @@
 
 #include "ir/ir.h"
 
+namespace P4 {
 namespace IR {
 class P4Program;
 }  // namespace IR
+}  // namespace P4
+
+using namespace P4;
 
 class BFN_Options;
 

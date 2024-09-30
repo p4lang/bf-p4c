@@ -86,7 +86,7 @@ class P4RuntimeStdConverter {
             auto converterIt = converters.find(externTypeId);
             if (converterIt == converters.end()) {
                 if (suppressWarnings.count(externTypeId) == 0) {
-                    ::warning("No known conversion to standard P4Info for '%1%' extern type",
+                    ::P4::warning("No known conversion to standard P4Info for '%1%' extern type",
                               externType.extern_type_name());
                 }
                 continue;
@@ -345,7 +345,7 @@ class P4RuntimeStdConverter {
                 if (idIt != oldToNewIds.end()) {
                     table.set_implementation_id(idIt->second);
                 } else {
-                    ::error("Unknown implementation id %1% for table '%2%' "
+                    ::P4::error("Unknown implementation id %1% for table '%2%' "
                             "(maybe the implementation extern type is not supported)",
                             implementationId, tableName);
                     table.clear_implementation_id();
@@ -357,7 +357,7 @@ class P4RuntimeStdConverter {
                 if (idIt != oldToNewIds.end()) {
                     table.set_direct_resource_ids(idx++, idIt->second);
                 } else {
-                    ::warning("Unknown direct resource id %1% for table '%2%' "
+                    ::P4::warning("Unknown direct resource id %1% for table '%2%' "
                               "(maybe the extern type is not supported), "
                               "so dropping the direct resource for the table",
                               directResourceId, tableName);

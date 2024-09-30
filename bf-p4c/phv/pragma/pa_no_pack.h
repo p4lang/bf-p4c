@@ -9,13 +9,13 @@ class PragmaNoPack : public Inspector {
     const PhvInfo& phv_i;
     std::vector<std::pair<const PHV::Field*, const PHV::Field*>> no_packs_i;
     const ordered_map<cstring, ordered_set<cstring>> &no_pack_constr;
-    profile_t init_apply(const IR::Node* root) override {
+    profile_t init_apply(const P4::IR::Node* root) override {
         profile_t rv = Inspector::init_apply(root);
         no_packs_i.clear();
         return rv;
     }
 
-    bool preorder(const IR::BFN::Pipe* pipe) override;
+    bool preorder(const P4::IR::BFN::Pipe* pipe) override;
 
  public:
     explicit PragmaNoPack(const PhvInfo& phv) :

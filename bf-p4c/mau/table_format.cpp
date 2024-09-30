@@ -365,7 +365,7 @@ bool TableFormat::analyze_wide_layout_option(safe_vector<IXBar::Use::GroupInfo> 
                      / layout_option.way.match_groups;
     if (layout_option.way.width % layout_option.way.match_groups == 0
         && layout_option.way.match_groups != 1) {
-        ::warning("Format for table %s to be %d entries and %d width, when that allocation "
+        ::P4::warning("Format for table %s to be %d entries and %d width, when that allocation "
                   "could easily be split.", tbl->name, layout_option.way.match_groups,
                   layout_option.way.width);
     }

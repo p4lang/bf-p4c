@@ -188,7 +188,7 @@ class TablePlacement : public PassManager {
         auto msg = ctxt.errorReporter().format_message(args...);
         LOG5("    defer error: " << msg);
         summary.addPlacementError(msg); }
-    int errorCount() const { return ::errorCount() + summary.placementErrorCount(); }
+    int errorCount() const { return ::P4::errorCount() + summary.placementErrorCount(); }
 };
 
 class DecidePlacement : public MauInspector {

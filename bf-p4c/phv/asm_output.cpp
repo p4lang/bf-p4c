@@ -357,7 +357,7 @@ void PhvAsmOutput::emit_gress(std::ostream& out, gress_t gress) const {
                 }
             }
         } else {
-            ::warning("Live range information not generated in assembly/context.json");
+            ::P4::warning("Live range information not generated in assembly/context.json");
         }
     }
 }

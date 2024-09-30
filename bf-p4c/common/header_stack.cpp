@@ -169,7 +169,7 @@ P4::IR::Node* RemovePushInitialization::preorder(P4::IR::MAU::Action* act) {
             for (auto idx : kv.second)
                 msg << idx << " ";
             // TODO: This should really be P4C_UNIMPLEMENTED.
-            ::warning("Header stack elements must be initialized in the action in which "
+            ::P4::warning("Header stack elements must be initialized in the action in which "
                               "they are pushed.  %1% is pushed but indices %3%are not "
                               "initialized in action %2%",
                               kv.first, cstring::to_cstring(act), msg.str());

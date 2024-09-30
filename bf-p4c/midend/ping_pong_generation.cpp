@@ -383,7 +383,7 @@ bool PingPongGeneration::isPingPongValid(const CollectPipelines::Pipe &pipe,
         bool coveredGhost = ppIfCoveredRegisters[pipe.ghost].count(reg);
         if (!calculatingCovered && (coveredIn || coveredGhost)) {
             if (!(coveredIn && coveredGhost)) {
-                ::warning(ErrorType::WARN_MISMATCH, "Register %1% is covered by ping-pong 'if' in "
+                ::P4::warning(ErrorType::WARN_MISMATCH, "Register %1% is covered by ping-pong 'if' in "
                           "%2% but not in corresponding %3%, not going to auto-generate "
                           "ping-poing 'if' for inconsistently used register.",
                           reg, coveredIn ? pipe.ingress.control->getName() : pipe.ghost->getName(),

@@ -176,7 +176,7 @@ unsigned ComputeLoweredParserIR::getOffsetIncAmt(const IR::BFN::ParserState* sta
         std::stringstream ss;
         for (auto& kv : count.header_stack_to_indices) ss << kv.first << " ";
 
-        ::error("More than one header stack in parser state %1%: %2%", state->name, ss.str());
+        ::P4::error("More than one header stack in parser state %1%: %2%", state->name, ss.str());
     }
 
     auto& indices = count.header_stack_to_indices.begin()->second;

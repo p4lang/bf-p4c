@@ -55,14 +55,14 @@ void ProgramStructure::include(cstring filename, IR::Vector<IR::Node> *vector) {
     if (auto preprocessorResult = options.preprocess(); preprocessorResult.has_value()) {
         FILE *file = preprocessorResult.value().get();
 
-        if (::errorCount() > 0) {
-            ::error("Failed to preprocess architecture file %1%", options.file);
+        if (::P4::errorCount() > 0) {
+            ::P4::error("Failed to preprocess architecture file %1%", options.file);
             return;
         }
 
         auto code = P4::P4ParserDriver::parse(file, options.file.string());
-        if (code == nullptr || ::errorCount() > 0) {
-            ::error("Failed to load architecture file %1%", options.file);
+        if (code == nullptr || ::P4::errorCount() > 0) {
+            ::P4::error("Failed to load architecture file %1%", options.file);
             return;
         }
 
@@ -74,7 +74,7 @@ void ProgramStructure::include(cstring filename, IR::Vector<IR::Node> *vector) {
             vector->push_back(decl);
         }
     } else {
-        ::error("Preprocessing failed for architecture file %1%", options.file);
+        ::P4::error("Preprocessing failed for architecture file %1%", options.file);
     }
 }
 

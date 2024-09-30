@@ -165,7 +165,7 @@ void TnaProgramStructure::checkHeaderType(const IR::Type_StructLike* hdr, bool m
     for (auto f : hdr->fields) {
         if (f->type->is<IR::Type_Varbits>()) {
             if (metadata)
-                ::error("%1%: varbit types illegal in metadata", f);
+                ::P4::error("%1%: varbit types illegal in metadata", f);
         } else if (f->type->is<IR::Type_Name>()) {
             // type name only comes from Type_StructLike
         } else if (f->type->is<IR::Type_StructLike>()) {
@@ -419,7 +419,7 @@ generate_tna_hash_block_statement(P4V1::TnaProgramStructure* structure,
             // auto name2 = symmetricAnnotation->expr[1];
             annos->addAnnotation("symmetric"_cs, new IR::ListExpression(symmetricAnnotation->expr));
         } else {
-            ::error("Invalid pragma usage: symmetric");
+            ::P4::error("Invalid pragma usage: symmetric");
         }
     }
     auto decl = new IR::Declaration_Instance(hash_inst, declType, declArgs);
@@ -536,7 +536,7 @@ TnaProgramStructure::convertActionProfile(const IR::ActionProfile* action_profil
         cstring newName) {
     auto *action_selector = action_selectors.get(action_profile->selector.name);
     if (!action_profile->selector.name.isNullOrEmpty() && !action_selector)
-        ::error("Cannot locate action selector %1%", action_profile->selector);
+        ::P4::error("Cannot locate action selector %1%", action_profile->selector);
     const IR::Type *type = nullptr;
     auto args = new IR::Vector<IR::Argument>();
     auto annos = addGlobalNameAnnotation(action_profile->name);
@@ -853,7 +853,7 @@ class FindHeaderReference : public Inspector {
         if (action_selector != nullptr) {
             auto flc = structure->field_list_calculations.get(action_selector->key.name);
             if (flc == nullptr) {
-                ::error("Cannot locate field list %1%", action_selector->key);
+                ::P4::error("Cannot locate field list %1%", action_selector->key);
                 return; }
             auto fl = structure->getFieldLists(flc);
             if (fl != nullptr) {
@@ -1067,7 +1067,7 @@ TnaProgramStructure::convertParser(const IR::V1Parser* parser,
                 if (!first) continue;
                 auto value_set = value_sets.get(first->path->name);
                 if (!value_set) {
-                    ::error("Unable to find declaration for parser_value_set %s",
+                    ::P4::error("Unable to find declaration for parser_value_set %s",
                             first->path->name);
                     return nullptr;
                 }
@@ -1077,12 +1077,12 @@ TnaProgramStructure::convertParser(const IR::V1Parser* parser,
                 const IR::Constant* sizeConstant;
                 if (sizeAnnotation) {
                     if (sizeAnnotation->expr.size() != 1) {
-                        ::error("@size should be an integer for declaration %1%", value_set);
+                        ::P4::error("@size should be an integer for declaration %1%", value_set);
                         return nullptr;
                     }
                     sizeConstant = sizeAnnotation->expr[0]->to<IR::Constant>();
                     if (sizeConstant == nullptr || !sizeConstant->fitsInt()) {
-                        ::error("@size should be an integer for declaration %1%", value_set);
+                        ::P4::error("@size should be an integer for declaration %1%", value_set);
                         return nullptr;
                     }
                 } else {
@@ -1240,7 +1240,7 @@ void TnaProgramStructure::createIngressParser() {
     }
 
     if (states->empty())
-        ::error("No parsers specified");
+        ::P4::error("No parsers specified");
 
     states->append(*createIngressParserStates());
 
@@ -1251,7 +1251,7 @@ void TnaProgramStructure::createIngressParser() {
     declarations->push_back(ip);
 
     if (ingressReference.name.isNullOrEmpty())
-        ::error("No transition from a parser to ingress pipeline found");
+        ::P4::error("No transition from a parser to ingress pipeline found");
 }
 
 void TnaProgramStructure::createEgressParser() {
@@ -1309,7 +1309,7 @@ void TnaProgramStructure::createEgressParser() {
         states->push_back(state);
     }
     if (states->empty())
-        ::error("No parsers specified");
+        ::P4::error("No parsers specified");
 
     states->append(*createEgressParserStates());
 
@@ -1318,7 +1318,7 @@ void TnaProgramStructure::createEgressParser() {
     declarations->push_back(ep);
 
     if (ingressReference.name.isNullOrEmpty())
-        ::error("No transition from a parser to ingress pipeline found");
+        ::P4::error("No transition from a parser to ingress pipeline found");
 }
 
 IR::IndexedVector<IR::ParserState>*
@@ -1825,7 +1825,7 @@ void TnaProgramStructure::parseUpdateLocationAnnotation(
         else if (gress->value == "ingress_and_egress")
             updateLocations = { INGRESS, EGRESS };
         else
-            ::error("Invalid use of @pragma %1%, valid value "
+            ::P4::error("Invalid use of @pragma %1%, valid value "
                     " is ingress/egress/ingress_and_egress", pragma);
     }
 }
@@ -2512,7 +2512,7 @@ void TnaProgramStructure::loadModel() {
         include("tna.p4"_cs, "-D__TARGET_TOFINO__=5"_cs);
 #endif
     else
-        ::error("Must specify either --arch tna or --arch t2na"
+        ::P4::error("Must specify either --arch tna or --arch t2na"
 #if HAVE_CLOUDBREAK
                 " or --arch t3na"
 #endif
@@ -2722,14 +2722,14 @@ TnaProgramStructure::create(Util::SourceInfo info) {
     createStructures();
     createExterns();
     createParser();
-    if (::errorCount())
+    if (::P4::errorCount())
         return nullptr;
     createControls();
-    if (::errorCount())
+    if (::P4::errorCount())
         return nullptr;
     createDeparser();
     createMain();
-    if (::errorCount())
+    if (::P4::errorCount())
         return nullptr;
     auto result = new IR::P4Program(info, *declarations);
     return result;
