@@ -5,6 +5,8 @@
 #include <optional>
 #include "lib/cstring.h"
 
+using namespace P4;
+
 /// An enumeration identifying a thread in the Tofino architecture.
 enum gress_t {
   INGRESS = 0,

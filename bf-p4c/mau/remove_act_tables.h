@@ -15,14 +15,14 @@
 class AnalyzeActionTables : public MAU::Inspector {
  public:
     AnalyzeActionTables() {}
-    bool isCandidate(const IR::MAU::Table *t) const {
+    bool isCandidate(const P4::IR::MAU::Table *t) const {
         return _candidates.
     }
 
  private:
-    bool preorder(IR::P4Control* control) override;
-    bool preorder(const IR::MAU::Table* t) override;
-    bool preorder(IR::P4Action* action) override;
+    bool preorder(P4::IR::P4Control* control) override;
+    bool preorder(const P4::IR::MAU::Table* t) override;
+    bool preorder(P4::IR::P4Action* action) override;
 
     std::set<cstring> _candidates;
 };
@@ -35,7 +35,7 @@ class DoRemoveActionTables : public Transform {
     DoRemoveActionTables(const AnalyzeActionTables *a) : analysis(a) {}
 
  private:
-    const IR::Node *postorder(const IR::MAU::Table* t) override;
+    const P4::IR::Node *postorder(const P4::IR::MAU::Table* t) override;
 };
 
 class RemoveActionTables : public PassManager {

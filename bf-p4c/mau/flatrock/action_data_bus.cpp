@@ -18,7 +18,7 @@ ActionDataBus::Use &ActionDataBus::getUse(autoclone_ptr<::ActionDataBus::Use> &a
     return *rv;
 }
 
-int ActionDataBus::find_free_bytes(const IR::MAU::Table *tbl, const ActionData::ALUPosition *pos,
+int ActionDataBus::find_free_bytes(const P4::IR::MAU::Table *tbl, const ActionData::ALUPosition *pos,
             safe_vector<Use::ReservedSpace> &action_data_locs, ActionData::Location_t loc) {
     int byte_start = 0, byte_end = 0, align = 0;
     if (loc == ActionData::IMMEDIATE) {
@@ -69,7 +69,7 @@ int ActionDataBus::find_free_bytes(const IR::MAU::Table *tbl, const ActionData::
  * The alignment restrictions in PHVWRITE are matching the PHE size.  So the
  * adb source for a 32-bit PHE needs to be 32-bit aligned in the adb.
  */
-bool ActionDataBus::alloc_action_data_bus(const IR::MAU::Table *tbl,
+bool ActionDataBus::alloc_action_data_bus(const P4::IR::MAU::Table *tbl,
         safe_vector<const ActionData::ALUPosition *> &alu_ops, TableResourceAlloc &alloc) {
     LOG2("  Initial Action Data Bus : " << *this);
 
@@ -131,12 +131,12 @@ bool ActionDataBus::alloc_action_data_bus(const IR::MAU::Table *tbl,
 
 /** allocation of the action unit(s) and action data bus for a particular table.
  */
-bool ActionDataBus::alloc_action_data_bus(const IR::MAU::Table *tbl,
+bool ActionDataBus::alloc_action_data_bus(const P4::IR::MAU::Table *tbl,
         const ActionData::Format::Use *use, TableResourceAlloc &alloc) {
     LOG1("Allocating action data bus for " << tbl->name);
     for (auto back_at : tbl->attached) {
         auto at = back_at->attached;
-        auto ad = at->to<IR::MAU::ActionData>();
+        auto ad = at->to<P4::IR::MAU::ActionData>();
         if (ad == nullptr) continue;
 
         auto pos = allocated_attached.find(ad);
@@ -167,15 +167,15 @@ bool ActionDataBus::alloc_action_data_bus(const IR::MAU::Table *tbl,
  * Implement the action data bus allocation logic here for meter alu output.
  *  should also allocate stateful/meter units here?
  */
-bool ActionDataBus::alloc_action_data_bus(const IR::MAU::Table *tbl,
+bool ActionDataBus::alloc_action_data_bus(const P4::IR::MAU::Table *tbl,
         const MeterALU::Format::Use *use, TableResourceAlloc &alloc) {
-    const IR::MAU::AttachedMemory* am = nullptr;
-    const IR::MAU::StatefulAlu *salu = nullptr;
+    const P4::IR::MAU::AttachedMemory* am = nullptr;
+    const P4::IR::MAU::StatefulAlu *salu = nullptr;
     for (auto back_at : tbl->attached) {
         auto at = back_at->attached;
 
-        auto mtr = at->to<IR::MAU::Meter>();
-        salu = at->to<IR::MAU::StatefulAlu>();
+        auto mtr = at->to<P4::IR::MAU::Meter>();
+        salu = at->to<P4::IR::MAU::StatefulAlu>();
 
         if ((mtr && mtr->alu_output()) || salu) {
             am = at;
@@ -218,7 +218,7 @@ void ActionDataBus::update(cstring name, const Use::ReservedSpace &rs) {
     LOG4("  Updated Action Data Bus: " << *this);
 }
 
-void ActionDataBus::update(const IR::MAU::Table *tbl) {
+void ActionDataBus::update(const P4::IR::MAU::Table *tbl) {
     ::ActionDataBus::update(tbl->name, tbl->resources, tbl);
 }
 

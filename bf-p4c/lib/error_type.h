@@ -5,8 +5,10 @@
 
 namespace BFN {
 
+using namespace P4;
+
 /// Barefoot specific error and warning types.
-class ErrorType: public ::ErrorType {
+class ErrorType: public P4::ErrorType {
  public:
     static const int WARN_TABLE_PLACEMENT = 1501;
     static const int WARN_PRAGMA_USE      = 1502;
@@ -28,15 +30,15 @@ class ErrorType: public ::ErrorType {
     /// Barefoot specific error catalog.
     /// It simply adds all the supported errors and warnings in Barefoot's backend.
     ErrorType() {
-        ::ErrorCatalog::getCatalog().add<ErrorMessage::MessageType::Warning,
+        P4::ErrorCatalog::getCatalog().add<ErrorMessage::MessageType::Warning,
                 WARN_TABLE_PLACEMENT>("table-placement");
-        ::ErrorCatalog::getCatalog().add<ErrorMessage::MessageType::Warning,
+        P4::ErrorCatalog::getCatalog().add<ErrorMessage::MessageType::Warning,
                 WARN_PRAGMA_USE>("pragma-use");
-        ::ErrorCatalog::getCatalog().add<ErrorMessage::MessageType::Warning,
+        P4::ErrorCatalog::getCatalog().add<ErrorMessage::MessageType::Warning,
                 WARN_SUBSTITUTION>("substitution");
-        ::ErrorCatalog::getCatalog().add<ErrorMessage::MessageType::Warning,
+        P4::ErrorCatalog::getCatalog().add<ErrorMessage::MessageType::Warning,
                 WARN_PHV_ALLOCATION>("phv-allocation");
-        ::ErrorCatalog::getCatalog().add<ErrorMessage::MessageType::Warning,
+        P4::ErrorCatalog::getCatalog().add<ErrorMessage::MessageType::Warning,
                 WARN_UNINIT_OVERLAY>("uninitialized-overlay");
     }
 };

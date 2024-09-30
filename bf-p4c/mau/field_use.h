@@ -15,12 +15,12 @@ class FieldUse : public MauInspector, TofinoWriteContext {
     struct rw_t { bitvec reads, writes; };
     std::map<cstring, rw_t>     table_use;
     void access_field(cstring field);
-    bool preorder(const IR::MAU::Table *t) override;
-    bool preorder(const IR::Member *f) override;
-    bool preorder(const IR::HeaderStackItemRef *f) override;
-    bool preorder(const IR::TempVar *t) override;
+    bool preorder(const P4::IR::MAU::Table *t) override;
+    bool preorder(const P4::IR::Member *f) override;
+    bool preorder(const P4::IR::HeaderStackItemRef *f) override;
+    bool preorder(const P4::IR::TempVar *t) override;
     friend std::ostream &operator<<(std::ostream &, const FieldUse &);
-    profile_t init_apply(const IR::Node *root) override {
+    profile_t init_apply(const P4::IR::Node *root) override {
         static int counter;
         auto rv = MauInspector::init_apply(root);
         LOG1("Field Use call #" << ++counter);
@@ -29,13 +29,13 @@ class FieldUse : public MauInspector, TofinoWriteContext {
 
  public:
     explicit FieldUse(const PhvInfo& p) : phv(p) { visitDagOnce = false; }
-    bitvec tables_modify(const IR::MAU::TableSeq *t) const;
-    bitvec tables_access(const IR::MAU::TableSeq *t) const;
-    bitvec tables_modify(const IR::MAU::Table *t) const;
-    bitvec tables_access(const IR::MAU::Table *t) const;
-    bitvec table_reads(const IR::MAU::Table *t) const {
+    bitvec tables_modify(const P4::IR::MAU::TableSeq *t) const;
+    bitvec tables_access(const P4::IR::MAU::TableSeq *t) const;
+    bitvec tables_modify(const P4::IR::MAU::Table *t) const;
+    bitvec tables_access(const P4::IR::MAU::Table *t) const;
+    bitvec table_reads(const P4::IR::MAU::Table *t) const {
         return table_use.at(t->name).reads; }
-    bitvec table_writes(const IR::MAU::Table *t) const {
+    bitvec table_writes(const P4::IR::MAU::Table *t) const {
         return table_use.at(t->name).writes; }
     void cloning_table(cstring name, cstring newname) {
         assert(table_use.count(name) && !table_use.count(newname));

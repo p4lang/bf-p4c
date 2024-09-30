@@ -168,8 +168,8 @@ class TableSummary: public MauInspector {
 
         ordered_map<cstring, int> attached_entries;
 
-        PlacedTable(const IR::MAU::Table *t, State::state_t state, const DependencyGraph &dg);
-        void add(const IR::MAU::Table *t, State::state_t state);
+        PlacedTable(const P4::IR::MAU::Table *t, State::state_t state, const DependencyGraph &dg);
+        void add(const P4::IR::MAU::Table *t, State::state_t state);
     };
     friend std::ostream &operator<<(std::ostream &out, const PlacedTable &pl);
     typedef enum {
@@ -233,7 +233,7 @@ class TableSummary: public MauInspector {
     /// Map of table names to the internal names used for communicating table placement information
     ordered_map<cstring, cstring> tableINames;
     /// Map of table name to the IR pointer of the table
-    static ordered_map<cstring, std::set<const IR::MAU::Table*>> tblName2IRptr;
+    static ordered_map<cstring, std::set<const P4::IR::MAU::Table*>> tblName2IRptr;
 
     // Map of Global ID (Stage + Logical Id) -> Placed Table
     std::map<int, PlacedTable*> placedTables;
@@ -253,11 +253,11 @@ class TableSummary: public MauInspector {
 
     PlacementResult table_replay_result = FAIL;
 
-    ordered_map<int, const IR::MAU::Table *> trivial_table_info;
+    ordered_map<int, const P4::IR::MAU::Table *> trivial_table_info;
     // Map of Global ID -> Table
-    std::map<int, const IR::MAU::Table *> order;
+    std::map<int, const P4::IR::MAU::Table *> order;
     // Map of Stage -> All Tables in stage
-    std::map<int, std::set<const IR::MAU::Table *>> tables;
+    std::map<int, std::set<const P4::IR::MAU::Table *>> tables;
     // Map of Field Name -> Map of Field Slice -> Map of Stage -> No. of IXBar
     // Bytes
     // E.g.
@@ -294,12 +294,12 @@ class TableSummary: public MauInspector {
 
     // this is only used for alt-phv-alloc, it is a set of table candidates that can be the table
     // to fix so that table replay can progress.
-    ordered_set<const IR::MAU::Table *> table_replay_fix_candidates;
-    const IR::MAU::Table* table_replay_problematic_table = nullptr;
+    ordered_set<const P4::IR::MAU::Table *> table_replay_fix_candidates;
+    const P4::IR::MAU::Table* table_replay_problematic_table = nullptr;
 
-    profile_t init_apply(const IR::Node *root) override;
-    bool preorder(const IR::MAU::Table* t) override;
-    void postorder(const IR::BFN::Pipe* pipe) override;
+    profile_t init_apply(const P4::IR::Node *root) override;
+    bool preorder(const P4::IR::MAU::Table* t) override;
+    void postorder(const P4::IR::BFN::Pipe* pipe) override;
     void end_apply() override;
 
     /// Prints the stage wise table placement.
@@ -325,24 +325,24 @@ class TableSummary: public MauInspector {
     /// @returns the compiler-generated internal name for tables. Other passes should
     /// use this name, instead of  externalName returned by getTableName(),
     /// to track tables.
-    static cstring getTableIName(const IR::MAU::Table* tbl);
+    static cstring getTableIName(const P4::IR::MAU::Table* tbl);
 
     /// @returns the P4 name for tables with an external name (non-gateways). @returns the
     /// compiler-generated name otherwise.
-    static cstring getTableName(const IR::MAU::Table* tbl);
+    static cstring getTableName(const P4::IR::MAU::Table* tbl);
 
     /// Reset the the tblName2IRptr map
     static void clearTblName2IRptr() { TableSummary::tblName2IRptr.clear(); }
 
     /// @returns the IR pointer to the table named as @t_name
-    static std::set<const IR::MAU::Table*> getTablePtr(const cstring t_name);
+    static std::set<const P4::IR::MAU::Table*> getTablePtr(const cstring t_name);
 
     /// Add table pointer into tblName2IRptr map
-    static void addTablePtr(const IR::MAU::Table* ptr);
+    static void addTablePtr(const P4::IR::MAU::Table* ptr);
 
     /// @return the set of stages to which table @p t has been allocated. optional internal flag
     /// can be used to retrieve the information from the internalTableAlloc map.
-    const ordered_set<int> stages(const IR::MAU::Table* tbl, bool internal = false) const;
+    const ordered_set<int> stages(const P4::IR::MAU::Table* tbl, bool internal = false) const;
 
     /// @returns the maximum number of stages used by the program.
     int maxStages() const { return maxStage; }
@@ -369,7 +369,7 @@ class TableSummary: public MauInspector {
 
     std::map<int, PlacedTable*>& getPlacedTables() { return placedTables; }
 
-    const IR::MAU::Table* get_table_replay_problematic_table() const
+    const P4::IR::MAU::Table* get_table_replay_problematic_table() const
         { return table_replay_problematic_table; }
     int getNumInvoked() const { return numInvoked; }
 
@@ -399,7 +399,7 @@ class TableSummary: public MauInspector {
 
     friend std::ostream &operator<<(std::ostream &out, const TableSummary &ts);
     friend std::ostream &operator<<(
-        std::ostream &out, ordered_map<int, const IR::MAU::Table *> &order);
+        std::ostream &out, ordered_map<int, const P4::IR::MAU::Table *> &order);
     // this is only for alt-phv-alloc, if progressing table replay is impossible due to adding
     // phv constraints, stop it and backtrack with stopTableReplayFitting = true.
     void stop_table_replay_fitting() const {

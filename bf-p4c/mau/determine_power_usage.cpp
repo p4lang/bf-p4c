@@ -11,7 +11,7 @@ namespace MauPower {
 /**
   * Finalize data structures prior to power estimation.
   */
-void DeterminePowerUsage::end_apply(const IR::Node*) {
+void DeterminePowerUsage::end_apply(const P4::IR::Node*) {
   find_stage_dependencies();
   update_stage_dependencies_for_min_latency();
 }
@@ -85,8 +85,8 @@ void DeterminePowerUsage::find_stage_dependencies() {
           for (auto* t2 : mau_features_->stage_to_tables_[gress][prev_stage]) {
             if (t1->gress == t2->gress &&
                 (control_graph->active_simultaneously(t2->unique_id(), t1->unique_id()) ||
-                 t1->always_run == IR::MAU::AlwaysRun::TABLE ||
-                 t2->always_run == IR::MAU::AlwaysRun::TABLE)) {
+                 t1->always_run == P4::IR::MAU::AlwaysRun::TABLE ||
+                 t2->always_run == P4::IR::MAU::AlwaysRun::TABLE)) {
               // Returns the dependency type from t1 to t2.
               DependencyGraph::mau_dependencies_t mau_dep = dep_graph_.find_mau_dependency(t1, t2);
               LOG4("MAU DEP t1 = " << t1->externalName() << " and t2 = "
@@ -115,16 +115,16 @@ void DeterminePowerUsage::find_stage_dependencies() {
   }
 }
 
-void DeterminePowerUsage::postorder(const IR::BFN::Pipe*) {
+void DeterminePowerUsage::postorder(const P4::IR::BFN::Pipe*) {
   // Propagate shared memory accesses to tables that they were not attached to.
   add_unattached_memory_accesses();
 }
 
-bool DeterminePowerUsage::preorder(const IR::MAU::Meter *m) {
+bool DeterminePowerUsage::preorder(const P4::IR::MAU::Meter *m) {
   // All 'normal' meters have to run at EOP time.
   bool runs_at_eop = m->color_output();
   bool is_lpf_or_wred = m->alu_output();
-  auto tbl = findContext<IR::MAU::Table>();
+  auto tbl = findContext<P4::IR::MAU::Table>();
   BUG_CHECK(tbl != nullptr, "No associated table found for Meter %1%", m);
   auto uniq_id = tbl->unique_id(m);
   mau_features_->meter_runs_at_eop_.emplace(uniq_id, runs_at_eop);
@@ -132,25 +132,25 @@ bool DeterminePowerUsage::preorder(const IR::MAU::Meter *m) {
   return true;
 }
 
-bool DeterminePowerUsage::preorder(const IR::MAU::Counter *c) {
-  bool runs_at_eop = c->type == IR::MAU::DataAggregation::BYTES ||
-                     c->type == IR::MAU::DataAggregation::BOTH;
-  auto tbl = findContext<IR::MAU::Table>();
+bool DeterminePowerUsage::preorder(const P4::IR::MAU::Counter *c) {
+  bool runs_at_eop = c->type == P4::IR::MAU::DataAggregation::BYTES ||
+                     c->type == P4::IR::MAU::DataAggregation::BOTH;
+  auto tbl = findContext<P4::IR::MAU::Table>();
   BUG_CHECK(tbl != nullptr, "No associated table found for Counter %1%", c);
   auto uniq_id = tbl->unique_id(c);
   mau_features_->counter_runs_at_eop_.emplace(uniq_id, runs_at_eop);
   return true;
 }
 
-bool DeterminePowerUsage::preorder(const IR::MAU::Selector *sel) {
-  auto tbl = findContext<IR::MAU::Table>();
+bool DeterminePowerUsage::preorder(const P4::IR::MAU::Selector *sel) {
+  auto tbl = findContext<P4::IR::MAU::Table>();
   BUG_CHECK(tbl != nullptr, "No associated table found for Selector %1%", sel);
   auto uniq_id = tbl->unique_id(sel);
   mau_features_->selector_group_size_.emplace(uniq_id, sel->max_pool_size);
   return true;
 }
 
-bool DeterminePowerUsage::uses_mocha_containers_in_ixbar(const IR::MAU::Table* t) const {
+bool DeterminePowerUsage::uses_mocha_containers_in_ixbar(const P4::IR::MAU::Table* t) const {
   if (Device::currentDevice() != Device::TOFINO) {
     if (t && t->resources) {
       PHV::FieldUse READ(PHV::FieldUse::READ);
@@ -200,7 +200,7 @@ bool DeterminePowerUsage::uses_mocha_containers_in_ixbar(const IR::MAU::Table* t
   return false;
 }
 
-void DeterminePowerUsage::postorder(const IR::MAU::Table *t) {
+void DeterminePowerUsage::postorder(const P4::IR::MAU::Table *t) {
   if (!t->logical_id) return;
   table_uses_mocha_container_.emplace(t->unique_id(), uses_mocha_containers_in_ixbar(t));
   if (t->stage() >= Device::numStages()) {
@@ -351,7 +351,7 @@ void DeterminePowerUsage::postorder(const IR::MAU::Table *t) {
 
     } else if (mem.type == Memories::Use::STATEFUL) {
       auto *att = t->get_attached(use.first);
-      if (att && att->use != IR::MAU::StatefulUse::NO_USE) {
+      if (att && att->use != P4::IR::MAU::StatefulUse::NO_USE) {
         auto local_stateful_table = PowerMemoryAccess();
         local_stateful_table.ram_read += 1;  // Stateful are only one ram wide
         local_stateful_table.ram_write += 1;

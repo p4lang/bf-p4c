@@ -13,22 +13,22 @@
 /// Determines which of the program's table dependencies should be ignored, based on
 /// \@ignore_table_dependency annotations appearing in the program.
 class IgnoreTableDeps : public MauTableInspector {
-    using TablePair = std::pair<const IR::MAU::Table *, const IR::MAU::Table *>;
+    using TablePair = std::pair<const P4::IR::MAU::Table *, const P4::IR::MAU::Table *>;
 
     /// When a table A is in the set mapped by table B, the dependencies between A and B should be
     /// ignored, based on the \@ignore_table_dependency annotations appearing in the program.
     /// Invariant: this is computed as a symmetric relation.
-    ordered_map<const IR::MAU::Table *, ordered_set<const IR::MAU::Table *>> ignore_dep_map;
+    ordered_map<const P4::IR::MAU::Table *, ordered_set<const P4::IR::MAU::Table *>> ignore_dep_map;
 
     // Auxiliary data structures for end_apply().
-    std::map<cstring, const IR::MAU::Table *> internal_name_to_table;
-    std::map<cstring, const IR::MAU::Table *> external_name_to_table;
+    std::map<cstring, const P4::IR::MAU::Table *> internal_name_to_table;
+    std::map<cstring, const P4::IR::MAU::Table *> external_name_to_table;
 
     /// Maps each table to the corresponding set of table names appearing in
     /// \@ignore_table_dependency annotations on that table.
-    ordered_map<const IR::MAU::Table *, std::set<cstring>> table_to_pragmas;
+    ordered_map<const P4::IR::MAU::Table *, std::set<cstring>> table_to_pragmas;
 
-    profile_t init_apply(const IR::Node *node) override {
+    profile_t init_apply(const P4::IR::Node *node) override {
         auto rv = MauTableInspector::init_apply(node);
         ignore_dep_map.clear();
         internal_name_to_table.clear();
@@ -38,7 +38,7 @@ class IgnoreTableDeps : public MauTableInspector {
     }
 
     /// Populates #table_to_pragmas.
-    bool preorder(const IR::MAU::Table *) override;
+    bool preorder(const P4::IR::MAU::Table *) override;
 
     /// Performs analysis to populate #ignore_dep_map.
     void end_apply() override;
@@ -48,7 +48,7 @@ class IgnoreTableDeps : public MauTableInspector {
     IgnoreTableDeps() {}
 
     /// Determines whether dependencies between the two given tables should be ignored.
-    bool ignore_deps(const IR::MAU::Table *t1, const IR::MAU::Table *t2) const;
+    bool ignore_deps(const P4::IR::MAU::Table *t1, const P4::IR::MAU::Table *t2) const;
 
     /// In the returned list, each pair of tables should have their dependencies ignored.
     safe_vector<TablePair> pairwise_deps_to_ignore() const;
@@ -66,8 +66,8 @@ class IgnoreTableDeps : public MauTableInspector {
  *        from the tables under the miss
  *      - in an action chain, the tables under each action branch are mutually exclusive
  *        from one another
- *  These different examples all stem from the structure of an IR tree.  The IR::MAU::Table
- *  class has a map of IR::MAU::TableSeqs.  This map corresponds to the different mutually
+ *  These different examples all stem from the structure of an IR tree.  The P4::IR::MAU::Table
+ *  class has a map of P4::IR::MAU::TableSeqs.  This map corresponds to the different mutually
  *  paths that can lead from the execution of this table, whether it is a gateway, hitmiss,
  *  or action chain.
  *
@@ -88,18 +88,18 @@ class IgnoreTableDeps : public MauTableInspector {
  */
 
 class TablesMutuallyExclusive : public MauTableInspector {
-    ordered_map<const IR::MAU::Table *, int>    table_ids;
-    std::map<int, const IR::MAU::Table *>       rev_table_ids;
+    ordered_map<const P4::IR::MAU::Table *, int>    table_ids;
+    std::map<int, const P4::IR::MAU::Table *>       rev_table_ids;
 
  public:
     // public for gtests
-    std::map<cstring, const IR::MAU::Table *> name_to_tables;
+    std::map<cstring, const P4::IR::MAU::Table *> name_to_tables;
 
  private:
     /// This is the reflexive, transitive closure of the relation in which each table T is related
     /// to all tables appearing in T's next-tables map. Each table is mapped to all of its related
     /// tables, represented by a bitvec keyed on table IDs.
-    ordered_map<const IR::MAU::Table *, bitvec> table_succ;
+    ordered_map<const P4::IR::MAU::Table *, bitvec> table_succ;
 
     /// The computed non-mutual-exclusion relation. This is a matrix keyed on table IDs. A value of
     /// 1 indicates that the corresponding tables are not mutually exclusive in the program's
@@ -108,14 +108,14 @@ class TablesMutuallyExclusive : public MauTableInspector {
 
     // If a table is present as an key, it means that one of its sucessor is an exit table.
     // The bit vec represents the exit table and tables before the exit table in a tableSeq
-    ordered_map<const IR::MAU::Table*, bitvec> exit_succ;
+    ordered_map<const P4::IR::MAU::Table*, bitvec> exit_succ;
 
-    void postorder(const IR::MAU::Table *tbl) override;
-    void postorder(const IR::MAU::TableSeq *seq) override;
-    bool miss_mutex_action_chain(const IR::MAU::Table *tbl, const IR::MAU::Action *default_act,
+    void postorder(const P4::IR::MAU::Table *tbl) override;
+    void postorder(const P4::IR::MAU::TableSeq *seq) override;
+    bool miss_mutex_action_chain(const P4::IR::MAU::Table *tbl, const P4::IR::MAU::Action *default_act,
         cstring &name);
 
-    profile_t init_apply(const IR::Node *root) override {
+    profile_t init_apply(const P4::IR::Node *root) override {
         profile_t rv = MauTableInspector::init_apply(root);
 
         table_ids.clear();
@@ -124,7 +124,7 @@ class TablesMutuallyExclusive : public MauTableInspector {
         name_to_tables.clear();
 
         // Populate auxiliary data structures.
-        forAllMatching<IR::MAU::Table>(root, [this](const IR::MAU::Table *t) {
+        forAllMatching<P4::IR::MAU::Table>(root, [this](const P4::IR::MAU::Table *t) {
             assert(!table_ids.count(t));
             rev_table_ids.emplace(table_ids.size(), t);
             table_ids.emplace(t, table_ids.size());
@@ -133,46 +133,46 @@ class TablesMutuallyExclusive : public MauTableInspector {
     }
 
  public:
-    bool operator()(const IR::MAU::Table *a, const IR::MAU::Table *b) const;
+    bool operator()(const P4::IR::MAU::Table *a, const P4::IR::MAU::Table *b) const;
 };
 
 class SharedIndirectAttachedAnalysis : public MauInspector {
-    ordered_map<const IR::MAU::AttachedMemory *,
-                safe_vector<const IR::MAU::Table *>> backend_users;
-    ordered_map<const IR::MAU::Table *,
-          ordered_set<const IR::MAU::Table *>> table_sharing_attached;
+    ordered_map<const P4::IR::MAU::AttachedMemory *,
+                safe_vector<const P4::IR::MAU::Table *>> backend_users;
+    ordered_map<const P4::IR::MAU::Table *,
+          ordered_set<const P4::IR::MAU::Table *>> table_sharing_attached;
     const TablesMutuallyExclusive &mutex;
     const IgnoreTableDeps &ignore;
     const ActionMutuallyExclusive &action_mutex;
     LayoutChoices &lc;
     SymBitMatrix _mutex_through_ignore;
 
-    std::map<const IR::MAU::Table *, int>    table_ids;
-    std::map<int, const IR::MAU::Table *>    rev_table_ids;
+    std::map<const P4::IR::MAU::Table *, int>    table_ids;
+    std::map<int, const P4::IR::MAU::Table *>    rev_table_ids;
 
-    profile_t init_apply(const IR::Node *root) override {
+    profile_t init_apply(const P4::IR::Node *root) override {
         profile_t rv = MauInspector::init_apply(root);
         backend_users.clear();
         table_sharing_attached.clear();
         table_ids.clear();
         rev_table_ids.clear();
         _mutex_through_ignore.clear();
-        forAllMatching<IR::MAU::Table>(root, [this](const IR::MAU::Table *t) {
+        forAllMatching<P4::IR::MAU::Table>(root, [this](const P4::IR::MAU::Table *t) {
             assert(!table_ids.count(t));
             rev_table_ids.emplace(table_ids.size(), t);
             table_ids.emplace(t, table_ids.size()); });
         return rv;
     }
-    bool preorder(const IR::MAU::AttachedMemory *) override;
-    bool check_if_can_share(const IR::MAU::Table *a, const IR::MAU::Table *b,
-                                   const IR::MAU::AttachedMemory *am);
-    std::vector<const IR::MAU::Action*> get_indirect_actions(const IR::MAU::Table *a,
-                                                             const IR::MAU::AttachedMemory *am);
+    bool preorder(const P4::IR::MAU::AttachedMemory *) override;
+    bool check_if_can_share(const P4::IR::MAU::Table *a, const P4::IR::MAU::Table *b,
+                                   const P4::IR::MAU::AttachedMemory *am);
+    std::vector<const P4::IR::MAU::Action*> get_indirect_actions(const P4::IR::MAU::Table *a,
+                                                             const P4::IR::MAU::AttachedMemory *am);
 
  public:
-    bool mutex_through_ignore(const IR::MAU::Table *a, const IR::MAU::Table *b) const;
+    bool mutex_through_ignore(const P4::IR::MAU::Table *a, const P4::IR::MAU::Table *b) const;
     // for gtest
-    bool if_table_share_attach(const IR::MAU::Table *a, const IR::MAU::Table *b) const;
+    bool if_table_share_attach(const P4::IR::MAU::Table *a, const P4::IR::MAU::Table *b) const;
     explicit SharedIndirectAttachedAnalysis(const TablesMutuallyExclusive &m,
          const IgnoreTableDeps &i, const ActionMutuallyExclusive &a, LayoutChoices  &lc) :
          mutex(m), ignore(i), action_mutex(a), lc(lc) {}

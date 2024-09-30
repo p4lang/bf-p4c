@@ -24,12 +24,12 @@
  * holdover until we have the time to implement this.
  */
 struct ReductionOrInfo {
-    using SaluReductionOrGroup = std::map<cstring, ordered_set<const IR::MAU::StatefulAlu *>>;
-    using TblReductionOrGroup = std::map<cstring, ordered_set<const IR::MAU::Table *>>;
+    using SaluReductionOrGroup = std::map<cstring, ordered_set<const P4::IR::MAU::StatefulAlu *>>;
+    using TblReductionOrGroup = std::map<cstring, ordered_set<const P4::IR::MAU::Table *>>;
 
     SaluReductionOrGroup salu_reduction_or_group;
     TblReductionOrGroup  tbl_reduction_or_group;
-    bool is_reduction_or(const IR::MAU::Instruction *, const IR::MAU::Table *,
+    bool is_reduction_or(const P4::IR::MAU::Instruction *, const P4::IR::MAU::Table *,
             cstring &red_or_key) const;
 
     void clear() {
@@ -39,9 +39,9 @@ struct ReductionOrInfo {
 };
 
 class GatherReductionOrReqs : public MauInspector {
-    Visitor::profile_t init_apply(const IR::Node *node) override;
-    bool preorder(const IR::MAU::StatefulAlu *) override;
-    bool preorder(const IR::MAU::Action *) override { return false; }
+    Visitor::profile_t init_apply(const P4::IR::Node *node) override;
+    bool preorder(const P4::IR::MAU::StatefulAlu *) override;
+    bool preorder(const P4::IR::MAU::Action *) override { return false; }
 
     ReductionOrInfo &red_or_info;
 

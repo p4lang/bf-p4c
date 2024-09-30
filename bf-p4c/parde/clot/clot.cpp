@@ -187,11 +187,11 @@ void Clot::set_slices(cstring parser_state, const std::vector<const PHV::FieldSl
     }
 }
 
-void Clot::toJSON(JSONGenerator& json) const {
+void Clot::toJSON(P4::JSONGenerator& json) const {
     json << *this;
 }
 
-/* static */ Clot* Clot::fromJSON(JSONLoader& json) {
+/* static */ Clot* Clot::fromJSON(P4::JSONLoader& json) {
     if (auto* v = json.json->to<JsonString>())
         return new Clot(cstring(v->c_str()));
     BUG("Couldn't decode JSON value to clot");
@@ -209,11 +209,11 @@ std::ostream& operator<<(std::ostream& out, const Clot* clot) {
         return out << "(nullptr)";
 }
 
-JSONGenerator& operator<<(JSONGenerator& out, const Clot& clot) {
+P4::JSONGenerator& operator<<(P4::JSONGenerator& out, const Clot& clot) {
     return out << clot.toString();
 }
 
-JSONGenerator& operator<<(JSONGenerator& out, const Clot* clot) {
+P4::JSONGenerator& operator<<(P4::JSONGenerator& out, const Clot* clot) {
     if (clot)
         return out << *clot;
     else

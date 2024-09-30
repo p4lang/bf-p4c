@@ -3,11 +3,13 @@
 
 #include "lib/ordered_map.h"
 
+namespace P4 {
 namespace IR {
 namespace MAU {
 class AttachedMemory;  // forward declaration
 }
 }
+}  // 
 
 // Table Placement needs to communicate infomation about attached tables (how many entries
 // are being placed in the current stage and whether more will be in a later stage) to Memory
@@ -24,7 +26,7 @@ struct attached_entries_element_t {
     explicit attached_entries_element_t(int e) : entries(e) {}
 };
 
-typedef ordered_map<const IR::MAU::AttachedMemory *, attached_entries_element_t> attached_entries_t;
+typedef ordered_map<const P4::IR::MAU::AttachedMemory *, attached_entries_element_t> attached_entries_t;
 
 // not a consistent ordering -- true if first has more of anything than second
 bool operator>(const attached_entries_t&, const attached_entries_t &);

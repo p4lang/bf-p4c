@@ -24,11 +24,11 @@ void ActionDataBus::update(cstring name, const Use &alloc) {
 }
 
 void ActionDataBus::update_action_data(cstring name, const TableResourceAlloc *alloc,
-                                       const IR::MAU::Table *tbl) {
-    const IR::MAU::ActionData *ad = nullptr;
+                                       const P4::IR::MAU::Table *tbl) {
+    const P4::IR::MAU::ActionData *ad = nullptr;
     for (auto back_at : tbl->attached) {
         auto at = back_at->attached;
-        ad = at->to<IR::MAU::ActionData>();
+        ad = at->to<P4::IR::MAU::ActionData>();
         if (ad != nullptr)
             break;
     }
@@ -45,13 +45,13 @@ void ActionDataBus::update_action_data(cstring name, const TableResourceAlloc *a
 }
 
 void ActionDataBus::update_meter(cstring name, const TableResourceAlloc *alloc,
-                                 const IR::MAU::Table *tbl) {
-    const IR::MAU::AttachedMemory *am = nullptr;
-    const IR::MAU::StatefulAlu *salu = nullptr;
+                                 const P4::IR::MAU::Table *tbl) {
+    const P4::IR::MAU::AttachedMemory *am = nullptr;
+    const P4::IR::MAU::StatefulAlu *salu = nullptr;
     for (auto back_at : tbl->attached) {
         auto at = back_at->attached;
-        auto mtr = at->to<IR::MAU::Meter>();
-        salu = at->to<IR::MAU::StatefulAlu>();
+        auto mtr = at->to<P4::IR::MAU::Meter>();
+        salu = at->to<P4::IR::MAU::StatefulAlu>();
         if ((mtr && mtr->alu_output()) || salu) {
             am = at;
             break;
@@ -77,12 +77,12 @@ void ActionDataBus::update_meter(cstring name, const TableResourceAlloc *alloc,
 }
 
 void ActionDataBus::update(cstring name, const TableResourceAlloc *alloc,
-                           const IR::MAU::Table *tbl) {
+                           const P4::IR::MAU::Table *tbl) {
     update_action_data(name, alloc, tbl);
     update_meter(name, alloc, tbl);
 }
 
-void ActionDataBus::update(const IR::MAU::Table *tbl) {
+void ActionDataBus::update(const P4::IR::MAU::Table *tbl) {
     update(tbl->name, tbl->resources, tbl);
 }
 

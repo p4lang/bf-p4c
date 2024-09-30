@@ -5,12 +5,10 @@
 #include "lib/cstring.h"
 #include "bf-p4c/ir/gress.h"
 
-using namespace P4;
+namespace P4 {
 
 class JSONGenerator;
 class JSONLoader;
-
-namespace P4 {
 
 struct MarshaledFrom {
     // use those two to uniquely identify a field.
@@ -31,11 +29,11 @@ struct MarshaledFrom {
     }
 
     /// JSON serialization/deserialization.
-    void toJSON(JSONGenerator& json) const;
-    static MarshaledFrom fromJSON(JSONLoader& json);
+    void toJSON(P4::JSONGenerator& json) const;
+    static MarshaledFrom fromJSON(P4::JSONLoader& json);
 
     friend std::ostream& operator<<(std::ostream& s, const MarshaledFrom& m);
-    friend JSONGenerator& operator<<(JSONGenerator& out, const MarshaledFrom& c);
+    friend P4::JSONGenerator& operator<<(P4::JSONGenerator& out, const MarshaledFrom& c);
 
     MarshaledFrom()
         : gress(INGRESS), field_name(""), pre_padding(0) { }

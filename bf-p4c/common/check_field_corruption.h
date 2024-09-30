@@ -16,8 +16,8 @@ class CheckFieldCorruption : public Inspector, TofinoWriteContext {
     const PHV::Pragmas &pragmas;
     Phv_Parde_Mau_Use uses;
     ordered_set<const PHV::Field*> pov_protected_fields;
-    std::map<const IR::BFN::ParserState *, std::set<const IR::Expression *>> state_extracts;
-    std::map<const PHV::Field *, std::set<const IR::Expression *>> parser_inits;
+    std::map<const P4::IR::BFN::ParserState *, std::set<const P4::IR::Expression *>> state_extracts;
+    std::map<const PHV::Field *, std::set<const P4::IR::Expression *>> parser_inits;
 
  protected:
     /// Check if any other fields that share a container with the field in @p use are extracted
@@ -37,11 +37,11 @@ class CheckFieldCorruption : public Inspector, TofinoWriteContext {
         defuse(defuse), phv(phv), pragmas(pragmas), uses(phv) {}
 
     void end_apply() override;
-    bool preorder(const IR::BFN::Pipe *) override;
-    bool preorder(const IR::BFN::DeparserParameter *) override;
-    bool preorder(const IR::BFN::Digest *) override;
-    bool preorder(const IR::Expression *) override;
-    bool preorder(const IR::BFN::ParserZeroInit *) override;
+    bool preorder(const P4::IR::BFN::Pipe *) override;
+    bool preorder(const P4::IR::BFN::DeparserParameter *) override;
+    bool preorder(const P4::IR::BFN::Digest *) override;
+    bool preorder(const P4::IR::Expression *) override;
+    bool preorder(const P4::IR::BFN::ParserZeroInit *) override;
 };
 
 #endif /* BF_P4C_COMMON_CHECK_FIELD_CORRUPTION_H_ */

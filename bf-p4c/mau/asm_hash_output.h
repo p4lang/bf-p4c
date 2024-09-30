@@ -36,9 +36,9 @@
 #include "lib/stringref.h"
 
 void emit_ixbar_gather_map(const PhvInfo &phv, std::multimap<int, Slice> &match_data_map,
-        std::map<le_bitrange, const IR::Constant*> &constant_map,
+        std::map<le_bitrange, const P4::IR::Constant*> &constant_map,
         const safe_vector<Slice> &match_data,
-        const safe_vector<const IR::Expression *> &field_list_order, const LTBitMatrix &sym_keys,
+        const safe_vector<const P4::IR::Expression *> &field_list_order, const LTBitMatrix &sym_keys,
         int &total_size);
 
 class EmitHashExpression : public Inspector {
@@ -48,11 +48,11 @@ class EmitHashExpression : public Inspector {
     int                         bit;
     const safe_vector<Slice>    &match_data;
 
-    bool preorder(const IR::Concat *c) override;
-    bool preorder(const IR::BFN::SignExtend *c) override;
-    bool preorder(const IR::Constant *) override;
-    bool preorder(const IR::Expression *e) override;
-    bool preorder(const IR::MAU::HashGenExpression *hge) override;
+    bool preorder(const P4::IR::Concat *c) override;
+    bool preorder(const P4::IR::BFN::SignExtend *c) override;
+    bool preorder(const P4::IR::Constant *) override;
+    bool preorder(const P4::IR::Expression *e) override;
+    bool preorder(const P4::IR::MAU::HashGenExpression *hge) override;
  public:
     EmitHashExpression(const PhvInfo &phv, std::ostream &out, indent_t indent, int bit,
                        const safe_vector<Slice> &match_data)
@@ -74,14 +74,14 @@ void emit_ixbar_hash_exact(std::ostream &out, indent_t indent,
         int hash_group, int &ident_bits_prev_alloc);
 void emit_ixbar_gather_map(const PhvInfo &phv,
         std::multimap<int, Slice> &match_data_map,
-        std::map<le_bitrange, const IR::Constant*> &constant_map,
+        std::map<le_bitrange, const P4::IR::Constant*> &constant_map,
         const safe_vector<Slice> &match_data,
-        const safe_vector<const IR::Expression *> &field_list_order, const LTBitMatrix &sym_keys,
+        const safe_vector<const P4::IR::Expression *> &field_list_order, const LTBitMatrix &sym_keys,
         int &total_size);
 void emit_ixbar_gather_bytes(const PhvInfo &phv,
         const safe_vector<::IXBar::Use::Byte> &use,
         std::map<int, std::map<int, Slice>> &sort, std::map<int, std::map<int, Slice>> &midbytes,
-        const IR::MAU::Table *tbl, bool ternary, bool atcam = false);
+        const P4::IR::MAU::Table *tbl, bool ternary, bool atcam = false);
 void emit_ixbar_hash_table(int hash_table, safe_vector<Slice> &match_data,
         safe_vector<Slice> &ghost, const TableMatch *fmt,
         std::map<int, std::map<int, Slice>> &sort);

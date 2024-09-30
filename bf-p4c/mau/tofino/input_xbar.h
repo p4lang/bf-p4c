@@ -205,8 +205,8 @@ struct IXBar : public ::IXBar {
             bool allocated = false;
             int group = -1;
             bitvec bit_mask;
-            IR::MAU::HashFunction algorithm;
-            std::map<int, const IR::Expression *> computed_expressions;
+            P4::IR::MAU::HashFunction algorithm;
+            std::map<int, const P4::IR::Expression *> computed_expressions;
 
             void clear() {
                 allocated = false;
@@ -216,7 +216,7 @@ struct IXBar : public ::IXBar {
                 computed_expressions.clear();
             }
         } meter_alu_hash;
-        const std::map<int, const IR::Expression *> &hash_computed_expressions() const override {
+        const std::map<int, const P4::IR::Expression *> &hash_computed_expressions() const override {
             return meter_alu_hash.computed_expressions; }
 
         /* tracks hash dist use (and hashes */
@@ -224,9 +224,9 @@ struct IXBar : public ::IXBar {
             bool allocated = false;
             int group = -1;
             bitvec galois_matrix_bits;
-            IR::MAU::HashFunction algorithm;
+            P4::IR::MAU::HashFunction algorithm;
             std::map<int, le_bitrange> galois_start_bit_to_p4_hash;
-            const IR::Expression *hash_gen_expr = nullptr;   // expression from HashGenExpr
+            const P4::IR::Expression *hash_gen_expr = nullptr;   // expression from HashGenExpr
             cstring name;    // Original name in case of hash distribution unit sharing
 
             void clear() {
@@ -242,7 +242,7 @@ struct IXBar : public ::IXBar {
             bool allocated = false;
             int group = -1;
             bitvec hash_bits;
-            IR::MAU::HashFunction algorithm;
+            P4::IR::MAU::HashFunction algorithm;
 
             void clear() {
                 allocated = false;
@@ -260,7 +260,7 @@ struct IXBar : public ::IXBar {
         } salu_input_source;
 
         // The order in the P4 program that the fields appear in the list
-        safe_vector<const IR::Expression *> field_list_order;
+        safe_vector<const P4::IR::Expression *> field_list_order;
         LTBitMatrix symmetric_keys;
 
         void clear() override {
@@ -291,9 +291,9 @@ struct IXBar : public ::IXBar {
         safe_vector<TotalInfo> bits_per_search_bus() const;
         unsigned compute_hash_tables();
         bool emit_gateway_asm(const MauAsmOutput &, std::ostream &, indent_t,
-                              const IR::MAU::Table *) const override { return false; }
+                              const P4::IR::MAU::Table *) const override { return false; }
         void emit_ixbar_asm(const PhvInfo &phv, std::ostream& out, indent_t indent,
-                            const TableMatch *fmt, const IR::MAU::Table *) const override;
+                            const TableMatch *fmt, const P4::IR::MAU::Table *) const override;
         void emit_salu_bytemasks(std::ostream &out, indent_t indent) const override;
         void emit_ixbar_hash_table(int hash_table, safe_vector<Slice> &match_data,
                 safe_vector<Slice> &ghost, const TableMatch *fmt,
@@ -329,7 +329,7 @@ struct IXBar : public ::IXBar {
         HashDistDest_t dest;
         int shift;
         // Only currently used for dynamic hash.  Goal is to remove
-        const IR::MAU::HashDist *created_hd;
+        const P4::IR::MAU::HashDist *created_hd;
         // Workaround for multi-stage fifo tests.  Goal is to remove this as well and have
         // the hash/compiler to generate this individually and determine it, but that's not
         // very optimal in the given structure
@@ -350,7 +350,7 @@ struct IXBar : public ::IXBar {
         le_bitrange p4_hash_range;
         HashDistDest_t dest;
         // Only currently used for dynamic hash.  Goal is to remove
-        const IR::MAU::HashDist *created_hd = nullptr;
+        const P4::IR::MAU::HashDist *created_hd = nullptr;
         cstring dyn_hash_name;
         bool is_dynamic() const { return !dyn_hash_name.isNull(); }
     };
@@ -386,36 +386,36 @@ struct IXBar : public ::IXBar {
     };
 
  private:
-    ordered_map<const IR::MAU::Table *, const safe_vector<HashDistUse> *> tbl_hash_dists;
+    ordered_map<const P4::IR::MAU::Table *, const safe_vector<HashDistUse> *> tbl_hash_dists;
     static unsigned hash_table_inputs(const HashDistUse &hdu);
 
     class XBarHashDist : public MauInspector {
         safe_vector<HashDistAllocPostExpand> alloc_reqs;
         IXBar &self;
         const PhvInfo &phv;
-        const IR::MAU::Table *tbl;
+        const P4::IR::MAU::Table *tbl;
         // const ActionFormat::Use *af;
         const ActionData::Format::Use *af;
         const LayoutOption *lo;
         TableResourceAlloc *resources;
         const attached_entries_t &attached_entries;
 
-        void build_action_data_req(const IR::MAU::HashDist *hd);
-        void build_req(const IR::MAU::HashDist *hd, const IR::Node *rel_node,
+        void build_action_data_req(const P4::IR::MAU::HashDist *hd);
+        void build_req(const P4::IR::MAU::HashDist *hd, const P4::IR::Node *rel_node,
             bool created_hd = false);
 
-        void build_function(const IR::MAU::HashDist *hd, P4HashFunction **func,
+        void build_function(const P4::IR::MAU::HashDist *hd, P4HashFunction **func,
             le_bitrange *bits = nullptr);
-        bool preorder(const IR::MAU::HashDist *) override;
-        bool preorder(const IR::MAU::TableSeq *) override { return false; }
-        bool preorder(const IR::MAU::AttachedOutput *) override { return false; }
-        bool preorder(const IR::MAU::StatefulCall *) override { return false; }
+        bool preorder(const P4::IR::MAU::HashDist *) override;
+        bool preorder(const P4::IR::MAU::TableSeq *) override { return false; }
+        bool preorder(const P4::IR::MAU::AttachedOutput *) override { return false; }
+        bool preorder(const P4::IR::MAU::StatefulCall *) override { return false; }
 
      public:
         void immediate_inputs();
         void hash_action();
         bool allocate_hash_dist();
-        XBarHashDist(IXBar &s, const PhvInfo &p, const IR::MAU::Table *t,
+        XBarHashDist(IXBar &s, const PhvInfo &p, const P4::IR::MAU::Table *t,
                 const ActionData::Format::Use *a, const LayoutOption *l, TableResourceAlloc *r,
                 const attached_entries_t &ae)
             : self(s), phv(p), tbl(t), af(a), lo(l), resources(r), attached_entries(ae) {}
@@ -521,74 +521,74 @@ struct IXBar : public ::IXBar {
     class FindSaluSources : public MauInspector {
         const PhvInfo              &phv;
         ContByteConversion  &map_alloc;
-        safe_vector<const IR::Expression *> &field_list_order;
+        safe_vector<const P4::IR::Expression *> &field_list_order;
         // Holds which bitranges of fields have been requested, and will not allocate
         // if a bitrange has been requested multiple times
         std::map<cstring, bitvec>  fields_needed;
-        const IR::MAU::Table       *tbl;
+        const P4::IR::MAU::Table       *tbl;
 
-        profile_t init_apply(const IR::Node *root) override;
-        bool preorder(const IR::MAU::StatefulAlu *) override;
-        bool preorder(const IR::MAU::SaluAction *) override;
-        bool preorder(const IR::Expression *e) override;
-        bool preorder(const IR::MAU::HashDist *) override;
-        bool preorder(const IR::MAU::IXBarExpression *) override;
+        profile_t init_apply(const P4::IR::Node *root) override;
+        bool preorder(const P4::IR::MAU::StatefulAlu *) override;
+        bool preorder(const P4::IR::MAU::SaluAction *) override;
+        bool preorder(const P4::IR::Expression *e) override;
+        bool preorder(const P4::IR::MAU::HashDist *) override;
+        bool preorder(const P4::IR::MAU::IXBarExpression *) override;
         ///> In order to prevent any annotations, i.e. chain_vpn, and determining this as a source
-        bool preorder(const IR::Annotation *) override { return false; }
-        bool preorder(const IR::Declaration_Instance *) override { return false; }
-        bool preorder(const IR::MAU::Selector *) override { return false; }
+        bool preorder(const P4::IR::Annotation *) override { return false; }
+        bool preorder(const P4::IR::Declaration_Instance *) override { return false; }
+        bool preorder(const P4::IR::MAU::Selector *) override { return false; }
 
-        static void collapse_contained(std::map<le_bitrange, const IR::Expression *> &m);
+        static void collapse_contained(std::map<le_bitrange, const P4::IR::Expression *> &m);
 
      public:
         FindSaluSources(IXBar &, const PhvInfo &phv, ContByteConversion &ma,
-                        safe_vector<const IR::Expression *> &flo, const IR::MAU::Table *t)
+                        safe_vector<const P4::IR::Expression *> &flo, const P4::IR::MAU::Table *t)
         : phv(phv), map_alloc(ma), field_list_order(flo), tbl(t) {}
 
-        ordered_map<const PHV::Field *, std::map<le_bitrange, const IR::Expression *>>
+        ordered_map<const PHV::Field *, std::map<le_bitrange, const P4::IR::Expression *>>
                                                         phv_sources;
-        std::vector<const IR::MAU::IXBarExpression *>   hash_sources;
+        std::vector<const P4::IR::MAU::IXBarExpression *>   hash_sources;
         bool                                            dleft = false;
     };
 
     void clear();
-    bool allocMatch(bool ternary, const IR::MAU::Table *tbl, const PhvInfo &phv, Use &alloc,
+    bool allocMatch(bool ternary, const P4::IR::MAU::Table *tbl, const PhvInfo &phv, Use &alloc,
                     safe_vector<IXBar::Use::Byte *> &alloced, hash_matrix_reqs &hm_reqs);
-    bool allocPartition(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &alloc,
+    bool allocPartition(const P4::IR::MAU::Table *tbl, const PhvInfo &phv, Use &alloc,
                         bool second_try);
     int getHashGroup(unsigned hash_table_input, const hash_matrix_reqs *hm_reqs = nullptr);
     void getHashDistGroups(unsigned hash_table_input, int hash_group_opt[HASH_DIST_UNITS]);
-    bool allocProxyHash(const IR::MAU::Table *tbl, const PhvInfo &phv,
+    bool allocProxyHash(const P4::IR::MAU::Table *tbl, const PhvInfo &phv,
         const LayoutOption *lo, Use &alloc, Use &proxy_hash_alloc);
-    bool allocProxyHashKey(const IR::MAU::Table *tbl, const PhvInfo &phv, const LayoutOption *lo,
+    bool allocProxyHashKey(const P4::IR::MAU::Table *tbl, const PhvInfo &phv, const LayoutOption *lo,
         Use &proxy_hash_alloc, hash_matrix_reqs &hm_reqs);
 
-    bool allocAllHashWays(bool ternary, const IR::MAU::Table *tbl, Use &alloc,
+    bool allocAllHashWays(bool ternary, const P4::IR::MAU::Table *tbl, Use &alloc,
         const LayoutOption *layout_option, size_t start, size_t last,
         const hash_matrix_reqs &hm_reqs);
-    bool allocHashWay(const IR::MAU::Table *tbl, const LayoutOption *layout_option,
+    bool allocHashWay(const P4::IR::MAU::Table *tbl, const LayoutOption *layout_option,
         size_t index, std::map<int, bitvec> &slice_to_select_bits, Use &alloc,
         unsigned local_hash_table_input, unsigned hf_hash_table_input, int hash_group);
-    bool allocGateway(const IR::MAU::Table *, const PhvInfo &phv, Use &alloc,
+    bool allocGateway(const P4::IR::MAU::Table *, const PhvInfo &phv, Use &alloc,
         const LayoutOption *lo, bool second_try);
-    bool allocSelector(const IR::MAU::Selector *, const IR::MAU::Table *, const PhvInfo &phv,
+    bool allocSelector(const P4::IR::MAU::Selector *, const P4::IR::MAU::Table *, const PhvInfo &phv,
                        Use &alloc, cstring name);
-    bool allocStateful(const IR::MAU::StatefulAlu *, const IR::MAU::Table *, const PhvInfo &phv,
+    bool allocStateful(const P4::IR::MAU::StatefulAlu *, const P4::IR::MAU::Table *, const PhvInfo &phv,
                        Use &alloc, bool on_search_bus);
-    bool allocMeter(const IR::MAU::Meter *, const IR::MAU::Table *, const PhvInfo &phv,
+    bool allocMeter(const P4::IR::MAU::Meter *, const P4::IR::MAU::Table *, const PhvInfo &phv,
                     Use &alloc, bool on_search_bus);
 
-    bool allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResourceAlloc &alloc,
+    bool allocTable(const P4::IR::MAU::Table *tbl, const PhvInfo &phv, TableResourceAlloc &alloc,
                     const LayoutOption *lo, const ActionData::Format::Use *af,
                     const attached_entries_t &ae);
-    bool allocTable(const IR::MAU::Table *tbl, const IR::MAU::Table *gw, const PhvInfo &phv,
+    bool allocTable(const P4::IR::MAU::Table *tbl, const P4::IR::MAU::Table *gw, const PhvInfo &phv,
                     TableResourceAlloc &alloc, const LayoutOption *lo,
                     const ActionData::Format::Use *af, const attached_entries_t &ae) override;
 
     void update(cstring name, const ::IXBar::Use &alloc) override;
     void update(cstring name, const HashDistUse &hash_dist_alloc);
-    void update(const IR::MAU::Table *tbl, const TableResourceAlloc *rsrc) override;
-    void update(const IR::MAU::Table *tbl) override;
+    void update(const P4::IR::MAU::Table *tbl, const TableResourceAlloc *rsrc) override;
+    void update(const P4::IR::MAU::Table *tbl) override;
     void add_collisions() override;
     void verify_hash_matrix() const override;
     void dbprint(std::ostream &) const override;
@@ -687,22 +687,22 @@ struct IXBar : public ::IXBar {
         cstring name);
     bool can_allocate_on_search_bus(Use &alloc, const PHV::Field *field, le_bitrange range,
         int ixbar_position);
-    bool setup_stateful_search_bus(const IR::MAU::StatefulAlu *salu, Use &alloc,
+    bool setup_stateful_search_bus(const P4::IR::MAU::StatefulAlu *salu, Use &alloc,
                                    const FindSaluSources &sources, unsigned &byte_mask);
-    bool setup_stateful_hash_bus(const PhvInfo &, const IR::MAU::StatefulAlu *salu, Use &alloc,
+    bool setup_stateful_hash_bus(const PhvInfo &, const P4::IR::MAU::StatefulAlu *salu, Use &alloc,
                                  const FindSaluSources &sources);
 
-    bitvec determine_final_xor(const IR::MAU::HashFunction *hf, const PhvInfo &phv,
+    bitvec determine_final_xor(const P4::IR::MAU::HashFunction *hf, const PhvInfo &phv,
         std::map<int, le_bitrange> &bit_starts,
-        safe_vector<const IR::Expression *> field_list, int total_input_bits);
-    void determine_proxy_hash_alg(const PhvInfo &, const IR::MAU::Table *tbl, Use &use, int group);
+        safe_vector<const P4::IR::Expression *> field_list, int total_input_bits);
+    void determine_proxy_hash_alg(const PhvInfo &, const P4::IR::MAU::Table *tbl, Use &use, int group);
 
     bool isHashDistAddress(HashDistDest_t dest) const;
 
     void determineHashDistInUse(int hash_group, bitvec &units_in_use, bitvec &hash_bits_in_use);
     void buildHashDistIRUse(HashDistAllocPostExpand &alloc_req, HashDistUse &use,
         IXBar::Use &all_reqs, const PhvInfo &phv, int hash_group, bitvec hash_bits_used,
-        bitvec total_post_expand_bits, const IR::MAU::Table* tbl, cstring name);
+        bitvec total_post_expand_bits, const P4::IR::MAU::Table* tbl, cstring name);
     void lockInHashDistArrays(safe_vector<Use::Byte *> *alloced, int hash_group,
         unsigned hash_table_input, int asm_unit, bitvec hash_bits_used, HashDistDest_t dest,
         cstring name);
@@ -713,7 +713,7 @@ struct IXBar : public ::IXBar {
     bool allocHashDistWideAddress(bitvec post_expand_bits, bitvec possible_shifts, int hash_group,
         bool chained_addr, int &unit_allocated, bitvec &hash_bits_allocated);
     bool allocHashDist(safe_vector<HashDistAllocPostExpand> &alloc_reqs, HashDistUse &use,
-        const PhvInfo &phv, cstring name, const IR::MAU::Table* tbl, bool second_try);
+        const PhvInfo &phv, cstring name, const P4::IR::MAU::Table* tbl, bool second_try);
     void createChainedHashDist(const HashDistUse &hd_alloc, HashDistUse &chained_hd_alloc,
         cstring name);
     void update_hash_parity(IXBar::Use &use, int hash_group);

@@ -17,7 +17,7 @@
 
 
 class InjectControlDependencies : public MauInspector {
-    bool preorder(const IR::MAU::TableSeq *seq) override;
+    bool preorder(const P4::IR::MAU::TableSeq *seq) override;
 
  private:
     DependencyGraph& dg;
@@ -32,12 +32,12 @@ class InjectControlDependencies : public MauInspector {
 class PredicationBasedControlEdges : public MauInspector {
     DependencyGraph *dg;
     const ControlPathwaysToTable &ctrl_paths;
-    ordered_map<const IR::MAU::Table *, ordered_set<const IR::MAU::Table *>> edges_to_add;
+    ordered_map<const P4::IR::MAU::Table *, ordered_set<const P4::IR::MAU::Table *>> edges_to_add;
 
  public:
-    std::map<cstring, const IR::MAU::Table *> name_to_table;
+    std::map<cstring, const P4::IR::MAU::Table *> name_to_table;
 
-    bool edge(const IR::MAU::Table *a, const IR::MAU::Table *b) const {
+    bool edge(const P4::IR::MAU::Table *a, const P4::IR::MAU::Table *b) const {
         if (edges_to_add.count(a) == 0) return false;
         return edges_to_add.at(a).count(b);
     }
@@ -46,13 +46,13 @@ class PredicationBasedControlEdges : public MauInspector {
         : dg(d), ctrl_paths(cp) {}
 
  private:
-    profile_t init_apply(const IR::Node *node) override {
+    profile_t init_apply(const P4::IR::Node *node) override {
         auto rv = MauInspector::init_apply(node);
         edges_to_add.clear();
         return rv;
     }
 
-    void postorder(const IR::MAU::Table *tbl) override;
+    void postorder(const P4::IR::MAU::Table *tbl) override;
     void end_apply() override;
 };
 
@@ -64,13 +64,13 @@ class AbstractDependencyInjector : public MauInspector {
     DependencyGraph &dg;
     const ControlPathwaysToTable &ctrl_paths;
 
-    Visitor::profile_t init_apply(const IR::Node *node) override {
+    Visitor::profile_t init_apply(const P4::IR::Node *node) override {
         auto rv = MauInspector::init_apply(node);
         tables_placed = false;
         return rv;
     }
 
-    bool preorder(const IR::MAU::Table *table) override {
+    bool preorder(const P4::IR::MAU::Table *table) override {
         tables_placed |= table->is_placed();
         return true;
     }
@@ -88,15 +88,15 @@ class AbstractDependencyInjector : public MauInspector {
 class InjectMetadataControlDependencies : public AbstractDependencyInjector {
     const PhvInfo &phv;
     const FlowGraph &fg;
-    std::map<cstring, const IR::MAU::Table *> name_to_table;
+    std::map<cstring, const P4::IR::MAU::Table *> name_to_table;
 
-    Visitor::profile_t init_apply(const IR::Node *node) override {
+    Visitor::profile_t init_apply(const P4::IR::Node *node) override {
         auto rv = AbstractDependencyInjector::init_apply(node);
         name_to_table.clear();
         return rv;
     }
 
-    bool preorder(const IR::MAU::Table *t) override {
+    bool preorder(const P4::IR::MAU::Table *t) override {
         auto rv = AbstractDependencyInjector::preorder(t);
         name_to_table[t->name] = t;
         return rv;
@@ -113,7 +113,7 @@ class InjectMetadataControlDependencies : public AbstractDependencyInjector {
 class InjectActionExitAntiDependencies : public AbstractDependencyInjector {
     const CalculateNextTableProp& cntp;
 
-    void postorder(const IR::MAU::Table* table) override;
+    void postorder(const P4::IR::MAU::Table* table) override;
 
  public:
     InjectActionExitAntiDependencies(DependencyGraph &g, const CalculateNextTableProp &cntp,
@@ -122,32 +122,32 @@ class InjectActionExitAntiDependencies : public AbstractDependencyInjector {
 };
 
 class InjectControlExitDependencies : public AbstractDependencyInjector {
-    std::map<gress_t, std::vector<const IR::MAU::Table *>> run_before_exit_tables;
+    std::map<gress_t, std::vector<const P4::IR::MAU::Table *>> run_before_exit_tables;
 
-    Visitor::profile_t init_apply(const IR::Node *node) override {
+    Visitor::profile_t init_apply(const P4::IR::Node *node) override {
         LOG3("InjectControlExitDependencies begins");
         auto rv = AbstractDependencyInjector::init_apply(node);
         run_before_exit_tables.clear();
         return rv;
     }
 
-    void end_apply(const IR::Node* node) override {
+    void end_apply(const P4::IR::Node* node) override {
         Visitor::end_apply(node);
         link_run_before_exit_tables();
         LOG3("InjectControlExitDependencies ends");
     }
 
-    bool preorder(const IR::MAU::Table* table) override;
-    void postorder(const IR::MAU::Table* table) override;
+    bool preorder(const P4::IR::MAU::Table* table) override;
+    void postorder(const P4::IR::MAU::Table* table) override;
 
-    void collect_run_before_exit_table(const IR::MAU::Table* table);
+    void collect_run_before_exit_table(const P4::IR::MAU::Table* table);
     void inject_dependencies_from_gress_root_tables_to_first_rbe_table(
-        const IR::MAU::Table* first_rbe_table);
-    bool is_first_run_before_exit_table_in_gress(const IR::MAU::Table* rbe_table);
-    const IR::MAU::TableSeq* get_gress_root_table_seq(const IR::MAU::Table* table);
+        const P4::IR::MAU::Table* first_rbe_table);
+    bool is_first_run_before_exit_table_in_gress(const P4::IR::MAU::Table* rbe_table);
+    const P4::IR::MAU::TableSeq* get_gress_root_table_seq(const P4::IR::MAU::Table* table);
     void link_run_before_exit_tables();
-    void inject_control_exit_dependency(const IR::MAU::Table* source,
-                                        const IR::MAU::Table* destination);
+    void inject_control_exit_dependency(const P4::IR::MAU::Table* source,
+                                        const P4::IR::MAU::Table* destination);
 
  public:
     InjectControlExitDependencies(DependencyGraph &dg, const ControlPathwaysToTable &cp)
@@ -157,20 +157,20 @@ class InjectControlExitDependencies : public AbstractDependencyInjector {
 class InjectDarkAntiDependencies : public AbstractDependencyInjector {
     const PhvInfo &phv;
     bool placed = false;
-    std::map<UniqueId, const IR::MAU::Table *> id_to_table;
+    std::map<UniqueId, const P4::IR::MAU::Table *> id_to_table;
 
-    profile_t init_apply(const IR::Node *node) override {
+    profile_t init_apply(const P4::IR::Node *node) override {
         auto rv = AbstractDependencyInjector::init_apply(node);
         placed = false;
         id_to_table.clear();
         return rv;
     }
 
-    bool preorder(const IR::MAU::Table *) override;
+    bool preorder(const P4::IR::MAU::Table *) override;
     void end_apply() override;
     // Get table corresponding to uid from id_to_table map
     // - handle case where @uid may not exists in id_to_table
-    const IR::MAU::Table* getTable(UniqueId uid);
+    const P4::IR::MAU::Table* getTable(UniqueId uid);
 
  public:
     InjectDarkAntiDependencies(const PhvInfo &p, DependencyGraph &g,
@@ -187,7 +187,7 @@ class TableFindInjectedDependencies : public PassManager {
     const FieldDefUse *defuse;
     const TableSummary *summary;
 
-    profile_t init_apply(const IR::Node *root) override {
+    profile_t init_apply(const P4::IR::Node *root) override {
         auto rv = PassManager::init_apply(root);
         fg.clear();
         return rv;
@@ -199,7 +199,7 @@ class TableFindInjectedDependencies : public PassManager {
         const TableSummary *summary = nullptr);
  private:
     // Duplicates to dominators
-    ordered_map<const IR::MAU::TableSeq*, const IR::MAU::Table*> dominators;
+    ordered_map<const P4::IR::MAU::TableSeq*, const P4::IR::MAU::Table*> dominators;
 };
 
 // During alt-phv-alloc, the ALT_FINALIZE_TABLE round during table placement

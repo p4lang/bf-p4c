@@ -5,8 +5,8 @@
 
 class IXBarVerify::GetCurrentUse : public MauInspector {
     IXBarVerify        &self;
-    bool preorder(const IR::Expression *) override { return false; }
-    bool preorder(const IR::MAU::Table *t) override {
+    bool preorder(const P4::IR::Expression *) override { return false; }
+    bool preorder(const P4::IR::MAU::Table *t) override {
         BUG_CHECK(t->is_always_run_action() || t->global_id(), "Table not placed");
         int gress = INGRESS;
 #if HAVE_FLATROCK
@@ -87,7 +87,7 @@ void IXBarVerify::verify_format(const IXBar::Use *use) {
     }
 }
 
-Visitor::profile_t IXBarVerify::init_apply(const IR::Node *root) {
+Visitor::profile_t IXBarVerify::init_apply(const P4::IR::Node *root) {
     auto rv = MauModifier::init_apply(root);
     for (auto gress : { INGRESS, EGRESS })
         ixbar[gress].clear();
@@ -96,7 +96,7 @@ Visitor::profile_t IXBarVerify::init_apply(const IR::Node *root) {
     return rv;
 }
 
-void IXBarVerify::postorder(IR::MAU::Table *tbl) {
+void IXBarVerify::postorder(P4::IR::MAU::Table *tbl) {
 #ifdef HAVE_FLATROCK
     if (Device::currentDevice() == Device::FLATROCK)
         return;         // FIXME -- skip for flatrock for now

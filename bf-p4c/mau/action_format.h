@@ -119,7 +119,7 @@ class Parameter : public IHasDbPrint {
 };
 
 /**
- * This class is to represent a slice of an IR::MAU::ActionArg, essentially any argument that
+ * This class is to represent a slice of an P4::IR::MAU::ActionArg, essentially any argument that
  * appears as a direct argument of an action and is used in an ALU operation:
  *
  * Let's take the following example:
@@ -135,7 +135,7 @@ class Parameter : public IHasDbPrint {
 
 
 class Argument : public Parameter {
-    IR::ID _name;
+    P4::IR::ID _name;
     le_bitrange _param_field;
 
 
@@ -144,7 +144,7 @@ class Argument : public Parameter {
     cstring originalName() const { return _name.originalName; }
     le_bitrange param_field() const { return _param_field; }
 
-    Argument(IR::ID n, le_bitrange pf) : _name(n), _param_field(pf) {}
+    Argument(P4::IR::ID n, le_bitrange pf) : _name(n), _param_field(pf) {}
     virtual ~Argument() {}
 
     bool from_p4_program() const override { return true; }
@@ -182,11 +182,11 @@ class Argument : public Parameter {
 };
 
 /**
- * This class represents a section of IR::MAU::ActionDataConstant, or an IR::Constant that
+ * This class represents a section of P4::IR::MAU::ActionDataConstant, or an P4::IR::Constant that
  * cannot be created as the src1 operand of an ALU operation.  The constant instead must come
  * from Action Ram.
  *
- * Similar to IR::Constant, the constant has a value and a bit size.  Due to the size of the
+ * Similar to P4::IR::Constant, the constant has a value and a bit size.  Due to the size of the
  * constant theoretically being infinite, a bitvec is used to store the value (though in
  * theory, an mpz_class could have been used as well
  */
@@ -1065,7 +1065,7 @@ class Format {
 
  private:
     PhvInfo &phv;
-    const IR::MAU::Table *tbl;
+    const P4::IR::MAU::Table *tbl;
     const ReductionOrInfo &red_info;
     safe_vector<Use> *uses = nullptr;
     SplitAttachedInfo &att_info;
@@ -1082,9 +1082,9 @@ class Format {
     AllActionPositions locked_in_all_actions_inputs;
 
     void create_argument(ALUOperation &alu, ActionAnalysis::ActionParam &read,
-        le_bitrange container_bits, const IR::MAU::ConditionalArg *ca);
-    void create_constant(ALUOperation &alu, const IR::Expression *read,
-        le_bitrange container_bits, int &constant_alias_index, const IR::MAU::ConditionalArg *ca);
+        le_bitrange container_bits, const P4::IR::MAU::ConditionalArg *ca);
+    void create_constant(ALUOperation &alu, const P4::IR::Expression *read,
+        le_bitrange container_bits, int &constant_alias_index, const P4::IR::MAU::ConditionalArg *ca);
     void create_hash(ALUOperation &alu, ActionAnalysis::ActionParam &read,
         le_bitrange container_bits);
     void create_hash_constant(ALUOperation &alu, ActionAnalysis::ActionParam &read,
@@ -1132,7 +1132,7 @@ class Format {
     void determine_single_action_input(SingleActionAllocation &single_action_alloc,
         int max_bytes_required);
     bool determine_next_immediate_bytes(bool immediate_forced);
-    bool determine_bytes_per_loc(bool &initialized, IR::MAU::Table::ImmediateControl_t imm_ctrl);
+    bool determine_bytes_per_loc(bool &initialized, P4::IR::MAU::Table::ImmediateControl_t imm_ctrl);
 
     void assign_action_data_table_bytes(AllActionPositions &all_bus_inputs,
          BusInputs &total_inputs);
@@ -1153,8 +1153,8 @@ class Format {
 
  public:
     void set_uses(safe_vector<Use> *u) { uses = u; }
-    void allocate_format(IR::MAU::Table::ImmediateControl_t imm_ctrl, FormatType_t format_type);
-    Format(PhvInfo &p, const IR::MAU::Table *t, const ReductionOrInfo &ri, SplitAttachedInfo &sai)
+    void allocate_format(P4::IR::MAU::Table::ImmediateControl_t imm_ctrl, FormatType_t format_type);
+    Format(PhvInfo &p, const P4::IR::MAU::Table *t, const ReductionOrInfo &ri, SplitAttachedInfo &sai)
         : phv(p), tbl(t), red_info(ri), att_info(sai) {}
 };
 

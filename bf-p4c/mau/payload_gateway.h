@@ -11,7 +11,7 @@ class LayoutChoices;
 class FindPayloadCandidates {
  public:
     static constexpr int GATEWAY_ROWS_FOR_ENTRIES = 4;
-    using PayloadArguments = std::vector<const IR::Constant *>;
+    using PayloadArguments = std::vector<const P4::IR::Constant *>;
 
  private:
     struct ContainerByte {
@@ -39,30 +39,30 @@ class FindPayloadCandidates {
     ordered_set<cstring> candidates;
 
 
-    static PayloadArguments convert_entry_to_payload_args(const IR::MAU::Table *tbl,
-        const IR::Entry *entry, cstring *act_name);
-    static bitvec determine_instr_address_payload(const IR::MAU::Action *act,
+    static PayloadArguments convert_entry_to_payload_args(const P4::IR::MAU::Table *tbl,
+        const P4::IR::Entry *entry, cstring *act_name);
+    static bitvec determine_instr_address_payload(const P4::IR::MAU::Action *act,
         const TableResourceAlloc *alloc);
-    static bitvec determine_immediate_payload(const IR::MAU::Action *act,
+    static bitvec determine_immediate_payload(const P4::IR::MAU::Action *act,
         PayloadArguments &entry, const TableResourceAlloc *alloc);
-    static bitvec determine_indirect_addr_payload(const IR::MAU::Action *act,
-        PayloadArguments &payload_args, const IR::MAU::AttachedMemory *at);
-    static bitvec determine_indirect_pfe_payload(const IR::MAU::Action *act,
-        const IR::MAU::AttachedMemory *at);
-    static bitvec determine_meter_type_payload(const IR::MAU::Action *act,
-        const IR::MAU::AttachedMemory *at);
+    static bitvec determine_indirect_addr_payload(const P4::IR::MAU::Action *act,
+        PayloadArguments &payload_args, const P4::IR::MAU::AttachedMemory *at);
+    static bitvec determine_indirect_pfe_payload(const P4::IR::MAU::Action *act,
+        const P4::IR::MAU::AttachedMemory *at);
+    static bitvec determine_meter_type_payload(const P4::IR::MAU::Action *act,
+        const P4::IR::MAU::AttachedMemory *at);
 
-    static bitvec determine_match_group_payload(const IR::MAU::Table *tbl,
-        const TableResourceAlloc *alloc, const IR::MAU::Action *act,
-        std::vector<const IR::Constant *> arguments, int entry_idx);
+    static bitvec determine_match_group_payload(const P4::IR::MAU::Table *tbl,
+        const TableResourceAlloc *alloc, const P4::IR::MAU::Action *act,
+        std::vector<const P4::IR::Constant *> arguments, int entry_idx);
 
  public:
     explicit FindPayloadCandidates(const PhvInfo &p) : phv(p) {}
-    void add_option(const IR::MAU::Table *, LayoutChoices &lc);
+    void add_option(const P4::IR::MAU::Table *, LayoutChoices &lc);
     void clear() { candidates.clear(); }
-    IR::MAU::Table *convert_to_gateway(const IR::MAU::Table *);
-    static bitvec determine_payload(const IR::MAU::Table *tbl, const TableResourceAlloc *alloc,
-        const IR::MAU::Table::Layout *layout);
+    P4::IR::MAU::Table *convert_to_gateway(const P4::IR::MAU::Table *);
+    static bitvec determine_payload(const P4::IR::MAU::Table *tbl, const TableResourceAlloc *alloc,
+        const P4::IR::MAU::Table::Layout *layout);
 };
 
 #endif  /* BF_P4C_MAU_PAYLOAD_GATEWAY_H_ */

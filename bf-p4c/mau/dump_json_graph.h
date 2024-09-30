@@ -11,7 +11,7 @@ class DumpJsonGraph : public PassManager {
     cstring passContext;
     bool placed;
 
-    void end_apply(const IR::Node *root) override;
+    void end_apply(const P4::IR::Node *root) override;
  public:
     DumpJsonGraph(DependencyGraph &dg, Util::JsonObject* dgJson, cstring passContext, bool placed);
 };

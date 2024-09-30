@@ -17,14 +17,14 @@ namespace MauPower {
  */
 class BuildPowerGraph : public MauInspector, BFN::ControlFlowVisitor {
  public:
-    profile_t init_apply(const IR::Node *root) override;
-    bool preorder(const IR::MAU::TableSeq *seq) override;
-    bool preorder(const IR::MAU::Table *tbl) override;
+    profile_t init_apply(const P4::IR::Node *root) override;
+    bool preorder(const P4::IR::MAU::TableSeq *seq) override;
+    bool preorder(const P4::IR::MAU::Table *tbl) override;
     /**
      * Depending on compilation options, this function produces a dot graph
      * for each thread of execution.
      */
-    void end_apply(const IR::Node *root) override;
+    void end_apply(const P4::IR::Node *root) override;
 
     BuildPowerGraph *clone() const override;
     void flow_merge(Visitor &v) override;
@@ -44,7 +44,7 @@ class BuildPowerGraph : public MauInspector, BFN::ControlFlowVisitor {
     const BFN_Options &options_;
     // Keep track of which logical tables are marked as always run.
     std::vector<UniqueId> always_run_;
-    ordered_set<UniqueId> next_for(const IR::MAU::Table *tbl, cstring what) const;
+    ordered_set<UniqueId> next_for(const P4::IR::MAU::Table *tbl, cstring what) const;
 };
 
 }  // end namespace MauPower

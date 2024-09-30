@@ -31,7 +31,7 @@ struct ActionDataBus : public ::ActionDataBus {
 
     struct Use : public ::ActionDataBus::Use {
         Use *clone() const override { return new Use(*this); }
-        bool emit_adb_asm(std::ostream &, const IR::MAU::Table *, bitvec source) const override;
+        bool emit_adb_asm(std::ostream &, const P4::IR::MAU::Table *, bitvec source) const override;
         int rng_unit() const override { return -1; }
 
         safe_vector<std::pair<int, int>>        action_alus;
@@ -39,22 +39,22 @@ struct ActionDataBus : public ::ActionDataBus {
 
     static Use &getUse(autoclone_ptr<::ActionDataBus::Use> &ac);
     int find_free_words(bitvec bits, size_t align, int *slots);
-    int find_free_bytes(const IR::MAU::Table *tbl, const ActionData::ALUPosition *pos,
+    int find_free_bytes(const P4::IR::MAU::Table *tbl, const ActionData::ALUPosition *pos,
             safe_vector<Use::ReservedSpace> &action_data_locs, ActionData::Location_t loc);
 
  public:
     bitvec total_in_use;  // duplicates total_use (1 bit per byte)
     void clear() override;
-    bool alloc_action_data_bus(const IR::MAU::Table *tbl,
+    bool alloc_action_data_bus(const P4::IR::MAU::Table *tbl,
                                safe_vector<const ActionData::ALUPosition *> &alu_ops,
                                TableResourceAlloc &alloc);
-    bool alloc_action_data_bus(const IR::MAU::Table *tbl, const ActionData::Format::Use *use,
+    bool alloc_action_data_bus(const P4::IR::MAU::Table *tbl, const ActionData::Format::Use *use,
                                TableResourceAlloc &alloc) override;
-    bool alloc_action_data_bus(const IR::MAU::Table *tbl, const MeterALU::Format::Use *use,
+    bool alloc_action_data_bus(const P4::IR::MAU::Table *tbl, const MeterALU::Format::Use *use,
                                TableResourceAlloc &alloc) override;
     void update(cstring name, const ::ActionDataBus::Use &) override;
     void update(cstring name, const Use::ReservedSpace &rs) override;
-    void update(const IR::MAU::Table *tbl) override;
+    void update(const P4::IR::MAU::Table *tbl) override;
 };
 
 std::ostream &operator<<(std::ostream &out, const ActionDataBus &adb);

@@ -44,7 +44,7 @@ namespace Tofino {
 void emit_ixbar_hash_dist_ident(const PhvInfo &phv, std::ostream &out,
         indent_t indent, safe_vector<Slice> &match_data,
         const Tofino::IXBar::Use::HashDistHash &hdh,
-        const safe_vector<const IR::Expression *> & /*field_list_order*/) {
+        const safe_vector<const P4::IR::Expression *> & /*field_list_order*/) {
     if (hdh.hash_gen_expr) {
         int hash_gen_expr_width = hdh.hash_gen_expr->type->width_bits();
         BUG_CHECK(hash_gen_expr_width > 0, "zero width hash expression: %s ?", hdh.hash_gen_expr);
@@ -101,7 +101,7 @@ void emit_ixbar_hash_dist_ident(const PhvInfo &phv, std::ostream &out,
                 ident_slice.push_back(asm_sl);
                 out << indent << hash_lo << ".." << hash_hi << ": "
                     << FormatHash(&ident_slice, nullptr, nullptr, nullptr,
-                                  IR::MAU::HashFunction::identity())
+                                  P4::IR::MAU::HashFunction::identity())
                     << std::endl;
             }
         }
@@ -112,9 +112,9 @@ void emit_ixbar_hash_dist_ident(const PhvInfo &phv, std::ostream &out,
 
 void emit_ixbar_meter_alu_hash(const PhvInfo &phv, std::ostream &out, indent_t indent,
         const safe_vector<Slice> &match_data, const Tofino::IXBar::Use::MeterAluHash &mah,
-        const safe_vector<const IR::Expression *> &field_list_order,
+        const safe_vector<const P4::IR::Expression *> &field_list_order,
         const LTBitMatrix &sym_keys) {
-    if (mah.algorithm.type == IR::MAU::HashFunction::IDENTITY) {
+    if (mah.algorithm.type == P4::IR::MAU::HashFunction::IDENTITY) {
         auto mask = mah.bit_mask;
         for (auto &el : mah.computed_expressions) {
             el.second->apply(EmitHashExpression(phv, out, indent, el.first, match_data));
@@ -130,7 +130,7 @@ void emit_ixbar_meter_alu_hash(const PhvInfo &phv, std::ostream &out, indent_t i
         le_bitrange br = { mah.bit_mask.min().index(), mah.bit_mask.max().index() };
         int total_bits = 0;
         std::multimap<int, Slice> match_data_map;
-        std::map<le_bitrange, const IR::Constant*> constant_map;
+        std::map<le_bitrange, const P4::IR::Constant*> constant_map;
         bool use_map = false;
         if (mah.algorithm.ordered()) {
             emit_ixbar_gather_map(phv, match_data_map, constant_map, match_data,
@@ -150,7 +150,7 @@ void emit_ixbar_meter_alu_hash(const PhvInfo &phv, std::ostream &out, indent_t i
 
 void emit_ixbar_proxy_hash(const PhvInfo &phv, std::ostream &out, indent_t indent,
         safe_vector<Slice> &match_data, const Tofino::IXBar::Use::ProxyHashKey &ph,
-        const safe_vector<const IR::Expression *> &field_list_order,
+        const safe_vector<const P4::IR::Expression *> &field_list_order,
         const LTBitMatrix &sym_keys) {
     int start_bit = ph.hash_bits.ffs();
     do {
@@ -160,7 +160,7 @@ void emit_ixbar_proxy_hash(const PhvInfo &phv, std::ostream &out, indent_t inden
         out << indent << br.lo << ".." << br.hi << ": ";
         if (ph.algorithm.ordered()) {
             std::multimap<int, Slice> match_data_map;
-            std::map<le_bitrange, const IR::Constant*> constant_map;
+            std::map<le_bitrange, const P4::IR::Constant*> constant_map;
             emit_ixbar_gather_map(phv, match_data_map, constant_map, match_data,
                     field_list_order, sym_keys, total_bits);
             out << FormatHash(nullptr, &match_data_map, nullptr, nullptr,
@@ -225,12 +225,12 @@ void emit_ixbar_hash(const PhvInfo &phv, std::ostream &out, indent_t indent,
 
     if (use->hash_dist_hash.allocated) {
         auto &hdh = use->hash_dist_hash;
-        if (hdh.algorithm.type == IR::MAU::HashFunction::IDENTITY) {
+        if (hdh.algorithm.type == P4::IR::MAU::HashFunction::IDENTITY) {
             emit_ixbar_hash_dist_ident(phv, out, indent, match_data, hdh, use->field_list_order);
             return;
         }
         std::multimap<int, Slice> match_data_map;
-        std::map<le_bitrange, const IR::Constant*> constant_map;
+        std::map<le_bitrange, const P4::IR::Constant*> constant_map;
         bool use_map = false;
         int total_bits = 0;
         if (hdh.algorithm.ordered()) {
@@ -256,7 +256,7 @@ void emit_ixbar_hash(const PhvInfo &phv, std::ostream &out, indent_t indent,
 }
 
 void Tofino::IXBar::Use::emit_ixbar_asm(const PhvInfo &phv, std::ostream &out, indent_t indent,
-        const TableMatch *fmt, const IR::MAU::Table *tbl) const {
+        const TableMatch *fmt, const P4::IR::MAU::Table *tbl) const {
     std::map<int, std::map<int, Slice>> sort;
     std::map<int, std::map<int, Slice>> midbytes;
     emit_ixbar_gather_bytes(phv, use, sort, midbytes, tbl,
@@ -305,7 +305,7 @@ void Tofino::IXBar::Use::emit_ixbar_asm(const PhvInfo &phv, std::ostream &out, i
     }
 }
 
-bool Tofino::ActionDataBus::Use::emit_adb_asm(std::ostream &out, const IR::MAU::Table *tbl,
+bool Tofino::ActionDataBus::Use::emit_adb_asm(std::ostream &out, const P4::IR::MAU::Table *tbl,
                                               bitvec source) const {
     auto &format = tbl->resources->action_format;
     auto &meter_use = tbl->resources->meter_format;
@@ -383,7 +383,7 @@ bool Tofino::ActionDataBus::Use::emit_adb_asm(std::ostream &out, const IR::MAU::
                    && format.is_byte_offset<ActionData::MeterColor>(rs.byte_offset)) {
             for (auto back_at : tbl->attached) {
                 auto at = back_at->attached;
-                auto *mtr = at->to<IR::MAU::Meter>();
+                auto *mtr = at->to<P4::IR::MAU::Meter>();
                 if (mtr == nullptr) continue;
                 out << MauAsmOutput::find_attached_name(tbl, mtr) << " color";
                 break;
@@ -391,7 +391,7 @@ bool Tofino::ActionDataBus::Use::emit_adb_asm(std::ostream &out, const IR::MAU::
         } else if (source_is_adt || source_is_immed) {
             out << format.get_format_name(rs.location.type, rs.source, rs.byte_offset);
         } else if (source_is_meter) {
-            auto *at = tbl->get_attached<IR::MAU::MeterBus2Port>();
+            auto *at = tbl->get_attached<P4::IR::MAU::MeterBus2Port>();
             BUG_CHECK(at != nullptr, "Trying to emit meter alu without meter alu user");
             cstring ret_name = MauAsmOutput::find_attached_name(tbl, at);
             out << ret_name;
@@ -422,7 +422,7 @@ void MauAsmOutput::emit_table_format(std::ostream &out, indent_t indent,
 }
 
 void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memories::Use &mem,
-         const IR::MAU::Table::Layout *layout, const TableFormat::Use *format) const {
+         const P4::IR::MAU::Table::Layout *layout, const TableFormat::Use *format) const {
     ::MauAsmOutput::emit_memory(out, indent, mem, layout, format);
 }
 

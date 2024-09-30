@@ -11,7 +11,7 @@
  *     - A table can have multiple branches, and the any actions that run in order to start
  *       that branch are not mutually exclusive with any tables on that branch.
  */
-void ActionMutuallyExclusive::postorder(const IR::MAU::Table *tbl) {
+void ActionMutuallyExclusive::postorder(const P4::IR::MAU::Table *tbl) {
     bitvec all_actions_in_table;
     for (const auto *act : Values(tbl->actions))
         all_actions_in_table.setbit(action_ids[act]);
@@ -77,7 +77,7 @@ void ActionMutuallyExclusive::postorder(const IR::MAU::Table *tbl) {
  * Here, we ensure that t4's actions are marked as not mutually exclusive with all of actions of
  * each of the entries in t1's table_succ.
  */
-void ActionMutuallyExclusive::postorder(const IR::MAU::TableSeq *seq) {
+void ActionMutuallyExclusive::postorder(const P4::IR::MAU::TableSeq *seq) {
     for (size_t i = 0; i < seq->tables.size(); i++) {
         auto i_tbl = seq->tables.at(i);
         for (size_t j = i+1; j < seq->tables.size(); j++) {

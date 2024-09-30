@@ -52,8 +52,8 @@ class FindUninitializedAndOverlayedReads: public Inspector {
                               const PHV::Pragmas &pragmas, const DependencyGraph &deps)
     : defuse(defuse), phv(phv), pragmas(pragmas), deps(deps) {}
 
-    bool preorder(const IR::BFN::DeparserParameter* param) override;
-    bool preorder(const IR::BFN::Digest* digest) override;
+    bool preorder(const P4::IR::BFN::DeparserParameter* param) override;
+    bool preorder(const P4::IR::BFN::Digest* digest) override;
 
     void end_apply() override;
 };

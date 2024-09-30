@@ -18,19 +18,19 @@ constexpr int StageUseEstimate::MAX_MOD;
 constexpr int StageUseEstimate::MAX_POOL_RAMLINES;
 constexpr int StageUseEstimate::MAX_MOD_SHIFT;
 
-int CounterPerWord(const IR::MAU::Counter *ctr) {
+int CounterPerWord(const P4::IR::MAU::Counter *ctr) {
     switch (ctr->type) {
-    case IR::MAU::DataAggregation::PACKETS:
+    case P4::IR::MAU::DataAggregation::PACKETS:
         if (ctr->min_width <= 32) return 4;
         if (ctr->min_width > 64)
             error("%s: Maximum width for counter %s is 64 bits", ctr->srcInfo, ctr->name);
         return 2;
-    case IR::MAU::DataAggregation::BYTES:
+    case P4::IR::MAU::DataAggregation::BYTES:
         if (ctr->min_width <= 32) return 4;
         if (ctr->min_width > 64)
             error("%s: Maximum width for counter %s is 64 bits", ctr->srcInfo, ctr->name);
         return 2;
-    case IR::MAU::DataAggregation::BOTH:
+    case P4::IR::MAU::DataAggregation::BOTH:
         // min_width refers to the byte counter at a given index.
         // 1 "packet_and_byte" entry gives 64-bit packet counter and 64-bit byte counter.
         // 2 "packet_and_byte" entries gives 28-bit packet counter and 36-bit byte counter.
@@ -45,15 +45,15 @@ int CounterPerWord(const IR::MAU::Counter *ctr) {
         return 1; }
 }
 
-int CounterWidth(const IR::MAU::Counter *cntr) {
+int CounterWidth(const P4::IR::MAU::Counter *cntr) {
     switch (cntr->type) {
-    case IR::MAU::DataAggregation::PACKETS:
+    case P4::IR::MAU::DataAggregation::PACKETS:
         if (cntr->min_width <= 32) return 32;
         return 64;
-    case IR::MAU::DataAggregation::BYTES:
+    case P4::IR::MAU::DataAggregation::BYTES:
         if (cntr->min_width <= 32) return 32;
         return 64;
-    case IR::MAU::DataAggregation::BOTH:
+    case P4::IR::MAU::DataAggregation::BOTH:
         // The min_width attribute is with respect to the byte counter.
         if (cntr->min_width <= 36) return 36;
         return 64;
@@ -63,13 +63,13 @@ int CounterWidth(const IR::MAU::Counter *cntr) {
     }
 }
 
-int RegisterPerWord(const IR::MAU::StatefulAlu *reg) {
+int RegisterPerWord(const P4::IR::MAU::StatefulAlu *reg) {
     BUG_CHECK(reg->width > 0 && (reg->width & (reg->width-1)) == 0,
               "register width not a power of two");
     return 128/reg->width;
 }
 
-int ActionDataPerWord(const IR::MAU::Table::Layout *layout, int *width) {
+int ActionDataPerWord(const P4::IR::MAU::Table::Layout *layout, int *width) {
     int size = 0;
     if (layout->action_data_bytes_in_table > 0)
         size = ceil_log2(layout->action_data_bytes_in_table);
@@ -100,7 +100,7 @@ int ActionDataPerWord(const IR::MAU::Table::Layout *layout, int *width) {
  *           512          |         4         |        1
  *          1024          |         8         |        3
  */
-int ActionDataHuffmanVPNBits(const IR::MAU::Table::Layout *layout) {
+int ActionDataHuffmanVPNBits(const P4::IR::MAU::Table::Layout *layout) {
     int size = 0;
     if (layout->action_data_bytes_in_table > 0)
         size = ceil_log2(layout->action_data_bytes_in_table);
@@ -108,7 +108,7 @@ int ActionDataHuffmanVPNBits(const IR::MAU::Table::Layout *layout) {
     return std::max(size - huffman_not_req_max_size, 0);
 }
 
-int ActionDataVPNStartPosition(const IR::MAU::Table::Layout *layout) {
+int ActionDataVPNStartPosition(const P4::IR::MAU::Table::Layout *layout) {
     int size = 0;
     if (layout->action_data_bytes_in_table > 0)
         size = ceil_log2(layout->action_data_bytes_in_table);
@@ -122,7 +122,7 @@ int ActionDataVPNStartPosition(const IR::MAU::Table::Layout *layout) {
     }
 }
 
-int ActionDataVPNIncrement(const IR::MAU::Table::Layout *layout) {
+int ActionDataVPNIncrement(const P4::IR::MAU::Table::Layout *layout) {
     int width = 1;
     ActionDataPerWord(layout, &width);
     if (width == 1)
@@ -130,14 +130,14 @@ int ActionDataVPNIncrement(const IR::MAU::Table::Layout *layout) {
     return (1 << ceil_log2(width));
 }
 
-int LocalTernaryIndirectPerWord(const IR::MAU::Table::Layout *layout, const IR::MAU::Table *tbl) {
+int LocalTernaryIndirectPerWord(const P4::IR::MAU::Table::Layout *layout, const P4::IR::MAU::Table *tbl) {
     int indir_size = ceil_log2(layout->overhead_bits);
     if (indir_size > 5)
         BUG("can't have more than 32 bits of overhead in local ternary table %s", tbl->name);
     return (64 >> indir_size);
 }
 
-int TernaryIndirectPerWord(const IR::MAU::Table::Layout *layout, const IR::MAU::Table *tbl) {
+int TernaryIndirectPerWord(const P4::IR::MAU::Table::Layout *layout, const P4::IR::MAU::Table *tbl) {
     int indir_size = ceil_log2(layout->overhead_bits);
     if (indir_size > 6)
         BUG("can't have more than 64 bits of overhead in ternary table %s", tbl->name);
@@ -145,7 +145,7 @@ int TernaryIndirectPerWord(const IR::MAU::Table::Layout *layout, const IR::MAU::
     return (128 >> indir_size);
 }
 
-int IdleTimePerWord(const IR::MAU::IdleTime *idletime) {
+int IdleTimePerWord(const P4::IR::MAU::IdleTime *idletime) {
     switch (idletime->precision) {
         case 1:  return 8;
         case 2:  return 4;
@@ -158,7 +158,7 @@ int IdleTimePerWord(const IR::MAU::IdleTime *idletime) {
 /**
  * Refer to the comments above the allocate_selector_length function in table_format.cpp
  */
-int SelectorRAMLinesPerEntry(const IR::MAU::Selector *sel) {
+int SelectorRAMLinesPerEntry(const P4::IR::MAU::Selector *sel) {
     return (sel->max_pool_size + StageUseEstimate::SINGLE_RAMLINE_POOL_SIZE - 1)
             / StageUseEstimate::SINGLE_RAMLINE_POOL_SIZE;
 }
@@ -218,7 +218,7 @@ int SelectorRAMLinesPerEntry(const IR::MAU::Selector *sel) {
    ram_word= 992   sel_shift= 0x5  sel_len_shift= 0x3      sel_len_mod= 0x5
  */
 
-int SelectorModBits(const IR::MAU::Selector *sel) {
+int SelectorModBits(const P4::IR::MAU::Selector *sel) {
     int RAM_lines_necessary = SelectorRAMLinesPerEntry(sel);
     if (RAM_lines_necessary <= StageUseEstimate::MAX_MOD) {
         auto sel_num_words = ceil_log2((RAM_lines_necessary >> SelectorShiftBits(sel)) + 1);
@@ -229,7 +229,7 @@ int SelectorModBits(const IR::MAU::Selector *sel) {
     return ceil_log2(StageUseEstimate::MAX_MOD);
 }
 
-int SelectorShiftBits(const IR::MAU::Selector *sel) {
+int SelectorShiftBits(const P4::IR::MAU::Selector *sel) {
     int RAM_lines_necessary = SelectorRAMLinesPerEntry(sel);
     if (RAM_lines_necessary > StageUseEstimate::MAX_POOL_RAMLINES) {
         error("%s: The max pools size %d of selector %s requires %d RAM lines, more than maximum "
@@ -244,7 +244,7 @@ int SelectorShiftBits(const IR::MAU::Selector *sel) {
     return sel_shift;
 }
 
-int SelectorHashModBits(const IR::MAU::Selector *sel) {
+int SelectorHashModBits(const P4::IR::MAU::Selector *sel) {
     int RAM_lines_necessary = SelectorRAMLinesPerEntry(sel);
     if (RAM_lines_necessary == 1) {
         return 0;
@@ -253,21 +253,21 @@ int SelectorHashModBits(const IR::MAU::Selector *sel) {
 }
 
 /* see comments above */
-int SelectorLengthShiftBits(const IR::MAU::Selector *sel) {
+int SelectorLengthShiftBits(const P4::IR::MAU::Selector *sel) {
     int sel_shift = SelectorShiftBits(sel);
     return sel_shift == 0 ? 0 : ceil_log2(sel_shift + 1);
 }
 
-int SelectorLengthBits(const IR::MAU::Selector *sel) {
+int SelectorLengthBits(const P4::IR::MAU::Selector *sel) {
     return SelectorModBits(sel) + SelectorLengthShiftBits(sel);
 }
 
-static int ways_pragma(const IR::MAU::Table *tbl, int min, int max) {
+static int ways_pragma(const P4::IR::MAU::Table *tbl, int min, int max) {
     auto annot = tbl->match_table->getAnnotations();
     if (auto s = annot->getSingle("ways"_cs)) {
         ERROR_CHECK(s->expr.size() >= 1, "%s: The ways pragma on table %s does not have a "
                     "value", tbl->srcInfo, tbl->name);
-        auto pragma_val =  s->expr.at(0)->to<IR::Constant>();
+        auto pragma_val =  s->expr.at(0)->to<P4::IR::Constant>();
         if (pragma_val == nullptr) {
             ::error("%s: The ways pragma value on table %s is not a constant", tbl->srcInfo,
                   tbl->name);
@@ -281,12 +281,12 @@ static int ways_pragma(const IR::MAU::Table *tbl, int min, int max) {
     return -1;
 }
 
-static int simul_lookups_pragma(const IR::MAU::Table *tbl, int min, int max) {
+static int simul_lookups_pragma(const P4::IR::MAU::Table *tbl, int min, int max) {
     auto annot = tbl->match_table->getAnnotations();
     if (auto s = annot->getSingle("simul_lookups"_cs)) {
         ERROR_CHECK(s->expr.size() >= 1, "%s: The simul_lookups pragma on table %s does not "
                     "have a value", tbl->srcInfo, tbl->name);
-        auto pragma_val =  s->expr.at(0)->to<IR::Constant>();
+        auto pragma_val =  s->expr.at(0)->to<P4::IR::Constant>();
         if (pragma_val == nullptr) {
             ::error("%s: The simul_lookups pragma value on table %s is not a constant",
                     tbl->srcInfo, tbl->name);
@@ -344,7 +344,7 @@ cstring StageUseEstimate::ran_out() const {
  * simul_lookups is only supported internally at this point, and is necessary to make progress
  * on power.p4
  */
-bool StageUseEstimate::ways_provided(const IR::MAU::Table *tbl, LayoutOption *lo,
+bool StageUseEstimate::ways_provided(const P4::IR::MAU::Table *tbl, LayoutOption *lo,
                                      int &calculated_depth) {
     int ways = ways_pragma(tbl, MIN_WAYS, MAX_WAYS);
     int simul_lookups = simul_lookups_pragma(tbl, MIN_WAYS, MAX_WAYS + 2);
@@ -449,7 +449,7 @@ bool StageUseEstimate::ways_provided(const IR::MAU::Table *tbl, LayoutOption *lo
  * With this change, compiler check will mimic driver checks and use identity
  * hash for cases where default actions do not have an attached resource.
  */
-bool StageUseEstimate::can_be_identity_hash(const IR::MAU::Table *tbl, LayoutOption *lo,
+bool StageUseEstimate::can_be_identity_hash(const P4::IR::MAU::Table *tbl, LayoutOption *lo,
         int &calculated_depth) {
     // Check if idletime is used on table
     if (tbl->uses_idletime()) return false;
@@ -539,7 +539,7 @@ bool StageUseEstimate::can_be_identity_hash(const IR::MAU::Table *tbl, LayoutOpt
  *  per MAU stage, so even the input xbar requirements are high, the RAM array requirements
  *  are high as well.
  */
-void StageUseEstimate::calculate_way_sizes(const IR::MAU::Table *tbl, LayoutOption *lo,
+void StageUseEstimate::calculate_way_sizes(const P4::IR::MAU::Table *tbl, LayoutOption *lo,
                                            int &calculated_depth) {
     Log::TempIndent indent;
     LOG5("Calculating way sizes for table : " << tbl->name
@@ -687,7 +687,7 @@ void StageUseEstimate::calculate_way_sizes(const IR::MAU::Table *tbl, LayoutOpti
 }
 
 /* Convert all possible layout options to the correct way sizes */
-void StageUseEstimate::options_to_ways(const IR::MAU::Table *tbl, int entries) {
+void StageUseEstimate::options_to_ways(const P4::IR::MAU::Table *tbl, int entries) {
     Log::TempIndent indent;
     LOG5("Calculating options to ways for " << layout_options.size()
             << " options in table " << tbl->name << indent);
@@ -717,7 +717,7 @@ void StageUseEstimate::options_to_ways(const IR::MAU::Table *tbl, int entries) {
 
 /* Calculate the correct size of ternary tables.  Obviously with ternary tables, no way
    size calculation is necessary, as ternary has no ways */
-void StageUseEstimate::options_to_ternary_entries(const IR::MAU::Table *tbl, int entries) {
+void StageUseEstimate::options_to_ternary_entries(const P4::IR::MAU::Table *tbl, int entries) {
     for (auto &lo : layout_options) {
         int depth = (entries + 511u)/512u;
         int bytes = tbl->layout.match_bytes;
@@ -747,7 +747,7 @@ void StageUseEstimate::options_to_ternary_entries(const IR::MAU::Table *tbl, int
  *  dedicated to an ATCAM table.  The goal is, calculate the minimum logical tables that I
  *  need, and then balance the size of those logical tables.
  */
-void StageUseEstimate::calculate_partition_sizes(const IR::MAU::Table *tbl,
+void StageUseEstimate::calculate_partition_sizes(const P4::IR::MAU::Table *tbl,
         LayoutOption *lo, int initial_ram_depth) {
     lo->partition_sizes.clear();
     int logical_tables_needed = (initial_ram_depth + Memories::MAX_PARTITION_RAMS_PER_ROW - 1)
@@ -772,7 +772,7 @@ void StageUseEstimate::calculate_partition_sizes(const IR::MAU::Table *tbl,
  *      partition_entries: total (logical) simultaneous lookups in the table
  *      ram_depth: number of RAMs to hold all partitions, if the match was one ram wide
  */
-void StageUseEstimate::options_to_atcam_entries(const IR::MAU::Table *tbl, int entries) {
+void StageUseEstimate::options_to_atcam_entries(const P4::IR::MAU::Table *tbl, int entries) {
     int partition_entries = (entries + tbl->layout.partition_count - 1)
                            / tbl->layout.partition_count;
     LOG1("\tpartition_entries : " << partition_entries);
@@ -795,11 +795,11 @@ void StageUseEstimate::options_to_atcam_entries(const IR::MAU::Table *tbl, int e
  *  to calculate a RAM size exactly, according to Mike Ferrera, so that the addresses
  *  don't have to be a power of two.
  */
-void StageUseEstimate::options_to_dleft_entries(const IR::MAU::Table *tbl,
+void StageUseEstimate::options_to_dleft_entries(const P4::IR::MAU::Table *tbl,
                                                 const attached_entries_t &attached_entries) {
-    const IR::MAU::StatefulAlu *salu = nullptr;
+    const P4::IR::MAU::StatefulAlu *salu = nullptr;
     for (auto back_at : tbl->attached) {
-        salu = back_at->attached->to<IR::MAU::StatefulAlu>();
+        salu = back_at->attached->to<P4::IR::MAU::StatefulAlu>();
         if (salu != nullptr)
             break;
     }
@@ -844,7 +844,7 @@ void StageUseEstimate::options_to_dleft_entries(const IR::MAU::Table *tbl,
 
 /* Calculate the number of rams required for attached tables, given the number of entries
    provided from the table placment */
-void StageUseEstimate::calculate_attached_rams(const IR::MAU::Table *tbl,
+void StageUseEstimate::calculate_attached_rams(const P4::IR::MAU::Table *tbl,
                                                const attached_entries_t &att_entries,
                                                LayoutOption *lo) {
     Log::TempIndent indent;
@@ -864,27 +864,27 @@ void StageUseEstimate::calculate_attached_rams(const IR::MAU::Table *tbl,
         }
         bool need_srams = true;
         bool need_maprams = false;
-        if (auto *ctr = at->to<IR::MAU::Counter>()) {
+        if (auto *ctr = at->to<P4::IR::MAU::Counter>()) {
             per_word = CounterPerWord(ctr);
             need_maprams = true;
-        } else if (at->is<IR::MAU::Meter>()) {
+        } else if (at->is<P4::IR::MAU::Meter>()) {
             per_word = 1;
             need_maprams = true;
-        } else if (auto *reg = at->to<IR::MAU::StatefulAlu>()) {
+        } else if (auto *reg = at->to<P4::IR::MAU::StatefulAlu>()) {
             per_word = RegisterPerWord(reg);
             need_maprams = true;
-        } else if (auto *ad = at->to<IR::MAU::ActionData>()) {
+        } else if (auto *ad = at->to<P4::IR::MAU::ActionData>()) {
             // FIXME: in theory, the table should not have an action data table,
             // as that is decided after the table layout is picked
             if (ad->direct)
                 BUG("Direct Action Data table exists before table placement occurs");
             width = 1;
             per_word = ActionDataPerWord(&lo->layout, &width);
-        } else if (at->is<IR::MAU::Selector>()) {
+        } else if (at->is<P4::IR::MAU::Selector>()) {
             // TODO
-        } else if (at->is<IR::MAU::TernaryIndirect>()) {
+        } else if (at->is<P4::IR::MAU::TernaryIndirect>()) {
             BUG("Ternary Indirect Data table exists before table placement occurs");
-        } else if (auto *idle = at->to<IR::MAU::IdleTime>()) {
+        } else if (auto *idle = at->to<P4::IR::MAU::IdleTime>()) {
             need_srams = false;
             need_maprams = true;
             per_word = IdleTimePerWord(idle);
@@ -943,7 +943,7 @@ void StageUseEstimate::calculate_attached_rams(const IR::MAU::Table *tbl,
 }
 
 /* Calculate the number of attached rams for every single potential layout option */
-void StageUseEstimate::options_to_rams(const IR::MAU::Table *tbl,
+void StageUseEstimate::options_to_rams(const P4::IR::MAU::Table *tbl,
             const attached_entries_t &attached_entries) {
     for (auto &lo : layout_options) {
         calculate_attached_rams(tbl, attached_entries, &lo);
@@ -952,7 +952,7 @@ void StageUseEstimate::options_to_rams(const IR::MAU::Table *tbl,
 
 /* Sorting algorithm to determine the best option given that it is before trying to
    fit the layout options to a certian number of resources, instead just using all entries */
-void StageUseEstimate::select_best_option(const IR::MAU::Table *tbl) {
+void StageUseEstimate::select_best_option(const P4::IR::MAU::Table *tbl) {
     bool small_table_allocation = true;
     int table_size = 0;
     if (auto k = tbl->match_table->getConstantProperty("size"_cs))
@@ -1035,7 +1035,7 @@ void StageUseEstimate::fill_estimate_from_option(int &entries) {
     entries = preferred()->entries;
 }
 
-void StageUseEstimate::determine_initial_layout_option(const IR::MAU::Table *tbl,
+void StageUseEstimate::determine_initial_layout_option(const P4::IR::MAU::Table *tbl,
         int &entries, attached_entries_t &attached_entries) {
     LOG3("Determining initial layout options on table : " << tbl->name << ", entries: " << entries
             << ", att entries: " << attached_entries);
@@ -1068,7 +1068,7 @@ void StageUseEstimate::determine_initial_layout_option(const IR::MAU::Table *tbl
 
 
 /* Constructor to estimate the number of srams, tcams, and maprams a table will require*/
-StageUseEstimate::StageUseEstimate(const IR::MAU::Table *tbl, int &entries,
+StageUseEstimate::StageUseEstimate(const P4::IR::MAU::Table *tbl, int &entries,
         attached_entries_t &attached_entries, LayoutChoices *lc, bool prev_placed,
         bool gateway_attached, bool disable_split, PhvInfo &phv) {
     HashMaskAnnotations hash_mask_annotations(tbl, phv);
@@ -1135,7 +1135,7 @@ StageUseEstimate::StageUseEstimate(const IR::MAU::Table *tbl, int &entries,
          layout_options.size() << " layouts");
 }
 
-bool StageUseEstimate::adjust_choices(const IR::MAU::Table *tbl, int &entries,
+bool StageUseEstimate::adjust_choices(const P4::IR::MAU::Table *tbl, int &entries,
                                       attached_entries_t &attached_entries) {
     LOG3("Adjusting choices on table : " << tbl->name << ", entries: " << entries
             << ", att entries: " << attached_entries);
@@ -1161,7 +1161,7 @@ bool StageUseEstimate::adjust_choices(const IR::MAU::Table *tbl, int &entries,
         layout_options.erase(layout_options.begin() + preferred_index);
         LOG2("    adjust_choices: previously_widened.  Erasing");
     } else {
-        IR::MAU::Table::Way &way = layout_options[preferred_index].way;
+        P4::IR::MAU::Table::Way &way = layout_options[preferred_index].way;
         way.width++;
         // While adjusting the layout we might end up creating one that is suboptimal. E.g.
         // 4 entries packed in 1 SRAMs can be adjusted to 4 entries packed in 2 SRAMs. This layout
@@ -1197,7 +1197,7 @@ int StageUseEstimate::stages_required() const {
 
 /* Given a number of available srams within a stage, calculate the maximum size
    different layout options can be while still using up to the number of srams */
-bool StageUseEstimate::calculate_for_leftover_srams(const IR::MAU::Table *tbl, int &srams_left,
+bool StageUseEstimate::calculate_for_leftover_srams(const P4::IR::MAU::Table *tbl, int &srams_left,
                                         int &entries, attached_entries_t &attached_entries) {
     if (entries > 1) {
         // Can't split hash_action tables that do any actual lookup (but can duplicate
@@ -1222,7 +1222,7 @@ bool StageUseEstimate::calculate_for_leftover_srams(const IR::MAU::Table *tbl, i
 
 /* Given a number of available tcams/srams within a stage, calculate the maximum size of different
    layout options that can with the available resources */
-void StageUseEstimate::calculate_for_leftover_tcams(const IR::MAU::Table *tbl, int tcams_left,
+void StageUseEstimate::calculate_for_leftover_tcams(const P4::IR::MAU::Table *tbl, int tcams_left,
                         int srams_left, int &entries, attached_entries_t &attached_entries) {
     for (auto &lo : layout_options) {
         lo.clear_mems();
@@ -1233,7 +1233,7 @@ void StageUseEstimate::calculate_for_leftover_tcams(const IR::MAU::Table *tbl, i
     fill_estimate_from_option(entries);
 }
 
-void StageUseEstimate::calculate_for_leftover_atcams(const IR::MAU::Table *tbl, int srams_left,
+void StageUseEstimate::calculate_for_leftover_atcams(const P4::IR::MAU::Table *tbl, int srams_left,
                                  int &entries, attached_entries_t &attached_entries) {
     for (auto &lo : layout_options) {
         lo.clear_mems();
@@ -1247,7 +1247,7 @@ void StageUseEstimate::calculate_for_leftover_atcams(const IR::MAU::Table *tbl, 
 // Shrink the preferred layout and reduce the SRAM consumption by at least one SRAM. Remove the
 // layout option if the result is invalid. Finally sort the remaining layout option based on
 // the number of entries that each layout can fit.
-void StageUseEstimate::shrink_preferred_srams_lo(const IR::MAU::Table *tbl, int &entries,
+void StageUseEstimate::shrink_preferred_srams_lo(const P4::IR::MAU::Table *tbl, int &entries,
                                                  attached_entries_t &attached_entries) {
     if (layout_options.empty()) return;
     LayoutOption *lo = &layout_options[preferred_index];
@@ -1270,7 +1270,7 @@ void StageUseEstimate::shrink_preferred_srams_lo(const IR::MAU::Table *tbl, int 
 // Shrink the preferred layout and reduce the TCAM consumption by at least one TCAM. Remove the
 // layout option if the result is invalid. Finally sort the remaining layout option based on
 // the number of entries that each layout can fit.
-void StageUseEstimate::shrink_preferred_tcams_lo(const IR::MAU::Table *tbl, int &entries,
+void StageUseEstimate::shrink_preferred_tcams_lo(const P4::IR::MAU::Table *tbl, int &entries,
                                                  attached_entries_t &attached_entries) {
     if (layout_options.empty()) return;
     LayoutOption *lo = &layout_options[preferred_index];
@@ -1294,7 +1294,7 @@ void StageUseEstimate::shrink_preferred_tcams_lo(const IR::MAU::Table *tbl, int 
 // Shrink the preferred layout and reduce the SRAM consumption by at least one SRAM. Remove the
 // layout option if the result is invalid. Finally sort the remaining layout option based on
 // the number of entries that each layout can fit.
-void StageUseEstimate::shrink_preferred_atcams_lo(const IR::MAU::Table *tbl, int &entries,
+void StageUseEstimate::shrink_preferred_atcams_lo(const P4::IR::MAU::Table *tbl, int &entries,
                                                   attached_entries_t &attached_entries) {
     if (layout_options.empty()) return;
     LayoutOption *lo = &layout_options[preferred_index];
@@ -1316,7 +1316,7 @@ void StageUseEstimate::shrink_preferred_atcams_lo(const IR::MAU::Table *tbl, int
 
 /* Calculates the number of resources needed by the attached tables that are independent
    of the size of table, such as indirect counters, action profiles, etc.*/
-void StageUseEstimate::known_srams_needed(const IR::MAU::Table *tbl,
+void StageUseEstimate::known_srams_needed(const P4::IR::MAU::Table *tbl,
                                           const attached_entries_t &att_entries,
                                           LayoutOption *lo) {
     for (auto back_at : tbl->attached) {
@@ -1327,24 +1327,24 @@ void StageUseEstimate::known_srams_needed(const IR::MAU::Table *tbl,
          int per_word = 0;
          int width = 1;
          bool need_maprams = false;
-         if (auto *ctr = at->to<IR::MAU::Counter>()) {
+         if (auto *ctr = at->to<P4::IR::MAU::Counter>()) {
             per_word = CounterPerWord(ctr);
             need_maprams = true;
-        } else if (at->is<IR::MAU::Meter>()) {
+        } else if (at->is<P4::IR::MAU::Meter>()) {
             per_word = 1;
             need_maprams = true;
-        } else if (auto *reg = at->to<IR::MAU::StatefulAlu>()) {
+        } else if (auto *reg = at->to<P4::IR::MAU::StatefulAlu>()) {
             per_word = RegisterPerWord(reg);
             need_maprams = true;
-        } else if (at->is<IR::MAU::ActionData>()) {
+        } else if (at->is<P4::IR::MAU::ActionData>()) {
             // Because this is called before and after table placement
             per_word = ActionDataPerWord(&lo->layout, &width);
-        } else if (at->is<IR::MAU::Selector>()) {
+        } else if (at->is<P4::IR::MAU::Selector>()) {
             // TODO
-        } else if (at->is<IR::MAU::TernaryIndirect>()) {
+        } else if (at->is<P4::IR::MAU::TernaryIndirect>()) {
             // Again, because this is called before and after table placement
             continue;
-        } else if (at->is<IR::MAU::IdleTime>()) {
+        } else if (at->is<P4::IR::MAU::IdleTime>()) {
             continue;
         } else {
             BUG("Unrecognized table type");
@@ -1363,7 +1363,7 @@ void StageUseEstimate::known_srams_needed(const IR::MAU::Table *tbl,
 /* Calculate the RAM_counter for each attached table.  This contains the entries per_row,
    the width, and the need of maprams */
 void StageUseEstimate::calculate_per_row_vector(safe_vector<RAM_counter> &per_word_and_width,
-                                                const IR::MAU::Table *tbl,
+                                                const P4::IR::MAU::Table *tbl,
                                                 LayoutOption *lo) {
     for (auto back_at : tbl->attached) {
          auto at = back_at->attached;
@@ -1372,21 +1372,21 @@ void StageUseEstimate::calculate_per_row_vector(safe_vector<RAM_counter> &per_wo
          int width = 1;
          bool need_srams = true;
          bool need_maprams = false;
-         if (auto *ctr = at->to<IR::MAU::Counter>()) {
+         if (auto *ctr = at->to<P4::IR::MAU::Counter>()) {
              per_word = CounterPerWord(ctr);
              need_maprams = true;;
-         } else if (at->is<IR::MAU::Meter>()) {
+         } else if (at->is<P4::IR::MAU::Meter>()) {
              per_word = 1;
              need_maprams = true;
-         } else if (auto *reg = at->to<IR::MAU::StatefulAlu>()) {
+         } else if (auto *reg = at->to<P4::IR::MAU::StatefulAlu>()) {
              per_word = RegisterPerWord(reg);
              need_maprams = true;
-         } else if (auto ad = at->to<IR::MAU::ActionData>()) {
+         } else if (auto ad = at->to<P4::IR::MAU::ActionData>()) {
              BUG_CHECK(!ad->direct, "Cannot have an action data table before table placement");
              continue;
-         } else if (at->is<IR::MAU::Selector>()) {
+         } else if (at->is<P4::IR::MAU::Selector>()) {
              continue;
-         } else if (auto *idle = at->to<IR::MAU::IdleTime>()) {
+         } else if (auto *idle = at->to<P4::IR::MAU::IdleTime>()) {
              per_word = IdleTimePerWord(idle);
              need_srams = false;
              need_maprams = true;
@@ -1411,7 +1411,7 @@ void StageUseEstimate::calculate_per_row_vector(safe_vector<RAM_counter> &per_wo
 /* Estimate the number of srams on a layout option, gradually growing the srams array
    size and then calculating the corresponding necessary attached rams that are related
    to the number of entries from the srams */
-void StageUseEstimate::unknown_srams_needed(const IR::MAU::Table *tbl, LayoutOption *lo,
+void StageUseEstimate::unknown_srams_needed(const P4::IR::MAU::Table *tbl, LayoutOption *lo,
                                             int srams_left) {
     safe_vector<RAM_counter> per_word_and_width;
     calculate_per_row_vector(per_word_and_width, tbl, lo);
@@ -1476,7 +1476,7 @@ void StageUseEstimate::unknown_srams_needed(const IR::MAU::Table *tbl, LayoutOpt
  *  layout option.  It is different than normal SRAMs, because the algorithm has to grow all
  *  ways simultaneously.
  */
-void StageUseEstimate::unknown_atcams_needed(const IR::MAU::Table *tbl, LayoutOption *lo,
+void StageUseEstimate::unknown_atcams_needed(const P4::IR::MAU::Table *tbl, LayoutOption *lo,
                                              int srams_left) {
     safe_vector<RAM_counter> per_word_and_width;
     calculate_per_row_vector(per_word_and_width, tbl, lo);
@@ -1575,7 +1575,7 @@ void StageUseEstimate::max_entries_best_option() {
 
 /* Calculate the relative size of the different ternary layout options by slowly increasing
    the number of entries until the available tcams or srams are full */
-void StageUseEstimate::unknown_tcams_needed(const IR::MAU::Table *tbl, LayoutOption *lo,
+void StageUseEstimate::unknown_tcams_needed(const P4::IR::MAU::Table *tbl, LayoutOption *lo,
                                             int tcams_left, int srams_left) {
     safe_vector<RAM_counter> per_word_and_width;
     calculate_per_row_vector(per_word_and_width, tbl, lo);
@@ -1666,14 +1666,14 @@ void StageUseEstimate::tcams_left_best_option() {
  *  a signal from 4 rows away, for a maximum distribution limit of 8 rows.  Thus the total rows
  *  is the max of the previous formula and 8.
  */
-bool RangeEntries::preorder(const IR::MAU::TableKey *ixbar_read) {
+bool RangeEntries::preorder(const P4::IR::MAU::TableKey *ixbar_read) {
     if (ixbar_read->match_type.name != "range")
         return false;
 
     le_bitrange bits = { 0, 0 };
     auto field = phv.field(ixbar_read->expr, &bits);
 
-    auto tbl = findContext<IR::MAU::Table>();
+    auto tbl = findContext<P4::IR::MAU::Table>();
 
     int range_nibbles = 0;
     PHV::FieldUse use(PHV::FieldUse::READ);
@@ -1702,16 +1702,16 @@ bool RangeEntries::preorder(const IR::MAU::TableKey *ixbar_read) {
  *  the maximum number of rows, or no range match at all, the programmer can provide a pragma
  *  to limit the number of rows.
  */
-void RangeEntries::postorder(const IR::MAU::Table *tbl) {
+void RangeEntries::postorder(const P4::IR::MAU::Table *tbl) {
     auto annot = tbl->match_table->getAnnotations();
     int range_entries = -1;
     if (auto s = annot->getSingle("entries_with_ranges"_cs)) {
-        const IR::Constant *pragma_val = nullptr;
+        const P4::IR::Constant *pragma_val = nullptr;
         if (s->expr.size() == 0) {
             ::error("%s: entries_with_ranges pragma on table %s has no value", s->srcInfo,
                     tbl->name);
         } else {
-            pragma_val = s->expr.at(0)->to<IR::Constant>();
+            pragma_val = s->expr.at(0)->to<P4::IR::Constant>();
             ERROR_CHECK(pragma_val != nullptr, "%s: the value for the entries_with_ranges "
                         "pragma on table %s is not a constant", s->srcInfo, tbl->name);
         }

@@ -2,11 +2,11 @@
 #include "bf-p4c/common/empty_tableseq.h"
 #include "bf-p4c/ir/table_tree.h"
 
-int AddAlwaysRun::compare(const IR::MAU::Table* t1, const IR::MAU::Table* t2) const {
+int AddAlwaysRun::compare(const P4::IR::MAU::Table* t1, const P4::IR::MAU::Table* t2) const {
     return compare(t1, t2 ? std::optional<UniqueId>(t2->get_uid()) : std::nullopt);
 }
 
-int AddAlwaysRun::compare(const IR::MAU::Table* t1, std::optional<UniqueId> t2) const {
+int AddAlwaysRun::compare(const P4::IR::MAU::Table* t1, std::optional<UniqueId> t2) const {
     if (t1 == nullptr) return t2 ? 1 : 0;
     if (!t2) return -1;
 
@@ -25,7 +25,7 @@ int AddAlwaysRun::compare(const IR::MAU::Table* t1, std::optional<UniqueId> t2) 
     return globalOrdering.at(t1Id) - globalOrdering.at(t2Id);
 }
 
-Visitor::profile_t AddAlwaysRun::PrepareToAdd::init_apply(const IR::Node* root) {
+Visitor::profile_t AddAlwaysRun::PrepareToAdd::init_apply(const P4::IR::Node* root) {
     auto result = MauInspector::init_apply(root);
 
     // Start with a clean slate.
@@ -40,7 +40,7 @@ Visitor::profile_t AddAlwaysRun::PrepareToAdd::init_apply(const IR::Node* root) 
         // Get the flow graph for the current gress and populate an index of tables in the flow
         // graph by their unique ID.
         auto& flowGraph = self.flowGraphs[gress];
-        std::map<UniqueId, const IR::MAU::Table*> tablesByUniqueId;
+        std::map<UniqueId, const P4::IR::MAU::Table*> tablesByUniqueId;
         for (auto* table : flowGraph.get_tables()) {
             tablesByUniqueId[table->get_uid()] = table;
         }
@@ -92,7 +92,7 @@ Visitor::profile_t AddAlwaysRun::PrepareToAdd::init_apply(const IR::Node* root) 
     return result;
 }
 
-bool AddAlwaysRun::PrepareToAdd::preorder(const IR::MAU::TableSeq* tableSeq) {
+bool AddAlwaysRun::PrepareToAdd::preorder(const P4::IR::MAU::TableSeq* tableSeq) {
     // Override the behaviour for visiting table sequences so that we accurately track
     // subsequentTable.
 
@@ -119,7 +119,7 @@ bool AddAlwaysRun::PrepareToAdd::preorder(const IR::MAU::TableSeq* tableSeq) {
     return false;
 }
 
-bool AddAlwaysRun::PrepareToAdd::preorder(const IR::MAU::Table* table) {
+bool AddAlwaysRun::PrepareToAdd::preorder(const P4::IR::MAU::Table* table) {
     // Ensure we re-visit this table if we encounter it again elsewhere in the IR.
     visitAgain();
 
@@ -130,7 +130,7 @@ bool AddAlwaysRun::PrepareToAdd::preorder(const IR::MAU::Table* table) {
     return true;
 }
 
-void AddAlwaysRun::PrepareToAdd::end_apply(const IR::Node* root) {
+void AddAlwaysRun::PrepareToAdd::end_apply(const P4::IR::Node* root) {
     Visitor::end_apply(root);
 
     // Convert minSubsequentTables into self.subsequentTables.
@@ -144,12 +144,12 @@ void AddAlwaysRun::PrepareToAdd::end_apply(const IR::Node* root) {
     }
 }
 
-const IR::BFN::Pipe* AddAlwaysRun::AddTables::preorder(IR::BFN::Pipe* pipe) {
+const P4::IR::BFN::Pipe* AddAlwaysRun::AddTables::preorder(P4::IR::BFN::Pipe* pipe) {
     // Override the behaviour for visiting pipes so that we accurately update tablesToAdd for each
     // gress.
     prune();
 
-    std::initializer_list<std::pair<const IR::MAU::TableSeq*&, gress_t>> threads = {
+    std::initializer_list<std::pair<const P4::IR::MAU::TableSeq*&, gress_t>> threads = {
         {pipe->thread[0].mau, INGRESS},
         {pipe->thread[1].mau, EGRESS},
         {pipe->ghost_thread.ghost_mau, GHOST},
@@ -162,7 +162,7 @@ const IR::BFN::Pipe* AddAlwaysRun::AddTables::preorder(IR::BFN::Pipe* pipe) {
         if (!self.globalOrderings.count(gress)) continue;
 
         // Build a map of tables to add, indexed by unique ID.
-        std::map<UniqueId, const IR::MAU::Table*> tableIdx;
+        std::map<UniqueId, const P4::IR::MAU::Table*> tableIdx;
         for (auto* table : Keys(self.allTablesToAdd.at(gress))) {
             tableIdx[table->get_uid()] = table;
         }
@@ -182,7 +182,7 @@ const IR::BFN::Pipe* AddAlwaysRun::AddTables::preorder(IR::BFN::Pipe* pipe) {
     return pipe;
 }
 
-const IR::Node* AddAlwaysRun::AddTables::preorder(IR::MAU::TableSeq* tableSeq) {
+const P4::IR::Node* AddAlwaysRun::AddTables::preorder(P4::IR::MAU::TableSeq* tableSeq) {
     // Override the behaviour for visiting table sequences so that we accurately track
     // subsequentTable. This is also where we insert the always-run tables into the IR.
     prune();
@@ -193,7 +193,7 @@ const IR::Node* AddAlwaysRun::AddTables::preorder(IR::MAU::TableSeq* tableSeq) {
     const auto savedSubsequentTable = subsequentTable;
 
     // This will hold the result that we will use to overwrite the table sequence being visited.
-    IR::Vector<IR::MAU::Table> result;
+    P4::IR::Vector<P4::IR::MAU::Table> result;
 
     for (unsigned i = 0; i < tableSeq->tables.size(); ++i) {
         auto* curTable = tableSeq->tables[i];
@@ -210,29 +210,29 @@ const IR::Node* AddAlwaysRun::AddTables::preorder(IR::MAU::TableSeq* tableSeq) {
             tablesToAdd.pop_front();
         }
 
-        // Visit the current table. This mirrors the functionality in IR::Vector::visit_children.
+        // Visit the current table. This mirrors the functionality in P4::IR::Vector::visit_children.
         auto* rewritten = apply_visitor(curTable);
         if (!rewritten && curTable) {
             continue;
         } else if (rewritten == curTable) {
           result.push_back(curTable);
-        } else if (auto l = dynamic_cast<const IR::Vector<IR::MAU::Table>*>(rewritten)) {
+        } else if (auto l = dynamic_cast<const P4::IR::Vector<P4::IR::MAU::Table>*>(rewritten)) {
             result.append(*l);
-        } else if (auto v = dynamic_cast<const IR::VectorBase*>(rewritten)) {
+        } else if (auto v = dynamic_cast<const P4::IR::VectorBase*>(rewritten)) {
             if (v->empty()) continue;
 
             for (auto elt : *v) {
-                if (auto e = dynamic_cast<const IR::MAU::Table*>(elt)) {
+                if (auto e = dynamic_cast<const P4::IR::MAU::Table*>(elt)) {
                     result.push_back(e);
                 } else {
-                    BUG("visitor returned invalid type %s for Vector<IR::MAU::Table>",
+                    BUG("visitor returned invalid type %s for Vector<P4::IR::MAU::Table>",
                         elt->node_type_name());
                 }
             }
-        } else if (auto e = dynamic_cast<const IR::MAU::Table*>(rewritten)) {
+        } else if (auto e = dynamic_cast<const P4::IR::MAU::Table*>(rewritten)) {
             result.push_back(e);
         } else {
-            BUG("visitor returned invalid type %s for Vector<IR::MAU::Table>",
+            BUG("visitor returned invalid type %s for Vector<P4::IR::MAU::Table>",
                 rewritten->node_type_name());
         }
     }

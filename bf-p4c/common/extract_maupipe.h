@@ -22,7 +22,7 @@ class CreateSaluInstruction;
 
 namespace BFN {
 
-const IR::BFN::Pipe *extract_maupipe(const IR::P4Program *, BFN_Options& options);
+const P4::IR::BFN::Pipe *extract_maupipe(const P4::IR::P4Program *, BFN_Options& options);
 
 /** The purpose of this code is to translate in each pipeline to Backend structures.
  *  At the top of each pipeline, each extern to be used by that pipeline is declared.
@@ -41,10 +41,10 @@ const IR::BFN::Pipe *extract_maupipe(const IR::P4Program *, BFN_Options& options
  *  map for the entire gress.  Depending on how complicated cases get, this may have to
  *  expanded at somepoint.
  */
-typedef assoc::map<const IR::Declaration_Instance *,
-                 const IR::MAU::AttachedMemory *> DeclarationConversions;
+typedef assoc::map<const P4::IR::Declaration_Instance *,
+                 const P4::IR::MAU::AttachedMemory *> DeclarationConversions;
 // a mapping from Registers to the (converted) ActionSelectors that are bound to them
-typedef assoc::map<const IR::Declaration_Instance *, const IR::MAU::Selector *> StatefulSelectors;
+typedef assoc::map<const P4::IR::Declaration_Instance *, const P4::IR::MAU::Selector *> StatefulSelectors;
 
 class AttachTables : public PassManager {
     P4::ReferenceMap *refMap;
@@ -52,16 +52,16 @@ class AttachTables : public PassManager {
     // Have to keep all non StatefulAlus separate from other Declaration_Instances, because
     // selectors and StatefulAlus may have the same Declaration
     DeclarationConversions &converted;
-    assoc::map<const IR::Declaration_Instance *,
-             IR::MAU::StatefulAlu *> salu_inits;  // Register -> StatefulAlu
+    assoc::map<const P4::IR::Declaration_Instance *,
+             P4::IR::MAU::StatefulAlu *> salu_inits;  // Register -> StatefulAlu
     StatefulSelectors   stateful_selectors;
 
     /**
      * \ingroup stateful_alu
-     * \brief The pass converts declarations of register actions into IR::MAU::StatefulAlu nodes.
+     * \brief The pass converts declarations of register actions into P4::IR::MAU::StatefulAlu nodes.
      *
      * The pass builds the BFN::AttachTables::salu_inits map, which maps declarations
-     * of register parameters to IR::MAU::StatefulAlu nodes.
+     * of register parameters to P4::IR::MAU::StatefulAlu nodes.
      *
      * There are two annotation processed in this pass:
      * 1. \@initial_register_lo_value
@@ -73,10 +73,10 @@ class AttachTables : public PassManager {
      */
     class InitializeStatefulAlus : public MauInspector {
         AttachTables &self;
-        void postorder(const IR::Expression *) override { visitAgain(); }
-        void postorder(const IR::GlobalRef *) override;
-        void updateAttachedSalu(const IR::Declaration_Instance *,
-                                const IR::GlobalRef *);
+        void postorder(const P4::IR::Expression *) override { visitAgain(); }
+        void postorder(const P4::IR::GlobalRef *) override;
+        void updateAttachedSalu(const P4::IR::Declaration_Instance *,
+                                const P4::IR::GlobalRef *);
 
      public:
         explicit InitializeStatefulAlus(AttachTables &s) : self(s) {}
@@ -85,13 +85,13 @@ class AttachTables : public PassManager {
     /**
      * \ingroup stateful_alu
      * \brief The pass converts declarations of register parameters
-     * into IR::MAU::SaluRegfileRow IR nodes.
+     * into P4::IR::MAU::SaluRegfileRow IR nodes.
      *
      * The pass collects all declarations of register params and checks whether
      * each of them is used in a single stateful ALU.
      * Then, it allocates a register file row for each RegisterParam used
      * in a stateful ALU and adds this information to the corresponding
-     * IR::MAU::StatefulAlu::regfile map.
+     * P4::IR::MAU::StatefulAlu::regfile map.
      *
      * Register parameters support only 8/16/32 signed and unsigned data types.
      *
@@ -103,9 +103,9 @@ class AttachTables : public PassManager {
      */
     class InitializeRegisterParams : public MauInspector {
         AttachTables &self;
-        ordered_map<const IR::Declaration_Instance *,
-             IR::MAU::StatefulAlu *> param_salus;  // RegisterParam -> StatefulAlu
-        bool preorder(const IR::MAU::Primitive *prim) override;
+        ordered_map<const P4::IR::Declaration_Instance *,
+             P4::IR::MAU::StatefulAlu *> param_salus;  // RegisterParam -> StatefulAlu
+        bool preorder(const P4::IR::MAU::Primitive *prim) override;
         void end_apply() override;
 
      public:
@@ -114,11 +114,11 @@ class AttachTables : public PassManager {
 
     /**
      * \ingroup stateful_alu
-     * \brief The pass converts register actions into IR::MAU::SaluAction nodes
+     * \brief The pass converts register actions into P4::IR::MAU::SaluAction nodes
      * using the CreateSaluInstruction inspector.
      *
      * For each SALU, it creates a single CreateSaluInstruction inspector, which is
-     * applied to each IR::MAU::SaluAction node belonging to that SALU, so that information
+     * applied to each P4::IR::MAU::SaluAction node belonging to that SALU, so that information
      * can be accumulated, and creates corresponding SALU instructions.
      *
      * @pre The pass must be called after BFN::AttachTables::InitializeRegisterParams,
@@ -126,11 +126,11 @@ class AttachTables : public PassManager {
      */
     class InitializeStatefulInstructions : public MauInspector {
         AttachTables &self;
-        assoc::set<const IR::Declaration_Instance *> register_actions;
-        assoc::map<const IR::MAU::StatefulAlu *, CreateSaluInstruction *> inst_ctor;
+        assoc::set<const P4::IR::Declaration_Instance *> register_actions;
+        assoc::map<const P4::IR::MAU::StatefulAlu *, CreateSaluInstruction *> inst_ctor;
 
-        void postorder(const IR::Expression *) override { visitAgain(); }
-        void postorder(const IR::GlobalRef *gref) override;
+        void postorder(const P4::IR::Expression *) override { visitAgain(); }
+        void postorder(const P4::IR::GlobalRef *gref) override;
 
      public:
         explicit InitializeStatefulInstructions(AttachTables &s) : self(s) {}
@@ -140,7 +140,7 @@ class AttachTables : public PassManager {
      * \ingroup stateful_alu
      * \brief The pass attaches stateful ALUs to corresponding M/A tables.
      *
-     * The attached stateful tables are stored in the IR::MAU::Table::attached vector
+     * The attached stateful tables are stored in the P4::IR::MAU::Table::attached vector
      * of a M/A table.
      */
     class DefineGlobalRefs : public MauModifier {
@@ -148,27 +148,27 @@ class AttachTables : public PassManager {
         P4::ReferenceMap *refMap;
         P4::TypeMap* typeMap;
 
-        assoc::map<cstring, safe_vector<const IR::MAU::BackendAttached *>> attached;
-        bool preorder(IR::MAU::Table *) override;
-        bool preorder(IR::MAU::Action *) override;
-        void postorder(IR::MAU::Table *) override;
-        void postorder(IR::Expression *) override { visitAgain(); }
-        void postorder(IR::GlobalRef *) override;
+        assoc::map<cstring, safe_vector<const P4::IR::MAU::BackendAttached *>> attached;
+        bool preorder(P4::IR::MAU::Table *) override;
+        bool preorder(P4::IR::MAU::Action *) override;
+        void postorder(P4::IR::MAU::Table *) override;
+        void postorder(P4::IR::Expression *) override { visitAgain(); }
+        void postorder(P4::IR::GlobalRef *) override;
 
-        const IR::MAU::StatefulAlu *findAttachedSalu(const IR::Declaration_Instance *ext);
+        const P4::IR::MAU::StatefulAlu *findAttachedSalu(const P4::IR::Declaration_Instance *ext);
 
      public:
         explicit DefineGlobalRefs(AttachTables &s, P4::ReferenceMap *refMap,
                 P4::TypeMap* typeMap) :
             self(s), refMap(refMap), typeMap(typeMap) {}
     };
-    bool findSaluDeclarations(const IR::Declaration_Instance *ext,
-                              const IR::Declaration_Instance **reg_ptr,
-                              const IR::Type_Specialized **regtype_ptr = nullptr,
-                              const IR::Type_Extern **seltype_ptr = nullptr);
-    profile_t init_apply(const IR::Node *root) override;
+    bool findSaluDeclarations(const P4::IR::Declaration_Instance *ext,
+                              const P4::IR::Declaration_Instance **reg_ptr,
+                              const P4::IR::Type_Specialized **regtype_ptr = nullptr,
+                              const P4::IR::Type_Extern **seltype_ptr = nullptr);
+    profile_t init_apply(const P4::IR::Node *root) override;
 
-    static bool isSaluActionType(const IR::Type *);
+    static bool isSaluActionType(const P4::IR::Type *);
 
  public:
     AttachTables(P4::ReferenceMap *rm, P4::TypeMap* tm, DeclarationConversions &con,
@@ -184,11 +184,11 @@ class AttachTables : public PassManager {
     }
 };
 
-/// must be applied to IR::BFN::Pipe
+/// must be applied to P4::IR::BFN::Pipe
 class ProcessBackendPipe : public PassManager {
  public:
     ProcessBackendPipe(P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
-                       IR::BFN::Pipe* rv, DeclarationConversions &converted,
+                       P4::IR::BFN::Pipe* rv, DeclarationConversions &converted,
                        StatefulSelectors ss,
                        ParamBinding *bindings);
 };
@@ -198,25 +198,25 @@ class BackendConverter : public Inspector {
     P4::TypeMap *typeMap;
     ParamBinding *bindings;
     ParseTna *arch;
-    const IR::ToplevelBlock* toplevel = nullptr;
+    const P4::IR::ToplevelBlock* toplevel = nullptr;
     StatefulSelectors stateful_selectors;
-    IR::Vector<IR::BFN::Pipe>& pipe;
-    ordered_map<int, const IR::BFN::Pipe*>& pipes;
+    P4::IR::Vector<P4::IR::BFN::Pipe>& pipe;
+    ordered_map<int, const P4::IR::BFN::Pipe*>& pipes;
     CollectSourceInfoLogging& sourceInfoLogging;
 
  public:
     BackendConverter(P4::ReferenceMap *refMap, P4::TypeMap *typeMap,
-            ParamBinding* bindings, IR::Vector<IR::BFN::Pipe>& pipe,
-            ordered_map<int, const IR::BFN::Pipe*>& pipes,
+            ParamBinding* bindings, P4::IR::Vector<P4::IR::BFN::Pipe>& pipe,
+            ordered_map<int, const P4::IR::BFN::Pipe*>& pipes,
             CollectSourceInfoLogging& sourceInfoLogging)
     : refMap(refMap), typeMap(typeMap), bindings(bindings),
     pipe(pipe), pipes(pipes), sourceInfoLogging(sourceInfoLogging)
     { arch = new ParseTna(refMap, typeMap); }
 
-    ordered_map<int, const IR::BFN::Pipe*>& getPipes() { return pipes; }
-    cstring getPipelineName(const IR::P4Program* program, int index);
+    ordered_map<int, const P4::IR::BFN::Pipe*>& getPipes() { return pipes; }
+    cstring getPipelineName(const P4::IR::P4Program* program, int index);
     const ProgramPipelines &getPipelines() const { return arch->pipelines; }
-    bool preorder(const IR::P4Program* program) override;
+    bool preorder(const P4::IR::P4Program* program) override;
 };
 
 }  // namespace BFN

@@ -3,6 +3,7 @@
 
 struct bfn_hash_algorithm_;
 
+namespace P4 {
 namespace IR {
 namespace MAU {
 
@@ -24,8 +25,8 @@ struct HashFunction {
     bool operator!=(const HashFunction &a) const { return !(*this == a); }
     void toJSON(JSONGenerator &json) const;
     static HashFunction *fromJSON(JSONLoader &);
-    bool setup(const IR::Expression *exp);
-    bool convertPolynomialExtern(const IR::GlobalRef *);
+    bool setup(const P4::IR::Expression *exp);
+    bool convertPolynomialExtern(const P4::IR::GlobalRef *);
     static HashFunction identity() {
         HashFunction rv;
         rv.type = IDENTITY;
@@ -70,37 +71,37 @@ struct HashFunction {
     }
 
  private:
-    const IR::MethodCallExpression *hash_to_mce(const IR::Expression *);
+    const P4::IR::MethodCallExpression *hash_to_mce(const P4::IR::Expression *);
     uint64_t toKoopman(uint64_t poly, uint32_t width);
 
  public:
     void build_algorithm_t(bfn_hash_algorithm_ *) const;
-    static const IR::Expression *convertHashAlgorithmBFN(Util::SourceInfo srcInfo,
-                                                         IR::ID algorithm);
+    static const P4::IR::Expression *convertHashAlgorithmBFN(Util::SourceInfo srcInfo,
+                                                         P4::IR::ID algorithm);
     friend std::ostream &operator<<(std::ostream &, const HashFunction &);
 
  private:
-    static const IR::Expression *convertHashAlgorithmExtern(Util::SourceInfo srcInfo,
-                                                            IR::ID algorithm);
+    static const P4::IR::Expression *convertHashAlgorithmExtern(Util::SourceInfo srcInfo,
+                                                            P4::IR::ID algorithm);
 
-    static const IR::Expression *convertHashAlgorithmInner(Util::SourceInfo srcInfo,
-                                                           IR::ID algorithm, bool msb, bool extend,
+    static const P4::IR::Expression *convertHashAlgorithmInner(Util::SourceInfo srcInfo,
+                                                           P4::IR::ID algorithm, bool msb, bool extend,
                                                            bool extension_set,
                                                            const std::string &alg_name);
 };
 
 inline std::ostream &operator<<(std::ostream &out, const IR::MAU::HashFunction &h) {
     switch (h.type) {
-    case IR::MAU::HashFunction::IDENTITY:
+    case P4::IR::MAU::HashFunction::IDENTITY:
         out << "identity";
         break;
-    case IR::MAU::HashFunction::CSUM:
+    case P4::IR::MAU::HashFunction::CSUM:
         out << "csum" << h.size;
         break;
-    case IR::MAU::HashFunction::XOR:
+    case P4::IR::MAU::HashFunction::XOR:
         out << "xor" << h.size;
         break;
-    case IR::MAU::HashFunction::CRC:
+    case P4::IR::MAU::HashFunction::CRC:
         out << "crc(0x" << std::hex << h.poly;
         if (h.init)
             out << " init=0x" << std::hex << h.init;
@@ -108,7 +109,7 @@ inline std::ostream &operator<<(std::ostream &out, const IR::MAU::HashFunction &
         if (h.final_xor)
             out << "^" << std::hex << h.final_xor;
         break;
-    case IR::MAU::HashFunction::RANDOM:
+    case P4::IR::MAU::HashFunction::RANDOM:
         out << "random";
         break;
     default:
@@ -119,5 +120,6 @@ inline std::ostream &operator<<(std::ostream &out, const IR::MAU::HashFunction &
 
 }  // end namespace MAU
 }  // end namespace IR
+}  // end namespace P4
 
 #endif /* BF_P4C_MAU_HASH_FUNCTION_H_ */

@@ -50,9 +50,9 @@ class StaticEntriesConstProp : public MauModifier {
  public:
     explicit StaticEntriesConstProp(const PhvInfo& phv) : phv(phv) { }
 
-    bool equiv(const IR::MethodCallExpression* mc, const IR::MAU::Action* ac) {
+    bool equiv(const P4::IR::MethodCallExpression* mc, const P4::IR::MAU::Action* ac) {
         if (mc && ac) {
-            if (auto path = mc->method->to<IR::PathExpression>()) {
+            if (auto path = mc->method->to<P4::IR::PathExpression>()) {
                 if (path->path->name == ac->name) {
                     return true;
                 }
@@ -61,12 +61,12 @@ class StaticEntriesConstProp : public MauModifier {
         return false;
     }
 
-    bool preorder(IR::MAU::Instruction* instr) override {
-        auto table = findContext<IR::MAU::Table>();
+    bool preorder(P4::IR::MAU::Instruction* instr) override {
+        auto table = findContext<P4::IR::MAU::Table>();
         if (table->is_compiler_generated || table->entries_list == nullptr)
             return false;
 
-        auto action = findContext<IR::MAU::Action>();
+        auto action = findContext<P4::IR::MAU::Action>();
 
         for (unsigned i = 0; i < instr->operands.size(); i++) {
             if (i == 0) continue;
@@ -86,11 +86,11 @@ class StaticEntriesConstProp : public MauModifier {
                 auto key = phv.field(table->match_key[j]->expr);
                 if (op == key) {
                     bool can_const_prop = false;
-                    const IR::Expression * match = nullptr;
+                    const P4::IR::Expression * match = nullptr;
                     // Check if constant values for one same action in multi-entries are unique.
                     // Don't do constant propagation if not unique or it's a default action.
                     for (auto& ent : table->entries_list->entries) {
-                        if (equiv(ent->action->to<IR::MethodCallExpression>(), action) &&
+                        if (equiv(ent->action->to<P4::IR::MethodCallExpression>(), action) &&
                             (action->init_default == false)) {
                             if (can_const_prop == false) {
                                 // Assume can constant propagtion for the first entry.
@@ -109,10 +109,10 @@ class StaticEntriesConstProp : public MauModifier {
 
                     if (can_const_prop) {
                         LOG4("rewrite " << instr);
-                        if (auto b = match->to<IR::BoolLiteral>()) {
+                        if (auto b = match->to<P4::IR::BoolLiteral>()) {
                             instr->operands[i] =
-                                new IR::Constant(IR::Type::Bits::get(1), b->value);
-                        } else if (auto c = match->to<IR::Constant>()) {
+                                new P4::IR::Constant(P4::IR::Type::Bits::get(1), b->value);
+                        } else if (auto c = match->to<P4::IR::Constant>()) {
                             instr->operands[i] = c;
                         } else {
                             LOG4("unknown static entry match type");

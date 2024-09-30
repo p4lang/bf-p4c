@@ -17,24 +17,24 @@ class CheckOperations : public Inspector {
     // Helper that removes casts to make identifying unsupported operator
     // combinations easier.
     struct RemoveCasts : public Transform {
-        IR::Node* preorder(IR::Cast* cast) override {
+        P4::IR::Node* preorder(P4::IR::Cast* cast) override {
             return cast->expr->clone();
         }
     };
 
     /// @returns BOP in modify_field(x, BOP), if BOP is a binary operation
     /// expression.
-    std::optional<const IR::Operation_Binary*> getSrcBinop(const IR::MAU::Primitive* p) const;
+    std::optional<const P4::IR::Operation_Binary*> getSrcBinop(const P4::IR::MAU::Primitive* p) const;
 
     /// @returns true if @p is a P4_16 encoding of a P4_14 funnel shift
     /// operation, eg. modify_field(x, (y ++ z) >> n).
-    bool isFunnelShift(const IR::MAU::Primitive* p) const;
+    bool isFunnelShift(const P4::IR::MAU::Primitive* p) const;
 
     /// @returns true if @p is a P4_16 encoding of a P4_14 bitmasked modify_field
     /// operation, eg. modify_field(x, val, 0xAA).
-    bool isModBitMask(const IR::MAU::Primitive* p) const;
+    bool isModBitMask(const P4::IR::MAU::Primitive* p) const;
 
-    bool preorder(const IR::MAU::Primitive*) override;
+    bool preorder(const P4::IR::MAU::Primitive*) override;
 };
 
 class CheckForUnimplementedFeatures : public PassManager {

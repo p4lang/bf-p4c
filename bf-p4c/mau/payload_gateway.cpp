@@ -153,7 +153,7 @@
  * The purpose of this pass is to find tables that can be converted to this type of gateway
  * and convert them if table placement wishes to do so.
  */
-void FindPayloadCandidates::add_option(const IR::MAU::Table *tbl, LayoutChoices &lc) {
+void FindPayloadCandidates::add_option(const P4::IR::MAU::Table *tbl, LayoutChoices &lc) {
     if (tbl->getAnnotation("no_gateway_conversion"_cs)) return;
 
     CollectMatchFieldsAsGateway collect(phv);
@@ -191,7 +191,7 @@ void FindPayloadCandidates::add_option(const IR::MAU::Table *tbl, LayoutChoices 
     lc.add_payload_gw_layout(tbl, *single_lo);
 }
 
-IR::MAU::Table *FindPayloadCandidates::convert_to_gateway(const IR::MAU::Table *tbl) {
+P4::IR::MAU::Table *FindPayloadCandidates::convert_to_gateway(const P4::IR::MAU::Table *tbl) {
     if (candidates.count(tbl->name) == 0)
         return nullptr;
 
@@ -200,43 +200,43 @@ IR::MAU::Table *FindPayloadCandidates::convert_to_gateway(const IR::MAU::Table *
     BUG_CHECK(!tbl->match_table->getAnnotation("no_gateway_conversion"_cs),
         "attempt to perform a disabled optimisation");
 
-    IR::MAU::Table *gw_tbl = new IR::MAU::Table(*tbl);
+    P4::IR::MAU::Table *gw_tbl = new P4::IR::MAU::Table(*tbl);
 
     // We iterate over the list of entries.
     int entry_index = 0;
     for (auto &entry : tbl->entries_list->entries) {
         // for each entry line we create a single gw_expr, combining the key values.
-        IR::Expression* gw_expr = nullptr;
+        P4::IR::Expression* gw_expr = nullptr;
 
         // Iterate over tbl->match_key & entry->keys->components together.
         BUG_CHECK(entry->keys->size() == tbl->match_key.size(),
                      "entry keys size != match_key size");
         for (auto tup : boost::combine(tbl->match_key, entry->keys->components)) {
-            const IR::MAU::TableKey* tbl_key;
-            const IR::Expression* value;
+            const P4::IR::MAU::TableKey* tbl_key;
+            const P4::IR::Expression* value;
             boost::tie(tbl_key, value) = tup;  // Oh for C++17 structured binding.
             auto key = tbl_key->expr;
 
-            if (value->is<IR::DefaultExpression>())
+            if (value->is<P4::IR::DefaultExpression>())
                 continue;  // Always true.
-            if (auto mask = value->to<IR::Mask>()) {
+            if (auto mask = value->to<P4::IR::Mask>()) {
                 // Move the masking onto the key itself.
-                key = new IR::BAnd(key, mask->right);
+                key = new P4::IR::BAnd(key, mask->right);
                 value = mask->left;
             }
             // Combine into a single `key1==value1 && key2==value2` expression.
-            auto equ = new IR::Equ(key, value);
+            auto equ = new P4::IR::Equ(key, value);
             if (gw_expr == nullptr)
                 gw_expr = equ;
             else
-                gw_expr = new IR::LAnd(equ, gw_expr);
+                gw_expr = new P4::IR::LAnd(equ, gw_expr);
         }
 
         cstring entry_name = "$entry"_cs + std::to_string(entry_index++);
         gw_tbl->gateway_rows.push_back(std::make_pair(gw_expr, entry_name));
         cstring action_name;
 
-        std::pair<cstring, std::vector<const IR::Constant *>> payload_row;
+        std::pair<cstring, std::vector<const P4::IR::Constant *>> payload_row;
         payload_row.second = convert_entry_to_payload_args(tbl, entry, &action_name);
         payload_row.first = action_name;
         gw_tbl->gateway_payload.emplace(entry_name, payload_row);
@@ -276,31 +276,31 @@ IR::MAU::Table *FindPayloadCandidates::convert_to_gateway(const IR::MAU::Table *
         gw_tbl->next["$miss"_cs] = miss_seq;
     } else if (tbl->action_chain() || tbl->has_default_path()) {
         for (auto &entry : gw_tbl->gateway_payload) {
-            const IR::MAU::TableSeq *act_seq = nullptr;
+            const P4::IR::MAU::TableSeq *act_seq = nullptr;
             auto act_name = entry.second.first;
             if (tbl->next.count(act_name))
                 act_seq = tbl->next.at(act_name);
             else if (tbl->next.count("$default"_cs))
                 act_seq = tbl->next.at("$default"_cs);
             else
-                act_seq = new IR::MAU::TableSeq();
+                act_seq = new P4::IR::MAU::TableSeq();
             gw_tbl->next[entry.first] = act_seq;
         }
 
         for (auto &act : tbl->actions) {
             if (!act.second->init_default) continue;
-            const IR::MAU::TableSeq *act_seq = nullptr;
+            const P4::IR::MAU::TableSeq *act_seq = nullptr;
             auto act_name = act.first;
             if (tbl->next.count(act_name))
                 act_seq = tbl->next.at(act_name);
             else if (tbl->next.count("$default"_cs))
                 act_seq = tbl->next.at("$default"_cs);
             else
-                act_seq = new IR::MAU::TableSeq();
+                act_seq = new P4::IR::MAU::TableSeq();
             gw_tbl->next["$miss"_cs] = act_seq;
         }
     } else {
-        auto next_seq = new IR::MAU::TableSeq();
+        auto next_seq = new P4::IR::MAU::TableSeq();
         for (auto entry : gw_tbl->gateway_payload) {
             gw_tbl->next[entry.first] = next_seq;
         }
@@ -313,15 +313,15 @@ IR::MAU::Table *FindPayloadCandidates::convert_to_gateway(const IR::MAU::Table *
 
 /**
  * Given a static entry, which has an action and parameters, this converts these parameters
- * to a list of IR::Constants, which will either be saved on the gateway_row or used in
+ * to a list of P4::IR::Constants, which will either be saved on the gateway_row or used in
  * an entry.
  */
 FindPayloadCandidates::PayloadArguments
-        FindPayloadCandidates::convert_entry_to_payload_args(const IR::MAU::Table *tbl,
-        const IR::Entry *entry, cstring *act_name) {
-    std::vector<const IR::Constant *> rv;
-    auto mc = entry->action->to<IR::MethodCallExpression>();
-    auto pe = mc->method->to<IR::PathExpression>();
+        FindPayloadCandidates::convert_entry_to_payload_args(const P4::IR::MAU::Table *tbl,
+        const P4::IR::Entry *entry, cstring *act_name) {
+    std::vector<const P4::IR::Constant *> rv;
+    auto mc = entry->action->to<P4::IR::MethodCallExpression>();
+    auto pe = mc->method->to<P4::IR::PathExpression>();
     if (act_name) {
         cstring action_name = pe->path->name;
         for (auto act_it : tbl->actions) {
@@ -333,13 +333,13 @@ FindPayloadCandidates::PayloadArguments
 
     for (size_t i = 0; i < mc->arguments->size(); i++) {
         auto expr = mc->arguments->at(i)->expression;
-        if (auto constant = expr->to<IR::Constant>()) {
+        if (auto constant = expr->to<P4::IR::Constant>()) {
             rv.push_back(constant);
-        } else if (auto bool_lit = expr->to<IR::BoolLiteral>()) {
+        } else if (auto bool_lit = expr->to<P4::IR::BoolLiteral>()) {
             if (bool_lit->value == true)
-                rv.push_back(new IR::Constant(IR::Type::Bits::get(1), 1));
+                rv.push_back(new P4::IR::Constant(P4::IR::Type::Bits::get(1), 1));
             else
-                rv.push_back(new IR::Constant(IR::Type::Bits::get(1), 0));
+                rv.push_back(new P4::IR::Constant(P4::IR::Type::Bits::get(1), 0));
         } else {
             BUG("Unknown expression in a static list");
         }
@@ -351,7 +351,7 @@ FindPayloadCandidates::PayloadArguments
  * Determines the bits to write as the bits for the instruction address.  This comes from
  * the VLIW Instruction allocation, which must be done before this value is calculated
  */
-bitvec FindPayloadCandidates::determine_instr_address_payload(const IR::MAU::Action *act,
+bitvec FindPayloadCandidates::determine_instr_address_payload(const P4::IR::MAU::Action *act,
         const TableResourceAlloc *alloc) {
     auto &instr_mem = alloc->instr_mem;
     auto vliw_instr = instr_mem.all_instrs.at(act->name);
@@ -363,7 +363,7 @@ bitvec FindPayloadCandidates::determine_instr_address_payload(const IR::MAU::Act
 /**
  * Determines the value of the immediate data based on the PayloadArguments
  */
-bitvec FindPayloadCandidates::determine_immediate_payload(const IR::MAU::Action *act,
+bitvec FindPayloadCandidates::determine_immediate_payload(const P4::IR::MAU::Action *act,
         PayloadArguments &payload_args, const TableResourceAlloc *alloc) {
     auto &af = alloc->action_format;
     auto &alu_positions = af.alu_positions.at(act->name);
@@ -400,9 +400,9 @@ bitvec FindPayloadCandidates::determine_immediate_payload(const IR::MAU::Action 
  * The indirect address is similar to the immediate in that the value may come from the
  * payload arguments.
  */
-bitvec FindPayloadCandidates::determine_indirect_addr_payload(const IR::MAU::Action *act,
-        PayloadArguments &payload_args, const IR::MAU::AttachedMemory *at) {
-    const IR::MAU::StatefulCall *call = nullptr;
+bitvec FindPayloadCandidates::determine_indirect_addr_payload(const P4::IR::MAU::Action *act,
+        PayloadArguments &payload_args, const P4::IR::MAU::AttachedMemory *at) {
+    const P4::IR::MAU::StatefulCall *call = nullptr;
     for (auto sc : act->stateful_calls) {
         if (sc->attached_callee->clone_id != at->clone_id) continue;
         call = sc;
@@ -419,7 +419,7 @@ bitvec FindPayloadCandidates::determine_indirect_addr_payload(const IR::MAU::Act
     // No index implies call is direct
     if (call->index == nullptr) return rv;
 
-    if (auto aa = call->index->to<IR::MAU::ActionArg>()) {
+    if (auto aa = call->index->to<P4::IR::MAU::ActionArg>()) {
         BUG_CHECK(act->args.size() == payload_args.size(), "Cannot have an action argument "
             "without a payload argument");
         int param_index = 0;
@@ -428,15 +428,15 @@ bitvec FindPayloadCandidates::determine_indirect_addr_payload(const IR::MAU::Act
             param_index++;
         }
         auto expr = payload_args.at(param_index);
-        if (auto c = expr->to<IR::Constant>()) {
+        if (auto c = expr->to<P4::IR::Constant>()) {
             rv = bitvec(c->asUnsigned());
-        } else if (auto b = expr->to<IR::BoolLiteral>()) {
+        } else if (auto b = expr->to<P4::IR::BoolLiteral>()) {
             if (b->value)
                 rv.setbit(0);
         } else {
             BUG("Unhandled type in the static entry parameter list");
         }
-    } else if (auto c = call->index->to<IR::Constant>()) {
+    } else if (auto c = call->index->to<P4::IR::Constant>()) {
         rv = bitvec(c->asUnsigned());
     }
     return rv;
@@ -445,8 +445,8 @@ bitvec FindPayloadCandidates::determine_indirect_addr_payload(const IR::MAU::Act
 /**
  * Returns a bool if that attached memory runs in that action 
  */
-bitvec FindPayloadCandidates::determine_indirect_pfe_payload(const IR::MAU::Action *act,
-        const IR::MAU::AttachedMemory *at) {
+bitvec FindPayloadCandidates::determine_indirect_pfe_payload(const P4::IR::MAU::Action *act,
+        const P4::IR::MAU::AttachedMemory *at) {
     bitvec rv;
     if (act->per_flow_enables.count(at->unique_id()))
         rv.setbit(0);
@@ -456,8 +456,8 @@ bitvec FindPayloadCandidates::determine_indirect_pfe_payload(const IR::MAU::Acti
 /**
  * The meter type value is returned from the meter type of that action
  */
-bitvec FindPayloadCandidates::determine_meter_type_payload(const IR::MAU::Action *act,
-        const IR::MAU::AttachedMemory *at) {
+bitvec FindPayloadCandidates::determine_meter_type_payload(const P4::IR::MAU::Action *act,
+        const P4::IR::MAU::AttachedMemory *at) {
     if (act->meter_types.count(at->unique_id()) == 0) {
         BUG_CHECK(act->per_flow_enables.count(at->unique_id()) == 0, "Per flow enable "
             "on but missing meter type");
@@ -473,17 +473,17 @@ bitvec FindPayloadCandidates::determine_meter_type_payload(const IR::MAU::Action
  * a particular action, and set of parameters from a static entry for that action, this
  * will return the payload value for that entry.
  */
-bitvec FindPayloadCandidates::determine_match_group_payload(const IR::MAU::Table *tbl,
-        const TableResourceAlloc *alloc, const IR::MAU::Action *act,
-        std::vector<const IR::Constant *> arguments, int entry_idx) {
+bitvec FindPayloadCandidates::determine_match_group_payload(const P4::IR::MAU::Table *tbl,
+        const TableResourceAlloc *alloc, const P4::IR::MAU::Action *act,
+        std::vector<const P4::IR::Constant *> arguments, int entry_idx) {
     bitvec rv;
-    const IR::MAU::AttachedMemory *stats_alu_user  = nullptr;
-    const IR::MAU::AttachedMemory *meter_alu_user = nullptr;
+    const P4::IR::MAU::AttachedMemory *stats_alu_user  = nullptr;
+    const P4::IR::MAU::AttachedMemory *meter_alu_user = nullptr;
     for (auto attached : tbl->attached) {
-        if (attached->attached->to<IR::MAU::Counter>())
+        if (attached->attached->to<P4::IR::MAU::Counter>())
             stats_alu_user = attached->attached;
-        if (attached->attached->to<IR::MAU::Meter>() ||
-            attached->attached->to<IR::MAU::StatefulAlu>())
+        if (attached->attached->to<P4::IR::MAU::Meter>() ||
+            attached->attached->to<P4::IR::MAU::StatefulAlu>())
             meter_alu_user = attached->attached;
     }
 
@@ -550,8 +550,8 @@ bitvec FindPayloadCandidates::determine_match_group_payload(const IR::MAU::Table
  *    - meter_pfe
  *    - meter_type
  */
-bitvec FindPayloadCandidates::determine_payload(const IR::MAU::Table *tbl,
-        const TableResourceAlloc *alloc, const IR::MAU::Table::Layout *layout) {
+bitvec FindPayloadCandidates::determine_payload(const P4::IR::MAU::Table *tbl,
+        const TableResourceAlloc *alloc, const P4::IR::MAU::Table::Layout *layout) {
     bitvec payload;
     auto &tf = alloc->table_format;
     if (tbl->entries_list && tbl->entries_list->entries.size() == tf.match_groups.size()) {
@@ -578,8 +578,8 @@ bitvec FindPayloadCandidates::determine_payload(const IR::MAU::Table *tbl,
     } else if (layout->hash_action) {
         BUG_CHECK(tf.match_groups.size() == 1 && tbl->hit_actions() == 1, "Not a no match hit "
                   "table");
-        std::vector<const IR::Constant *> payload_args;
-        const IR::MAU::Action *hit_act = nullptr;
+        std::vector<const P4::IR::Constant *> payload_args;
+        const P4::IR::MAU::Action *hit_act = nullptr;
         for (auto act : Values(tbl->actions)) {
             if (act->miss_only()) continue;
             hit_act = act;

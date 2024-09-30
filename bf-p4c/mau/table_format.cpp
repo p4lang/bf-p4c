@@ -666,9 +666,9 @@ bitvec TableFormat::bitvec_necessary(type_t type) const {
     } else if (type == IMMEDIATE) {
         rv |= immediate_mask;
     } else if (type == COUNTER || type == COUNTER_PFE) {
-        const IR::MAU::AttachedMemory *stats_addr_user = nullptr;
+        const P4::IR::MAU::AttachedMemory *stats_addr_user = nullptr;
         for (auto ba : tbl->attached) {
-             if (!ba->attached->is<IR::MAU::Counter>()) continue;
+             if (!ba->attached->is<P4::IR::MAU::Counter>()) continue;
              stats_addr_user = ba->attached;
              break;
         }
@@ -690,13 +690,13 @@ bitvec TableFormat::bitvec_necessary(type_t type) const {
             BUG("Unreachable");
         }
     } else if (type == METER || type == METER_PFE || type == METER_TYPE) {
-        const IR::MAU::AttachedMemory *meter_addr_user = nullptr;
+        const P4::IR::MAU::AttachedMemory *meter_addr_user = nullptr;
         for (auto *ba : tbl->attached) {
-             if (ba->attached->is<IR::MAU::StatefulAlu>() &&
-                 ba->use != IR::MAU::StatefulUse::NO_USE) {
+             if (ba->attached->is<P4::IR::MAU::StatefulAlu>() &&
+                 ba->use != P4::IR::MAU::StatefulUse::NO_USE) {
                  meter_addr_user = ba->attached;
-            } else if (ba->attached->is<IR::MAU::Selector>() ||
-                       ba->attached->is<IR::MAU::Meter>()) {
+            } else if (ba->attached->is<P4::IR::MAU::Selector>() ||
+                       ba->attached->is<P4::IR::MAU::Meter>()) {
                  meter_addr_user = ba->attached;
             }
         }
@@ -706,7 +706,7 @@ bitvec TableFormat::bitvec_necessary(type_t type) const {
             return rv;
         bool move_to_overhead = gw_linked &&
                                 !(meter_addr_user->direct ||
-                                  meter_addr_user->is<IR::MAU::Selector>());
+                                  meter_addr_user->is<P4::IR::MAU::Selector>());
         if (type == METER) {
             rv.setrange(0, layout_option.layout.meter_addr.address_bits);
         } else if (type == METER_PFE) {
@@ -724,9 +724,9 @@ bitvec TableFormat::bitvec_necessary(type_t type) const {
         // was to have different sized action data.  Right now the full bits are
         // reserved even if the size of the action profile does not warrant it
 #if 0
-         const IR::MAU::ActionData *ad = nullptr;
+         const P4::IR::MAU::ActionData *ad = nullptr;
          for (auto back_at : tbl->attached) {
-             ad = back_at->to<IR::MAU::ActionData>();
+             ad = back_at->to<P4::IR::MAU::ActionData>();
              if (ad != nullptr)
                  break;
          }
@@ -742,9 +742,9 @@ bitvec TableFormat::bitvec_necessary(type_t type) const {
         ad_adr_bits += ActionDataHuffmanVPNBits(&layout_option.layout);
         rv.setrange(0, ad_adr_bits);
     } else if (type == SEL_LEN_MOD || type == SEL_LEN_SHIFT) {
-        const IR::MAU::Selector *sel = nullptr;
+        const P4::IR::MAU::Selector *sel = nullptr;
         for (auto ba : tbl->attached) {
-            sel = ba->attached->to<IR::MAU::Selector>();
+            sel = ba->attached->to<P4::IR::MAU::Selector>();
             if (sel != nullptr)
                 break;
         }
@@ -1047,12 +1047,12 @@ bool TableFormat::allocate_indirect_ptr(int total, type_t type, int group, int R
 }
 
 void TableFormat::setup_pfes_and_types() {
-    IR::MAU::PfeLocation update_pfe_loc = layout_option.layout.no_match_hit_path() ?
-                                          IR::MAU::PfeLocation::GATEWAY_PAYLOAD :
-                                          IR::MAU::PfeLocation::OVERHEAD;
-    IR::MAU::TypeLocation update_type_loc = layout_option.layout.no_match_hit_path() ?
-                                            IR::MAU::TypeLocation::GATEWAY_PAYLOAD :
-                                            IR::MAU::TypeLocation::OVERHEAD;
+    P4::IR::MAU::PfeLocation update_pfe_loc = layout_option.layout.no_match_hit_path() ?
+                                          P4::IR::MAU::PfeLocation::GATEWAY_PAYLOAD :
+                                          P4::IR::MAU::PfeLocation::OVERHEAD;
+    P4::IR::MAU::TypeLocation update_type_loc = layout_option.layout.no_match_hit_path() ?
+                                            P4::IR::MAU::TypeLocation::GATEWAY_PAYLOAD :
+                                            P4::IR::MAU::TypeLocation::OVERHEAD;
     if (bits_necessary(COUNTER_PFE) > 0)
         use->stats_pfe_loc = update_pfe_loc;
     if (bits_necessary(METER_PFE) > 0)
@@ -2936,7 +2936,7 @@ void TableFormat::verify() {
 }
 
 TableFormat* TableFormat::create(const LayoutOption &l, const IXBar::Use *mi, const IXBar::Use *phi,
-        const IR::MAU::Table *t, const bitvec im, bool gl, FindPayloadCandidates &fpc,
+        const P4::IR::MAU::Table *t, const bitvec im, bool gl, FindPayloadCandidates &fpc,
         const PhvInfo &phv) {
 #ifdef HAVE_FLATROCK
     if (Device::currentDevice() == Device::FLATROCK) {

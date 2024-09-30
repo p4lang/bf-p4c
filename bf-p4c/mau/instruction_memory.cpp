@@ -10,7 +10,7 @@
 #endif
 
 GenerateVLIWInstructions::GenerateVLIWInstructions(PhvInfo &p, ActionData::FormatType_t ft,
-        SplitAttachedInfo &sai, const IR::MAU::Table* tbl)
+        SplitAttachedInfo &sai, const P4::IR::MAU::Table* tbl)
     : phv(p)
     , format_type(ft)
     , split_attached(sai)
@@ -22,7 +22,7 @@ GenerateVLIWInstructions::GenerateVLIWInstructions(PhvInfo &p, ActionData::Forma
     }
 }
 
-void GenerateVLIWInstructions::generate_for_action(const IR::MAU::Action *act) {
+void GenerateVLIWInstructions::generate_for_action(const P4::IR::MAU::Action *act) {
     LOG3("GenerateVLIWInstructions for action " << act->name);
     bitvec current_vliw;
     bool current_has_unalloc_tempvar = false;
@@ -34,8 +34,8 @@ void GenerateVLIWInstructions::generate_for_action(const IR::MAU::Action *act) {
 
     LOG4("\tSplit action found " << act_to_visit);
     for (auto* prim : act_to_visit->action) {
-        auto instr = prim->to<IR::MAU::Instruction>();
-        BUG_CHECK(instr, "Unexpected IR::Primitive, expected IR::MAU::Instruction");
+        auto instr = prim->to<P4::IR::MAU::Instruction>();
+        BUG_CHECK(instr, "Unexpected P4::IR::Primitive, expected P4::IR::MAU::Instruction");
         auto output = instr->getOutput();
         if (output) {
             LOG3("\tGenerateVLIWInstructions for expression " << output);
@@ -184,13 +184,13 @@ bool InstructionMemory::find_row_and_color(bitvec current_bv, gress_t gress,
  * This function is to share the instruction memory line, while determining the correct
  * memcode per action.
  */
-bool InstructionMemory::shared_instr(const IR::MAU::Table *tbl, Use &alloc, bool gw_linked) {
+bool InstructionMemory::shared_instr(const P4::IR::MAU::Table *tbl, Use &alloc, bool gw_linked) {
     const Use *cached_use = nullptr;
-    const IR::MAU::ActionData *ad = nullptr;
-    const IR::MAU::ActionData *ad_use = nullptr;
+    const P4::IR::MAU::ActionData *ad = nullptr;
+    const P4::IR::MAU::ActionData *ad_use = nullptr;
     for (auto back_at : tbl->attached) {
         auto at = back_at->attached;
-        ad = at->to<IR::MAU::ActionData>();
+        ad = at->to<P4::IR::MAU::ActionData>();
         if (ad == nullptr) continue;
         if (shared_action_profiles.count(ad)) {
             LOG2("Already shared through the action profile");
@@ -229,7 +229,7 @@ bool InstructionMemory::shared_instr(const IR::MAU::Table *tbl, Use &alloc, bool
     return true;
 }
 
-bool InstructionMemory::alloc_always_run_instr(const IR::MAU::Table *tbl, Use &alloc,
+bool InstructionMemory::alloc_always_run_instr(const P4::IR::MAU::Table *tbl, Use &alloc,
         bitvec current_bv) {
     auto &use = imem_use(tbl->gress);
     auto &slot_in_use = imem_slot_inuse(tbl->gress);
@@ -251,7 +251,7 @@ bool InstructionMemory::alloc_always_run_instr(const IR::MAU::Table *tbl, Use &a
     return true;
 }
 
-bool InstructionMemory::allocate_imem(const IR::MAU::Table *tbl, Use &alloc, PhvInfo &phv,
+bool InstructionMemory::allocate_imem(const P4::IR::MAU::Table *tbl, Use &alloc, PhvInfo &phv,
         bool gw_linked, ActionData::FormatType_t format_type, SplitAttachedInfo &sai) {
     BUG_CHECK(format_type.valid(), "invalid format type in InstructionMemory::allocate_imem");
     LOG1("Allocating instruction memory for " << tbl->name << " " << format_type);
@@ -311,7 +311,7 @@ bool InstructionMemory::allocate_imem(const IR::MAU::Table *tbl, Use &alloc, Phv
 
     for (auto back_at : tbl->attached) {
         auto at = back_at->attached;
-        auto ad = at->to<IR::MAU::ActionData>();
+        auto ad = at->to<P4::IR::MAU::ActionData>();
         if (ad) {
             shared_action_profiles.emplace(ad, &alloc);
             break;
@@ -380,14 +380,14 @@ void InstructionMemory::update(cstring name, const TableResourceAlloc *alloc, gr
 }
 
 void InstructionMemory::update(cstring name, const TableResourceAlloc *alloc,
-        const IR::MAU::Table *tbl) {
+        const P4::IR::MAU::Table *tbl) {
     if (tbl->is_always_run_action()) {
         update_always_run(alloc->instr_mem, tbl->gress);
         return;
     }
     for (auto back_at : tbl->attached) {
         auto at = back_at->attached;
-        auto ad = at->to<IR::MAU::ActionData>();
+        auto ad = at->to<P4::IR::MAU::ActionData>();
         if (ad == nullptr) continue;
         if (shared_action_profiles.count(ad))
             return;
@@ -396,7 +396,7 @@ void InstructionMemory::update(cstring name, const TableResourceAlloc *alloc,
     update(name, alloc, tbl->gress);
 }
 
-void InstructionMemory::update(const IR::MAU::Table *tbl) {
+void InstructionMemory::update(const P4::IR::MAU::Table *tbl) {
     if (tbl->layout.atcam && tbl->is_placed()) {
         auto orig_name = tbl->name.before(tbl->name.findlast('$'));
         if (atcam_updates.count(orig_name))

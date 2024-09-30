@@ -3,13 +3,13 @@
 
 #include "lib/bitrange.h"
 
-using BitRange::Detail::divideFloor;
-using BitRange::Detail::modulo;
-using BitRange::Detail::moduloFloor;
+using P4::BitRange::Detail::divideFloor;
+using P4::BitRange::Detail::modulo;
+using P4::BitRange::Detail::moduloFloor;
 
-using BitRange::FromTo;
-using BitRange::StartLen;
-using BitRange::ZeroToMax;
-using BitRange::MinToMax;
+using P4::BitRange::FromTo;
+using P4::BitRange::StartLen;
+using P4::BitRange::ZeroToMax;
+using P4::BitRange::MinToMax;
 
 #endif /* EXTENSIONS_BF_P4C_IR_BITRANGE_H_ */

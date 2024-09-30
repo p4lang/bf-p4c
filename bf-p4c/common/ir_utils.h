@@ -3,12 +3,12 @@
 
 #include "ir/ir.h"
 
-IR::Member *gen_fieldref(const IR::HeaderOrMetadata *hdr, cstring field);
+P4::IR::Member *gen_fieldref(const P4::IR::HeaderOrMetadata *hdr, cstring field);
 
-const IR::HeaderOrMetadata*
-getMetadataType(const IR::BFN::Pipe* pipe, cstring typeName);
+const P4::IR::HeaderOrMetadata*
+getMetadataType(const P4::IR::BFN::Pipe* pipe, cstring typeName);
 
-bool isSigned(const IR::Type *);
+bool isSigned(const P4::IR::Type *);
 
 // probably belongs in ir/ir.h or ir/node.h...
 template <class T> inline T *clone_update(const T* &ptr) {
@@ -32,7 +32,7 @@ class CatchBacktrack : public Backtrack {
         }
     }
     // pass does nothing
-    const IR::Node *apply_visitor(const IR::Node *n, const char * = 0) override { return n; }
+    const P4::IR::Node *apply_visitor(const P4::IR::Node *n, const char * = 0) override { return n; }
 
  public:
     explicit CatchBacktrack(std::function<void(BT *)> f) : fn(f) {}

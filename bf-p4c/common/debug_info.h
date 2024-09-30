@@ -4,7 +4,7 @@
 #include <vector>
 #include "lib/cstring.h"
 
-// using namespace P4;
+using namespace P4;
 
 namespace BFN {
 

@@ -6,8 +6,8 @@
 /// Adds empty table sequences to implicit fall-through paths in the program. For example, when
 /// an 'if' statement has no 'else', this adds an empty table sequence to the 'else' branch.
 class AddEmptyTableSeqs : public MauModifier {
-    void postorder(IR::BFN::Pipe* pipe) override;
-    void postorder(IR::MAU::Table* tbl) override;
+    void postorder(P4::IR::BFN::Pipe* pipe) override;
+    void postorder(P4::IR::MAU::Table* tbl) override;
 
  public:
     AddEmptyTableSeqs() {}

@@ -192,9 +192,9 @@ void CheckTofinoPhvContainerJSON() {
 
         // Serialize the container to JSON and deserialize it back again.
         std::stringstream jsonStream;
-        JSONGenerator generator(jsonStream);
+        P4::JSONGenerator generator(jsonStream);
         generator << inputContainer;
-        JSONLoader loader(jsonStream);
+        P4::JSONLoader loader(jsonStream);
         PHV::Container outputContainer;
         loader >> outputContainer;
 

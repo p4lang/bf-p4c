@@ -1,6 +1,6 @@
 #include "resource.h"
 
-TableResourceAlloc *TableResourceAlloc::rename(const IR::MAU::Table *tbl, int stage_table,
+TableResourceAlloc *TableResourceAlloc::rename(const P4::IR::MAU::Table *tbl, int stage_table,
                                                int logical_table) {
     UniqueId u_id = tbl->pp_unique_id();
     u_id.stage_table = stage_table;

@@ -8,7 +8,7 @@ DumpJsonGraph::DumpJsonGraph(DependencyGraph &dg, Util::JsonObject* dgJson,
     });
 }
 
-void DumpJsonGraph::end_apply(const IR::Node *) {
+void DumpJsonGraph::end_apply(const P4::IR::Node *) {
     if (BackendOptions().create_graphs) {
         dg.to_json(dgJson, fg, passContext, placed);
     }

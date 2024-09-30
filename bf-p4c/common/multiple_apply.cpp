@@ -4,12 +4,12 @@
 #include "bf-p4c/mau/table_flow_graph.h"
 #include "bf-p4c/common/utils.h"
 
-Visitor::profile_t MultipleApply::MutuallyExclusiveApplies::init_apply(const IR::Node *root) {
+Visitor::profile_t MultipleApply::MutuallyExclusiveApplies::init_apply(const P4::IR::Node *root) {
     mutex_apply.clear();
     return MauInspector::init_apply(root);
 }
 
-void MultipleApply::MutuallyExclusiveApplies::postorder(const IR::MAU::Table* tbl) {
+void MultipleApply::MutuallyExclusiveApplies::postorder(const P4::IR::MAU::Table* tbl) {
     // Ensure the table being visited was derived from an actual table in the P4 source.
     if (tbl->match_table == nullptr) return;
 
@@ -29,7 +29,7 @@ void MultipleApply::MutuallyExclusiveApplies::postorder(const IR::MAU::Table* tb
     mutex_apply[tbl->match_table].emplace(tbl);
 }
 
-Visitor::profile_t MultipleApply::CheckStaticNextTable::init_apply(const IR::Node *root) {
+Visitor::profile_t MultipleApply::CheckStaticNextTable::init_apply(const P4::IR::Node *root) {
     auto result = MauInspector::init_apply(root);
     self.duplicate_tables.clear();
     canon_table.clear();
@@ -85,7 +85,7 @@ Visitor::profile_t MultipleApply::CheckStaticNextTable::init_apply(const IR::Nod
  * valid P4 program).  By then de-duplicating the condition, this has no affect on the default
  * next able of controlA, meaning that the de-duplication was safe. 
  */
-void MultipleApply::CheckStaticNextTable::check_all_gws(const IR::MAU::Table *tbl) {
+void MultipleApply::CheckStaticNextTable::check_all_gws(const P4::IR::MAU::Table *tbl) {
     // Do nothing if we've encountered tis gateway already
     if (all_gateways.count(tbl)) return;
 
@@ -101,7 +101,7 @@ void MultipleApply::CheckStaticNextTable::check_all_gws(const IR::MAU::Table *tb
     }
 }
 
-void MultipleApply::CheckStaticNextTable::postorder(const IR::MAU::Table *tbl) {
+void MultipleApply::CheckStaticNextTable::postorder(const P4::IR::MAU::Table *tbl) {
     // Mark duplicate tables and check that tables that are supposed to be duplicates really are
     // equivalent.
 
@@ -180,8 +180,8 @@ void MultipleApply::CheckStaticNextTable::postorder(const IR::MAU::Table *tbl) {
     self.duplicate_tables.makeUnion(tbl, canon_tbl);
 }
 
-bool MultipleApply::CheckStaticNextTable::check_equiv(const IR::MAU::Table* table1,
-        const IR::MAU::Table* table2, bool makeUnion) {
+bool MultipleApply::CheckStaticNextTable::check_equiv(const P4::IR::MAU::Table* table1,
+        const P4::IR::MAU::Table* table2, bool makeUnion) {
     if (table1 == table2) return true;
     if (!table1 || !table2) return false;
 
@@ -228,8 +228,8 @@ bool MultipleApply::CheckStaticNextTable::check_equiv(const IR::MAU::Table* tabl
     return true;
 }
 
-bool MultipleApply::CheckStaticNextTable::check_equiv(const IR::MAU::TableSeq* seq1,
-        const IR::MAU::TableSeq* seq2, bool makeUnion) {
+bool MultipleApply::CheckStaticNextTable::check_equiv(const P4::IR::MAU::TableSeq* seq1,
+        const P4::IR::MAU::TableSeq* seq2, bool makeUnion) {
     if (seq1 == seq2) return true;
     if (!seq1 || !seq2) return false;
 
@@ -244,7 +244,7 @@ bool MultipleApply::CheckStaticNextTable::check_equiv(const IR::MAU::TableSeq* s
 }
 
 bool MultipleApply::CheckStaticNextTable::equiv_gateway(
-    const IR::Expression* expr1, const IR::Expression* expr2
+    const P4::IR::Expression* expr1, const P4::IR::Expression* expr2
 ) {
     // This implements a simple check, which just determines whether the two expressions are
     // structurally equivalent, without considering semantic equivalence.
@@ -253,15 +253,15 @@ bool MultipleApply::CheckStaticNextTable::equiv_gateway(
     return expr1->equiv(*expr2);
 }
 
-Visitor::profile_t MultipleApply::DeduplicateTables::init_apply(const IR::Node* root) {
+Visitor::profile_t MultipleApply::DeduplicateTables::init_apply(const P4::IR::Node* root) {
     auto result = MauTransform::init_apply(root);
     replacements.clear();
     table_seqs_seen.clear();
     return result;
 }
 
-const IR::Node* MultipleApply::DeduplicateTables::postorder(IR::MAU::Table* tbl) {
-    auto orig_tbl = getOriginal<IR::MAU::Table>();
+const P4::IR::Node* MultipleApply::DeduplicateTables::postorder(P4::IR::MAU::Table* tbl) {
+    auto orig_tbl = getOriginal<P4::IR::MAU::Table>();
     auto canon_tbl = self.duplicate_tables.find(orig_tbl);
 
     auto& replacements = this->replacements[getGress()];
@@ -270,12 +270,12 @@ const IR::Node* MultipleApply::DeduplicateTables::postorder(IR::MAU::Table* tbl)
     // This is the first time we are encountering this table. No replacement to make here, but if
     // tbl hasn't been changed, then return orig_tbl to make sure the visitor framework doesn't
     // throw away our result.
-    const IR::MAU::Table* result = *tbl == *orig_tbl ? orig_tbl : tbl;
+    const P4::IR::MAU::Table* result = *tbl == *orig_tbl ? orig_tbl : tbl;
     replacements[canon_tbl] = result;
     return result;
 }
 
-const IR::Node* MultipleApply::DeduplicateTables::postorder(IR::MAU::TableSeq* seq) {
+const P4::IR::Node* MultipleApply::DeduplicateTables::postorder(P4::IR::MAU::TableSeq* seq) {
     auto& table_seqs_seen = this->table_seqs_seen[getGress()];
     for (auto seq_seen : table_seqs_seen) {
         if (*seq == *seq_seen) return seq_seen;
@@ -284,20 +284,20 @@ const IR::Node* MultipleApply::DeduplicateTables::postorder(IR::MAU::TableSeq* s
     // This is the first time we are encountering this table sequence. No replacement to make here,
     // but if seq hasn't been changed, then return orig_seq to make sure the visitor framework
     // doesn't throw away our result.
-    auto orig_seq = getOriginal<IR::MAU::TableSeq>();
-    const IR::MAU::TableSeq* result = *seq == *orig_seq ? orig_seq : seq;
+    auto orig_seq = getOriginal<P4::IR::MAU::TableSeq>();
+    const P4::IR::MAU::TableSeq* result = *seq == *orig_seq ? orig_seq : seq;
     table_seqs_seen.push_back(result);
     return result;
 }
 
-bool MultipleApply::CheckTopologicalTables::preorder(const IR::MAU::TableSeq* thread) {
+bool MultipleApply::CheckTopologicalTables::preorder(const P4::IR::MAU::TableSeq* thread) {
     // Each top-level TableSeq should represent the whole MAU pipeline for a single gress. Build
     // the control-flow graph for that.
     FlowGraph graph;
     thread->apply(FindFlowGraph(graph));
 
     // Check for cycles in the control-flow graph.
-    std::set<const IR::MAU::Table*> tables_reported;
+    std::set<const P4::IR::MAU::Table*> tables_reported;
     for (const auto& entry : graph.tableToVertex) {
         const auto* table = entry.first;
 
@@ -335,7 +335,7 @@ bool MultipleApply::CheckTopologicalTables::preorder(const IR::MAU::TableSeq* th
     return false;
 }
 
-Visitor::profile_t MultipleApply::init_apply(const IR::Node *root) {
+Visitor::profile_t MultipleApply::init_apply(const P4::IR::Node *root) {
     auto result = PassManager::init_apply(root);
     longBranchDisabled = Device::numLongBranchTags() == 0 || options.disable_long_branch;
     return result;

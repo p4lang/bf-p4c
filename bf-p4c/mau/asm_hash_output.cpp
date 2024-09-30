@@ -1,19 +1,19 @@
 #include "asm_hash_output.h"
 
 void emit_ixbar_gather_map(const PhvInfo &phv, std::multimap<int, Slice> &match_data_map,
-        std::map<le_bitrange, const IR::Constant*> &constant_map,
+        std::map<le_bitrange, const P4::IR::Constant*> &constant_map,
         const safe_vector<Slice> &match_data,
-        const safe_vector<const IR::Expression *> &field_list_order, const LTBitMatrix &sym_keys,
+        const safe_vector<const P4::IR::Expression *> &field_list_order, const LTBitMatrix &sym_keys,
         int &total_size);
 
-bool EmitHashExpression::preorder(const IR::Concat *c) {
+bool EmitHashExpression::preorder(const P4::IR::Concat *c) {
     visit(c->right, "right");
     bit += c->right->type->width_bits();
     visit(c->left, "left");
     return false;
 }
 
-bool EmitHashExpression::preorder(const IR::BFN::SignExtend *c) {
+bool EmitHashExpression::preorder(const P4::IR::BFN::SignExtend *c) {
     le_bitrange     bits;
     if (auto *field = phv.field(c->expr, &bits)) {
         Slice f(field, bits);
@@ -28,12 +28,12 @@ bool EmitHashExpression::preorder(const IR::BFN::SignExtend *c) {
     return false;
 }
 
-bool EmitHashExpression::preorder(const IR::Constant *) {
+bool EmitHashExpression::preorder(const P4::IR::Constant *) {
     // FIXME -- if the constant is non-zero, it should be included into the 'seed'
     return false;
 }
 
-bool EmitHashExpression::preorder(const IR::Expression *e) {
+bool EmitHashExpression::preorder(const P4::IR::Expression *e) {
     le_bitrange     bits;
     if (auto *field = phv.field(e, &bits)) {
         Slice sl(field, bits);
@@ -45,7 +45,7 @@ bool EmitHashExpression::preorder(const IR::Expression *e) {
             if (overlap.width() > 1)
                 out << ".." << (bit + overlap.width() - 1);
             out << ": " << overlap << std::endl; }
-    } else if (e->is<IR::Slice>()) {
+    } else if (e->is<P4::IR::Slice>()) {
         // allow for slice on HashGenExpression
         return true;
     } else {
@@ -54,27 +54,27 @@ bool EmitHashExpression::preorder(const IR::Expression *e) {
     return false;
 }
 
-bool EmitHashExpression::preorder(const IR::MAU::HashGenExpression *hge) {
-    auto *fl = hge->expr->to<IR::MAU::FieldListExpression>();
+bool EmitHashExpression::preorder(const P4::IR::MAU::HashGenExpression *hge) {
+    auto *fl = hge->expr->to<P4::IR::MAU::FieldListExpression>();
     BUG_CHECK(fl, "HashGenExpression not a field list: %s", hge);
-    if (hge->algorithm.type == IR::MAU::HashFunction::IDENTITY) {
+    if (hge->algorithm.type == P4::IR::MAU::HashFunction::IDENTITY) {
         // For identity, just output each field individually
         for (auto *el : boost::adaptors::reverse(fl->components)) {
             visit(el, "component");
             bit += el->type->width_bits(); }
         return false; }
     le_bitrange br = { 0, hge->hash_output_width };
-    if (auto *sl = getParent<IR::Slice>()) {
+    if (auto *sl = getParent<P4::IR::Slice>()) {
         br.lo = sl->getL();
         br.hi = sl->getH(); }
     out << indent << bit << ".." << (bit + br.size() - 1) << ": ";
-    safe_vector<const IR::Expression *> field_list_order;
+    safe_vector<const P4::IR::Expression *> field_list_order;
     int total_bits = 0;
     for (auto e : fl->components)
         field_list_order.push_back(e);
     if (hge->algorithm.ordered()) {
         std::multimap<int, Slice> match_data_map;
-        std::map<le_bitrange, const IR::Constant*> constant_map;
+        std::map<le_bitrange, const P4::IR::Constant*> constant_map;
         LTBitMatrix sym_keys;  // FIXME -- needed?  always empty for now
         emit_ixbar_gather_map(phv, match_data_map, constant_map, match_data,
                                    field_list_order, sym_keys, total_bits);
@@ -390,9 +390,9 @@ void emit_ixbar_hash_exact(std::ostream &out, indent_t indent,
  */
 void emit_ixbar_gather_map(const PhvInfo &phv,
         std::multimap<int, Slice> &match_data_map,
-        std::map<le_bitrange, const IR::Constant*> &constant_map,
+        std::map<le_bitrange, const P4::IR::Constant*> &constant_map,
         const safe_vector<Slice> &match_data,
-        const safe_vector<const IR::Expression *> &field_list_order, const LTBitMatrix &sym_keys,
+        const safe_vector<const P4::IR::Expression *> &field_list_order, const LTBitMatrix &sym_keys,
         int &total_size) {
     std::map<int, int> field_start_bits;
     std::map<int, int> reverse_sym_keys;
@@ -463,7 +463,7 @@ void emit_ixbar_gather_map(const PhvInfo &phv,
 void emit_ixbar_gather_bytes(const PhvInfo &phv,
         const safe_vector<::IXBar::Use::Byte> &use,
         std::map<int, std::map<int, Slice>> &sort, std::map<int, std::map<int, Slice>> &midbytes,
-        const IR::MAU::Table *tbl, bool ternary, bool atcam) {
+        const P4::IR::MAU::Table *tbl, bool ternary, bool atcam) {
     PHV::FieldUse f_use(PHV::FieldUse::READ);
     for (auto &b : use) {
         BUG_CHECK(b.loc.allocated(), "Byte not allocated by assembly");

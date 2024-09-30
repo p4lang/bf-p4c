@@ -20,7 +20,7 @@ struct DumpPipe : public Inspector {
     DumpPipe() : heading(nullptr) {}
     explicit DumpPipe(const char *h) : heading(h) {}
 #if BAREFOOT_INTERNAL
-    bool preorder(const IR::Node *pipe) override;
+    bool preorder(const P4::IR::Node *pipe) override;
 #endif  // BAREFOOT_INTERNAL
 };
 
@@ -64,7 +64,7 @@ std::pair<cstring, cstring> get_key_and_mask(const cstring &input);
 /// Input: "vrf[15:0]", Output: std::pair<true, "vrf", 15, 0>
 std::tuple<bool, cstring, int, int> get_key_slice_info(const cstring &input);
 
-const IR::Vector<IR::Expression>* getListExprComponents(const IR::Node& node);
+const P4::IR::Vector<P4::IR::Expression>* getListExprComponents(const P4::IR::Node& node);
 
 bool is_starter_pistol_table(const cstring &tableName);
 #endif /* EXTENSIONS_BF_P4C_COMMON_UTILS_H_ */

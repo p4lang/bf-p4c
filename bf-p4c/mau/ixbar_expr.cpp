@@ -93,10 +93,10 @@ void P4HashFunction::dbprint(std::ostream &out) const {
 
 bool verifySymmetricHashPairs(
     const PhvInfo &phv,
-    safe_vector<const IR::Expression *> &field_list,
-    const IR::Annotations *annotations,
+    safe_vector<const P4::IR::Expression *> &field_list,
+    const P4::IR::Annotations *annotations,
     gress_t gress,
-    const IR::MAU::HashFunction& hf,
+    const P4::IR::MAU::HashFunction& hf,
     LTBitMatrix *sym_pairs) {
 
     bool contains_symmetric = false;
@@ -105,14 +105,14 @@ bool verifySymmetricHashPairs(
     for (auto annot : annotations->annotations) {
         if (annot->name != "symmetric") continue;
 
-        if (!(annot->expr.size() == 2 && annot->expr.at(0)->is<IR::StringLiteral>()
-              && annot->expr.at(1)->is<IR::StringLiteral>())) {
+        if (!(annot->expr.size() == 2 && annot->expr.at(0)->is<P4::IR::StringLiteral>()
+              && annot->expr.at(1)->is<P4::IR::StringLiteral>())) {
             ::error("%1%: The symmetric annotation requires two string inputs", annot->srcInfo);
             continue;
         }
 
-        const auto *sl0 = annot->expr.at(0)->to<IR::StringLiteral>();
-        const auto *sl1 = annot->expr.at(1)->to<IR::StringLiteral>();
+        const auto *sl0 = annot->expr.at(0)->to<P4::IR::StringLiteral>();
+        const auto *sl1 = annot->expr.at(1)->to<P4::IR::StringLiteral>();
 
         cstring gress_str = (gress == INGRESS ? "ingress::"_cs : "egress::"_cs);
         auto field0 = phv.field(gress_str + sl0->value);
@@ -185,7 +185,7 @@ bool verifySymmetricHashPairs(
     }
 
     if (contains_symmetric) {
-        if (hf.type != IR::MAU::HashFunction::CRC) {
+        if (hf.type != P4::IR::MAU::HashFunction::CRC) {
             ::error("%1%: Currently in p4c, symmetric hash is only supported to work with CRC "
                     "algorithms", annotations->srcInfo);
             return false;
@@ -195,53 +195,53 @@ bool verifySymmetricHashPairs(
     return contains_symmetric;
 }
 
-bool BuildP4HashFunction::InsideHashGenExpr::preorder(const IR::MAU::HashGenExpression *) {
+bool BuildP4HashFunction::InsideHashGenExpr::preorder(const P4::IR::MAU::HashGenExpression *) {
     state = State::INSIDE;
     return true;
 }
 
-bool BuildP4HashFunction::InsideHashGenExpr::preorder(const IR::MAU::FieldListExpression *fle) {
+bool BuildP4HashFunction::InsideHashGenExpr::preorder(const P4::IR::MAU::FieldListExpression *fle) {
     sym_fields = fle->symmetric_keys;
     state = State::FIELD_LIST;
     return true;
 }
 
-bool BuildP4HashFunction::InsideHashGenExpr::preorder(const IR::MAU::ActionArg *aa) {
+bool BuildP4HashFunction::InsideHashGenExpr::preorder(const P4::IR::MAU::ActionArg *aa) {
     ::error("%s: Action Data Argument %s cannot be used in a hash generation expression.  "
             "Data plane values and constants only", aa->srcInfo, aa->name);
     return false;
 }
 
-bool BuildP4HashFunction::InsideHashGenExpr::preorder(const IR::Constant *con) {
+bool BuildP4HashFunction::InsideHashGenExpr::preorder(const P4::IR::Constant *con) {
     fields.emplace_back(con);
     return false;
 }
 
-bool BuildP4HashFunction::InsideHashGenExpr::preorder(const IR::Mask *mask) {
+bool BuildP4HashFunction::InsideHashGenExpr::preorder(const P4::IR::Mask *mask) {
     BUG("%s: Masks not supported by Tofino Backend for hash functions", mask->srcInfo);
     return false;
 }
 
-bool BuildP4HashFunction::InsideHashGenExpr::preorder(const IR::Cast *) {
+bool BuildP4HashFunction::InsideHashGenExpr::preorder(const P4::IR::Cast *) {
     return true;
 }
 
-bool BuildP4HashFunction::InsideHashGenExpr::preorder(const IR::Concat *) {
+bool BuildP4HashFunction::InsideHashGenExpr::preorder(const P4::IR::Concat *) {
     return true;
 }
 
-bool BuildP4HashFunction::InsideHashGenExpr::preorder(const IR::ListExpression*) {
+bool BuildP4HashFunction::InsideHashGenExpr::preorder(const P4::IR::ListExpression*) {
     /* -- Conversion from P4_14 can create nested tuples. As we construct the hash
      *    field list in the same order as the nested tuple, we can bravely enter
      *    inside. */
     return true;
 }
 
-bool BuildP4HashFunction::InsideHashGenExpr::preorder(const IR::StructExpression*) {
+bool BuildP4HashFunction::InsideHashGenExpr::preorder(const P4::IR::StructExpression*) {
     return true;
 }
 
-bool BuildP4HashFunction::InsideHashGenExpr::preorder(const IR::Expression *expr) {
+bool BuildP4HashFunction::InsideHashGenExpr::preorder(const P4::IR::Expression *expr) {
     if (state == State::OUTSIDE)
         return true;
 
@@ -273,10 +273,10 @@ bool BuildP4HashFunction::InsideHashGenExpr::preorder(const IR::Expression *expr
     return true;
 }
 
-void BuildP4HashFunction::InsideHashGenExpr::postorder(const IR::BFN::SignExtend *se) {
+void BuildP4HashFunction::InsideHashGenExpr::postorder(const P4::IR::BFN::SignExtend *se) {
     BUG_CHECK(!fields.empty(), "SignExtend on nonexistant field");
     auto expr = se->expr;
-    while (auto c = expr->to<IR::Cast>())
+    while (auto c = expr->to<P4::IR::Cast>())
         expr = c->expr;
 
     BUG_CHECK(fields.back() == expr, "SignExtend mismatch");
@@ -286,7 +286,7 @@ void BuildP4HashFunction::InsideHashGenExpr::postorder(const IR::BFN::SignExtend
     }
 }
 
-void BuildP4HashFunction::InsideHashGenExpr::postorder(const IR::MAU::HashGenExpression *hge) {
+void BuildP4HashFunction::InsideHashGenExpr::postorder(const P4::IR::MAU::HashGenExpression *hge) {
     state = State::OUTSIDE;
     BUG_CHECK(!self._func, "Multiple HashGenExpressions in a single BuildP4HashFunction");
     self._func = new P4HashFunction();
@@ -300,11 +300,11 @@ void BuildP4HashFunction::InsideHashGenExpr::postorder(const IR::MAU::HashGenExp
 }
 
 
-bool BuildP4HashFunction::OutsideHashGenExpr::preorder(const IR::MAU::HashGenExpression *) {
+bool BuildP4HashFunction::OutsideHashGenExpr::preorder(const P4::IR::MAU::HashGenExpression *) {
     return false;
 }
 
-void BuildP4HashFunction::OutsideHashGenExpr::postorder(const IR::Slice *sl) {
+void BuildP4HashFunction::OutsideHashGenExpr::postorder(const P4::IR::Slice *sl) {
     if (self._func == nullptr)
         return;
 
@@ -326,7 +326,7 @@ void BuildP4HashFunction::OutsideHashGenExpr::postorder(const IR::Slice *sl) {
  */
 void BuildP4HashFunction::end_apply() {
     bool repeats_allowed = !_func->is_dynamic() &&
-                            _func->algorithm.type != IR::MAU::HashFunction::CRC;
+                            _func->algorithm.type != P4::IR::MAU::HashFunction::CRC;
     if (repeats_allowed)
         return;
     std::map<cstring, bitvec> field_list_check;
@@ -354,8 +354,8 @@ void BuildP4HashFunction::end_apply() {
     }
 }
 
-bool AdjustIXBarExpression::preorder(IR::MAU::IXBarExpression *e) {
-    auto *tbl = findContext<IR::MAU::Table>();
+bool AdjustIXBarExpression::preorder(P4::IR::MAU::IXBarExpression *e) {
+    auto *tbl = findContext<P4::IR::MAU::Table>();
     BUG_CHECK(tbl != nullptr, "No associated table found for ixbar expr - %1%", e);
 
     if (!tbl->resources) {
@@ -365,7 +365,7 @@ bool AdjustIXBarExpression::preorder(IR::MAU::IXBarExpression *e) {
         if (e->expr->equiv(*ce.second)) {
             e->bit = ce.first;
             return false; } }
-    if (findContext<IR::MAU::HashDist>())
+    if (findContext<P4::IR::MAU::HashDist>())
          return false;
     // can get here if TablePlacmenet failed
     // BUG("Can't find %s in the ixbar allocation for %s", e->expr, tbl);

@@ -166,9 +166,9 @@ struct TableFormat {
         std::map<IXBar::Use::Byte, bitvec> ghost_bits;
         bitvec immed_mask;
 
-        IR::MAU::PfeLocation stats_pfe_loc = IR::MAU::PfeLocation::NOT_SET;
-        IR::MAU::PfeLocation meter_pfe_loc = IR::MAU::PfeLocation::NOT_SET;
-        IR::MAU::TypeLocation meter_type_loc = IR::MAU::TypeLocation::NOT_SET;
+        P4::IR::MAU::PfeLocation stats_pfe_loc = P4::IR::MAU::PfeLocation::NOT_SET;
+        P4::IR::MAU::PfeLocation meter_pfe_loc = P4::IR::MAU::PfeLocation::NOT_SET;
+        P4::IR::MAU::TypeLocation meter_type_loc = P4::IR::MAU::TypeLocation::NOT_SET;
 
         std::map<int, int> payload_map;
 
@@ -182,9 +182,9 @@ struct TableFormat {
             result_bus_needed.clear();
             avail_sb_bytes.clear();
             immed_mask.clear();
-            stats_pfe_loc = IR::MAU::PfeLocation::NOT_SET;
-            meter_pfe_loc = IR::MAU::PfeLocation::NOT_SET;
-            meter_type_loc = IR::MAU::TypeLocation::NOT_SET;
+            stats_pfe_loc = P4::IR::MAU::PfeLocation::NOT_SET;
+            meter_pfe_loc = P4::IR::MAU::PfeLocation::NOT_SET;
+            meter_type_loc = P4::IR::MAU::TypeLocation::NOT_SET;
             payload_map.clear();
         }
 
@@ -243,7 +243,7 @@ struct TableFormat {
     safe_vector<IXBar::Use::Byte> single_match;
     int ghost_bits_count = 0;
 
-    const IR::MAU::Table *tbl;
+    const P4::IR::MAU::Table *tbl;
 
  private:
     const IXBar::Use *proxy_hash_ixbar;
@@ -347,14 +347,14 @@ struct TableFormat {
 
  public:
     TableFormat(const LayoutOption &l, const IXBar::Use *mi, const IXBar::Use *phi,
-                const IR::MAU::Table *t, const bitvec im, bool gl, FindPayloadCandidates &fpc,
+                const P4::IR::MAU::Table *t, const bitvec im, bool gl, FindPayloadCandidates &fpc,
                 const PhvInfo &phv)
         : layout_option(l), match_ixbar(mi), tbl(t), proxy_hash_ixbar(phi), immediate_mask(im),
           gw_linked(gl), fpc(fpc), phv(phv) {}
     bool find_format(Use *u);
     void verify();
     static TableFormat* create(const LayoutOption &l, const IXBar::Use *mi, const IXBar::Use *phi,
-                const IR::MAU::Table *t, const bitvec im, bool gl, FindPayloadCandidates &fpc,
+                const P4::IR::MAU::Table *t, const bitvec im, bool gl, FindPayloadCandidates &fpc,
                 const PhvInfo &phv);
 };
 

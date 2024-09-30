@@ -1,23 +1,23 @@
 #include "check_field_corruption.h"
 
-bool CheckFieldCorruption::preorder(const IR::BFN::Pipe* pipe) {
+bool CheckFieldCorruption::preorder(const P4::IR::BFN::Pipe* pipe) {
     pipe->apply(uses);
     return true;
 }
 
-bool CheckFieldCorruption::preorder(const IR::BFN::DeparserParameter* param) {
+bool CheckFieldCorruption::preorder(const P4::IR::BFN::DeparserParameter* param) {
     if (param->source) pov_protected_fields.insert(phv.field(param->source->field));
     return false;
 }
 
-bool CheckFieldCorruption::preorder(const IR::BFN::Digest* digest) {
+bool CheckFieldCorruption::preorder(const P4::IR::BFN::Digest* digest) {
     pov_protected_fields.insert(phv.field(digest->selector->field));
     return false;
 }
 
-bool CheckFieldCorruption::preorder(const IR::Expression* e) {
+bool CheckFieldCorruption::preorder(const P4::IR::Expression* e) {
     if (isWrite()) {
-        if (auto state = findContext<IR::BFN::ParserState>()) {
+        if (auto state = findContext<P4::IR::BFN::ParserState>()) {
             state_extracts[state].insert(e);
             parser_inits[phv.field(e)].insert(e);
         }
@@ -25,7 +25,7 @@ bool CheckFieldCorruption::preorder(const IR::Expression* e) {
     return false;
 }
 
-bool CheckFieldCorruption::preorder(const IR::BFN::ParserZeroInit* pzi) {
+bool CheckFieldCorruption::preorder(const P4::IR::BFN::ParserZeroInit* pzi) {
     parser_inits[phv.field(pzi->field->field)].insert(pzi->field->field);
     return true;
 }
@@ -37,7 +37,7 @@ bool CheckFieldCorruption::copackedFieldExtractedSeparately(const FieldDefUse::l
     for (const auto &sl : allocs) {
         // Skip this field if it's not a parser init
         if (!std::any_of(parser_inits[sl.field()].begin(), parser_inits[sl.field()].end(),
-                         [this, sl](const IR::Expression *e) {
+                         [this, sl](const P4::IR::Expression *e) {
                              le_bitrange bits;
                              this->phv.field(e, &bits);
                              return bits.overlaps(sl.field_slice());
@@ -69,9 +69,9 @@ bool CheckFieldCorruption::copackedFieldExtractedSeparately(const FieldDefUse::l
             }
 
             if (uses.is_extracted_from_pkt(other.field())) {
-                std::set<const IR::BFN::ParserState *> seenStates;
+                std::set<const P4::IR::BFN::ParserState *> seenStates;
                 for (const auto &otherDef : defuse.getAllDefs(other.field()->id)) {
-                    if (const auto *state = otherDef.first->to<IR::BFN::ParserState>()) {
+                    if (const auto *state = otherDef.first->to<P4::IR::BFN::ParserState>()) {
                         if (seenStates.count(state)) continue;
 
                         const auto *oExp = otherDef.second;

@@ -27,7 +27,7 @@ int Memories::table_alloc::analysis_priority() const {
 /** Building a UniqueId per table alloc.  The stage table comes from initialization, all other
  *  data must be provided
  */
-UniqueId Memories::table_alloc::build_unique_id(const IR::MAU::AttachedMemory *at,
+UniqueId Memories::table_alloc::build_unique_id(const P4::IR::MAU::AttachedMemory *at,
         bool is_gw, int logical_table, UniqueAttachedId::pre_placed_type_t ppt) const {
     return table->pp_unique_id(at, is_gw, stage_table, logical_table, ppt);
 }
@@ -57,7 +57,7 @@ UniqueId Memories::table_alloc::build_unique_id(const IR::MAU::AttachedMemory *a
 
 /**
  * Given the input parameters, this will return all of the UniqueIds associated with this
- * particular IR::MAU::Table object.  Generally this is a one-to-one relationship with
+ * particular P4::IR::MAU::Table object.  Generally this is a one-to-one relationship with
  * a few exceptions.
  *
  * ATCAM tables: The match portion and any direct BackendAttached tables (action data/idletime),
@@ -69,7 +69,7 @@ UniqueId Memories::table_alloc::build_unique_id(const IR::MAU::AttachedMemory *a
  *
  * This leaves room for any other odd corner casing we need to support
  */
-safe_vector<UniqueId> Memories::table_alloc::allocation_units(const IR::MAU::AttachedMemory *at,
+safe_vector<UniqueId> Memories::table_alloc::allocation_units(const P4::IR::MAU::AttachedMemory *at,
         bool is_gw, UniqueAttachedId::pre_placed_type_t ppt) const {
     safe_vector<UniqueId> rv;
     if (table->layout.atcam) {
@@ -101,7 +101,7 @@ safe_vector<UniqueId> Memories::table_alloc::allocation_units(const IR::MAU::Att
  * DLEFT some point in the future, maybe if other tables are attached, not just the stateful
  * ALU table.
  */
-safe_vector<UniqueId> Memories::table_alloc::unattached_units(const IR::MAU::AttachedMemory *at,
+safe_vector<UniqueId> Memories::table_alloc::unattached_units(const P4::IR::MAU::AttachedMemory *at,
     UniqueAttachedId::pre_placed_type_t ppt) const {
     safe_vector<UniqueId> rv;
     if (table->layout.atcam) {
@@ -117,7 +117,7 @@ safe_vector<UniqueId> Memories::table_alloc::unattached_units(const IR::MAU::Att
 /**
  * The union of the allocation_units and the unattached_units
  */
-safe_vector<UniqueId> Memories::table_alloc::accounted_units(const IR::MAU::AttachedMemory *at,
+safe_vector<UniqueId> Memories::table_alloc::accounted_units(const P4::IR::MAU::AttachedMemory *at,
     UniqueAttachedId::pre_placed_type_t ppt) const {
     safe_vector<UniqueId> rv = allocation_units(at, false, ppt);
     safe_vector<UniqueId> vec2 = unattached_units(at, ppt);
@@ -166,7 +166,7 @@ void Memories::clear_allocation() {
 }
 
 /* Creates a new table_alloc object for each of the tables within the memory allocation */
-void Memories::add_table(const IR::MAU::Table *t, const IR::MAU::Table *gw,
+void Memories::add_table(const P4::IR::MAU::Table *t, const P4::IR::MAU::Table *gw,
         TableResourceAlloc *resources, const LayoutOption *lo, const ActionData::Format::Use *af,
         ActionData::FormatType_t ft, int entries, int stage_table,
         attached_entries_t attached_entries) {
@@ -279,7 +279,7 @@ class SetupAttachedTables : public MauInspector {
     Memories::mem_info &mi;
     bool stats_pushed = false, meter_pushed = false, stateful_pushed = false;
 
-    profile_t init_apply(const IR::Node *root) {
+    profile_t init_apply(const P4::IR::Node *root) {
         profile_t rv = MauInspector::init_apply(root);
         if (ta->layout_option == nullptr) return rv;
         bool tind_check = ta->layout_option->layout.ternary &&
@@ -322,14 +322,14 @@ class SetupAttachedTables : public MauInspector {
     }
 
     /* In order to only visit the attached tables of the current table */
-    bool preorder(const IR::MAU::TableSeq *) { return false; }
-    bool preorder(const IR::MAU::Action *) { return false; }
+    bool preorder(const P4::IR::MAU::TableSeq *) { return false; }
+    bool preorder(const P4::IR::MAU::Action *) { return false; }
 
-    bool preorder(const IR::MAU::TernaryIndirect *) {
+    bool preorder(const P4::IR::MAU::TernaryIndirect *) {
         BUG("Should be no Ternary Indirect before table placement is complete");
     }
 
-    bool preorder(const IR::MAU::Table* tbl) {
+    bool preorder(const P4::IR::MAU::Table* tbl) {
         visit(tbl->attached);
         return false;
     }
@@ -642,7 +642,7 @@ int Memories::ternary_TCAMs_necessary(table_alloc *ta) {
 
 /* Finds the stretch on the ternary array that can hold entries */
 bool Memories::find_ternary_stretch(int TCAMs_necessary,
-                                    BFN::Alloc1D<const IR::MAU::Table *, TCAM_ROWS> &tcam_use,
+                                    BFN::Alloc1D<const P4::IR::MAU::Table *, TCAM_ROWS> &tcam_use,
                                     int &row) {
     int clear_cols = 0;
 
@@ -817,7 +817,7 @@ bool Memories::allocate_all_tind() {
     return true;
 }
 
-void Memories::fill_placed_scm_table(const IR::MAU::Table *t, const TableResourceAlloc *resources) {
+void Memories::fill_placed_scm_table(const P4::IR::MAU::Table *t, const TableResourceAlloc *resources) {
     int group = -1;
     Use::h_bus_t bus = Use::NONE;
     for (auto &kv : resources->memuse) {
@@ -950,8 +950,8 @@ void Memories::remove(const std::map<UniqueId, Use> &alloc) {
 std::ostream & operator<<(std::ostream &out, const Memories::scm_alloc &scma) {
     // Build table -> abreviated name map using e.g. A00G0000 for the first TCAM table defined
     // on stage 0 group 0.
-    std::map<const IR::MAU::Table *, cstring> tbl_to_ab;
-    std::map<cstring, const IR::MAU::Table *> ab_to_tbl;
+    std::map<const P4::IR::MAU::Table *, cstring> tbl_to_ab;
+    std::map<cstring, const P4::IR::MAU::Table *> ab_to_tbl;
     std::vector<char> next_val(16, 'A');
 
     if (scma.tbl_to_local_stage.empty())

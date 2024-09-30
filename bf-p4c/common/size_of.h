@@ -9,25 +9,25 @@ namespace BFN {
 class CloneConstants : public Transform {
  public:
     CloneConstants() = default;
-    const IR::Node* postorder(IR::Constant* constant) override {
+    const P4::IR::Node* postorder(P4::IR::Constant* constant) override {
         // We clone the constant.  This is necessary because the same
         // the type associated with the constant may participate in
         // type unification, and thus we want to have different type
         // objects for different constant instances.
-        const IR::Type* type = constant->type;
-        if (type->is<IR::Type_Bits>()) {
+        const P4::IR::Type* type = constant->type;
+        if (type->is<P4::IR::Type_Bits>()) {
             type = constant->type->clone();
-        } else if (auto ii = type->to<IR::Type_InfInt>()) {
+        } else if (auto ii = type->to<P4::IR::Type_InfInt>()) {
             // You can't just clone a InfInt value, because
             // you get the same declid.  We want a new declid.
-            type = IR::Type_InfInt::get(ii->srcInfo);
+            type = P4::IR::Type_InfInt::get(ii->srcInfo);
         } else {
             BUG("unexpected type %2% for constant %2%", type, constant);
         }
-        return new IR::Constant(constant->srcInfo, type, constant->value, constant->base);
+        return new P4::IR::Constant(constant->srcInfo, type, constant->value, constant->base);
     }
-    static const IR::Expression* clone(const IR::Expression* expression) {
-        return expression->apply(CloneConstants())->to<IR::Expression>();
+    static const P4::IR::Expression* clone(const P4::IR::Expression* expression) {
+        return expression->apply(CloneConstants())->to<P4::IR::Expression>();
     }
 };
 
@@ -38,8 +38,8 @@ class CloneConstants : public Transform {
 class ConvertSizeOfToConstant : public Transform {
  public:
     ConvertSizeOfToConstant() { }
-    const IR::Node *preorder(IR::MAU::TypedPrimitive* p) override;
-    const IR::Node *preorder(IR::MethodCallExpression* mce) override;
+    const P4::IR::Node *preorder(P4::IR::MAU::TypedPrimitive* p) override;
+    const P4::IR::Node *preorder(P4::IR::MethodCallExpression* mce) override;
 };
 
 /**
@@ -48,14 +48,14 @@ class ConvertSizeOfToConstant : public Transform {
  */
 class BackendConstantFolding : public Transform {
  public:
-    const IR::Expression* getConstant(const IR::Expression* expr) const;
-    const IR::Node* postorder(IR::Slice* e) override;
+    const P4::IR::Expression* getConstant(const P4::IR::Expression* expr) const;
+    const P4::IR::Node* postorder(P4::IR::Slice* e) override;
 };
 
 class BackendStrengthReduction : public Transform {
-    const IR::Node* sub(IR::MAU::Instruction* inst);
-    const IR::Node* preorder(IR::MAU::SaluInstruction* inst) override;
-    const IR::Node* preorder(IR::MAU::Instruction* inst) override;
+    const P4::IR::Node* sub(P4::IR::MAU::Instruction* inst);
+    const P4::IR::Node* preorder(P4::IR::MAU::SaluInstruction* inst) override;
+    const P4::IR::Node* preorder(P4::IR::MAU::Instruction* inst) override;
 };
 
 class ResolveSizeOfOperator : public PassManager {

@@ -7,12 +7,12 @@ std::string MarshaledFrom::toString() const {
     return tmp.str();
 }
 
-void MarshaledFrom::toJSON(JSONGenerator& json) const {
+void MarshaledFrom::toJSON(P4::JSONGenerator& json) const {
     json << *this;
 }
 
 /* static */
-MarshaledFrom MarshaledFrom::fromJSON(JSONLoader&) {
+MarshaledFrom MarshaledFrom::fromJSON(P4::JSONLoader&) {
     BUG("Uninmplemented");
     return MarshaledFrom();
 }

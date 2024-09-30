@@ -4,6 +4,7 @@
 #include <lib/cstring.h>
 #include <iostream>
 
+namespace P4 {
 namespace IR {
 namespace MAU {
 enum class DataAggregation { NONE, PACKETS, BYTES, BOTH, AGGR_TYPES };
@@ -79,7 +80,8 @@ bool operator>>(cstring s, IR::BFN::ParserWriteMode &t);
 
 }  // end namespace BFN
 
-
 }  // end namespace IR
+
+}  // end namespace P4
 
 #endif /* BF_P4C_IR_IR_ENUMS_H_ */

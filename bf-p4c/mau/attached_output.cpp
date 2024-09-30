@@ -51,7 +51,7 @@ bool Format::Use::contains_adb_slot(ActionData::SlotType_t type, int start_byte)
 
 void Format::create_meter_alu(ActionData::ALUOperation &alu,
         ActionAnalysis::ActionParam &read, le_bitrange container_bits) {
-    auto ao = read.unsliced_expr()->to<IR::MAU::AttachedOutput>();
+    auto ao = read.unsliced_expr()->to<P4::IR::MAU::AttachedOutput>();
     BUG_CHECK(ao != nullptr, "Cannot create meter alu");
     ActionData::MeterALU *ma = new ActionData::MeterALU(ao->attached->name, read.range());
     ActionData::ALUParameter ap(ma, container_bits);
@@ -63,7 +63,7 @@ void Format::create_meter_alu(ActionData::ALUOperation &alu,
  * the same address bus to meter ram or stateful ram.
  *
  * Tofino can support at most one meter address user per logical table, i.e. stateful alu,
- * selector, or meter.  Currently, in the compiler each IR::MAU::Table object corresponds to
+ * selector, or meter.  Currently, in the compiler each P4::IR::MAU::Table object corresponds to
  * a single logical table (unless split into multiple stages), and cannot yet by itself
  * be split into multiple logical tables with two different addresses that get extracted.
  *
@@ -134,7 +134,7 @@ void Format::create_alu_ops_for_action(
 }
 
 
-bool Format::preorder(const IR::MAU::Table *tbl) {
+bool Format::preorder(const P4::IR::MAU::Table *tbl) {
     auto &ops_per_action = operations_per_table[tbl];
 
     ActionAnalysis::ContainerActionsMap container_actions_map;
@@ -148,7 +148,7 @@ bool Format::preorder(const IR::MAU::Table *tbl) {
 
     bool found_attached_meter_or_stateful_alu = false;
     for (auto ba : tbl->attached) {
-        if (!ba->attached->is<IR::MAU::Meter>() && !ba->attached->is<IR::MAU::StatefulAlu>())
+        if (!ba->attached->is<P4::IR::MAU::Meter>() && !ba->attached->is<P4::IR::MAU::StatefulAlu>())
             continue;
         attached_to_table_map[ba->attached].insert(tbl);
         found_attached_meter_or_stateful_alu = true;

@@ -97,11 +97,11 @@ TableSummary::TableSummary(
     ids_seen.insert(pipe_id);
 }
 
-ordered_map<cstring, std::set<const IR::MAU::Table*>> TableSummary::tblName2IRptr;
+ordered_map<cstring, std::set<const P4::IR::MAU::Table*>> TableSummary::tblName2IRptr;
 
-Visitor::profile_t TableSummary::init_apply(const IR::Node *root) {
+Visitor::profile_t TableSummary::init_apply(const P4::IR::Node *root) {
     if (BackendOptions().verbose > 0) {
-        const IR::BFN::Pipe *pipe = root->to<IR::BFN::Pipe>();
+        const P4::IR::BFN::Pipe *pipe = root->to<P4::IR::BFN::Pipe>();
         tsLog = new Logging::FileLog(pipe->canon_id(), "table_summary.log"_cs);
     }
 
@@ -171,7 +171,7 @@ void TableSummary::end_apply() {
     Logging::FileLog::close(tsLog);
 }
 
-bool TableSummary::preorder(const IR::MAU::Table *t) {
+bool TableSummary::preorder(const P4::IR::MAU::Table *t) {
     LOG5("TableSummary preorder on table : " << t->name << " with gw : " << t->gateway_name);
     TableSummary::addTablePtr(t);
     if (t->is_always_run_action()) {
@@ -257,7 +257,7 @@ bool TableSummary::preorder(const IR::MAU::Table *t) {
     return true;
 }
 
-cstring TableSummary::getTableIName(const IR::MAU::Table* tbl) {
+cstring TableSummary::getTableIName(const P4::IR::MAU::Table* tbl) {
     // For split gateways, refer to the original name.
     if (!tbl->match_table && tbl->name.endsWith("$split")) {
         cstring newName = tbl->name.before(tbl->name.find('$'));
@@ -266,7 +266,7 @@ cstring TableSummary::getTableIName(const IR::MAU::Table* tbl) {
     return tbl->name;
 }
 
-cstring TableSummary::getTableName(const IR::MAU::Table* tbl) {
+cstring TableSummary::getTableName(const P4::IR::MAU::Table* tbl) {
     if (tbl->match_table) {
         BUG_CHECK(tbl->match_table->externalName(), "Table %1% does not have a P4 name", tbl->name);
         return tbl->match_table->externalName();
@@ -280,7 +280,7 @@ cstring TableSummary::getTableName(const IR::MAU::Table* tbl) {
     return tbl->name;
 }
 
-void TableSummary::addTablePtr(const IR::MAU::Table* tbl) {
+void TableSummary::addTablePtr(const P4::IR::MAU::Table* tbl) {
     cstring ref_name = tbl->name;
     if (ref_name.endsWith("$split"))
         ref_name = tbl->name.before(tbl->name.find('$'));
@@ -292,8 +292,8 @@ void TableSummary::addTablePtr(const IR::MAU::Table* tbl) {
     }
 }
 
-std::set<const IR::MAU::Table*> TableSummary::getTablePtr(const cstring t_name){
-    std::set<const IR::MAU::Table*> empty;
+std::set<const P4::IR::MAU::Table*> TableSummary::getTablePtr(const cstring t_name){
+    std::set<const P4::IR::MAU::Table*> empty;
     if (tblName2IRptr.count(t_name))
         return tblName2IRptr.at(t_name);
     return empty;
@@ -332,8 +332,8 @@ bool TableSummary::find_problematic_table() {
     }
 
     auto select_problem_table_by_score =
-        [](ordered_map<const IR::MAU::Table *, int> table_to_score){
-        const IR::MAU::Table* problem_table = nullptr;
+        [](ordered_map<const P4::IR::MAU::Table *, int> table_to_score){
+        const P4::IR::MAU::Table* problem_table = nullptr;
         int max_diff = -1;
         for (auto [table, diff] : table_to_score) {
             if (diff > max_diff) {
@@ -345,7 +345,7 @@ bool TableSummary::find_problematic_table() {
         return problem_table;
     };
 
-    ordered_map<const IR::MAU::Table *, int> problematic_candidates;
+    ordered_map<const P4::IR::MAU::Table *, int> problematic_candidates;
     if (table_replay_result == PlacementResult::FAIL_ON_ADB) {
         // For FAIL_ON_ADB, the score is the difference of adb size allocated between real table
         // allocation and table allocation after trivial allocation.
@@ -423,7 +423,7 @@ bool TableSummary::find_problematic_table() {
     }
 }
 
-void TableSummary::postorder(const IR::BFN::Pipe *pipe) {
+void TableSummary::postorder(const P4::IR::BFN::Pipe *pipe) {
     LOG7(pipe);
     const int criticalPathLength = deps.critical_path_length();
     const int deviceStages = Device::numStages();
@@ -736,7 +736,7 @@ void TableSummary::postorder(const IR::BFN::Pipe *pipe) {
     }
 }
 
-const ordered_set<int> TableSummary::stages(const IR::MAU::Table* tbl, bool internal) const {
+const ordered_set<int> TableSummary::stages(const P4::IR::MAU::Table* tbl, bool internal) const {
     ordered_set<int> rs;
     const ordered_map<cstring, ordered_set<int>> *tableAllocPtr;
     cstring tbl_name;
@@ -977,7 +977,7 @@ std::ostream &operator<<(std::ostream &out, const TableSummary &ts) {
     return out;
 }
 
-void TableSummary::PlacedTable::add(const IR::MAU::Table *t, state_t state) {
+void TableSummary::PlacedTable::add(const P4::IR::MAU::Table *t, state_t state) {
     if (!t) return;
     if (!t->resources) return;
     if (t->resources->memuse.count(t->unique_id()) == 0) return;  // BUG_CHECK?
@@ -998,7 +998,7 @@ void TableSummary::PlacedTable::add(const IR::MAU::Table *t, state_t state) {
     }
 }
 
-TableSummary::PlacedTable::PlacedTable(const IR::MAU::Table *t, state_t state,
+TableSummary::PlacedTable::PlacedTable(const P4::IR::MAU::Table *t, state_t state,
                                        const DependencyGraph &dg) {
     BUG_CHECK(t, "PlacedTable called with no valid table");
     Log::TempIndent indent;

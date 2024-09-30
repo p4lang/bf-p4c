@@ -63,29 +63,29 @@ class memory_vector {
 class MauAsmOutput : public MauInspector {
  protected:
     const PhvInfo       &phv;
-    const IR::BFN::Pipe *pipe;
+    const P4::IR::BFN::Pipe *pipe;
     const NextTable *nxt_tbl;
     const MauPower::FinalizeMauPredDepsPower* power_and_mpr;
     const BFN_Options   &options;
 
  private:
     struct TableInstance {
-        explicit TableInstance(const IR::MAU::Table *table)
+        explicit TableInstance(const P4::IR::MAU::Table *table)
             : tableInfo(table) { }
 
-        const IR::MAU::Table *tableInfo;
+        const P4::IR::MAU::Table *tableInfo;
     };
 
     std::map<std::pair<gress_t, int>, std::vector<TableInstance>>       by_stage;
-    ordered_map<std::pair<int, const IR::MAU::Selector *>,
+    ordered_map<std::pair<int, const P4::IR::MAU::Selector *>,
                 std::pair<UniqueId, const Memories::Use *>>     selector_memory;
-    profile_t init_apply(const IR::Node *root) override {
+    profile_t init_apply(const P4::IR::Node *root) override {
         return MauInspector::init_apply(root); }
-    bool preorder(const IR::MAU::Table *tbl) override {
+    bool preorder(const P4::IR::MAU::Table *tbl) override {
         auto tableId = std::make_pair(tbl->gress, tbl->stage());
         by_stage[tableId].push_back(TableInstance(tbl));
         return true; }
-    bool preorder(const IR::MAU::BackendAttached *) override {
+    bool preorder(const P4::IR::MAU::BackendAttached *) override {
         // Same backend resource can be attached to a table split across
         // multiple stages which means it must be visited for each table.
         // In order to enable this, we need to set visitAgain on the common
@@ -93,38 +93,38 @@ class MauAsmOutput : public MauInspector {
         visitAgain();
         return true;
     }
-    void postorder(const IR::MAU::Selector *as) override {
+    void postorder(const P4::IR::MAU::Selector *as) override {
         visitAgain();
-        auto tbl = findContext<IR::MAU::Table>();
+        auto tbl = findContext<P4::IR::MAU::Table>();
         if (tbl->is_placed()) {
             auto &unattached = tbl->resources->memuse.at(tbl->unique_id()).unattached_tables;
             auto unique_id = tbl->unique_id(as);
             if (!unattached.count(unique_id) && tbl->resources->memuse.count(unique_id)) {
                 selector_memory[std::make_pair(tbl->stage(), as)] =
                 std::make_pair(unique_id, &tbl->resources->memuse.at(unique_id)); } } }
-    bool preorder(const IR::MAU::StatefulAlu *) override { return false; }
+    bool preorder(const P4::IR::MAU::StatefulAlu *) override { return false; }
     friend std::ostream &operator<<(std::ostream &, const MauAsmOutput &);
 
  public:
     class NextTableSet;
 
  protected:
-    bool require_ixbar(const IR::MAU::Table *tbl, IXBar::Use::type_t) const;
-    bool require_ixbar(const IR::MAU::Table *tbl, std::initializer_list<IXBar::Use::type_t>) const;
-    void emit_ixbar(std::ostream &out, indent_t indent, const IR::MAU::Table *tbl,
+    bool require_ixbar(const P4::IR::MAU::Table *tbl, IXBar::Use::type_t) const;
+    bool require_ixbar(const P4::IR::MAU::Table *tbl, std::initializer_list<IXBar::Use::type_t>) const;
+    void emit_ixbar(std::ostream &out, indent_t indent, const P4::IR::MAU::Table *tbl,
                     IXBar::Use::type_t type) const;
-    void emit_ixbar(std::ostream &out, indent_t indent, const IR::MAU::Table *tbl,
+    void emit_ixbar(std::ostream &out, indent_t indent, const P4::IR::MAU::Table *tbl,
                     std::initializer_list<IXBar::Use::type_t> types) const;
     void emit_random_seed(std::ostream &out, indent_t indent, const TableMatch *fmt) const;
     // FIXME: change API to be target-agnostic
     void emit_hash_dist(std::ostream &out, indent_t indent,
         const safe_vector<Tofino::IXBar::HashDistUse> *hash_dist_use, bool hashmod) const;
 
-    bool emit_gateway(std::ostream &out, indent_t gw_indent, const IR::MAU::Table *tbl,
+    bool emit_gateway(std::ostream &out, indent_t gw_indent, const P4::IR::MAU::Table *tbl,
              bool hash_action, NextTableSet next_hit, NextTableSet &gw_miss) const;
     void emit_no_match_gateway(std::ostream &out, indent_t gw_indent,
-            const IR::MAU::Table *tbl) const;
-    void emit_table_hitmap(std::ostream &out, indent_t indent, const IR::MAU::Table *tbl,
+            const P4::IR::MAU::Table *tbl) const;
+    void emit_table_hitmap(std::ostream &out, indent_t indent, const P4::IR::MAU::Table *tbl,
             NextTableSet &next_hit, NextTableSet &gw_miss, bool no_match_hit,
             bool gw_can_miss) const;
 
@@ -137,46 +137,46 @@ class MauAsmOutput : public MauInspector {
 
  protected:
     virtual void emit_memory(std::ostream &out, indent_t, const Memories::Use &,
-            const IR::MAU::Table::Layout *l = nullptr,
+            const P4::IR::MAU::Table::Layout *l = nullptr,
             const TableFormat::Use *f = nullptr) const = 0;
 
-    void emit_table_context_json(std::ostream &out, indent_t, const IR::MAU::Table *tbl) const;
+    void emit_table_context_json(std::ostream &out, indent_t, const P4::IR::MAU::Table *tbl) const;
     void emit_ternary_match(std::ostream &out, indent_t, const TableFormat::Use &use) const;
-    void emit_atcam_match(std::ostream &out, indent_t, const IR::MAU::Table *tbl,
+    void emit_atcam_match(std::ostream &out, indent_t, const P4::IR::MAU::Table *tbl,
             std::stringstream &context_json_entries) const;
-    void emit_table(std::ostream &out, const IR::MAU::Table *tbl, int stage, gress_t gress) const;
-    void emit_always_run_action(std::ostream &out, const IR::MAU::Table *tbl, int stage,
+    void emit_table(std::ostream &out, const P4::IR::MAU::Table *tbl, int stage, gress_t gress) const;
+    void emit_always_run_action(std::ostream &out, const P4::IR::MAU::Table *tbl, int stage,
         gress_t gress) const;
-    void emit_static_entries(std::ostream &, indent_t indent, const IR::MAU::Table *tbl,
+    void emit_static_entries(std::ostream &, indent_t indent, const P4::IR::MAU::Table *tbl,
             std::stringstream &context_json_entries) const;
-    void next_table_non_action_map(const IR::MAU::Table *,
+    void next_table_non_action_map(const P4::IR::MAU::Table *,
             safe_vector<NextTableSet> &next_table_map) const;
-    void emit_table_indir(std::ostream &out, indent_t, const IR::MAU::Table *tbl,
-            const IR::MAU::TernaryIndirect *ti) const;
-    void emit_action_data_format(std::ostream &out, indent_t, const IR::MAU::Table *tbl,
-            const IR::MAU::Action *af) const;
+    void emit_table_indir(std::ostream &out, indent_t, const P4::IR::MAU::Table *tbl,
+            const P4::IR::MAU::TernaryIndirect *ti) const;
+    void emit_action_data_format(std::ostream &out, indent_t, const P4::IR::MAU::Table *tbl,
+            const P4::IR::MAU::Action *af) const;
     void emit_single_alias(std::ostream &out, std::string &sep, const ActionData::Parameter *param,
             le_bitrange adt_range, cstring alias,
             safe_vector<ActionData::Argument> &full_args, cstring action_name) const;
-    void emit_action_data_alias(std::ostream &out, indent_t, const IR::MAU::Table *tbl,
-            const IR::MAU::Action *af) const;
-    void emit_action_data_bus(std::ostream &out, indent_t, const IR::MAU::Table *tbl,
+    void emit_action_data_alias(std::ostream &out, indent_t, const P4::IR::MAU::Table *tbl,
+            const P4::IR::MAU::Action *af) const;
+    void emit_action_data_bus(std::ostream &out, indent_t, const P4::IR::MAU::Table *tbl,
                               bitvec source) const;
-    bool emit_idletime(std::ostream &out, indent_t indent, const IR::MAU::Table *tbl,
-                       const IR::MAU::IdleTime *id) const;
+    bool emit_idletime(std::ostream &out, indent_t indent, const P4::IR::MAU::Table *tbl,
+                       const P4::IR::MAU::IdleTime *id) const;
     void emit_indirect_res_context_json(std::ostream &, indent_t indent,
-            const IR::MAU::Table *tbl,
+            const P4::IR::MAU::Table *tbl,
             std::stringstream &context_json_entries) const;
-    virtual bool gateway_uses_inhibit_index(const IR::MAU::Table *) const { return false; }
-    std::string indirect_address(const IR::MAU::AttachedMemory *) const;
-    std::string indirect_pfe(const IR::MAU::AttachedMemory *) const;
-    std::string stateful_counter_addr(IR::MAU::StatefulUse use) const;
-    std::string build_call(const IR::MAU::AttachedMemory *at_mem,
-        const IR::MAU::BackendAttached *ba, const IR::MAU::Table *tbl) const;
-    std::string build_sel_len_call(const IR::MAU::Selector *as) const;
-    std::string build_meter_color_call(const IR::MAU::Meter *mtr,
-        const IR::MAU::BackendAttached *ba, const IR::MAU::Table *tbl) const;
-    NextTableSet next_for(const IR::MAU::Table *tbl, cstring what) const;
+    virtual bool gateway_uses_inhibit_index(const P4::IR::MAU::Table *) const { return false; }
+    std::string indirect_address(const P4::IR::MAU::AttachedMemory *) const;
+    std::string indirect_pfe(const P4::IR::MAU::AttachedMemory *) const;
+    std::string stateful_counter_addr(P4::IR::MAU::StatefulUse use) const;
+    std::string build_call(const P4::IR::MAU::AttachedMemory *at_mem,
+        const P4::IR::MAU::BackendAttached *ba, const P4::IR::MAU::Table *tbl) const;
+    std::string build_sel_len_call(const P4::IR::MAU::Selector *as) const;
+    std::string build_meter_color_call(const P4::IR::MAU::Meter *mtr,
+        const P4::IR::MAU::BackendAttached *ba, const P4::IR::MAU::Table *tbl) const;
+    NextTableSet next_for(const P4::IR::MAU::Table *tbl, cstring what) const;
 
     class EmitAction;
     class EmitAlwaysRunAction;
@@ -185,20 +185,20 @@ class MauAsmOutput : public MauInspector {
     // class EmitHashExpression;
 
  public:
-    MauAsmOutput(const PhvInfo &phv, const IR::BFN::Pipe *pipe,
+    MauAsmOutput(const PhvInfo &phv, const P4::IR::BFN::Pipe *pipe,
                  const NextTable *nxts, const MauPower::FinalizeMauPredDepsPower* pmpr,
                  const BFN_Options &options)
             : phv(phv), pipe(pipe), nxt_tbl(nxts), power_and_mpr(pmpr), options(options) { }
 
-    static cstring find_attached_name(const IR::MAU::Table *tbl,
-                                      const IR::MAU::AttachedMemory *am);
-    static ordered_set<UniqueId> find_attached_ids(const IR::MAU::Table *tbl,
-                                                   const IR::MAU::AttachedMemory *am);
+    static cstring find_attached_name(const P4::IR::MAU::Table *tbl,
+                                      const P4::IR::MAU::AttachedMemory *am);
+    static ordered_set<UniqueId> find_attached_ids(const P4::IR::MAU::Table *tbl,
+                                                   const P4::IR::MAU::AttachedMemory *am);
 };
 
 class TableMatch {
  public:
-    const IR::MAU::Table     *table = nullptr;
+    const P4::IR::MAU::Table     *table = nullptr;
     const PhvInfo            &phv;
 
     // TOF5-DOC: TODO -- a bunch of this is tofino-specific and probably needs to change for
@@ -232,9 +232,9 @@ class TableMatch {
     void populate_slices(safe_vector<Slice> &slices,
                          const std::map<IXBar::Use::Byte, bitvec> &byte_infos);
 
-    TableMatch(const PhvInfo &phv, const IR::MAU::Table *tbl);
+    TableMatch(const PhvInfo &phv, const P4::IR::MAU::Table *tbl);
     explicit TableMatch(const PhvInfo &phv) : phv(phv) {}
-    static TableMatch* create(const PhvInfo &phv, const IR::MAU::Table *tbl);
+    static TableMatch* create(const PhvInfo &phv, const P4::IR::MAU::Table *tbl);
 };
 
 #endif /* BF_P4C_MAU_ASM_OUTPUT_H_ */

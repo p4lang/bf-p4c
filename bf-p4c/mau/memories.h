@@ -111,7 +111,7 @@ struct Memories {
         safe_vector<Way>                         ways;
         Gateway                                  gateway;
         int                                      tind_result_bus = -1;
-        IR::MAU::ColorMapramAddress cma = IR::MAU::ColorMapramAddress::NOT_SET;
+        P4::IR::MAU::ColorMapramAddress cma = P4::IR::MAU::ColorMapramAddress::NOT_SET;
 
         // SCM related data
         enum h_bus_t { NONE, LEFT_HBUS1, LEFT_HBUS2, RIGHT_HBUS1, RIGHT_HBUS2};
@@ -172,7 +172,7 @@ struct Memories {
             color_mapram.clear();
             home_row.clear();
             gateway.clear();
-            cma = IR::MAU::ColorMapramAddress::NOT_SET;
+            cma = P4::IR::MAU::ColorMapramAddress::NOT_SET;
         }
 
         void clear_scm() {
@@ -205,12 +205,12 @@ struct Memories {
     virtual void remove(cstring table_name, const Use &alloc) = 0;
     virtual void remove(const std::map<UniqueId, Use> &alloc) = 0;
     virtual void clear() = 0;
-    virtual void add_table(const IR::MAU::Table *t, const IR::MAU::Table *gw,
+    virtual void add_table(const P4::IR::MAU::Table *t, const P4::IR::MAU::Table *gw,
                    TableResourceAlloc *resources, const LayoutOption *lo,
                    const ActionData::Format::Use *af, ActionData::FormatType_t ft,
                    int entries, int stage_table, attached_entries_t attached_entries) = 0;
     virtual void shrink_allowed_lts() = 0;
-    virtual void fill_placed_scm_table(const IR::MAU::Table *, const TableResourceAlloc *) = 0;
+    virtual void fill_placed_scm_table(const P4::IR::MAU::Table *, const TableResourceAlloc *) = 0;
     virtual void printOn(std::ostream &) const = 0;
     cstring last_failure() const { return failure_reason ? failure_reason : ""_cs; }
     virtual void init_shared(int stage) { local_stage = stage; }

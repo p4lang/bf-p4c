@@ -144,7 +144,7 @@ safe_vector<Slice> Slice::split(const safe_vector<Slice> &vec,
     return rv;
 }
 
-bool has_user_annotation(const IR::IAnnotated* node) {
+bool has_user_annotation(const P4::IR::IAnnotated* node) {
     if (!node) return false;
     for (auto* annotation : node->getAnnotations()->annotations) {
         if (annotation->name == PragmaUserAnnotation::name) return true;
@@ -155,7 +155,7 @@ bool has_user_annotation(const IR::IAnnotated* node) {
 
 void emit_user_annotation_context_json(std::ostream &out,
                                        indent_t indent,
-                                       const IR::IAnnotated* node,
+                                       const P4::IR::IAnnotated* node,
                                        bool emit_dash) {
     std::stringstream context_json_entries;
     emit_user_annotation_context_json(indent, node, context_json_entries);
@@ -166,7 +166,7 @@ void emit_user_annotation_context_json(std::ostream &out,
 }
 
 void emit_user_annotation_context_json(indent_t indent,
-                                       const IR::IAnnotated* node,
+                                       const P4::IR::IAnnotated* node,
                                        std::stringstream &context_json_entries) {
     if (!node) return;
 
@@ -182,7 +182,7 @@ void emit_user_annotation_context_json(indent_t indent,
 
         bool emitted_elts = false;
         for (auto* expr : annotation->expr) {
-            auto str = expr->to<IR::StringLiteral>();
+            auto str = expr->to<P4::IR::StringLiteral>();
             BUG_CHECK(str, "User annotation not a string literal: %1%", expr);
 
             auto cur_elt = str->value;

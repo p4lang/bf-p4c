@@ -23,18 +23,18 @@
 #include "lib/stringref.h"
 
 struct FormatHash {
-    using RangeOfConstant = std::map<le_bitrange, const IR::Constant*>;
+    using RangeOfConstant = std::map<le_bitrange, const P4::IR::Constant*>;
     const safe_vector<Slice>         *match_data;
     const std::multimap<int, Slice>  *match_data_map;
     const RangeOfConstant            *constant_map;
     const Slice                      *ghost;
-    IR::MAU::HashFunction            func;
+    P4::IR::MAU::HashFunction            func;
     int                              total_bits = 0;
     le_bitrange                      *field_range;
 
     FormatHash(const safe_vector<Slice> *md, const std::multimap<int, Slice> *mdm,
-               const std::map<le_bitrange, const IR::Constant*> *cm, const Slice *g,
-               IR::MAU::HashFunction f, int tb = 0, le_bitrange *fr = nullptr)
+               const std::map<le_bitrange, const P4::IR::Constant*> *cm, const Slice *g,
+               P4::IR::MAU::HashFunction f, int tb = 0, le_bitrange *fr = nullptr)
         : match_data(md), match_data_map(mdm), constant_map(cm), ghost(g),
         func(f), total_bits(tb), field_range(fr) {
         BUG_CHECK(match_data == nullptr || match_data_map == nullptr, "FormatHash not "
@@ -59,10 +59,10 @@ inline std::ostream &operator<<(std::ostream &out, const FormatHash &hash) {
         return out;
     }
 
-    if (hash.func.type == IR::MAU::HashFunction::IDENTITY) {
+    if (hash.func.type == P4::IR::MAU::HashFunction::IDENTITY) {
         BUG_CHECK(hash.match_data, "For an identity, must be a standard vector");
         out << "stripe(" << emit_vector(*hash.match_data) << ")";
-    } else if (hash.func.type == IR::MAU::HashFunction::RANDOM) {
+    } else if (hash.func.type == P4::IR::MAU::HashFunction::RANDOM) {
         BUG_CHECK(hash.match_data, "For a random, must be a standard vector");
         if (!hash.match_data->empty()) {
             out << "random(" << emit_vector(*hash.match_data, ", ") << ")";
@@ -71,7 +71,7 @@ inline std::ostream &operator<<(std::ostream &out, const FormatHash &hash) {
         if (hash.ghost) {
             out << *hash.ghost;
         }
-    } else if (hash.func.type == IR::MAU::HashFunction::CRC) {
+    } else if (hash.func.type == P4::IR::MAU::HashFunction::CRC) {
         BUG_CHECK(hash.match_data_map, "For a crc, must be a map");
         out << "stripe(crc";
         if (hash.func.reverse) out << "_rev";
@@ -93,13 +93,13 @@ inline std::ostream &operator<<(std::ostream &out, const FormatHash &hash) {
         out << ")";
         // FIXME -- final_xor needs to go into the seed for the hash group
         out << ")";
-    } else if (hash.func.type == IR::MAU::HashFunction::XOR) {
+    } else if (hash.func.type == P4::IR::MAU::HashFunction::XOR) {
         /* -- note: constants are computed by the midend into the seed value.
          *    There is no need to pass them through the xor directive. */
         BUG_CHECK(hash.match_data_map, "For a xor, must be a map");
         out << "stripe(xor("
             << "0x" << hex(hash.func.size) << ", " << *hash.match_data_map << "))";
-    } else if (hash.func.type == IR::MAU::HashFunction::CSUM) {
+    } else if (hash.func.type == P4::IR::MAU::HashFunction::CSUM) {
         BUG("csum hashing algorithm not supported");
     } else {
         BUG("unknown hashing algorithm %d", hash.func.type);
@@ -115,13 +115,13 @@ class FormatHash::SliceWidth : public Inspector {
     safe_vector<Slice> &match_data;
     int bit;
     int width;
-    bool preorder(const IR::Annotation *) { return false; }
-    bool preorder(const IR::Type *) { return false; }
-    bool preorder(const IR::BXor *) { return true; }
-    bool preorder(const IR::BAnd *) { return true; }
-    bool preorder(const IR::BOr *) { return true; }
-    bool preorder(const IR::Constant *c) {
-        if (getParent<IR::BOr>()) {
+    bool preorder(const P4::IR::Annotation *) { return false; }
+    bool preorder(const P4::IR::Type *) { return false; }
+    bool preorder(const P4::IR::BXor *) { return true; }
+    bool preorder(const P4::IR::BAnd *) { return true; }
+    bool preorder(const P4::IR::BOr *) { return true; }
+    bool preorder(const P4::IR::Constant *c) {
+        if (getParent<P4::IR::BOr>()) {
             // can't do OR in the .bfa -- need to slice based on bit ranges
             big_int v = c->value >> bit;
             if (v != 0) {
@@ -131,7 +131,7 @@ class FormatHash::SliceWidth : public Inspector {
                 if (width > w)
                     width = w; } }
         return false; }
-    bool preorder(const IR::Concat *e) {
+    bool preorder(const P4::IR::Concat *e) {
         if (bit < e->right->type->width_bits()) {
             if (width > e->right->type->width_bits() - bit)
                 width = e->right->type->width_bits() - bit;
@@ -145,7 +145,7 @@ class FormatHash::SliceWidth : public Inspector {
             visit(e->left, "left");
             bit = tmp; }
         return false; }
-    bool preorder(const IR::ListExpression *fl) {
+    bool preorder(const P4::IR::ListExpression *fl) {
         int tmp = bit;
         for (auto *e : boost::adaptors::reverse(fl->components)) {
             if (bit < e->type->width_bits()) {
@@ -156,7 +156,7 @@ class FormatHash::SliceWidth : public Inspector {
             bit -= e->type->width_bits(); }
         bit = tmp;
         return false; }
-    bool preorder(const IR::StructExpression *sl) {
+    bool preorder(const P4::IR::StructExpression *sl) {
         int tmp = bit;
         for (auto *e : boost::adaptors::reverse(sl->components)) {
             if (bit < e->expression->type->width_bits()) {
@@ -167,7 +167,7 @@ class FormatHash::SliceWidth : public Inspector {
             bit -= e->expression->type->width_bits(); }
         bit = tmp;
         return false; }
-    bool preorder(const IR::BFN::SignExtend *e) {
+    bool preorder(const P4::IR::BFN::SignExtend *e) {
         int w = e->type->width_bits() - bit;
         if (width > w)
             width = w;
@@ -176,7 +176,7 @@ class FormatHash::SliceWidth : public Inspector {
         if (width < w && width >= e->expr->type->width_bits())
             width = w;
         return false; }
-    bool preorder(const IR::Expression *e) {
+    bool preorder(const P4::IR::Expression *e) {
         int w = e->type->width_bits() - bit;
         if (width > w)
             width = w;
@@ -195,7 +195,7 @@ class FormatHash::SliceWidth : public Inspector {
         return false; }
 
  public:
-    SliceWidth(const PhvInfo &p, const IR::Expression *e, int b, safe_vector<Slice> &md)
+    SliceWidth(const PhvInfo &p, const P4::IR::Expression *e, int b, safe_vector<Slice> &md)
     : phv(p), match_data(md), bit(b), width(e->type->width_bits() - b) { e->apply(*this); }
     operator int() const { return width; }
 };
@@ -207,9 +207,9 @@ class FormatHash::ZeroHash : public Inspector {
     le_bitrange slice;
     safe_vector<Slice> &match_data;
     bool    rv = false;
-    bool preorder(const IR::Annotation *) { return false; }
-    bool preorder(const IR::Type *) { return false; }
-    bool preorder(const IR::BXor *e) {
+    bool preorder(const P4::IR::Annotation *) { return false; }
+    bool preorder(const P4::IR::Type *) { return false; }
+    bool preorder(const P4::IR::BXor *e) {
         if (!rv) {
             visit(e->left, "left");
             bool tmp = rv;
@@ -217,17 +217,17 @@ class FormatHash::ZeroHash : public Inspector {
             visit(e->right, "right");
             rv &= tmp; }
         return false; }
-    bool preorder(const IR::BAnd *) { return true; }
-    bool preorder(const IR::BOr *) { return true; }
-    bool preorder(const IR::BFN::SignExtend *) { return true; }
-    bool preorder(const IR::Constant *k) {
-        if (getParent<IR::BAnd>() || getParent<IR::BOr>()) {
+    bool preorder(const P4::IR::BAnd *) { return true; }
+    bool preorder(const P4::IR::BOr *) { return true; }
+    bool preorder(const P4::IR::BFN::SignExtend *) { return true; }
+    bool preorder(const P4::IR::Constant *k) {
+        if (getParent<P4::IR::BAnd>() || getParent<P4::IR::BOr>()) {
             big_int v = k->value, mask = 1;
             v >>= slice.lo;
             mask <<= slice.size();
             mask -= 1;
             v &= mask;
-            if (getParent<IR::BAnd>()) {
+            if (getParent<P4::IR::BAnd>()) {
                 if (v == 0) rv = true;
             } else if (v == mask) {
                 rv = true;
@@ -236,7 +236,7 @@ class FormatHash::ZeroHash : public Inspector {
         } else {
             rv = true; }
         return false; }
-    bool preorder(const IR::Concat *e) {
+    bool preorder(const P4::IR::Concat *e) {
         int rwidth = e->right->type->width_bits();
         if (slice.lo < rwidth) {
             BUG_CHECK(slice.hi < rwidth, "Slice too wide in FormatHash::ZeroHash");
@@ -247,7 +247,7 @@ class FormatHash::ZeroHash : public Inspector {
             visit(e->left, "left");
             slice = tmp; }
         return false; }
-    bool preorder(const IR::ListExpression *fl) {
+    bool preorder(const P4::IR::ListExpression *fl) {
         auto tmp = slice;
         for (auto *e : boost::adaptors::reverse(fl->components)) {
             int width = e->type->width_bits();
@@ -258,7 +258,7 @@ class FormatHash::ZeroHash : public Inspector {
             slice = slice.shiftedByBits(-width); }
         slice = tmp;
         return false; }
-    bool preorder(const IR::StructExpression *sl) {
+    bool preorder(const P4::IR::StructExpression *sl) {
         auto tmp = slice;
         for (auto *e : boost::adaptors::reverse(sl->components)) {
             int width = e->expression->type->width_bits();
@@ -269,7 +269,7 @@ class FormatHash::ZeroHash : public Inspector {
             slice = slice.shiftedByBits(-width); }
         slice = tmp;
         return false; }
-    bool preorder(const IR::Expression *e) {
+    bool preorder(const P4::IR::Expression *e) {
         Slice sl(phv, e, slice);
         BUG_CHECK(sl, "Invalid expression %s in FormatHash::ZeroHash", e);
         for (auto &md : match_data) {
@@ -279,7 +279,7 @@ class FormatHash::ZeroHash : public Inspector {
         return false; }
 
  public:
-    ZeroHash(const PhvInfo &p, const IR::Expression *e, le_bitrange s, safe_vector<Slice> &md)
+    ZeroHash(const PhvInfo &p, const P4::IR::Expression *e, le_bitrange s, safe_vector<Slice> &md)
     : phv(p), slice(s), match_data(md) { e->apply(*this); }
     explicit operator bool() const { return rv; }
 };
@@ -290,28 +290,28 @@ class FormatHash::Output : public Inspector {
     std::ostream &out;
     le_bitrange slice;
     safe_vector<Slice> &match_data;
-    bool preorder(const IR::Annotation *) { return false; }
-    bool preorder(const IR::Type *) { return false; }
-    bool preorder(const IR::BXor *e) {
+    bool preorder(const P4::IR::Annotation *) { return false; }
+    bool preorder(const P4::IR::Type *) { return false; }
+    bool preorder(const P4::IR::BXor *e) {
         bool need_left = !ZeroHash(phv, e->left, slice, match_data);
         bool need_right = !ZeroHash(phv, e->right, slice, match_data);
         if (need_left) visit(e->left, "left");
         if (need_left && need_right) out << " ^ ";
         if (need_right) visit(e->right, "right");
         return false; }
-    bool preorder(const IR::BAnd *e) {
+    bool preorder(const P4::IR::BAnd *e) {
         visit(e->left, "left"); out << "&"; visit(e->right, "right"); return false; }
-    bool preorder(const IR::BOr *e) {
-        auto k = e->left->to<IR::Constant>();
+    bool preorder(const P4::IR::BOr *e) {
+        auto k = e->left->to<P4::IR::Constant>();
         auto &op = k ? e->right : e->left;
-        if (!k) k = e->right->to<IR::Constant>();
+        if (!k) k = e->right->to<P4::IR::Constant>();
         big_int v = k->value >> slice.lo;
         if ((v & 1) == 0) {
             visit(op);
         } else {
             out << "0"; }
         return false; }
-    bool preorder(const IR::Constant *k) {
+    bool preorder(const P4::IR::Constant *k) {
         big_int v = k->value, mask = 1;
         v >>= slice.lo;
         mask <<= slice.size();
@@ -319,7 +319,7 @@ class FormatHash::Output : public Inspector {
         v &= mask;
         out << "0x" << std::hex << v << std::dec;
         return false; }
-    bool preorder(const IR::Concat *e) {
+    bool preorder(const P4::IR::Concat *e) {
         if (slice.lo < e->right->type->width_bits()) {
             visit(e->right, "right");
         } else {
@@ -328,7 +328,7 @@ class FormatHash::Output : public Inspector {
             visit(e->left, "left");
             slice = tmp; }
         return false; }
-    bool preorder(const IR::ListExpression *fl) {
+    bool preorder(const P4::IR::ListExpression *fl) {
         auto tmp = slice;
         for (auto *e : boost::adaptors::reverse(fl->components)) {
             if (slice.lo < e->type->width_bits()) {
@@ -337,7 +337,7 @@ class FormatHash::Output : public Inspector {
             slice = slice.shiftedByBits(-e->type->width_bits()); }
         slice = tmp;
         return false; }
-    bool preorder(const IR::StructExpression *sl) {
+    bool preorder(const P4::IR::StructExpression *sl) {
         auto tmp = slice;
         for (auto *e : boost::adaptors::reverse(sl->components)) {
             if (slice.lo < e->expression->type->width_bits()) {
@@ -346,7 +346,7 @@ class FormatHash::Output : public Inspector {
             slice = slice.shiftedByBits(-e->expression->type->width_bits()); }
         slice = tmp;
         return false; }
-    bool preorder(const IR::BFN::SignExtend *e) {
+    bool preorder(const P4::IR::BFN::SignExtend *e) {
         if (slice.hi < e->expr->type->width_bits()) {
             // a slice or mask on a sign extension such that we don't need any of the
             // sign extended bits.  Could have been eliinated earlier, but ignore it here
@@ -358,7 +358,7 @@ class FormatHash::Output : public Inspector {
         slice = tmp;
         out << ")";
         return false; }
-    bool preorder(const IR::Expression *e) {
+    bool preorder(const P4::IR::Expression *e) {
         Slice sl(phv, e, slice);
         BUG_CHECK(sl, "Invalid expression %s in FormatHash::Output", e);
         for (auto &md : match_data) {
@@ -368,7 +368,7 @@ class FormatHash::Output : public Inspector {
         return false; }
 
  public:
-    Output(const PhvInfo &p, std::ostream &o, const IR::Expression *e, le_bitrange s,
+    Output(const PhvInfo &p, std::ostream &o, const P4::IR::Expression *e, le_bitrange s,
            safe_vector<Slice> &md)
     : phv(p), out(o), slice(s), match_data(md) { e->apply(*this); }
 };

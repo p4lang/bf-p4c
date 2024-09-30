@@ -1035,14 +1035,14 @@ bool ActionDataBus::alloc_rng(Use &use, const ActionData::Format::Use *format, c
  *
  *  TODO: When action immediate and action data table can happen simultaneously, change here
  */
-bool ActionDataBus::alloc_action_data_bus(const IR::MAU::Table *tbl,
+bool ActionDataBus::alloc_action_data_bus(const P4::IR::MAU::Table *tbl,
         const ActionData::Format::Use *use, TableResourceAlloc &alloc) {
     Log::TempIndent indent;
     LOG1("Allocating action data bus for " << tbl->name << indent);
-    const IR::MAU::ActionData *ad = nullptr;
+    const P4::IR::MAU::ActionData *ad = nullptr;
     for (auto back_at : tbl->attached) {
         auto at = back_at->attached;
-        ad = at->to<IR::MAU::ActionData>();
+        ad = at->to<P4::IR::MAU::ActionData>();
         if (ad == nullptr) continue;
 
         auto pos = allocated_attached.find(ad);
@@ -1102,15 +1102,15 @@ bool ActionDataBus::alloc_action_data_bus(const IR::MAU::Table *tbl,
 /**
  * Implement the action data bus allocation logic here for meter alu output.
  */
-bool ActionDataBus::alloc_action_data_bus(const IR::MAU::Table *tbl,
+bool ActionDataBus::alloc_action_data_bus(const P4::IR::MAU::Table *tbl,
         const MeterALU::Format::Use *use, TableResourceAlloc &alloc) {
-    const IR::MAU::AttachedMemory* am = nullptr;
-    const IR::MAU::StatefulAlu *salu = nullptr;
+    const P4::IR::MAU::AttachedMemory* am = nullptr;
+    const P4::IR::MAU::StatefulAlu *salu = nullptr;
     for (auto back_at : tbl->attached) {
         auto at = back_at->attached;
 
-        auto mtr = at->to<IR::MAU::Meter>();
-        salu = at->to<IR::MAU::StatefulAlu>();
+        auto mtr = at->to<P4::IR::MAU::Meter>();
+        salu = at->to<P4::IR::MAU::StatefulAlu>();
 
         if ((mtr && mtr->alu_output()) || salu) {
             am = at;
@@ -1206,7 +1206,7 @@ void ActionDataBus::update(cstring name, const Use::RandomNumberGenerator &rng) 
     rng_in_use[rng.unit] |= rng.bytes;
 }
 
-void ActionDataBus::update(const IR::MAU::Table *tbl) {
+void ActionDataBus::update(const P4::IR::MAU::Table *tbl) {
     if (tbl->layout.atcam && tbl->is_placed()) {
         auto orig_name = tbl->name.before(tbl->name.findlast('$'));
         if (atcam_updates.count(orig_name))

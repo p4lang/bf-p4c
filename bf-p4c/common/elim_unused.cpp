@@ -7,9 +7,9 @@
 #include "bf-p4c/parde/parde_visitor.h"
 #include "lib/log.h"
 
-const IR::BFN::Extract*
-AbstractElimUnusedInstructions::preorder(IR::BFN::Extract* extract) {
-    auto unit = findOrigCtxt<IR::BFN::Unit>();
+const P4::IR::BFN::Extract*
+AbstractElimUnusedInstructions::preorder(P4::IR::BFN::Extract* extract) {
+    auto unit = findOrigCtxt<P4::IR::BFN::Unit>();
     if (!unit) return extract;
 
     // Do not eliminate extract that it is serialized from deparser so that its layout
@@ -24,7 +24,7 @@ AbstractElimUnusedInstructions::preorder(IR::BFN::Extract* extract) {
         return extract; }
 
     if (elim_extract(unit, extract)) {
-        if (auto lval = extract->dest->to<IR::BFN::FieldLVal>())
+        if (auto lval = extract->dest->to<P4::IR::BFN::FieldLVal>())
             eliminated.insert(lval->toString());
         LOG1("ELIM UNUSED " << extract << " IN UNIT " << DBPrint::Brief << unit);
         return nullptr;
@@ -33,9 +33,9 @@ AbstractElimUnusedInstructions::preorder(IR::BFN::Extract* extract) {
     return extract;
 }
 
-const IR::BFN::FieldLVal*
-AbstractElimUnusedInstructions::preorder(IR::BFN::FieldLVal* lval) {
-    auto tcs = findOrigCtxt<IR::BFN::TotalContainerSize>();
+const P4::IR::BFN::FieldLVal*
+AbstractElimUnusedInstructions::preorder(P4::IR::BFN::FieldLVal* lval) {
+    auto tcs = findOrigCtxt<P4::IR::BFN::TotalContainerSize>();
     if (!tcs) return lval;
 
     if (eliminated.count(lval->toString())) {
@@ -47,20 +47,20 @@ AbstractElimUnusedInstructions::preorder(IR::BFN::FieldLVal* lval) {
 }
 
 class ElimUnused::Instructions : public AbstractElimUnusedInstructions {
-    bool elim_extract(const IR::BFN::Unit* unit, const IR::Expression* field) {
+    bool elim_extract(const P4::IR::BFN::Unit* unit, const P4::IR::Expression* field) {
         return defuse.getUses(unit, field).empty();
     }
 
-    bool elim_extract(const IR::BFN::Unit* unit,
-                      const IR::BFN::Extract* extract) override {
-        if (auto lval = extract->dest->to<IR::BFN::FieldLVal>())
+    bool elim_extract(const P4::IR::BFN::Unit* unit,
+                      const P4::IR::BFN::Extract* extract) override {
+        if (auto lval = extract->dest->to<P4::IR::BFN::FieldLVal>())
             return elim_extract(unit, lval->field);
 
         return false;
     }
 
-    const IR::BFN::ChecksumVerify* preorder(IR::BFN::ChecksumVerify* verify) override {
-        auto unit = findOrigCtxt<IR::BFN::Unit>();
+    const P4::IR::BFN::ChecksumVerify* preorder(P4::IR::BFN::ChecksumVerify* verify) override {
+        auto unit = findOrigCtxt<P4::IR::BFN::Unit>();
         if (!unit) return verify;
         if (verify->dest && !defuse.getUses(unit, verify->dest->field).empty())
             return verify;
@@ -69,9 +69,9 @@ class ElimUnused::Instructions : public AbstractElimUnusedInstructions {
         return nullptr;
     }
 
-    const IR::MAU::Instruction *preorder(IR::MAU::Instruction *i) override {
+    const P4::IR::MAU::Instruction *preorder(P4::IR::MAU::Instruction *i) override {
         LOG5("ElimUnused Instruction " << i);
-        auto unit = findOrigCtxt<IR::BFN::Unit>();
+        auto unit = findOrigCtxt<P4::IR::BFN::Unit>();
         if (!unit) return i;
         if (!i->operands[0]) return i;
         if (!defuse.getUses(unit, i->operands[0]).empty()) return i;
@@ -79,14 +79,14 @@ class ElimUnused::Instructions : public AbstractElimUnusedInstructions {
         return nullptr;
     }
 
-    const IR::MAU::Instruction *postorder(IR::MAU::Instruction *inst) override {
+    const P4::IR::MAU::Instruction *postorder(P4::IR::MAU::Instruction *inst) override {
         /// HACK(hanw): copy-propagation introduces set(a, a) instructions, which
         /// is not deadcode eliminated because 'a' is still in-use in the control flow.
         if (inst->operands.size() < 2) return inst;
         auto left = (inst->operands[0])->apply(ReplaceMember());
         auto right = (inst->operands[1])->apply(ReplaceMember());
-        if (auto lmem = left->to<IR::Member>()) {
-            if (auto rmem = right->to<IR::Member>()) {
+        if (auto lmem = left->to<P4::IR::Member>()) {
+            if (auto rmem = right->to<P4::IR::Member>()) {
                 if (inst->name == "set" && lmem->equiv(*rmem))
                     return nullptr; } }
         return inst;
@@ -100,10 +100,10 @@ class ElimUnused::Instructions : public AbstractElimUnusedInstructions {
 /// Removes no-op tables that have the \@hidden annotation.
 class ElimUnused::Tables : public MauTransform {
  public:
-    const IR::Node* postorder(IR::MAU::Table* table) override {
+    const P4::IR::Node* postorder(P4::IR::MAU::Table* table) override {
         // Don't remove the table unless it has the \@hidden annotation.
-        std::vector<IR::ID> val;
-        if (!table->getAnnotation(IR::Annotation::hiddenAnnotation, val)) return table;
+        std::vector<P4::IR::ID> val;
+        if (!table->getAnnotation(P4::IR::Annotation::hiddenAnnotation, val)) return table;
 
         // Don't remove the table unless its gateway payload is a no-op.
         if (table->uses_gateway_payload()) {
@@ -124,7 +124,7 @@ class ElimUnused::Tables : public MauTransform {
 
         // Don't remove the table unless its "next" entries are all the same.
         bool first = true;
-        const IR::MAU::TableSeq* theEntry = nullptr;
+        const P4::IR::MAU::TableSeq* theEntry = nullptr;
         for (auto& entry : table->next) {
             auto curEntry = normalize(entry.second);
             if (first) {
@@ -174,13 +174,13 @@ class ElimUnused::Tables : public MauTransform {
 
  private:
     /// An action is a no-op if it is nullptr, or if it is empty and doesn't exit.
-    bool isNoOp(const IR::MAU::Action* action) {
+    bool isNoOp(const P4::IR::MAU::Action* action) {
         return !action || (action->action.empty() && !action->exitAction);
     }
 
     /// Normalizes a TableSeq* by turning nullptrs into empty sequences.
-    const IR::MAU::TableSeq* normalize(const IR::MAU::TableSeq* seq) {
-        static IR::MAU::TableSeq* empty = new IR::MAU::TableSeq();
+    const P4::IR::MAU::TableSeq* normalize(const P4::IR::MAU::TableSeq* seq) {
+        static P4::IR::MAU::TableSeq* empty = new P4::IR::MAU::TableSeq();
         return seq ? seq : empty;
     }
 
@@ -190,9 +190,9 @@ class ElimUnused::Tables : public MauTransform {
 
 class ElimUnused::Headers : public PardeTransform {
     ElimUnused &self;
-    const IR::BFN::Pipe* pipe;
+    const P4::IR::BFN::Pipe* pipe;
 
-    bool hasDefs(const IR::Expression* fieldRef) const {
+    bool hasDefs(const P4::IR::Expression* fieldRef) const {
         auto* field = self.phv.field(fieldRef);
         if (!field) return true;
         for (const auto& def : self.defuse.getAllDefs(field->id)) {
@@ -213,7 +213,7 @@ class ElimUnused::Headers : public PardeTransform {
         return false;
     }
 
-    const IR::BFN::EmitField* preorder(IR::BFN::EmitField* emit) override {
+    const P4::IR::BFN::EmitField* preorder(P4::IR::BFN::EmitField* emit) override {
         prune();
         bool hasdefs = hasDefs(emit->povBit->field);
         LOG5("ElimUnused preorder emit field : " << emit
@@ -228,7 +228,7 @@ class ElimUnused::Headers : public PardeTransform {
         return nullptr;
     }
 
-    const IR::BFN::EmitChecksum* preorder(IR::BFN::EmitChecksum* emit) override {
+    const P4::IR::BFN::EmitChecksum* preorder(P4::IR::BFN::EmitChecksum* emit) override {
         prune();
 
         bool hasdefs = hasDefs(emit->povBit->field);
@@ -243,13 +243,13 @@ class ElimUnused::Headers : public PardeTransform {
         return nullptr;
     }
 
-    const IR::BFN::Pipe* preorder(IR::BFN::Pipe* p) override {
+    const P4::IR::BFN::Pipe* preorder(P4::IR::BFN::Pipe* p) override {
         pipe = p;
         return p;
     }
 
-    const IR::BFN::DeparserParameter*
-    preorder(IR::BFN::DeparserParameter* param) override {
+    const P4::IR::BFN::DeparserParameter*
+    preorder(P4::IR::BFN::DeparserParameter* param) override {
         prune();
         bool hasdefs = param->source ? hasDefs(param->source->field) : false;
         LOG5("ElimUnused preorder deparser parameter: " << param

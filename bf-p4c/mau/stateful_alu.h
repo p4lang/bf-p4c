@@ -6,17 +6,17 @@
  *
  * Note that a stateful ALU (SALU) is referred to as meter ALU
  * in micro-architecture specificaion (MAS) documents.
- * * Represented by IR::MAU::StatefulAlu IR node.
+ * * Represented by P4::IR::MAU::StatefulAlu IR node.
  * * Contains:
  *   * %Instruction memory:
  *     * Four rows, each one contains a SALU VLIW instruction
- *       represented by a register action in P4 code and IR::MAU::SaluAction IR node
+ *       represented by a register action in P4 code and P4::IR::MAU::SaluAction IR node
  *       * The SALU VLIW instruction contains instructions for particular units
  *         (four sub-ALUs, two comparators, output sub-ALU) represented by primitives
- *         (IR::MAU::Primitive) both in backend and assembler.
+ *         (P4::IR::MAU::Primitive) both in backend and assembler.
  *   * Register file:
  *     * Four rows, each one is 32b (Tofino) / 34b (Tofino 2) register
- *       represented by a register parameter in P4 code and IR::MAU::SaluRegfileRow IR node
+ *       represented by a register parameter in P4 code and P4::IR::MAU::SaluRegfileRow IR node
  *       TOF3-DOC: 34b (Tofino 3).
  *     * Shared by "large" constants and register parameters
  * * There are four SALUs in a MAU stage.
@@ -140,23 +140,23 @@ struct Device::StatefulAluSpec {
  * via | operation.
  */
 class CreateSaluInstruction : public Inspector {
-    IR::MAU::StatefulAlu                *salu;
-    const IR::Type                      *regtype;
-    const IR::Declaration_Instance      *reg_action = nullptr;
+    P4::IR::MAU::StatefulAlu                *salu;
+    const P4::IR::Type                      *regtype;
+    const P4::IR::Declaration_Instance      *reg_action = nullptr;
     cstring                             action_type_name;
     enum class param_t { VALUE, OUTPUT, HASH, LEARN, MATCH };
     const std::vector<param_t>          *param_types = nullptr;
-    IR::MAU::SaluAction                 *action = nullptr;
-    const IR::ParameterList             *params = nullptr;
+    P4::IR::MAU::SaluAction                 *action = nullptr;
+    const P4::IR::ParameterList             *params = nullptr;
 
     struct LocalVar {
         cstring                 name;
         bool                    pair;
-        const IR::MAU::SaluRegfileRow   *regfile = nullptr;
+        const P4::IR::MAU::SaluRegfileRow   *regfile = nullptr;
         enum use_t { NONE, ALUHI, MEMLO, MEMHI, MEMALL, REGFILE }
                                 use = NONE;
         LocalVar(cstring name, bool pair, use_t use = NONE,
-            const IR::MAU::SaluRegfileRow *regfile = nullptr)
+            const P4::IR::MAU::SaluRegfileRow *regfile = nullptr)
             : name(name), pair(pair), regfile(regfile), use(use) {}
     }                           *dest = nullptr;  // destination of current assignment
     std::map<cstring, LocalVar> locals;
@@ -178,47 +178,47 @@ class CreateSaluInstruction : public Inspector {
     bool                        negate_regfile = false;
     bool                        alu_write[2] = { false, false };
     cstring                     opcode;
-    IR::Vector<IR::Expression>                  operands, pred_operands;
+    P4::IR::Vector<P4::IR::Expression>                  operands, pred_operands;
     int                                         output_index = -1;
-    std::vector<const IR::MAU::SaluInstruction *> cmp_instr;
-    const IR::MAU::SaluInstruction              *divmod_instr = nullptr, *minmax_instr = nullptr;
+    std::vector<const P4::IR::MAU::SaluInstruction *> cmp_instr;
+    const P4::IR::MAU::SaluInstruction              *divmod_instr = nullptr, *minmax_instr = nullptr;
     int                                         minmax_width = -1;  // 0 = min/max8, 1 = min/max16
-    const IR::Expression                        *predicate = nullptr;
-    const IR::MAU::SaluInstruction              *onebit = nullptr;  // the single 1-bit alu op
+    const P4::IR::Expression                        *predicate = nullptr;
+    const P4::IR::MAU::SaluInstruction              *onebit = nullptr;  // the single 1-bit alu op
     bool                                        onebit_cmpl = false;  // 1-bit op needs cmpl
     int                                         address_subword = 0;
-    std::vector<IR::MAU::SaluInstruction  *>    outputs;  // add to end of action body
-    std::map<int, const IR::Expression  *>      output_address_subword_predicate;
-    IR::MAU::StatefulAlu::MathUnit              math;
-    IR::MAU::SaluFunction                       *math_function = nullptr;
+    std::vector<P4::IR::MAU::SaluInstruction  *>    outputs;  // add to end of action body
+    std::map<int, const P4::IR::Expression  *>      output_address_subword_predicate;
+    P4::IR::MAU::StatefulAlu::MathUnit              math;
+    P4::IR::MAU::SaluFunction                       *math_function = nullptr;
     bool                                        assignDone = false;
     int                                         comb_pred_width = 0;
-    IR::MAU::SaluAction::ReturnEnumEncoding     *return_encoding = nullptr;
+    P4::IR::MAU::SaluAction::ReturnEnumEncoding     *return_encoding = nullptr;
     int                                         return_enum_word = -1;
     bool                                        split_ifs = false;
-    std::map<int, const IR::Expression*>        output_param_operands;
-    std::map<int, const IR::Expression*>        output_predicates;
-    std::set<const IR::Expression*>             or_targets;
+    std::map<int, const P4::IR::Expression*>        output_param_operands;
+    std::map<int, const P4::IR::Expression*>        output_predicates;
+    std::set<const P4::IR::Expression*>             or_targets;
 
     // Map for detection of WAW data hazards
     // * Key is the lvalue
     // * Value is the set of predicates for a given expression and source code position
     // of given assignment
     struct AssignmentProperties {
-        const IR::Expression   *predicate;
+        const P4::IR::Expression   *predicate;
         const Util::SourceInfo &srcInfo;
-        explicit AssignmentProperties(const IR::Expression *pred, const Util::SourceInfo &src) :
+        explicit AssignmentProperties(const P4::IR::Expression *pred, const Util::SourceInfo &src) :
             predicate(pred), srcInfo(src) {}
     };
     std::map<cstring,
         std::vector<AssignmentProperties>>   written_dest;
-    const IR::AssignmentStatement           *assig_st = nullptr;
-    const IR::Expression                    *assig_pred = nullptr;
+    const P4::IR::AssignmentStatement           *assig_st = nullptr;
+    const P4::IR::Expression                    *assig_pred = nullptr;
     void captureAssigstateProps();
     void checkWriteAfterWrite();
 
-    bool isComplexInstruction(const IR::Operation_Binary *op) const;
-    void checkAndReportComplexInstruction(const IR::Operation_Binary* op) const;
+    bool isComplexInstruction(const P4::IR::Operation_Binary *op) const;
+    void checkAndReportComplexInstruction(const P4::IR::Operation_Binary* op) const;
 
     /**
      * @brief Insert the instruction into the SALU body.
@@ -227,87 +227,87 @@ class CreateSaluInstruction : public Inspector {
      * but they have a different predicate at the same time. If so, both instructions are
      * merged together and predicates are aggregated using the | operator.
      */
-    void insert_instruction(const IR::MAU::SaluInstruction *si);
+    void insert_instruction(const P4::IR::MAU::SaluInstruction *si);
 
     void clearFuncState();
-    const IR::MAU::SaluInstruction *createInstruction();
-    bool applyArg(const IR::PathExpression *, cstring);
-    const IR::Expression *reuseCmp(const IR::MAU::SaluInstruction *cmp, int idx);
+    const P4::IR::MAU::SaluInstruction *createInstruction();
+    bool applyArg(const P4::IR::PathExpression *, cstring);
+    const P4::IR::Expression *reuseCmp(const P4::IR::MAU::SaluInstruction *cmp, int idx);
     void setupCmp(cstring op);
     void splitWideInstructions();
     void assignOutputAlus();
-    const IR::MAU::SaluInstruction *setup_output();
-    bool outputEnumAsPredicate(const IR::Member *);
-    bool canBeIXBarExpr(const IR::Expression *);
+    const P4::IR::MAU::SaluInstruction *setup_output();
+    bool outputEnumAsPredicate(const P4::IR::Member *);
+    bool canBeIXBarExpr(const P4::IR::Expression *);
     bool outputAluHi();
     void checkActions(const Util::SourceInfo &srcInfo);
 
-    bool preorder(const IR::Declaration_Instance *di) override;
-    bool preorder(const IR::Declaration_Variable *v) override;
-    bool preorder(const IR::Property *) override { BUG("unconverted p4_14"); }
-    void postorder(const IR::Property *) override { BUG("unconverted p4_14"); }
-    bool preorder(const IR::Function *) override;
-    void postorder(const IR::Function *) override;
-    bool preorder(const IR::Annotations *) override { return false; }
+    bool preorder(const P4::IR::Declaration_Instance *di) override;
+    bool preorder(const P4::IR::Declaration_Variable *v) override;
+    bool preorder(const P4::IR::Property *) override { BUG("unconverted p4_14"); }
+    void postorder(const P4::IR::Property *) override { BUG("unconverted p4_14"); }
+    bool preorder(const P4::IR::Function *) override;
+    void postorder(const P4::IR::Function *) override;
+    bool preorder(const P4::IR::Annotations *) override { return false; }
     void doAssignment(const Util::SourceInfo &srcInfo);
-    bool preorder(const IR::AssignmentStatement *) override;
-    bool preorder(const IR::IfStatement *) override;
-    bool preorder(const IR::BlockStatement *) override { return true; }
-    bool preorder(const IR::EmptyStatement *) override { return true; }
-    bool preorder(const IR::Statement *s) override {
+    bool preorder(const P4::IR::AssignmentStatement *) override;
+    bool preorder(const P4::IR::IfStatement *) override;
+    bool preorder(const P4::IR::BlockStatement *) override { return true; }
+    bool preorder(const P4::IR::EmptyStatement *) override { return true; }
+    bool preorder(const P4::IR::Statement *s) override {
         error("%s: statement too complex for register action %s", s->srcInfo, s);
         return false; }
 
-    void doPrimary(const IR::Expression *, const IR::PathExpression *, cstring);
-    bool preorder(const IR::PathExpression *pe) override;
-    bool preorder(const IR::Member *m) override;
-    bool preorder(const IR::StructExpression *m) override;
+    void doPrimary(const P4::IR::Expression *, const P4::IR::PathExpression *, cstring);
+    bool preorder(const P4::IR::PathExpression *pe) override;
+    bool preorder(const P4::IR::Member *m) override;
+    bool preorder(const P4::IR::StructExpression *m) override;
 
-    bool preorder(const IR::Constant *) override;
-    bool preorder(const IR::BoolLiteral *) override;
-    bool preorder(const IR::AttribLocal *) override { BUG("unconverted p4_14"); }
-    bool preorder(const IR::Slice *) override;
-    bool preorder(const IR::MAU::Primitive *) override;
-    bool preorder(const IR::MAU::SaluRegfileRow *) override;
-    bool preorder(const IR::Operation::Relation *, cstring op, bool eq);
-    bool preorder(const IR::Equ *r) override { return preorder(r, "equ"_cs, true); }
-    bool preorder(const IR::Neq *r) override { return preorder(r, "neq"_cs, true); }
-    bool preorder(const IR::Grt *r) override { return preorder(r, "grt"_cs, false); }
-    bool preorder(const IR::Lss *r) override { return preorder(r, "lss"_cs, false); }
-    bool preorder(const IR::Geq *r) override { return preorder(r, "geq"_cs, false); }
-    bool preorder(const IR::Leq *r) override { return preorder(r, "leq"_cs, false); }
-    bool preorder(const IR::Cast *) override;
-    void postorder(const IR::Cast *) override;
-    bool preorder(const IR::BFN::SignExtend *) override;
-    bool preorder(const IR::BFN::ReinterpretCast *) override { return true; }
-    void postorder(const IR::BFN::ReinterpretCast *) override;
-    bool preorder(const IR::LNot *) override { return true; }
-    void postorder(const IR::LNot *) override;
-    bool preorder(const IR::LAnd *) override { return true; }
-    void postorder(const IR::LAnd *) override;
-    bool preorder(const IR::LOr *) override { return true; }
-    void postorder(const IR::LOr *) override;
-    bool preorder(const IR::Mux *) override;
-    bool preorder(const IR::Add *) override;
-    bool preorder(const IR::AddSat *) override;
-    bool preorder(const IR::Sub *) override;
-    bool preorder(const IR::SubSat *) override;
-    bool preorder(const IR::Neg *) override;
-    void postorder(const IR::Neg *) override;
-    bool preorder(const IR::Cmpl *) override { return true; }
-    void postorder(const IR::Cmpl *) override;
-    bool preorder(const IR::BAnd *) override;
-    void postorder(const IR::BAnd *) override;
-    bool preorder(const IR::BOr *) override;
-    void postorder(const IR::BOr *) override;
-    bool preorder(const IR::BXor *) override;
-    void postorder(const IR::BXor *) override;
-    bool preorder(const IR::Concat *) override;
-    void postorder(const IR::Concat *) override;
-    bool divmod(const IR::Operation::Binary *, cstring op);
-    bool preorder(const IR::Div *e) override { return divmod(e, "div"_cs); }
-    bool preorder(const IR::Mod *e) override { return divmod(e, "mod"_cs); }
-    bool preorder(const IR::Expression *e) override {
+    bool preorder(const P4::IR::Constant *) override;
+    bool preorder(const P4::IR::BoolLiteral *) override;
+    bool preorder(const P4::IR::AttribLocal *) override { BUG("unconverted p4_14"); }
+    bool preorder(const P4::IR::Slice *) override;
+    bool preorder(const P4::IR::MAU::Primitive *) override;
+    bool preorder(const P4::IR::MAU::SaluRegfileRow *) override;
+    bool preorder(const P4::IR::Operation::Relation *, cstring op, bool eq);
+    bool preorder(const P4::IR::Equ *r) override { return preorder(r, "equ"_cs, true); }
+    bool preorder(const P4::IR::Neq *r) override { return preorder(r, "neq"_cs, true); }
+    bool preorder(const P4::IR::Grt *r) override { return preorder(r, "grt"_cs, false); }
+    bool preorder(const P4::IR::Lss *r) override { return preorder(r, "lss"_cs, false); }
+    bool preorder(const P4::IR::Geq *r) override { return preorder(r, "geq"_cs, false); }
+    bool preorder(const P4::IR::Leq *r) override { return preorder(r, "leq"_cs, false); }
+    bool preorder(const P4::IR::Cast *) override;
+    void postorder(const P4::IR::Cast *) override;
+    bool preorder(const P4::IR::BFN::SignExtend *) override;
+    bool preorder(const P4::IR::BFN::ReinterpretCast *) override { return true; }
+    void postorder(const P4::IR::BFN::ReinterpretCast *) override;
+    bool preorder(const P4::IR::LNot *) override { return true; }
+    void postorder(const P4::IR::LNot *) override;
+    bool preorder(const P4::IR::LAnd *) override { return true; }
+    void postorder(const P4::IR::LAnd *) override;
+    bool preorder(const P4::IR::LOr *) override { return true; }
+    void postorder(const P4::IR::LOr *) override;
+    bool preorder(const P4::IR::Mux *) override;
+    bool preorder(const P4::IR::Add *) override;
+    bool preorder(const P4::IR::AddSat *) override;
+    bool preorder(const P4::IR::Sub *) override;
+    bool preorder(const P4::IR::SubSat *) override;
+    bool preorder(const P4::IR::Neg *) override;
+    void postorder(const P4::IR::Neg *) override;
+    bool preorder(const P4::IR::Cmpl *) override { return true; }
+    void postorder(const P4::IR::Cmpl *) override;
+    bool preorder(const P4::IR::BAnd *) override;
+    void postorder(const P4::IR::BAnd *) override;
+    bool preorder(const P4::IR::BOr *) override;
+    void postorder(const P4::IR::BOr *) override;
+    bool preorder(const P4::IR::BXor *) override;
+    void postorder(const P4::IR::BXor *) override;
+    bool preorder(const P4::IR::Concat *) override;
+    void postorder(const P4::IR::Concat *) override;
+    bool divmod(const P4::IR::Operation::Binary *, cstring op);
+    bool preorder(const P4::IR::Div *e) override { return divmod(e, "div"_cs); }
+    bool preorder(const P4::IR::Mod *e) override { return divmod(e, "mod"_cs); }
+    bool preorder(const P4::IR::Expression *e) override {
         error("%s: expression too complex for register action", e->srcInfo);
         return false; }
 
@@ -316,15 +316,15 @@ class CreateSaluInstruction : public Inspector {
     static std::map<std::pair<cstring, cstring>, std::vector<param_t>>  function_param_types;
 
  public:
-    explicit CreateSaluInstruction(IR::MAU::StatefulAlu *salu) : salu(salu) {
-        if (auto spec = salu->reg->type->to<IR::Type_Specialized>())
+    explicit CreateSaluInstruction(P4::IR::MAU::StatefulAlu *salu) : salu(salu) {
+        if (auto spec = salu->reg->type->to<P4::IR::Type_Specialized>())
             regtype = spec->arguments->at(0);  // RegisterAction
         else
-            regtype = IR::Type::Bits::get(1);  // SelectorAction
+            regtype = P4::IR::Type::Bits::get(1);  // SelectorAction
         visitDagOnce = false; }
 };
 
-/** Check all IR::MAU::StatefulAlu objects to make sure they're implementable
+/** Check all P4::IR::MAU::StatefulAlu objects to make sure they're implementable
  */
 class CheckStatefulAlu : public MauModifier {
     // There's a nasty problem outputting the address on jbay -- we have a way of
@@ -334,33 +334,33 @@ class CheckStatefulAlu : public MauModifier {
     struct AddressLmatchUsage : public Inspector {
         static unsigned regmasks[];
         void clear();
-        unsigned eval_cmp(const IR::Expression *);
-        bool preorder(const IR::MAU::SaluAction *) override;
-        bool preorder(const IR::MAU::SaluFunction *) override;
-        bool preorder(const IR::MAU::SaluCmpReg *) override;
-        bool safe_merge(const IR::Expression *a, const IR::Expression *b, unsigned inuse);
-        const IR::MAU::StatefulAlu      *salu;
+        unsigned eval_cmp(const P4::IR::Expression *);
+        bool preorder(const P4::IR::MAU::SaluAction *) override;
+        bool preorder(const P4::IR::MAU::SaluFunction *) override;
+        bool preorder(const P4::IR::MAU::SaluCmpReg *) override;
+        bool safe_merge(const P4::IR::Expression *a, const P4::IR::Expression *b, unsigned inuse);
+        const P4::IR::MAU::StatefulAlu      *salu;
         unsigned                inuse_mask;      // cmp registers used in this action
-        const IR::Expression    *lmatch_operand;
+        const P4::IR::Expression    *lmatch_operand;
         unsigned                lmatch_inuse_mask;
     } lmatch_usage;
 
-    bool preorder(IR::MAU::StatefulAlu *) override;
-    bool preorder(IR::MAU::SaluFunction *) override;
-    bool preorder(IR::MAU::Primitive *) override;
+    bool preorder(P4::IR::MAU::StatefulAlu *) override;
+    bool preorder(P4::IR::MAU::SaluFunction *) override;
+    bool preorder(P4::IR::MAU::Primitive *) override;
 
     /**
      * @brief Check that register params and large constants used in register actions associated
      * with a given register fit in the device's register file rows.
      *
      */
-    void postorder(IR::MAU::StatefulAlu *) override;
-    void postorder(IR::MAU::SaluInstruction *) override;
+    void postorder(P4::IR::MAU::StatefulAlu *) override;
+    void postorder(P4::IR::MAU::SaluInstruction *) override;
 
     // FIXME -- Type_Typedef should have been resolved and removed by Typechecking in the
     // midend?  But we're running into it here, so a helper to skip over typedefs.
-    static const IR::Type *getType(const IR::Type *t) {
-        while (auto td = t->to<IR::Type_Typedef>()) t = td->type;
+    static const P4::IR::Type *getType(const P4::IR::Type *t) {
+        while (auto td = t->to<P4::IR::Type_Typedef>()) t = td->type;
         return t; }
 
     std::set<big_int> large_constants;
@@ -388,39 +388,39 @@ class FixupStatefulAlu : public PassManager {
 
     struct return_enum_info_t {
         cstring                                         enum_name;
-        ordered_set<const IR::MAU::SaluAction *>        actions;
-        const IR::MAU::SaluAction::ReturnEnumEncoding   *encoding;
+        ordered_set<const P4::IR::MAU::SaluAction *>        actions;
+        const P4::IR::MAU::SaluAction::ReturnEnumEncoding   *encoding;
     };
-    ordered_map<const IR::Type_Enum *, return_enum_info_t>      encodings;
+    ordered_map<const P4::IR::Type_Enum *, return_enum_info_t>      encodings;
     int                                 pred_type_size;
-    const IR::Type::Bits                *pred_type;
+    const P4::IR::Type::Bits                *pred_type;
 
     struct FindEncodings : public MauInspector {
         FixupStatefulAlu        &self;
-        bool preorder(const IR::MAU::SaluAction *) override;
-        bool preorder(const IR::MAU::Action *) override { return false; }
+        bool preorder(const P4::IR::MAU::SaluAction *) override;
+        bool preorder(const P4::IR::MAU::Action *) override { return false; }
         explicit FindEncodings(FixupStatefulAlu &self) : self(self) {}
     };
     struct UpdateEncodings : public Transform {
         FixupStatefulAlu        &self;
-        const IR::BFN::Pipe *preorder(IR::BFN::Pipe *p) override {
+        const P4::IR::BFN::Pipe *preorder(P4::IR::BFN::Pipe *p) override {
             if (self.encodings.empty()) prune();
             return p; }
-        const IR::MAU::SaluAction *preorder(IR::MAU::SaluAction *) override;
-        const IR::Operation::Relation *preorder(IR::Operation::Relation *) override;
-        const IR::Expression *preorder(IR::Member *) override;
-        const IR::Expression *preorder(IR::Expression *) override;
-        const IR::BFN::ParserRVal *postorder(IR::BFN::SavedRVal *) override;
+        const P4::IR::MAU::SaluAction *preorder(P4::IR::MAU::SaluAction *) override;
+        const P4::IR::Operation::Relation *preorder(P4::IR::Operation::Relation *) override;
+        const P4::IR::Expression *preorder(P4::IR::Member *) override;
+        const P4::IR::Expression *preorder(P4::IR::Expression *) override;
+        const P4::IR::BFN::ParserRVal *postorder(P4::IR::BFN::SavedRVal *) override;
 
         explicit UpdateEncodings(FixupStatefulAlu &self) : self(self) {}
     };
     struct ReplaceUpdatedEnumTypes : public Transform {
         FixupStatefulAlu        &self;
-        const IR::Expression *postorder(IR::Expression *exp) {
+        const P4::IR::Expression *postorder(P4::IR::Expression *exp) {
             visit(exp->type, "type");
             return exp; }
-        const IR::Type *preorder(IR::Type_Enum *enum_t) {
-            if (self.encodings.count(getOriginal<IR::Type_Enum>()))
+        const P4::IR::Type *preorder(P4::IR::Type_Enum *enum_t) {
+            if (self.encodings.count(getOriginal<P4::IR::Type_Enum>()))
                 return self.pred_type;
             return enum_t; }
         explicit ReplaceUpdatedEnumTypes(FixupStatefulAlu &self) : self(self) {}
@@ -434,7 +434,7 @@ class FixupStatefulAlu : public PassManager {
         new ReplaceUpdatedEnumTypes(*this),
     }) {
         pred_type_size = 1 << Device::statefulAluSpec().CmpUnits.size();
-        pred_type = IR::Type::Bits::get(pred_type_size);
+        pred_type = P4::IR::Type::Bits::get(pred_type_size);
     }
 };
 

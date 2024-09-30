@@ -17,7 +17,7 @@
 #include "bf-p4c/phv/phv_fields.h"
 #include "bf-p4c/mau/validate_actions.h"
 
-bool UnimplementedRegisterMethodCalls::preorder(const IR::MAU::Primitive *prim) {
+bool UnimplementedRegisterMethodCalls::preorder(const P4::IR::MAU::Primitive *prim) {
     auto dot = prim->name.find('.');
     auto objType = dot ? prim->name.before(dot) : cstring();
     cstring method = dot ? cstring(dot+1) : prim->name;
@@ -30,12 +30,12 @@ bool UnimplementedRegisterMethodCalls::preorder(const IR::MAU::Primitive *prim) 
     return true;
 }
 
-const IR::Expression *ToFunnelShiftInstruction::preorder(IR::Cast *e) {
-    const IR::Type* srcType = e->expr->type;
-    const IR::Type* dstType = e->destType;
+const P4::IR::Expression *ToFunnelShiftInstruction::preorder(P4::IR::Cast *e) {
+    const P4::IR::Type* srcType = e->expr->type;
+    const P4::IR::Type* dstType = e->destType;
 
-    if (srcType->is<IR::Type_Bits>() && dstType->is<IR::Type_Bits>()) {
-        if (srcType->to<IR::Type_Bits>()->isSigned != dstType->to<IR::Type_Bits>()->isSigned)
+    if (srcType->is<P4::IR::Type_Bits>() && dstType->is<P4::IR::Type_Bits>()) {
+        if (srcType->to<P4::IR::Type_Bits>()->isSigned != dstType->to<P4::IR::Type_Bits>()->isSigned)
             return e;
 
         if (srcType->width_bits() > dstType->width_bits()) {
@@ -47,56 +47,56 @@ const IR::Expression *ToFunnelShiftInstruction::preorder(IR::Cast *e) {
             // funnel shifting. At this point, if we still have a format where the source
             // concatenation is larger than the destination, it mean the decision was to use funnel
             // shifting.
-            if (auto *shift = e->expr->to<IR::Shr>()) {
-                if (auto *concat = shift->left->to<IR::Concat>()) {
-                    if (shift->right->to<IR::Constant>()->value ==
+            if (auto *shift = e->expr->to<P4::IR::Shr>()) {
+                if (auto *concat = shift->left->to<P4::IR::Concat>()) {
+                    if (shift->right->to<P4::IR::Constant>()->value ==
                             concat->right->type->width_bits()) {
-                        return new IR::MAU::Instruction(e->srcInfo, "set"_cs,
-                                { new IR::TempVar(shift->type), concat->left });
+                        return new P4::IR::MAU::Instruction(e->srcInfo, "set"_cs,
+                                { new P4::IR::TempVar(shift->type), concat->left });
                     } else {
-                        return new IR::MAU::Instruction(e->srcInfo, "funnel-shift"_cs,
-                                { new IR::TempVar(shift->type), concat->left, concat->right,
+                        return new P4::IR::MAU::Instruction(e->srcInfo, "funnel-shift"_cs,
+                                { new P4::IR::TempVar(shift->type), concat->left, concat->right,
                                 shift->right });
                     }
                 }
-            } else if (auto *concat = e->expr->to<IR::Concat>()) {
-                    return new IR::MAU::Instruction(e->srcInfo, "funnel-shift"_cs,
-                        { new IR::TempVar(concat->type), concat->left, concat->right,
-                          new IR::Constant(0) });
+            } else if (auto *concat = e->expr->to<P4::IR::Concat>()) {
+                    return new P4::IR::MAU::Instruction(e->srcInfo, "funnel-shift"_cs,
+                        { new P4::IR::TempVar(concat->type), concat->left, concat->right,
+                          new P4::IR::Constant(0) });
             }
         }
     }
     return e;
 }
 
-const IR::Expression *ConvertFunnelShiftExtern::preorder(IR::Primitive* prim) {
+const P4::IR::Expression *ConvertFunnelShiftExtern::preorder(P4::IR::Primitive* prim) {
     if (prim->name != "funnel_shift_right")
         return prim;
     const auto* dst = prim->operands[0];
     const auto* src1 = prim->operands[1];
     const auto* src2 = prim->operands[2];
     const auto* n_shift = prim->operands[3];
-    return new IR::MAU::Instruction(prim->srcInfo, "funnel-shift"_cs, {dst, src1, src2, n_shift});
+    return new P4::IR::MAU::Instruction(prim->srcInfo, "funnel-shift"_cs, {dst, src1, src2, n_shift});
 }
 
-bool HashGenSetup::CreateHashGenExprs::preorder(const IR::BFN::SignExtend *se) {
-    if (!findContext<IR::MAU::Action>())
+bool HashGenSetup::CreateHashGenExprs::preorder(const P4::IR::BFN::SignExtend *se) {
+    if (!findContext<P4::IR::MAU::Action>())
         return false;
     if (CanBeIXBarExpr(se)) {
         per_prim_hge.push_back(se);
-        auto hge = new IR::MAU::HashGenExpression(se->srcInfo, se->type, se,
-                                                  IR::MAU::HashFunction::identity());
+        auto hge = new P4::IR::MAU::HashGenExpression(se->srcInfo, se->type, se,
+                                                  P4::IR::MAU::HashFunction::identity());
         self.hash_gen_injections[se] = hge;
         return false;
     }
     return true;
 }
 
-bool HashGenSetup::CreateHashGenExprs::preorder(const IR::Concat *c) {
-    if (!findContext<IR::MAU::Action>())
+bool HashGenSetup::CreateHashGenExprs::preorder(const P4::IR::Concat *c) {
+    if (!findContext<P4::IR::MAU::Action>())
         return false;
-    auto *prim = findContext<IR::MAU::Primitive>();
-    auto k = c->left->to<IR::Constant>();
+    auto *prim = findContext<P4::IR::MAU::Primitive>();
+    auto k = c->left->to<P4::IR::Constant>();
     if ((!prim || !prim->in_hash) && k && k->value == 0 && self.phv.field(c->right)) {
         // HACK -- avoid dealing with 0-prefix concats (zero extension) as the midend
         // now changes zero-extend casts into them, and trying to do them in the hash
@@ -104,38 +104,38 @@ bool HashGenSetup::CreateHashGenExprs::preorder(const IR::Concat *c) {
         return true; }
     if (CanBeIXBarExpr(c)) {
         per_prim_hge.push_back(c);
-        auto hge = new IR::MAU::HashGenExpression(c->srcInfo, c->type, c,
-                                                  IR::MAU::HashFunction::identity());
+        auto hge = new P4::IR::MAU::HashGenExpression(c->srcInfo, c->type, c,
+                                                  P4::IR::MAU::HashFunction::identity());
         self.hash_gen_injections[c] = hge;
     }
     return false;
 }
 
-bool HashGenSetup::CreateHashGenExprs::preorder(const IR::Expression *expr) {
-    if (!findContext<IR::MAU::Action>())
+bool HashGenSetup::CreateHashGenExprs::preorder(const P4::IR::Expression *expr) {
+    if (!findContext<P4::IR::MAU::Action>())
         return false;
-    auto *prim = findContext<IR::MAU::Primitive>();
+    auto *prim = findContext<P4::IR::MAU::Primitive>();
     if (prim && prim->in_hash && !isWrite() && CanBeIXBarExpr(expr)) {
         per_prim_hge.push_back(expr);
-        auto hge = new IR::MAU::HashGenExpression(expr->srcInfo, expr->type, expr,
-                                                  IR::MAU::HashFunction::identity());
+        auto hge = new P4::IR::MAU::HashGenExpression(expr->srcInfo, expr->type, expr,
+                                                  P4::IR::MAU::HashFunction::identity());
         self.hash_gen_injections[expr] = hge;
         return false; }
     return true;
 }
 
-bool HashGenSetup::CreateHashGenExprs::preorder(const IR::Constant *) {
+bool HashGenSetup::CreateHashGenExprs::preorder(const P4::IR::Constant *) {
     // Never worth while to put a constant by itself through hash dist (though possible!),
     // so don't do it
     return false;
 }
 
-void HashGenSetup::CreateHashGenExprs::check_for_symmetric(const IR::Declaration_Instance *decl,
-        const IR::ListExpression *le, IR::MAU::HashFunction hf, LTBitMatrix *sym_keys) {
-    auto tbl = findContext<IR::MAU::Table>();
+void HashGenSetup::CreateHashGenExprs::check_for_symmetric(const P4::IR::Declaration_Instance *decl,
+        const P4::IR::ListExpression *le, P4::IR::MAU::HashFunction hf, LTBitMatrix *sym_keys) {
+    auto tbl = findContext<P4::IR::MAU::Table>();
     if (!tbl) return;
 
-    safe_vector<const IR::Expression *> field_list;
+    safe_vector<const P4::IR::Expression *> field_list;
     for (auto expr : le->components) {
         field_list.push_back(expr);
     }
@@ -146,23 +146,23 @@ void HashGenSetup::CreateHashGenExprs::check_for_symmetric(const IR::Declaration
  * @brief Construct a field list expression from a hash list and update the relevant properties.
  * @see HashGenSetup::CreateHashGenExprs::preorder.
  */
-void load_hash_details(const BFN_Options &options, const IR::Expression *orig_hash_list,
+void load_hash_details(const BFN_Options &options, const P4::IR::Expression *orig_hash_list,
                         int &hash_output_width, cstring &hash_name,
-                        IR::NameList const* &alg_names, IR::MAU::FieldListExpression *&fle) {
+                        P4::IR::NameList const* &alg_names, P4::IR::MAU::FieldListExpression *&fle) {
     if (options.langVersion == CompilerOptions::FrontendVersion::P4_14) {
-        if (orig_hash_list->is<IR::HashListExpression>()) {
-            auto hle = orig_hash_list->to<IR::HashListExpression>();
+        if (orig_hash_list->is<P4::IR::HashListExpression>()) {
+            auto hle = orig_hash_list->to<P4::IR::HashListExpression>();
 
-            IR::ID fl_id(hle->fieldListNames->names[0]);
-            fle = new IR::MAU::FieldListExpression(hle->srcInfo, hle->components, fl_id);
+            P4::IR::ID fl_id(hle->fieldListNames->names[0]);
+            fle = new P4::IR::MAU::FieldListExpression(hle->srcInfo, hle->components, fl_id);
             hash_name = hle->fieldListCalcName;
             hash_output_width = hle->outputWidth;
             alg_names = hle->algorithms;
-        } else if (orig_hash_list->is<IR::HashStructExpression>()) {
-            auto hse = orig_hash_list->to<IR::HashStructExpression>();
+        } else if (orig_hash_list->is<P4::IR::HashStructExpression>()) {
+            auto hse = orig_hash_list->to<P4::IR::HashStructExpression>();
 
-            IR::ID fl_id(hse->fieldListNames->names[0]);
-            fle = new IR::MAU::FieldListExpression(hse->srcInfo,
+            P4::IR::ID fl_id(hse->fieldListNames->names[0]);
+            fle = new P4::IR::MAU::FieldListExpression(hse->srcInfo,
                                                    *getListExprComponents(*orig_hash_list), fl_id);
             hash_name = hse->fieldListCalcName;
             hash_output_width = hse->outputWidth;
@@ -171,22 +171,22 @@ void load_hash_details(const BFN_Options &options, const IR::Expression *orig_ha
             BUG("Hash not converted correctly in the midend");
         }
     } else {
-        const IR::ListExpression *le = orig_hash_list->to<IR::ListExpression>();
+        const P4::IR::ListExpression *le = orig_hash_list->to<P4::IR::ListExpression>();
         if (le == nullptr) {
-            if (orig_hash_list->is<IR::StructExpression>()) {
-                le = new IR::ListExpression(orig_hash_list->srcInfo,
+            if (orig_hash_list->is<P4::IR::StructExpression>()) {
+                le = new P4::IR::ListExpression(orig_hash_list->srcInfo,
                                             *getListExprComponents(*orig_hash_list));
-            } else if (orig_hash_list->is<IR::Expression>()) {
-                IR::Vector<IR::Expression> le_vec;
+            } else if (orig_hash_list->is<P4::IR::Expression>()) {
+                P4::IR::Vector<P4::IR::Expression> le_vec;
                 le_vec.push_back(orig_hash_list);
-                le = new IR::ListExpression(orig_hash_list->srcInfo, le_vec);
+                le = new P4::IR::ListExpression(orig_hash_list->srcInfo, le_vec);
             }
         }
 
         BUG_CHECK(le != nullptr, "Hash.get calls must have a valid input or list of inputs");
 
-        IR::ID fl_id("$field_list_1");
-        fle = new IR::MAU::FieldListExpression(le->srcInfo, le->components, fl_id);
+        P4::IR::ID fl_id("$field_list_1");
+        fle = new P4::IR::MAU::FieldListExpression(le->srcInfo, le->components, fl_id);
         fle->rotateable = true;
         fle->permutable = true;
         hash_name += ".configure";
@@ -208,23 +208,23 @@ void load_hash_details(const BFN_Options &options, const IR::Expression *orig_ha
  * 3.  P4-14 can allow only certain algorithms, the one that come through names, p4-16 can allow
  *     any hash algorithm necessary.  Everything is rotateable and permutable.
  */
-bool HashGenSetup::CreateHashGenExprs::preorder(const IR::MAU::Primitive *prim) {
+bool HashGenSetup::CreateHashGenExprs::preorder(const P4::IR::MAU::Primitive *prim) {
     per_prim_hge.clear();
     if (prim->name != "Hash.get")
         return true;
 
     cstring hash_name;
-    IR::MAU::HashGenExpression *hge = nullptr;
-    IR::MAU::FieldListExpression *fle = nullptr;
-    IR::MAU::HashFunction algorithm;
+    P4::IR::MAU::HashGenExpression *hge = nullptr;
+    P4::IR::MAU::FieldListExpression *fle = nullptr;
+    P4::IR::MAU::HashFunction algorithm;
 
     auto it = prim->operands.begin();
     // operand 0 is always the extern itself.
     BUG_CHECK(it != prim->operands.end(), "primitive %s does not have a reference to P4 extern",
               prim->name);
-    auto glob = (*it)->to<IR::GlobalRef>();
-    auto decl = glob->obj->to<IR::Declaration_Instance>();
-    auto *orig_type = decl->type->to<IR::Type_Specialized>()->arguments->at(0);
+    auto glob = (*it)->to<P4::IR::GlobalRef>();
+    auto decl = glob->obj->to<P4::IR::Declaration_Instance>();
+    auto *orig_type = decl->type->to<P4::IR::Type_Specialized>()->arguments->at(0);
     int hash_output_width = orig_type->width_bits();
     int bit_size = hash_output_width;
 
@@ -235,7 +235,7 @@ bool HashGenSetup::CreateHashGenExprs::preorder(const IR::MAU::Primitive *prim) 
 
     bool custom_hash = false;
     std::advance(it, 1);
-    auto crc_poly = (*it)->to<IR::GlobalRef>();
+    auto crc_poly = (*it)->to<P4::IR::GlobalRef>();
     if (crc_poly) {
         custom_hash = true;
         if (!algorithm.convertPolynomialExtern(crc_poly))
@@ -252,13 +252,13 @@ bool HashGenSetup::CreateHashGenExprs::preorder(const IR::MAU::Primitive *prim) 
     auto orig_hash_list = *it;
     if (remaining_op_size > 1) {
         auto base = std::next(it, 1);
-        if (auto *constant = (*base)->to<IR::Constant>()) {
+        if (auto *constant = (*base)->to<P4::IR::Constant>()) {
             if (constant->asInt() != 0)
                 error("%1%: The initial offset for a hash calculation function has to be zero "
                       "instead of %2%", prim, constant);
         }
         auto max = std::next(it, 2);
-        if (auto *constant = (*max)->to<IR::Constant>()) {
+        if (auto *constant = (*max)->to<P4::IR::Constant>()) {
             auto value = constant->asUint64();
             if (value != 0) {
                 bit_size = bitcount(value - 1);
@@ -269,13 +269,13 @@ bool HashGenSetup::CreateHashGenExprs::preorder(const IR::MAU::Primitive *prim) 
         }
     }
 
-    const IR::NameList *alg_names = nullptr;
+    const P4::IR::NameList *alg_names = nullptr;
     load_hash_details(self.options, orig_hash_list, hash_output_width,
                                 hash_name, alg_names, fle);
 
     check_for_symmetric(decl, fle, algorithm, &fle->symmetric_keys);
-    auto *type = IR::Type::Bits::get(bit_size);
-    hge = new IR::MAU::HashGenExpression(prim->srcInfo, type, fle, IR::ID(hash_name), algorithm);
+    auto *type = P4::IR::Type::Bits::get(bit_size);
+    hge = new P4::IR::MAU::HashGenExpression(prim->srcInfo, type, fle, P4::IR::ID(hash_name), algorithm);
     // Symmetric is not supported with bf-utils dynamic hash library
     hge->dynamic = fle->symmetric_keys.empty();
     hge->any_alg_allowed = self.options.langVersion == CompilerOptions::FrontendVersion::P4_16;
@@ -285,10 +285,10 @@ bool HashGenSetup::CreateHashGenExprs::preorder(const IR::MAU::Primitive *prim) 
     return false;
 }
 
-static const IR::Expression *removeSliceAndCast(const IR::Expression *expr) {
-    if (auto *sl = expr->to<IR::Slice>())
+static const P4::IR::Expression *removeSliceAndCast(const P4::IR::Expression *expr) {
+    if (auto *sl = expr->to<P4::IR::Slice>())
         return removeSliceAndCast(sl->e0);
-    if (auto *c = expr->to<IR::Cast>())
+    if (auto *c = expr->to<P4::IR::Cast>())
         return removeSliceAndCast(c->expr);
     return expr;
 }
@@ -296,21 +296,21 @@ static const IR::Expression *removeSliceAndCast(const IR::Expression *expr) {
 /* check which expression is better done in the hash for a primitive that writes to dest.
  * returns true if b is same or better, false if a is better
  */
-bool HashGenSetup::CreateHashGenExprs::isBetter(const IR::Expression *dest,
-    const IR::Expression *a, const IR::Expression *b) {
+bool HashGenSetup::CreateHashGenExprs::isBetter(const P4::IR::Expression *dest,
+    const P4::IR::Expression *a, const P4::IR::Expression *b) {
     if (a->equiv(*dest)) return true;
     if (b->equiv(*dest)) return false;
-    if (a->is<IR::Constant>()) return true;
-    if (b->is<IR::Constant>()) return false;
-    return a->is<IR::Member>() || a->is<IR::TempVar>();
+    if (a->is<P4::IR::Constant>()) return true;
+    if (b->is<P4::IR::Constant>()) return false;
+    return a->is<P4::IR::Member>() || a->is<P4::IR::TempVar>();
 }
 
-void HashGenSetup::CreateHashGenExprs::postorder(const IR::MAU::Primitive *prim) {
+void HashGenSetup::CreateHashGenExprs::postorder(const P4::IR::MAU::Primitive *prim) {
     if (per_prim_hge.size() > 1) {
         /* can only have one hash_gen expression per primitive, so we need to decide which
          * one is "best" and get rid of the rest. */
         auto *dest = removeSliceAndCast(prim->operands.at(0));
-        const IR::Expression *best = nullptr;
+        const P4::IR::Expression *best = nullptr;
         for (auto *expr : per_prim_hge) {
             if (!best) {
                 best = expr;
@@ -326,17 +326,17 @@ void HashGenSetup::CreateHashGenExprs::postorder(const IR::MAU::Primitive *prim)
     per_prim_hge.clear();
 }
 
-bool HashGenSetup::ScanHashDists::preorder(const IR::Expression *expr) {
+bool HashGenSetup::ScanHashDists::preorder(const P4::IR::Expression *expr) {
     if (self.hash_gen_injections.count(expr) == 0)
         return true;
     auto context = getContext();
-    const IR::Node *curr_node = expr;
-    while (context->node->is<IR::Slice>() || context->node->is<IR::Cast>()) {
+    const P4::IR::Node *curr_node = expr;
+    while (context->node->is<P4::IR::Slice>() || context->node->is<P4::IR::Cast>()) {
         curr_node = context->node;
         context = context->parent;
     }
 
-    auto highest_expr = curr_node->to<IR::Expression>();
+    auto highest_expr = curr_node->to<P4::IR::Expression>();
     self.hash_dist_injections.insert(highest_expr);
     return false;
 }
@@ -351,9 +351,9 @@ bool HashGenSetup::ScanHashDists::preorder(const IR::Expression *expr) {
  * as converting this to a HashGenExpression by itself will fail the Action check that
  * all base statements in the action are Primitives or their subclass.
  */
-const IR::Expression *HashGenSetup::UpdateHashDists::postorder(IR::Expression *e) {
+const P4::IR::Expression *HashGenSetup::UpdateHashDists::postorder(P4::IR::Expression *e) {
     auto rv = e;
-    auto origExpr = getOriginal()->to<IR::Expression>();
+    auto origExpr = getOriginal()->to<P4::IR::Expression>();
     auto hgi = self.hash_gen_injections.find(origExpr);
     if (hgi != self.hash_gen_injections.end()) {
         rv = hgi->second;
@@ -361,30 +361,30 @@ const IR::Expression *HashGenSetup::UpdateHashDists::postorder(IR::Expression *e
 
     auto hdi = self.hash_dist_injections.find(origExpr);
     if (hdi != self.hash_dist_injections.end()) {
-        auto tv = new IR::TempVar(e->type);
-        auto hd2 = new IR::MAU::HashDist(rv->srcInfo, rv->type, rv);
-        auto inst = new IR::MAU::Instruction(e->srcInfo, "set"_cs, tv, hd2);
+        auto tv = new P4::IR::TempVar(e->type);
+        auto hd2 = new P4::IR::MAU::HashDist(rv->srcInfo, rv->type, rv);
+        auto inst = new P4::IR::MAU::Instruction(e->srcInfo, "set"_cs, tv, hd2);
         rv = inst;
     }
     return rv;
 }
 
-const IR::MAU::Action *Synth2PortSetup::preorder(IR::MAU::Action *act) {
+const P4::IR::MAU::Action *Synth2PortSetup::preorder(P4::IR::MAU::Action *act) {
     clear_action();
     return act;
 }
 /** Converts any method calls relating to Synth2Port tables to the associated AttachedOutput
  *  if necessary, and once converted, saves this value to the primitive
  */
-const IR::Node *Synth2PortSetup::postorder(IR::MAU::Primitive *prim) {
-    if (findContext<IR::MAU::SaluAction>())
+const P4::IR::Node *Synth2PortSetup::postorder(P4::IR::MAU::Primitive *prim) {
+    if (findContext<P4::IR::MAU::SaluAction>())
         return prim;
 
-    auto act = findContext<IR::MAU::Action>();
+    auto act = findContext<P4::IR::MAU::Action>();
     if (act == nullptr)
         return prim;
 
-    auto tbl = findContext<IR::MAU::Table>();
+    auto tbl = findContext<P4::IR::MAU::Table>();
     if (tbl == nullptr)
         return prim;
 
@@ -393,25 +393,25 @@ const IR::Node *Synth2PortSetup::postorder(IR::MAU::Primitive *prim) {
     const char *tail = objType.c_str() + objType.size();
     while (tail > objType && std::isdigit(tail[-1])) --tail;
     objType = objType.before(tail);
-    IR::Node *rv = prim;
+    P4::IR::Node *rv = prim;
 
-    const IR::GlobalRef *glob = nullptr;
+    const P4::IR::GlobalRef *glob = nullptr;
 
-    IR::MAU::MeterType meter_type = IR::MAU::MeterType::UNUSED;
+    P4::IR::MAU::MeterType meter_type = P4::IR::MAU::MeterType::UNUSED;
 
     cstring method = dot ? cstring(dot+1) : prim->name;
     if (objType.endsWith("Action") || objType == "SelectorAction") {
         bool direct_access = (prim->operands.size() == 1 && method == "execute") ||
                              objType == "DirectRegisterAction" ||
                              method == "execute_direct";
-        glob = prim->operands.at(0)->to<IR::GlobalRef>();
-        auto salu = glob->obj->to<IR::MAU::StatefulAlu>();
+        glob = prim->operands.at(0)->to<P4::IR::GlobalRef>();
+        auto salu = glob->obj->to<P4::IR::MAU::StatefulAlu>();
         if (method == "address") {
-            if (getParent<IR::MAU::Action>()) {
+            if (getParent<P4::IR::MAU::Action>()) {
                 // dead use of the address, so discard it.
                 return nullptr; }
-            auto t = IR::Type::Bits::get(32);
-            return new IR::MAU::StatefulCounter(prim->srcInfo, t, salu); }
+            auto t = P4::IR::Type::Bits::get(32);
+            return new P4::IR::MAU::StatefulCounter(prim->srcInfo, t, salu); }
         auto *salu_inst = salu->calledAction(tbl, act);
         BUG_CHECK(salu_inst != nullptr, "%s: Could not find called action for stateful memory in ",
                   prim->srcInfo, salu->name);
@@ -422,13 +422,13 @@ const IR::Node *Synth2PortSetup::postorder(IR::MAU::Primitive *prim) {
             salu_index = std::distance(salu->instruction.begin(), pos); }
         switch (salu_index) {
             case 0:
-                meter_type = IR::MAU::MeterType::STFUL_INST0; break;
+                meter_type = P4::IR::MAU::MeterType::STFUL_INST0; break;
             case 1:
-                meter_type = IR::MAU::MeterType::STFUL_INST1; break;
+                meter_type = P4::IR::MAU::MeterType::STFUL_INST1; break;
             case 2:
-                meter_type = IR::MAU::MeterType::STFUL_INST2; break;
+                meter_type = P4::IR::MAU::MeterType::STFUL_INST2; break;
             case 3:
-                meter_type = IR::MAU::MeterType::STFUL_INST3; break;
+                meter_type = P4::IR::MAU::MeterType::STFUL_INST3; break;
             default:
                 BUG("%s: An stateful instruction %s is outside the bounds of the stateful "
                     "memory in %s", prim->srcInfo, salu_inst, salu->name);
@@ -442,8 +442,8 @@ const IR::Node *Synth2PortSetup::postorder(IR::MAU::Primitive *prim) {
                   direct_access ? "" : "in", salu->direct ? "" : "in");
 
         int output_offsets[] = { 0, 64, 32, 96 };
-        auto makeInstr = [&](const IR::Expression *dest, int param,
-                             int output_alu) -> IR::MAU::Instruction * {
+        auto makeInstr = [&](const P4::IR::Expression *dest, int param,
+                             int output_alu) -> P4::IR::MAU::Instruction * {
             BUG_CHECK(size_t(output_alu) < sizeof(output_offsets)/sizeof(output_offsets[0]),
                       "too many outputs");
             int bit = output_offsets[output_alu];
@@ -454,16 +454,16 @@ const IR::Node *Synth2PortSetup::postorder(IR::MAU::Primitive *prim) {
                           "its being used");
                 bit += 4 + salu->pred_shift;
                 output_size = 1 << Device::statefulAluSpec().CmpUnits.size(); }
-            auto ao = new IR::MAU::AttachedOutput(IR::Type::Bits::get(bit+output_size), salu);
+            auto ao = new P4::IR::MAU::AttachedOutput(P4::IR::Type::Bits::get(bit+output_size), salu);
             int dest_size = dest->type->width_bits();
             if (output_size < dest_size) {
-                created_instrs.push_back(new IR::MAU::Instruction(
+                created_instrs.push_back(new P4::IR::MAU::Instruction(
                     prim->srcInfo, "set"_cs, MakeSlice(dest, output_size, dest_size - 1),
-                    new IR::Constant(IR::Type_Bits::get(dest_size - output_size), 0)));
+                    new P4::IR::Constant(P4::IR::Type_Bits::get(dest_size - output_size), 0)));
                 dest = MakeSlice(dest, 0, output_size - 1);
             } else
                 output_size = dest_size;
-            return new IR::MAU::Instruction(prim->srcInfo, "set"_cs, dest,
+            return new P4::IR::MAU::Instruction(prim->srcInfo, "set"_cs, dest,
                                             MakeSlice(ao, bit, bit+output_size - 1));
         };
 
@@ -476,64 +476,64 @@ const IR::Node *Synth2PortSetup::postorder(IR::MAU::Primitive *prim) {
             created_instrs.push_back(makeInstr(prim->operands[idx], output, alu->second));
         }
         rv = nullptr;
-        if (prim->type->is<IR::Type::Void>()) {
-        } else if (prim->type->is<IR::Type::Bits>() || prim->type->is<IR::Type_Enum>() ||
-                   prim->type->is<IR::Type::Boolean>()) {
+        if (prim->type->is<P4::IR::Type::Void>()) {
+        } else if (prim->type->is<P4::IR::Type::Bits>() || prim->type->is<P4::IR::Type_Enum>() ||
+                   prim->type->is<P4::IR::Type::Boolean>()) {
             const auto alu = salu_inst->output_param_to_alu.find(0);
             BUG_CHECK(alu != salu_inst->output_param_to_alu.end(),
                       "No output ALU assigned to paramater 0 in %1%", salu_inst->name);
-            rv = makeInstr(new IR::TempVar(prim->type), 0, alu->second);
+            rv = makeInstr(new P4::IR::TempVar(prim->type), 0, alu->second);
         } else {
             error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "%1%: %2% return type must be simple "
                   "(void, bit, bool or enum), not complex", prim, objType); }
     } else if (prim->name == "Register.clear" || prim->name == "DirectRegister.clear") {
-        glob = prim->operands.at(0)->to<IR::GlobalRef>();
-        meter_type = IR::MAU::MeterType::STFUL_CLEAR;
+        glob = prim->operands.at(0)->to<P4::IR::GlobalRef>();
+        meter_type = P4::IR::MAU::MeterType::STFUL_CLEAR;
         stateful.push_back(prim);  // needed to setup clear/busy values
         rv = nullptr;
     } else if (prim->name == "Counter.count") {
-        glob = prim->operands.at(0)->to<IR::GlobalRef>();
+        glob = prim->operands.at(0)->to<P4::IR::GlobalRef>();
         stateful.push_back(prim);  // needed to setup the index
         rv = nullptr;
     } else if (prim->name == "Lpf.execute" || prim->name == "Wred.execute" ||
                prim->name == "Meter.execute" || prim->name == "DirectLpf.execute" ||
                prim->name == "DirectWred.execute") {
-        glob = prim->operands.at(0)->to<IR::GlobalRef>();
-        auto mtr = glob->obj->to<IR::MAU::Meter>();
+        glob = prim->operands.at(0)->to<P4::IR::GlobalRef>();
+        auto mtr = glob->obj->to<P4::IR::MAU::Meter>();
         BUG_CHECK(mtr != nullptr, "%s: Cannot find associated meter for the method call %s",
                   prim->srcInfo, *prim);
         stateful.push_back(prim);
-        rv = new IR::MAU::Instruction(prim->srcInfo, "set"_cs, new IR::TempVar(prim->type),
-                                      new IR::MAU::AttachedOutput(prim->type, mtr));
+        rv = new P4::IR::MAU::Instruction(prim->srcInfo, "set"_cs, new P4::IR::TempVar(prim->type),
+                                      new P4::IR::MAU::AttachedOutput(prim->type, mtr));
     } else if (prim->name == "DirectCounter.count") {
-        glob = prim->operands.at(0)->to<IR::GlobalRef>();
+        glob = prim->operands.at(0)->to<P4::IR::GlobalRef>();
         stateful.push_back(prim);
         rv = nullptr;
     } else if (prim->name == "DirectMeter.execute") {
-        glob = prim->operands.at(0)->to<IR::GlobalRef>();
-        auto mtr = glob->obj->to<IR::MAU::Meter>();
+        glob = prim->operands.at(0)->to<P4::IR::GlobalRef>();
+        auto mtr = glob->obj->to<P4::IR::MAU::Meter>();
         stateful.push_back(prim);
-        rv = new IR::MAU::Instruction(prim->srcInfo, "set"_cs, new IR::TempVar(prim->type),
-                                      new IR::MAU::AttachedOutput(IR::Type::Bits::get(8), mtr));
+        rv = new P4::IR::MAU::Instruction(prim->srcInfo, "set"_cs, new P4::IR::TempVar(prim->type),
+                                      new P4::IR::MAU::AttachedOutput(P4::IR::Type::Bits::get(8), mtr));
     }
 
     if (glob != nullptr) {
-        auto at_mem = glob->obj->to<IR::MAU::AttachedMemory>();
+        auto at_mem = glob->obj->to<P4::IR::MAU::AttachedMemory>();
         auto u_id = at_mem->unique_id();
         if (per_flow_enables.count(u_id) > 0) {
             ::error("%s: An attached table can only be executed once per action", prim->srcInfo);
         }
         per_flow_enables.insert(u_id);
-        if (meter_type != IR::MAU::MeterType::UNUSED)
+        if (meter_type != P4::IR::MAU::MeterType::UNUSED)
             meter_types[u_id] = meter_type;
     }
 
-    if (findContext<IR::MAU::Primitive>() != nullptr)
+    if (findContext<P4::IR::MAU::Primitive>() != nullptr)
         return rv;
     // If instructions are at the top level of the instruction, then push these instructions
     // in after
     if (!created_instrs.empty()) {
-        auto *rv_vec = new IR::Vector<IR::Node>();
+        auto *rv_vec = new P4::IR::Vector<P4::IR::Node>();
         if (rv != nullptr)
             rv_vec->push_back(rv);
         for (auto instr : created_instrs)
@@ -544,10 +544,10 @@ const IR::Node *Synth2PortSetup::postorder(IR::MAU::Primitive *prim) {
     return rv;
 }
 
-const IR::MAU::Action *Synth2PortSetup::postorder(IR::MAU::Action *act) {
+const P4::IR::MAU::Action *Synth2PortSetup::postorder(P4::IR::MAU::Action *act) {
     for (auto stateful_prim : stateful) {
-        auto at_mem = stateful_prim->operands.at(0)->to<IR::GlobalRef>()
-                                   ->obj->to<IR::MAU::AttachedMemory>();
+        auto at_mem = stateful_prim->operands.at(0)->to<P4::IR::GlobalRef>()
+                                   ->obj->to<P4::IR::MAU::AttachedMemory>();
         BUG_CHECK(at_mem, "%s: Stateful Call %s doesn't have a stateful object",
                           stateful_prim->srcInfo, stateful_prim);
         act->stateful_calls.emplace_back(stateful_prim->srcInfo, stateful_prim, at_mem);
@@ -562,15 +562,15 @@ const IR::MAU::Action *Synth2PortSetup::postorder(IR::MAU::Action *act) {
 template<class T> static
 T *clone(const T *ir) { return ir ? ir->clone() : nullptr; }
 
-Visitor::profile_t DoInstructionSelection::init_apply(const IR::Node *root) {
+Visitor::profile_t DoInstructionSelection::init_apply(const P4::IR::Node *root) {
     auto rv = MauTransform::init_apply(root);
     return rv;
 }
 
-IR::Member *DoInstructionSelection::genIntrinsicMetadata(gress_t gress,
+P4::IR::Member *DoInstructionSelection::genIntrinsicMetadata(gress_t gress,
                                                        cstring header, cstring field) {
     auto metadataName = cstring::to_cstring(gress) + "::" + header;
-    auto* pipe = findContext<IR::BFN::Pipe>();
+    auto* pipe = findContext<P4::IR::BFN::Pipe>();
     if (!pipe) return nullptr;
 
     auto* meta = pipe->metadata[metadataName];
@@ -579,12 +579,12 @@ IR::Member *DoInstructionSelection::genIntrinsicMetadata(gress_t gress,
         return nullptr;
     }
     if (auto* f = meta->type->getField(field))
-        return new IR::Member(f->type, new IR::ConcreteHeaderRef(meta), field);
+        return new P4::IR::Member(f->type, new P4::IR::ConcreteHeaderRef(meta), field);
     BUG("No field %s in %s", field, metadataName);
     return nullptr;
 }
 
-const IR::GlobalRef *DoInstructionSelection::preorder(IR::GlobalRef *gr) {
+const P4::IR::GlobalRef *DoInstructionSelection::preorder(P4::IR::GlobalRef *gr) {
     /* don't recurse through GlobalRefs as they refer to things elsewhere, not stuff
      * we want to turn into VLIW instructions */
     prune();
@@ -592,21 +592,21 @@ const IR::GlobalRef *DoInstructionSelection::preorder(IR::GlobalRef *gr) {
 }
 
 class DoInstructionSelection::SplitInstructions : public Transform {
-    IR::Vector<IR::MAU::Primitive> &split;
-    const IR::Expression *postorder(IR::MAU::Instruction *inst) override {
+    P4::IR::Vector<P4::IR::MAU::Primitive> &split;
+    const P4::IR::Expression *postorder(P4::IR::MAU::Instruction *inst) override {
         if (inst->operands.empty()) return inst;
-        if (auto *tv = inst->operands[0]->to<IR::TempVar>()) {
+        if (auto *tv = inst->operands[0]->to<P4::IR::TempVar>()) {
             if (getContext() != nullptr) {
                 LOG3("splitting instruction " << inst);
                 split.push_back(inst);
                 return tv; } }
         return inst; }
-    const IR::MAU::AttachedOutput *preorder(IR::MAU::AttachedOutput *ao) override {
+    const P4::IR::MAU::AttachedOutput *preorder(P4::IR::MAU::AttachedOutput *ao) override {
         // don't recurse into attached tables read by instructions.
         prune();
         return ao; }
  public:
-    explicit SplitInstructions(IR::Vector<IR::MAU::Primitive> &s) : split(s) {}
+    explicit SplitInstructions(P4::IR::Vector<P4::IR::MAU::Primitive> &s) : split(s) {}
 };
 
 // Create a compiler generated table per lowest common table sequence having saturated subtract
@@ -668,7 +668,7 @@ class DoInstructionSelection::SplitInstructions : public Transform {
  * into TableSeq C to initialize SubSat1 and SubSat2 respectively. However, it can be more optimal
  * if we only insert one action in TableSeq a to initialize SubSat1 and SubSat2 together.
  */
-const IR::MAU::TableSeq *DoInstructionSelection::postorder(IR::MAU::TableSeq *ts) {
+const P4::IR::MAU::TableSeq *DoInstructionSelection::postorder(P4::IR::MAU::TableSeq *ts) {
     static int id = 0;
 
     if (!const_to_phv.empty() && this->ts == ts) {
@@ -676,7 +676,7 @@ const IR::MAU::TableSeq *DoInstructionSelection::postorder(IR::MAU::TableSeq *ts
 
         gress_t gress = VisitingThread(this);
 
-        auto action = new IR::MAU::Action("__assign_const_to_phv__");
+        auto action = new P4::IR::MAU::Action("__assign_const_to_phv__");
         action->default_allowed = action->init_default = true;
 
         for (const auto inst : const_to_phv) {
@@ -685,11 +685,11 @@ const IR::MAU::TableSeq *DoInstructionSelection::postorder(IR::MAU::TableSeq *ts
         }
 
         auto table_name = toString(gress) + "_assign_const_to_phv_" + cstring::to_cstring(id++);
-        auto t = new IR::MAU::Table(table_name, gress);
+        auto t = new P4::IR::MAU::Table(table_name, gress);
 
         t->is_compiler_generated = true;
         t->actions[action->name] = action;
-        t->match_table = new IR::P4Table(table_name.c_str(), new IR::TableProperties());
+        t->match_table = new P4::IR::P4Table(table_name.c_str(), new P4::IR::TableProperties());
 
         ts->tables.insert(ts->tables.begin(), t);
         const_to_phv.clear();
@@ -699,8 +699,8 @@ const IR::MAU::TableSeq *DoInstructionSelection::postorder(IR::MAU::TableSeq *ts
     return ts;
 }
 
-const IR::MAU::Action *DoInstructionSelection::postorder(IR::MAU::Action *af) {
-    IR::Vector<IR::MAU::Primitive> split;
+const P4::IR::MAU::Action *DoInstructionSelection::postorder(P4::IR::MAU::Action *af) {
+    P4::IR::Vector<P4::IR::MAU::Primitive> split;
     // FIXME: This should be pulled out as a different pass
     for (auto *p : af->action)
         split.push_back(p->apply(SplitInstructions(split)));
@@ -712,55 +712,55 @@ const IR::MAU::Action *DoInstructionSelection::postorder(IR::MAU::Action *af) {
     return af;
 }
 
-const IR::MAU::Action *DoInstructionSelection::preorder(IR::MAU::Action *af) {
-    BUG_CHECK(findContext<IR::MAU::Action>() == nullptr, "Nested action functions");
+const P4::IR::MAU::Action *DoInstructionSelection::preorder(P4::IR::MAU::Action *af) {
+    BUG_CHECK(findContext<P4::IR::MAU::Action>() == nullptr, "Nested action functions");
     LOG2("DoInstructionSelection processing action " << af->name);
     LOG5(af);
     this->af = af;
     return af;
 }
 
-bool DoInstructionSelection::checkPHV(const IR::Expression *e) {
-    if (auto *c = e->to<IR::BFN::ReinterpretCast>())
+bool DoInstructionSelection::checkPHV(const P4::IR::Expression *e) {
+    if (auto *c = e->to<P4::IR::BFN::ReinterpretCast>())
         return checkPHV(c->expr);
     return phv.field(e);
 }
 
-bool DoInstructionSelection::checkActionBus(const IR::Expression *e) {
-    if (auto *c = e->to<IR::BFN::ReinterpretCast>())
+bool DoInstructionSelection::checkActionBus(const P4::IR::Expression *e) {
+    if (auto *c = e->to<P4::IR::BFN::ReinterpretCast>())
         return checkActionBus(c->expr);
-    if (auto *c = e->to<IR::BFN::SignExtend>())
+    if (auto *c = e->to<P4::IR::BFN::SignExtend>())
         return checkActionBus(c->expr);
-    if (auto slice = e->to<IR::Slice>())
+    if (auto slice = e->to<P4::IR::Slice>())
         return checkActionBus(slice->e0);
-    if (e->is<IR::Constant>()) return true;
-    if (e->is<IR::BoolLiteral>()) return true;
-    if (e->is<IR::MAU::ActionArg>()) return true;
-    if (e->is<IR::MAU::HashDist>()) return true;
-    if (e->is<IR::MAU::RandomNumber>()) return true;
-    if (e->is<IR::MAU::AttachedOutput>()) return true;
-    if (e->is<IR::MAU::StatefulCounter>()) return true;
-    if (auto m = e->to<IR::Member>())
-        if (m->expr->is<IR::MAU::AttachedOutput>())
+    if (e->is<P4::IR::Constant>()) return true;
+    if (e->is<P4::IR::BoolLiteral>()) return true;
+    if (e->is<P4::IR::MAU::ActionArg>()) return true;
+    if (e->is<P4::IR::MAU::HashDist>()) return true;
+    if (e->is<P4::IR::MAU::RandomNumber>()) return true;
+    if (e->is<P4::IR::MAU::AttachedOutput>()) return true;
+    if (e->is<P4::IR::MAU::StatefulCounter>()) return true;
+    if (auto m = e->to<P4::IR::Member>())
+        if (m->expr->is<P4::IR::MAU::AttachedOutput>())
             return true;
     return false;
 }
 
-bool DoInstructionSelection::checkSrc1(const IR::Expression *e) {
+bool DoInstructionSelection::checkSrc1(const P4::IR::Expression *e) {
     LOG3("Checking src1 : " << e);
-    if (auto *c = e->to<IR::BFN::ReinterpretCast>())
+    if (auto *c = e->to<P4::IR::BFN::ReinterpretCast>())
         return checkSrc1(c->expr);
-    if (auto *c = e->to<IR::BFN::SignExtend>())
+    if (auto *c = e->to<P4::IR::BFN::SignExtend>())
         return checkSrc1(c->expr);
-    if (auto slice = e->to<IR::Slice>())
+    if (auto slice = e->to<P4::IR::Slice>())
         return checkSrc1(slice->e0);
     if (checkActionBus(e))
         return true;
     return phv.field(e);
 }
 
-bool DoInstructionSelection::checkConst(const IR::Expression *ex, long &value) {
-    if (auto *k = ex->to<IR::Constant>()) {
+bool DoInstructionSelection::checkConst(const P4::IR::Expression *ex, long &value) {
+    if (auto *k = ex->to<P4::IR::Constant>()) {
         value = k->asLong();  // \TODO: long or 64-bit value?
         return true;
     } else {
@@ -768,27 +768,27 @@ bool DoInstructionSelection::checkConst(const IR::Expression *ex, long &value) {
     }
 }
 
-bool DoInstructionSelection::equiv(const IR::Expression *a, const IR::Expression *b) {
+bool DoInstructionSelection::equiv(const P4::IR::Expression *a, const P4::IR::Expression *b) {
     if (*a == *b) return true;
     if (typeid(*a) != typeid(*b)) return false;
-    if (auto ca = a->to<IR::BFN::ReinterpretCast>()) {
-        auto cb = b->to<IR::BFN::ReinterpretCast>();
+    if (auto ca = a->to<P4::IR::BFN::ReinterpretCast>()) {
+        auto cb = b->to<P4::IR::BFN::ReinterpretCast>();
         return ca->type == cb->type && equiv(ca->expr, cb->expr);
     }
-    if (auto sa = a->to<IR::Slice>()) {
-        if (auto sb = b->to<IR::Slice>()) {
+    if (auto sa = a->to<P4::IR::Slice>()) {
+        if (auto sb = b->to<P4::IR::Slice>()) {
             return sa->getL() == sb->getL() && sa->getH() == sb->getH() && equiv(sa->e0, sb->e0);
         }
     }
     return false;
 }
 
-void DoInstructionSelection::limitWidth(const IR::Expression *e) {
+void DoInstructionSelection::limitWidth(const P4::IR::Expression *e) {
     // JIRA-DOC: P4C-2694
     // Verify that the operation width is less than the maximum container width.
     // Required for instructions that can't be split without rewriting the
     // instruction.
-    auto bits = e->type->to<IR::Type_Bits>();
+    auto bits = e->type->to<P4::IR::Type_Bits>();
     unsigned short max_size = static_cast<unsigned short>(
             *Device::phvSpec().containerSizes().rbegin());
     if (bits && bits->width_bits() > max_size) {
@@ -799,18 +799,18 @@ void DoInstructionSelection::limitWidth(const IR::Expression *e) {
     }
 }
 
-const IR::Expression *DoInstructionSelection::postorder(IR::BoolLiteral *bl) {
-    if (!findContext<IR::MAU::Action>())
+const P4::IR::Expression *DoInstructionSelection::postorder(P4::IR::BoolLiteral *bl) {
+    if (!findContext<P4::IR::MAU::Action>())
         return bl;
-    return new IR::Constant(IR::Type::Bits::get(1), static_cast<int>(bl->value));
+    return new P4::IR::Constant(P4::IR::Type::Bits::get(1), static_cast<int>(bl->value));
 }
 
-const IR::Expression *DoInstructionSelection::postorder(IR::BAnd *e) {
+const P4::IR::Expression *DoInstructionSelection::postorder(P4::IR::BAnd *e) {
     if (!af) return e;
     auto *left = e->left, *right = e->right;
     std::string op = "and";
-    auto *l = left->to<IR::MAU::Instruction>();
-    auto *r = right->to<IR::MAU::Instruction>();
+    auto *l = left->to<P4::IR::MAU::Instruction>();
+    auto *r = right->to<P4::IR::MAU::Instruction>();
     if (l && l->name == "not" && r && r->name == "not") {
         left = l->operands[1];
         right = r->operands[1];
@@ -821,15 +821,15 @@ const IR::Expression *DoInstructionSelection::postorder(IR::BAnd *e) {
     } else if (r && r->name == "not") {
         right = r->operands[1];
         op = "andcb"; }
-    return new IR::MAU::Instruction(e->srcInfo, cstring(op), new IR::TempVar(e->type), left, right);
+    return new P4::IR::MAU::Instruction(e->srcInfo, cstring(op), new P4::IR::TempVar(e->type), left, right);
 }
 
-const IR::Expression *DoInstructionSelection::postorder(IR::BOr *e) {
+const P4::IR::Expression *DoInstructionSelection::postorder(P4::IR::BOr *e) {
     if (!af) return e;
     auto *left = e->left, *right = e->right;
     std::string op = "or";
-    auto *l = left->to<IR::MAU::Instruction>();
-    auto *r = right->to<IR::MAU::Instruction>();
+    auto *l = left->to<P4::IR::MAU::Instruction>();
+    auto *r = right->to<P4::IR::MAU::Instruction>();
     if (l && l->name == "not" && r && r->name == "not") {
         left = l->operands[1];
         right = r->operands[1];
@@ -840,15 +840,15 @@ const IR::Expression *DoInstructionSelection::postorder(IR::BOr *e) {
     } else if (r && r->name == "not") {
         right = r->operands[1];
         op = "orcb"; }
-    return new IR::MAU::Instruction(e->srcInfo, cstring(op), new IR::TempVar(e->type), left, right);
+    return new P4::IR::MAU::Instruction(e->srcInfo, cstring(op), new P4::IR::TempVar(e->type), left, right);
 }
 
-const IR::Expression *DoInstructionSelection::postorder(IR::BXor *e) {
+const P4::IR::Expression *DoInstructionSelection::postorder(P4::IR::BXor *e) {
     if (!af) return e;
     auto *left = e->left, *right = e->right;
     std::string op = "xor";
-    auto *l = left->to<IR::MAU::Instruction>();
-    auto *r = right->to<IR::MAU::Instruction>();
+    auto *l = left->to<P4::IR::MAU::Instruction>();
+    auto *r = right->to<P4::IR::MAU::Instruction>();
     if (l && l->name == "not" && r && r->name == "not") {
         left = l->operands[1];
         right = r->operands[1];
@@ -858,12 +858,12 @@ const IR::Expression *DoInstructionSelection::postorder(IR::BXor *e) {
     } else if (r && r->name == "not") {
         right = r->operands[1];
         op = "xnor"; }
-    return new IR::MAU::Instruction(e->srcInfo, cstring(op), new IR::TempVar(e->type), left, right);
+    return new P4::IR::MAU::Instruction(e->srcInfo, cstring(op), new P4::IR::TempVar(e->type), left, right);
 }
 
-const IR::Expression *DoInstructionSelection::postorder(IR::Cmpl *e) {
+const P4::IR::Expression *DoInstructionSelection::postorder(P4::IR::Cmpl *e) {
     if (!af) return e;
-    if (auto *fold = ::clone(e->expr->to<IR::MAU::Instruction>())) {
+    if (auto *fold = ::clone(e->expr->to<P4::IR::MAU::Instruction>())) {
         if (fold->name == "and") fold->name = "nand"_cs;
         else if (fold->name == "andca") fold->name = "orcb"_cs;
         else if (fold->name == "andcb") fold->name = "orca"_cs;
@@ -877,40 +877,40 @@ const IR::Expression *DoInstructionSelection::postorder(IR::Cmpl *e) {
         else
             fold = nullptr;
         if (fold) return fold; }
-    return new IR::MAU::Instruction(e->srcInfo, "not"_cs, new IR::TempVar(e->type), e->expr);
+    return new P4::IR::MAU::Instruction(e->srcInfo, "not"_cs, new P4::IR::TempVar(e->type), e->expr);
 }
 
-const IR::Expression *DoInstructionSelection::postorder(IR::Add *e) {
+const P4::IR::Expression *DoInstructionSelection::postorder(P4::IR::Add *e) {
     if (!af) return e;
     /// HACK(hanw): I had to put in this hack to get p4-14 switch.p4 to compile after removing the
     /// cast, we need a follow-up PR to add the support for '++' operator in the backen.
     auto operand = e->right;
-    if (auto concat = e->right->to<IR::Concat>()) {
-        if (concat->left->is<IR::Constant>()) {
+    if (auto concat = e->right->to<P4::IR::Concat>()) {
+        if (concat->left->is<P4::IR::Constant>()) {
             operand = concat->right; } }
     return new IR::MAU::Instruction(e->srcInfo, "add"_cs, new IR::TempVar(e->type), e->left,
                                     operand);
 }
 
-const IR::Expression *DoInstructionSelection::postorder(IR::AddSat *e) {
+const P4::IR::Expression *DoInstructionSelection::postorder(P4::IR::AddSat *e) {
     if (!af) return e;
     auto opName = "saddu"_cs;
-    if (e->type->is<IR::Type_Bits>() && e->type->to<IR::Type_Bits>()->isSigned)
+    if (e->type->is<P4::IR::Type_Bits>() && e->type->to<P4::IR::Type_Bits>()->isSigned)
         opName = "sadds"_cs;
     limitWidth(e);
-    return new IR::MAU::Instruction(e->srcInfo, opName,
-                                        new IR::TempVar(e->type), e->left, e->right);
+    return new P4::IR::MAU::Instruction(e->srcInfo, opName,
+                                        new P4::IR::TempVar(e->type), e->left, e->right);
 }
 
-const IR::Expression *DoInstructionSelection::postorder(IR::SubSat *e) {
+const P4::IR::Expression *DoInstructionSelection::postorder(P4::IR::SubSat *e) {
     if (!af) return e;
     auto opName = "ssubu";
     auto eLeft = e->left;
     auto eRight = e->right;
-    auto bits = e->type->to<IR::Type_Bits>();
+    auto bits = e->type->to<P4::IR::Type_Bits>();
     if (bits && bits->isSigned) {
         opName = "ssubs";
-        if (auto *k = eRight->to<IR::Constant>()) {
+        if (auto *k = eRight->to<P4::IR::Constant>()) {
             // Dont convert to an add when constant is equal to maximum negative
             // value as the value will overflow upon negation.
             // e.g. For an 8 bit subtraction
@@ -940,25 +940,25 @@ const IR::Expression *DoInstructionSelection::postorder(IR::SubSat *e) {
     // 2. Instead of using an additional stage, use a table in this stage to detect TTL
     //    value of 0 to conditionally execute the subtract or not
     // Both these solutions require program transformations
-    if (bits && !bits->isSigned && eRight->to<IR::Constant>()) {
+    if (bits && !bits->isSigned && eRight->to<P4::IR::Constant>()) {
         if (this->ts == nullptr) {
-            this->ts = findContext<IR::MAU::TableSeq>();
+            this->ts = findContext<P4::IR::MAU::TableSeq>();
         }
         cstring temp_name = "const_to_phv_"_cs + cstring::to_cstring(bits->width_bits()) + "w"_cs +
-                            cstring::to_cstring(eRight->to<IR::Constant>()->asLong());
+                            cstring::to_cstring(eRight->to<P4::IR::Constant>()->asLong());
 
-        const IR::MAU::Instruction *temp_inst;
-        const IR::TempVar *temp_var;
+        const P4::IR::MAU::Instruction *temp_inst;
+        const P4::IR::TempVar *temp_var;
         if (const_to_phv.count(temp_name)) {
             temp_inst = const_to_phv.at(temp_name);
             BUG_CHECK(!temp_inst->operands.empty(), "Incomplete temporary instruction");
-            temp_var = temp_inst->operands[0]->to<IR::TempVar>();
+            temp_var = temp_inst->operands[0]->to<P4::IR::TempVar>();
         } else {
-            temp_var = new IR::TempVar(IR::Type::Bits::get(bits->width_bits()), false, temp_name);
-            temp_inst = new IR::MAU::Instruction(e->srcInfo, "set"_cs, temp_var, eRight);
+            temp_var = new P4::IR::TempVar(P4::IR::Type::Bits::get(bits->width_bits()), false, temp_name);
+            temp_inst = new P4::IR::MAU::Instruction(e->srcInfo, "set"_cs, temp_var, eRight);
             const_to_phv[temp_name] = temp_inst;
         }
-        return new IR::MAU::Instruction(e->srcInfo, cstring(opName), new IR::TempVar(e->type),
+        return new P4::IR::MAU::Instruction(e->srcInfo, cstring(opName), new P4::IR::TempVar(e->type),
                                         eLeft, temp_var);
     }
 
@@ -966,7 +966,7 @@ const IR::Expression *DoInstructionSelection::postorder(IR::SubSat *e) {
                                     eRight);
 }
 
-const IR::Expression *DoInstructionSelection::postorder(IR::Sub *e) {
+const P4::IR::Expression *DoInstructionSelection::postorder(P4::IR::Sub *e) {
     if (!af) return e;
     if (auto *k = e->right->to<IR::Constant>())
         return new IR::MAU::Instruction(e->srcInfo, "add"_cs, new IR::TempVar(e->type),
@@ -974,102 +974,102 @@ const IR::Expression *DoInstructionSelection::postorder(IR::Sub *e) {
     return new IR::MAU::Instruction(e->srcInfo, "sub"_cs, new IR::TempVar(e->type), e->left,
                                     e->right);
 }
-const IR::Expression *DoInstructionSelection::postorder(IR::Neg *e) {
+const P4::IR::Expression *DoInstructionSelection::postorder(P4::IR::Neg *e) {
     if (!af) return e;
-    return new IR::MAU::Instruction(e->srcInfo, "sub"_cs, new IR::TempVar(e->type),
-                                    new IR::Constant(e->srcInfo, e->type, 0), e->expr);
+    return new P4::IR::MAU::Instruction(e->srcInfo, "sub"_cs, new P4::IR::TempVar(e->type),
+                                    new P4::IR::Constant(e->srcInfo, e->type, 0), e->expr);
 }
 
-const IR::Expression *DoInstructionSelection::postorder(IR::Shl *e) {
+const P4::IR::Expression *DoInstructionSelection::postorder(P4::IR::Shl *e) {
     if (!af) return e;
-    if (!e->right->is<IR::Constant>())
+    if (!e->right->is<P4::IR::Constant>())
         error("%s: shift count must be a constant in %s", e->srcInfo, e);
     return new IR::MAU::Instruction(e->srcInfo, "shl"_cs, new IR::TempVar(e->type), e->left,
                                     e->right);
 }
 
-const IR::Expression *DoInstructionSelection::postorder(IR::Shr *e) {
+const P4::IR::Expression *DoInstructionSelection::postorder(P4::IR::Shr *e) {
     if (!af) return e;
-    if (!e->right->is<IR::Constant>())
+    if (!e->right->is<P4::IR::Constant>())
         error("%s: shift count must be a constant in %s", e->srcInfo, e);
     std::string shr = "shru";
-    if (e->type->is<IR::Type_Bits>() && e->type->to<IR::Type_Bits>()->isSigned)
+    if (e->type->is<P4::IR::Type_Bits>() && e->type->to<P4::IR::Type_Bits>()->isSigned)
         shr = "shrs";
     return new IR::MAU::Instruction(e->srcInfo, cstring(shr), new IR::TempVar(e->type), e->left,
                                     e->right);
 }
 
-const IR::Expression *DoInstructionSelection::postorder(IR::Operation_Relation *e) {
+const P4::IR::Expression *DoInstructionSelection::postorder(P4::IR::Operation_Relation *e) {
     if (!af) return e;
     // Skip the transform if it's in a Mux -- the Mux should handle it
-    if (getParent<IR::Mux>()) return e;
+    if (getParent<P4::IR::Mux>()) return e;
     if (Device::hasCompareInstructions()) {
         auto isSigned =
-                (e->left->type->is<IR::Type_Bits>() &&
-                 e->left->type->to<IR::Type_Bits>()->isSigned) ||
-                (e->right->type->is<IR::Type_Bits>() &&
-                 e->right->type->to<IR::Type_Bits>()->isSigned);
+                (e->left->type->is<P4::IR::Type_Bits>() &&
+                 e->left->type->to<P4::IR::Type_Bits>()->isSigned) ||
+                (e->right->type->is<P4::IR::Type_Bits>() &&
+                 e->right->type->to<P4::IR::Type_Bits>()->isSigned);
         auto isWide = e->left->type->width_bits() > 32 || e->right->type->width_bits() > 32;
         auto opName = "";
-        if (e->is<IR::Equ>()) {
+        if (e->is<P4::IR::Equ>()) {
             opName = isWide ? "eq64" : "eq";
-        } else if (e->is<IR::Neq>()) {
+        } else if (e->is<P4::IR::Neq>()) {
             opName = isWide ? "neq64" : "neq";
-        } else if (e->is<IR::Lss>()) {
+        } else if (e->is<P4::IR::Lss>()) {
             opName = isSigned ? "lts" : "ltu";
-        } else if (e->is<IR::Leq>()) {
+        } else if (e->is<P4::IR::Leq>()) {
             opName = isSigned ? "leqs" : "lequ";
-        } else if (e->is<IR::Grt>()) {
+        } else if (e->is<P4::IR::Grt>()) {
             opName = isSigned ? "gts" : "gtu";
-        } else if (e->is<IR::Geq>()) {
+        } else if (e->is<P4::IR::Geq>()) {
             opName = isSigned ? "gteqs" : "gtequ";
         } else {
             error("%1%: Unknown relational operator",
                     e, e->node_type_name());
         }
-        return new IR::MAU::Instruction(e->srcInfo, cstring(opName),
-                new IR::TempVar(e->type), e->left, e->right);
+        return new P4::IR::MAU::Instruction(e->srcInfo, cstring(opName),
+                new P4::IR::TempVar(e->type), e->left, e->right);
     } else {
         return e;
     }
 }
 
-const IR::Expression *DoInstructionSelection::postorder(IR::Mux *e) {
-    if (auto r = e->e0->to<IR::Operation_Relation>()) {
+const P4::IR::Expression *DoInstructionSelection::postorder(P4::IR::Mux *e) {
+    if (auto r = e->e0->to<P4::IR::Operation_Relation>()) {
         bool isMin = false;
-        if (r->is<IR::Lss>() || r->is<IR::Leq>())
+        if (r->is<P4::IR::Lss>() || r->is<P4::IR::Leq>())
             isMin = true;
-        else if (!r->is<IR::Grt>() && !r->is<IR::Geq>())
+        else if (!r->is<P4::IR::Grt>() && !r->is<P4::IR::Geq>())
             return e;
         if (equiv(r->left, e->e2) && equiv(r->right, e->e1))
             isMin = !isMin;
         else if (!equiv(r->left, e->e1) || !equiv(r->right, e->e2))
             return e;
         cstring op = isMin ? "minu"_cs : "maxu"_cs;
-        if (auto t = r->left->type->to<IR::Type::Bits>())
+        if (auto t = r->left->type->to<P4::IR::Type::Bits>())
             if (t->isSigned)
                 op = isMin ? "mins"_cs : "maxs"_cs;
-        return new IR::MAU::Instruction(e->srcInfo, op, new IR::TempVar(e->type), e->e1, e->e2); }
+        return new P4::IR::MAU::Instruction(e->srcInfo, op, new P4::IR::TempVar(e->type), e->e1, e->e2); }
     return e;
 }
 
-const IR::Slice *DoInstructionSelection::postorder(IR::Slice *sl) {
-    if (auto expr = sl->e0->to<IR::Slice>()) {
+const P4::IR::Slice *DoInstructionSelection::postorder(P4::IR::Slice *sl) {
+    if (auto expr = sl->e0->to<P4::IR::Slice>()) {
         sl->e0 = expr->e0;
-        sl->e1 = new IR::Constant(sl->getH() + expr->getL());
-        sl->e2 = new IR::Constant(sl->getL() + expr->getL());
+        sl->e1 = new P4::IR::Constant(sl->getH() + expr->getL());
+        sl->e2 = new P4::IR::Constant(sl->getL() + expr->getL());
         BUG_CHECK(int(sl->getH()) < sl->e0->type->width_bits(), "invalid slice on slice"); }
     return sl;
 }
 
-const IR::Expression *DoInstructionSelection::preorder(IR::BFN::SignExtend *c) {
+const P4::IR::Expression *DoInstructionSelection::preorder(P4::IR::BFN::SignExtend *c) {
     if (CanBeIXBarExpr(c))
         BUG("%s: Hash Dist object on concat %s not correctly converted", c->srcInfo, c->toString());
     return c;
 }
 
-const IR::Expression *DoInstructionSelection::preorder(IR::Concat *c) {
-    if (auto k = c->left->to<IR::Constant>()) {
+const P4::IR::Expression *DoInstructionSelection::preorder(P4::IR::Concat *c) {
+    if (auto k = c->left->to<P4::IR::Constant>()) {
         if (k->value == 0) {
             // HACK -- avoid dealing with 0-prefix concats (zero extension) as the midend
             // now changes zero-extend casts into them, and trying to do them in the hash
@@ -1080,20 +1080,20 @@ const IR::Expression *DoInstructionSelection::preorder(IR::Concat *c) {
     return c;
 }
 
-static const IR::MAU::Instruction *fillInstDest(const IR::Expression *in,
-                                                const IR::Expression *dest, int lo = -1,
+static const P4::IR::MAU::Instruction *fillInstDest(const P4::IR::Expression *in,
+                                                const P4::IR::Expression *dest, int lo = -1,
                                                 int hi = -1, bool cast = false) {
-    if (auto *c = in->to<IR::BFN::ReinterpretCast>())
+    if (auto *c = in->to<P4::IR::BFN::ReinterpretCast>())
         // perhaps everything underneath should be cast to the same size
         return fillInstDest(c->expr, dest, c->destType->width_bits(), -1, true);
-    if (auto *sl = in->to<IR::Slice>())
+    if (auto *sl = in->to<P4::IR::Slice>())
         return fillInstDest(sl->e0, dest, sl->getL(), sl->getH());
-    if (auto *c = in->to<IR::BFN::SignExtend>())
+    if (auto *c = in->to<P4::IR::BFN::SignExtend>())
         return fillInstDest(c->expr, dest, c->destType->width_bits(), -1);
-    auto *inst = in ? in->to<IR::MAU::Instruction>() : nullptr;
-    auto *tv = inst ? inst->operands[0]->to<IR::TempVar>() : nullptr;
-    auto *sl = inst ? inst->operands[0]->to<IR::Slice>() : nullptr;
-    if (!tv) tv = sl ? sl->e0->to<IR::TempVar>() : nullptr;
+    auto *inst = in ? in->to<P4::IR::MAU::Instruction>() : nullptr;
+    auto *tv = inst ? inst->operands[0]->to<P4::IR::TempVar>() : nullptr;
+    auto *sl = inst ? inst->operands[0]->to<P4::IR::Slice>() : nullptr;
+    if (!tv) tv = sl ? sl->e0->to<P4::IR::TempVar>() : nullptr;
     if (tv) {
         int id;
         if (sscanf(tv->name, "$tmp%d", &id) > 0 && id == tv->uid) --tv->uid;
@@ -1119,12 +1119,12 @@ static bool isDepositMask(long) {
     /* TODO */
     return false;
 }
-static const IR::MAU::Primitive *makeDepositField(IR::MAU::Primitive *prim, long) {
+static const P4::IR::MAU::Primitive *makeDepositField(P4::IR::MAU::Primitive *prim, long) {
     /* TODO */
     return prim;
 }
 
-const IR::Node *DoInstructionSelection::postorder(IR::MAU::Primitive *prim) {
+const P4::IR::Node *DoInstructionSelection::postorder(P4::IR::MAU::Primitive *prim) {
     if (!af) return prim;
 
     /*
@@ -1135,16 +1135,16 @@ const IR::Node *DoInstructionSelection::postorder(IR::MAU::Primitive *prim) {
      * This statement is translated in midend to:
      *      bit<M> a; bit<N> b = (int<N>)((bit<N - M>)0 ++ a);
      */
-    auto is_reinterpret_cast_concat_0 = [](const IR::Expression *e) {
-        if (auto *rc = e->to<IR::BFN::ReinterpretCast>())
-            if (auto *cc = rc->expr->to<IR::Concat>())
-                if (auto *k = cc->left->to<IR::Constant>())
+    auto is_reinterpret_cast_concat_0 = [](const P4::IR::Expression *e) {
+        if (auto *rc = e->to<P4::IR::BFN::ReinterpretCast>())
+            if (auto *cc = rc->expr->to<P4::IR::Concat>())
+                if (auto *k = cc->left->to<P4::IR::Constant>())
                     if (k->value == 0)
                         return true;
         return false;
     };
 
-    const IR::Expression *dest = prim->operands.size() > 0 ? prim->operands[0] : nullptr;
+    const P4::IR::Expression *dest = prim->operands.size() > 0 ? prim->operands[0] : nullptr;
     LOG4("DoInstructionSelection::postorder on primitive " << prim->name);
     if (prim->name == "modify_field") {
         long mask;
@@ -1162,13 +1162,13 @@ const IR::Node *DoInstructionSelection::postorder(IR::MAU::Primitive *prim) {
              *   set A[M-1:N], 0
              *   set A[N-1:0], B
              */
-            auto *cc = prim->operands[1]->to<IR::BFN::ReinterpretCast>()->expr->to<IR::Concat>();
+            auto *cc = prim->operands[1]->to<P4::IR::BFN::ReinterpretCast>()->expr->to<P4::IR::Concat>();
             auto *k = cc->left;
-            auto *inst_phv = new IR::MAU::Instruction(prim->srcInfo, "set"_cs,
+            auto *inst_phv = new P4::IR::MAU::Instruction(prim->srcInfo, "set"_cs,
                 MakeSlice(dest, 0, cc->right->type->width_bits() - 1), cc->right);
-            auto *inst_const = new IR::MAU::Instruction(prim->srcInfo, "set"_cs,
+            auto *inst_const = new P4::IR::MAU::Instruction(prim->srcInfo, "set"_cs,
                 MakeSlice(dest, cc->right->type->width_bits(), dest->type->width_bits() - 1), k);
-            return new IR::Vector<IR::MAU::Primitive>({inst_const, inst_phv});
+            return new P4::IR::Vector<P4::IR::MAU::Primitive>({inst_const, inst_phv});
         } else if (!checkSrc1(prim->operands[1])) {
             /**
              * Converting ternary operands into conditionally-set format:
@@ -1180,9 +1180,9 @@ const IR::Node *DoInstructionSelection::postorder(IR::MAU::Primitive *prim) {
              *
              *     f1 = cond ? arg1 : f2 -> conditionally-set f1, f2, arg1, cond1
              */
-            if (auto mux = prim->operands[1]->to<IR::Mux>()) {
-                auto type = prim->operands[0]->type->to<IR::Type::Bits>();
-                auto arg = mux->e0->to<IR::MAU::ActionArg>();
+            if (auto mux = prim->operands[1]->to<P4::IR::Mux>()) {
+                auto type = prim->operands[0]->type->to<P4::IR::Type::Bits>();
+                auto arg = mux->e0->to<P4::IR::MAU::ActionArg>();
                 if (!arg) {
                     error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "%1%\nConditions in an action must "
                           "be simple comparisons of an action data parameter\nTry moving the test "
@@ -1190,16 +1190,16 @@ const IR::Node *DoInstructionSelection::postorder(IR::MAU::Primitive *prim) {
                           "of the table key", prim->srcInfo);
                     return prim; }
                 cstring cond_arg_name = "$cond_arg"_cs + std::to_string(synth_arg_num++);
-                auto cond_arg = new IR::MAU::ConditionalArg(mux->e0->srcInfo, type, af->name,
+                auto cond_arg = new P4::IR::MAU::ConditionalArg(mux->e0->srcInfo, type, af->name,
                                                             cond_arg_name, arg);
                 cstring instr_name = "conditionally-set"_cs;
-                IR::MAU::Instruction *rv = nullptr;
+                P4::IR::MAU::Instruction *rv = nullptr;
                 if (checkActionBus(mux->e1) && checkPHV(mux->e2)) {
-                    rv = new IR::MAU::Instruction(prim->srcInfo, instr_name,
+                    rv = new P4::IR::MAU::Instruction(prim->srcInfo, instr_name,
                             { prim->operands[0], mux->e2, mux->e1, cond_arg });
                 } else if (checkActionBus(mux->e2) && checkPHV(mux->e1)) {
                     cond_arg->one_on_true = false;
-                    rv = new IR::MAU::Instruction(prim->srcInfo, instr_name,
+                    rv = new P4::IR::MAU::Instruction(prim->srcInfo, instr_name,
                             { prim->operands[0], mux->e1, mux->e2, cond_arg });
                     error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "%1%\nConditional assignment must "
                           "be reversed, as the non PHV parameter must be on the true branch for "
@@ -1214,21 +1214,21 @@ const IR::Node *DoInstructionSelection::postorder(IR::MAU::Primitive *prim) {
                 error("%s: source of %s invalid", prim->srcInfo, prim->name);
             }
         } else if (prim->operands.size() == 2) {
-            return new IR::MAU::Instruction(prim->srcInfo, "set"_cs, &prim->operands);
+            return new P4::IR::MAU::Instruction(prim->srcInfo, "set"_cs, &prim->operands);
         } else if (!checkConst(prim->operands[2], mask)) {
             error(ErrorType::ERR_INVALID, "mask of %1% must be a constant", prim);
         } else if (dest && (1L << dest->type->width_bits() == mask + 1)) {
-            return new IR::MAU::Instruction(prim->srcInfo, "set"_cs, dest, prim->operands[1]);
+            return new P4::IR::MAU::Instruction(prim->srcInfo, "set"_cs, dest, prim->operands[1]);
         } else if (isDepositMask(mask)) {
             return makeDepositField(prim, mask);
         } else {
-            return new IR::MAU::Instruction(prim->srcInfo, "bitmasked-set"_cs, &prim->operands); }
+            return new P4::IR::MAU::Instruction(prim->srcInfo, "bitmasked-set"_cs, &prim->operands); }
         return prim; }
 
     // get rid of introduced tempvars
     for (auto &op : prim->operands) {
-        if (auto *inst = op->to<IR::MAU::Instruction>()) {
-            if (inst->name == "set" && inst->operands.at(0)->is<IR::TempVar>()) {
+        if (auto *inst = op->to<P4::IR::MAU::Instruction>()) {
+            if (inst->name == "set" && inst->operands.at(0)->is<P4::IR::TempVar>()) {
                BUG_CHECK(inst->operands.size() == 2, "invalid set");
                op = inst->operands.at(1); } } }
 
@@ -1236,44 +1236,44 @@ const IR::Node *DoInstructionSelection::postorder(IR::MAU::Primitive *prim) {
         BUG("%s: Should have already converted %s in previous pass", prim->srcInfo,
             prim->toString());
     } else if (prim->name == "Random.get") {
-        auto glob = prim->operands[0]->to<IR::GlobalRef>();
-        auto decl = glob->obj->to<IR::Declaration_Instance>();
-        auto rn = new IR::MAU::RandomNumber(prim->srcInfo, prim->type, decl->name);
+        auto glob = prim->operands[0]->to<P4::IR::GlobalRef>();
+        auto decl = glob->obj->to<P4::IR::Declaration_Instance>();
+        auto rn = new P4::IR::MAU::RandomNumber(prim->srcInfo, prim->type, decl->name);
         auto next_type = prim->type;
-        return new IR::MAU::Instruction(prim->srcInfo, "set"_cs, new IR::TempVar(next_type), rn);
+        return new P4::IR::MAU::Instruction(prim->srcInfo, "set"_cs, new P4::IR::TempVar(next_type), rn);
     } else if (prim->name == "invalidate") {
-        return new IR::MAU::Instruction(prim->srcInfo, "invalidate"_cs, prim->operands[0]);
+        return new P4::IR::MAU::Instruction(prim->srcInfo, "invalidate"_cs, prim->operands[0]);
     } else if (prim->name == "min" || prim->name == "max") {
         if (prim->operands.size() != 2) {
             error(ErrorType::ERR_INVALID, "wrong number of operands to %1%", prim);
-        } else if (!prim->type->is<IR::Type::Bits>()) {
+        } else if (!prim->type->is<P4::IR::Type::Bits>()) {
             error(ErrorType::ERR_INVALID, "non-numeric operrands to %1%", prim);
         } else {
             cstring op = prim->name;
-            op += prim->type->to<IR::Type::Bits>()->isSigned ? 's' : 'u';
-            return new IR::MAU::Instruction(prim->srcInfo, op, new IR::TempVar(prim->type),
+            op += prim->type->to<P4::IR::Type::Bits>()->isSigned ? 's' : 'u';
+            return new P4::IR::MAU::Instruction(prim->srcInfo, op, new P4::IR::TempVar(prim->type),
                                             prim->operands.at(0), prim->operands.at(1)); }
     } else {
         LOG1("WARNING: unhandled in InstSel: " << *prim); }
     return prim;
 }
 
-static const IR::Type *stateful_type_for_primitive(const IR::MAU::Primitive *prim) {
+static const P4::IR::Type *stateful_type_for_primitive(const P4::IR::MAU::Primitive *prim) {
     if (prim->name == "Counter.count" || prim->name == "DirectCounter.count")
-        return IR::Type_Counter::get();
+        return P4::IR::Type_Counter::get();
     if (prim->name == "Meter.execute" || prim->name == "DirectMeter.execute" ||
         prim->name == "Lpf.execute" || prim->name == "DirectLpf.execute" ||
         prim->name == "Wred.execute" || prim->name == "DirectWred.execute")
-        return IR::Type_Meter::get();
+        return P4::IR::Type_Meter::get();
     if (auto a = strstr(prim->name, "Action")) {
         if (a[6] == '.' || (std::isdigit(a[6]) && a[7] == '.'))
-            return IR::Type_Register::get(); }
+            return P4::IR::Type_Register::get(); }
     if (prim->name == "Register.clear" || prim->name == "DirectRegister.clear")
-        return IR::Type_Register::get();
+        return P4::IR::Type_Register::get();
     BUG("Not a stateful primitive %s", prim);
 }
 
-static ssize_t index_operand(const IR::MAU::Primitive *prim) {
+static ssize_t index_operand(const P4::IR::MAU::Primitive *prim) {
     if (prim->name.startsWith("Direct") || prim->name.endsWith(".clear"))
         return -1;
     else if (prim->name.startsWith("Counter") || prim->name.startsWith("Meter") ||
@@ -1286,7 +1286,7 @@ static ssize_t index_operand(const IR::MAU::Primitive *prim) {
     return 1;
 }
 
-static size_t input_operand(const IR::MAU::Primitive *prim) {
+static size_t input_operand(const P4::IR::MAU::Primitive *prim) {
     if (prim->name.startsWith("Lpf") || prim->name.startsWith("Wred") ||
             prim->name.startsWith("DirectLpf") || prim->name.startsWith("DirectWred"))
         return 1;
@@ -1294,9 +1294,9 @@ static size_t input_operand(const IR::MAU::Primitive *prim) {
         return -1;
 }
 
-static size_t precolor_operand(const IR::MAU::Primitive *prim) {
+static size_t precolor_operand(const P4::IR::MAU::Primitive *prim) {
     if (prim->name.startsWith("DirectMeter") || prim->name.startsWith("Meter")) {
-        if (auto tprim = prim->to<IR::MAU::TypedPrimitive>()) {
+        if (auto tprim = prim->to<P4::IR::MAU::TypedPrimitive>()) {
             for (auto o : tprim->op_names) {
                 if (o.second == "color")
                     return o.first;
@@ -1308,7 +1308,7 @@ static size_t precolor_operand(const IR::MAU::Primitive *prim) {
 }
 
 
-bool StatefulAttachmentSetup::Scan::preorder(const IR::MAU::Action *act) {
+bool StatefulAttachmentSetup::Scan::preorder(const P4::IR::MAU::Action *act) {
     self.remove_tempvars.clear();
     self.copy_propagated_tempvars.clear();
     if (act->stateful_calls.empty())
@@ -1317,17 +1317,17 @@ bool StatefulAttachmentSetup::Scan::preorder(const IR::MAU::Action *act) {
     for (auto call : act->stateful_calls) {
         auto prim = call->prim;
         BUG_CHECK(prim->operands.size() >= 1, "Invalid primitive %s", prim);
-        auto gref = prim->operands[0]->to<IR::GlobalRef>();
+        auto gref = prim->operands[0]->to<P4::IR::GlobalRef>();
         BUG_CHECK(gref, "No object named %s", prim->operands[0]);
 
-        auto find_and_save_temp_var = [&](const IR::Expression *expr) {
-            if (auto *tv = expr->to<IR::TempVar>()) {
+        auto find_and_save_temp_var = [&](const P4::IR::Expression *expr) {
+            if (auto *tv = expr->to<P4::IR::TempVar>()) {
                 self.remove_tempvars.insert(tv->name);
                 self.copy_propagated_tempvars.insert(tv->name);
             } else {
                 // it is possible to have a slice of TempVar as the operand for a SALU call.
-                if (auto *slice = expr->to<IR::Slice>()) {
-                    if (auto tv = slice->e0->to<IR::TempVar>()) {
+                if (auto *slice = expr->to<P4::IR::Slice>()) {
+                    if (auto tv = slice->e0->to<P4::IR::TempVar>()) {
                         self.copy_propagated_tempvars.insert(tv->name);
                     }
                 }
@@ -1336,11 +1336,11 @@ bool StatefulAttachmentSetup::Scan::preorder(const IR::MAU::Action *act) {
 
         if (prim->operands.size() >= 2) {
             find_and_save_temp_var(prim->operands[1]);
-            if (auto *c = prim->operands[1]->to<IR::BFN::ReinterpretCast>()) {
+            if (auto *c = prim->operands[1]->to<P4::IR::BFN::ReinterpretCast>()) {
                 find_and_save_temp_var(c->expr);
             }
-            if (auto *cc = prim->operands[1]->to<IR::Concat>()) {
-                std::vector<const IR::Expression *> possible_vars;
+            if (auto *cc = prim->operands[1]->to<P4::IR::Concat>()) {
+                std::vector<const P4::IR::Expression *> possible_vars;
                 simpl_concat(possible_vars, cc);
                 for (auto expr : possible_vars) {
                     find_and_save_temp_var(expr);
@@ -1351,24 +1351,24 @@ bool StatefulAttachmentSetup::Scan::preorder(const IR::MAU::Action *act) {
     return true;
 }
 
-bool StatefulAttachmentSetup::Scan::preorder(const IR::MAU::Instruction *) {
+bool StatefulAttachmentSetup::Scan::preorder(const P4::IR::MAU::Instruction *) {
     self.saved_tempvar = nullptr;
     self.saved_hashdist = nullptr;
     return true;
 }
 
-bool StatefulAttachmentSetup::Scan::preorder(const IR::TempVar *tv) {
+bool StatefulAttachmentSetup::Scan::preorder(const P4::IR::TempVar *tv) {
     if (self.copy_propagated_tempvars.count(tv->name))
         self.saved_tempvar = tv;
     return true;
 }
 
-bool StatefulAttachmentSetup::Scan::preorder(const IR::MAU::HashDist *hd) {
+bool StatefulAttachmentSetup::Scan::preorder(const P4::IR::MAU::HashDist *hd) {
     self.saved_hashdist = hd;
     return true;
 }
 
-void StatefulAttachmentSetup::Scan::postorder(const IR::MAU::Instruction *instr) {
+void StatefulAttachmentSetup::Scan::postorder(const P4::IR::MAU::Instruction *instr) {
     if (self.saved_tempvar && self.saved_hashdist) {
         if (self.copy_propagated_tempvars.count(self.saved_tempvar->name)) {
             self.stateful_alu_from_hash_dists[self.saved_tempvar->name] = self.saved_hashdist;
@@ -1379,53 +1379,53 @@ void StatefulAttachmentSetup::Scan::postorder(const IR::MAU::Instruction *instr)
     }
 }
 
-void StatefulAttachmentSetup::Scan::postorder(const IR::MAU::Primitive *prim) {
-    const IR::MAU::AttachedMemory *obj = nullptr;
-    use_t use = IR::MAU::StatefulUse::NO_USE;
+void StatefulAttachmentSetup::Scan::postorder(const P4::IR::MAU::Primitive *prim) {
+    const P4::IR::MAU::AttachedMemory *obj = nullptr;
+    use_t use = P4::IR::MAU::StatefulUse::NO_USE;
     auto dot = prim->name.find('.');
     cstring method = dot ? cstring(dot+1) : prim->name;
     while (dot && dot > prim->name && std::isdigit(dot[-1])) --dot;
     auto objType = dot ? prim->name.before(dot) : cstring();
     if (objType.endsWith("Action")) {
-        obj = prim->operands.at(0)->to<IR::GlobalRef>()->obj->to<IR::MAU::StatefulAlu>();
+        obj = prim->operands.at(0)->to<P4::IR::GlobalRef>()->obj->to<P4::IR::MAU::StatefulAlu>();
         BUG_CHECK(obj, "invalid object");
         if (method == "execute") {
             if (objType == "DirectRegisterAction")
-                use = IR::MAU::StatefulUse::DIRECT;
+                use = P4::IR::MAU::StatefulUse::DIRECT;
             else
-                use = IR::MAU::StatefulUse::INDIRECT;
+                use = P4::IR::MAU::StatefulUse::INDIRECT;
         } else if (method == "execute_log") {
-            use = IR::MAU::StatefulUse::LOG;
+            use = P4::IR::MAU::StatefulUse::LOG;
         } else if (method == "enqueue") {
-            use = IR::MAU::StatefulUse::FIFO_PUSH;
+            use = P4::IR::MAU::StatefulUse::FIFO_PUSH;
         } else if (method == "dequeue") {
-            use = IR::MAU::StatefulUse::FIFO_POP;
+            use = P4::IR::MAU::StatefulUse::FIFO_POP;
         } else if (method == "push") {
-            use = IR::MAU::StatefulUse::STACK_PUSH;
+            use = P4::IR::MAU::StatefulUse::STACK_PUSH;
         } else if (method == "pop") {
-            use = IR::MAU::StatefulUse::STACK_POP;
+            use = P4::IR::MAU::StatefulUse::STACK_POP;
         } else if (method == "sweep") {
-            use = IR::MAU::StatefulUse::FAST_CLEAR;
+            use = P4::IR::MAU::StatefulUse::FAST_CLEAR;
         } else {
             BUG("Unknown %s method %s in: %s", objType, method, prim); }
     } else if (method == "execute") {
-        obj = prim->operands.at(0)->to<IR::GlobalRef>()->obj->to<IR::MAU::Meter>();
+        obj = prim->operands.at(0)->to<P4::IR::GlobalRef>()->obj->to<P4::IR::MAU::Meter>();
         BUG_CHECK(obj, "invalid object");
-        use = objType.startsWith("Direct") ? IR::MAU::StatefulUse::DIRECT
-                                           : IR::MAU::StatefulUse::INDIRECT;
+        use = objType.startsWith("Direct") ? P4::IR::MAU::StatefulUse::DIRECT
+                                           : P4::IR::MAU::StatefulUse::INDIRECT;
     } else if (method == "count") {
-        obj = prim->operands.at(0)->to<IR::GlobalRef>()->obj->to<IR::MAU::Counter>();
+        obj = prim->operands.at(0)->to<P4::IR::GlobalRef>()->obj->to<P4::IR::MAU::Counter>();
         BUG_CHECK(obj, "invalid object");
-        use = objType.startsWith("Direct") ? IR::MAU::StatefulUse::DIRECT
-                                           : IR::MAU::StatefulUse::INDIRECT;
+        use = objType.startsWith("Direct") ? P4::IR::MAU::StatefulUse::DIRECT
+                                           : P4::IR::MAU::StatefulUse::INDIRECT;
     } else if (method == "clear") {
-        obj = prim->operands.at(0)->to<IR::GlobalRef>()->obj->to<IR::MAU::StatefulAlu>();
+        obj = prim->operands.at(0)->to<P4::IR::GlobalRef>()->obj->to<P4::IR::MAU::StatefulAlu>();
         BUG_CHECK(obj, "invalid object");
-        use = IR::MAU::StatefulUse::FAST_CLEAR;
+        use = P4::IR::MAU::StatefulUse::FAST_CLEAR;
         bitvec clear_value;
         uint32_t busy_value = 0;
         if (prim->operands.size() > 1) {
-            auto *v = prim->operands.at(1)->to<IR::Constant>();
+            auto *v = prim->operands.at(1)->to<P4::IR::Constant>();
             if (!v) {
                 error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "clear value %1% must be a constant",
                       prim->operands.at(1));
@@ -1434,13 +1434,13 @@ void StatefulAttachmentSetup::Scan::postorder(const IR::MAU::Primitive *prim) {
                 clear_value.putrange(64, 64,
                     static_cast<uint64_t>(static_cast<big_int>(v->value >> 64))); } }
         if (prim->operands.size() > 2) {
-            auto *v = prim->operands.at(2)->to<IR::Constant>();
+            auto *v = prim->operands.at(2)->to<P4::IR::Constant>();
             if (!v) {
                 error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "busy value %1% must be a constant",
                       prim->operands.at(2));
             } else {
                 busy_value = v->asUnsigned(); } }
-        auto &info = self.table_clears[findContext<IR::MAU::Table>()];
+        auto &info = self.table_clears[findContext<P4::IR::MAU::Table>()];
         if (info) {
             if (obj != info->attached)
                 error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "Clearing %1% and %2% in one table",
@@ -1459,41 +1459,41 @@ void StatefulAttachmentSetup::Scan::postorder(const IR::MAU::Primitive *prim) {
         info->busy_value = busy_value;
     }
     if (obj) {
-        auto *act = findContext<IR::MAU::Action>();
+        auto *act = findContext<P4::IR::MAU::Action>();
         use_t &prev_use = self.action_use[act][obj];
-        if (prev_use != IR::MAU::StatefulUse::NO_USE && prev_use != use)
+        if (prev_use != P4::IR::MAU::StatefulUse::NO_USE && prev_use != use)
             error("Inconsistent use of %s in action %s", obj, act);
         prev_use = use;
     }
 }
 
-IR::MAU::HashDist *StatefulAttachmentSetup::create_hash_dist(const IR::Expression *expr,
-                                                           const IR::MAU::Primitive *prim) {
+P4::IR::MAU::HashDist *StatefulAttachmentSetup::create_hash_dist(const P4::IR::Expression *expr,
+                                                           const P4::IR::MAU::Primitive *prim) {
     auto hash_field = expr;
-    if (auto c = expr->to<IR::BFN::ReinterpretCast>())
+    if (auto c = expr->to<P4::IR::BFN::ReinterpretCast>())
         hash_field = c->expr;
 
     int size = hash_field->type->width_bits();
-    auto *hge = new IR::MAU::HashGenExpression(prim->srcInfo, IR::Type::Bits::get(size),
-                        hash_field, IR::MAU::HashFunction::identity());
+    auto *hge = new P4::IR::MAU::HashGenExpression(prim->srcInfo, P4::IR::Type::Bits::get(size),
+                        hash_field, P4::IR::MAU::HashFunction::identity());
 
-    auto *hd = new IR::MAU::HashDist(hge->srcInfo, hge->type, hge);
+    auto *hd = new P4::IR::MAU::HashDist(hge->srcInfo, hge->type, hge);
     return hd;
 }
 
 /**
- * Find or generate a Hash Distribution unit, given what IR::Node is in the primitive
+ * Find or generate a Hash Distribution unit, given what P4::IR::Node is in the primitive
  */
-const IR::MAU::HashDist *StatefulAttachmentSetup::find_hash_dist(const IR::Expression *expr,
-        const IR::MAU::Primitive *prim) {
-    const IR::MAU::HashDist *hd = expr->to<IR::MAU::HashDist>();
+const P4::IR::MAU::HashDist *StatefulAttachmentSetup::find_hash_dist(const P4::IR::Expression *expr,
+        const P4::IR::MAU::Primitive *prim) {
+    const P4::IR::MAU::HashDist *hd = expr->to<P4::IR::MAU::HashDist>();
     if (!hd) {
-        auto tv = expr->to<IR::TempVar>();
-        const IR::Slice* slice = nullptr;
+        auto tv = expr->to<P4::IR::TempVar>();
+        const P4::IR::Slice* slice = nullptr;
 
         if (!tv) {
-            if ((slice = expr->to<IR::Slice>())) {
-                tv = slice->e0->to<IR::TempVar>();
+            if ((slice = expr->to<P4::IR::Slice>())) {
+                tv = slice->e0->to<P4::IR::TempVar>();
             }
         }
         if (tv != nullptr && stateful_alu_from_hash_dists.count(tv->name)) {
@@ -1501,7 +1501,7 @@ const IR::MAU::HashDist *StatefulAttachmentSetup::find_hash_dist(const IR::Expre
             if (slice) {
                 // If a slice of TempVar is used, then create a slice of HashGenExpression
                 auto *new_slice = MakeSlice(hd->expr, slice->getL(), slice->getH());
-                return new IR::MAU::HashDist(hd->srcInfo, new_slice);
+                return new P4::IR::MAU::HashDist(hd->srcInfo, new_slice);
             }
         } else if (phv.field(expr)) {
             hd = create_hash_dist(expr, prim); } }
@@ -1514,17 +1514,17 @@ const IR::MAU::HashDist *StatefulAttachmentSetup::find_hash_dist(const IR::Expre
  * - only one sub-expression in concatenation expression can be a field.
  * - other sub-expression must be constant.
  */
-void StatefulAttachmentSetup::Scan::simpl_concat(std::vector<const IR::Expression*>& slices,
-        const IR::Concat* expr) {
-    if (expr->left->is<IR::Constant>()) {
+void StatefulAttachmentSetup::Scan::simpl_concat(std::vector<const P4::IR::Expression*>& slices,
+        const P4::IR::Concat* expr) {
+    if (expr->left->is<P4::IR::Constant>()) {
         // ignore
-    } else if (auto lhs = expr->left->to<IR::Concat>()) {
+    } else if (auto lhs = expr->left->to<P4::IR::Concat>()) {
         simpl_concat(slices, lhs);
     } else {
         slices.push_back(expr->left); }
-    if (expr->right->is<IR::Constant>()) {
+    if (expr->right->is<P4::IR::Constant>()) {
         // ignore
-    } else if (auto rhs = expr->right->to<IR::Concat>()) {
+    } else if (auto rhs = expr->right->to<P4::IR::Concat>()) {
         simpl_concat(slices, rhs);
     } else {
         slices.push_back(expr->right); }
@@ -1540,14 +1540,14 @@ void StatefulAttachmentSetup::Scan::simpl_concat(std::vector<const IR::Expressio
  * FIXME: a hash.get is not yet translated to a HashDist before this.  The only way to
  * do this is to initialize a temporary variable as this, and use this as an address
  */
-void StatefulAttachmentSetup::Scan::setup_index_operand(const IR::Expression *index_expr,
-        const IR::MAU::Synth2Port *synth2port, const IR::MAU::Table *tbl,
-        const IR::MAU::StatefulCall *call) {
+void StatefulAttachmentSetup::Scan::setup_index_operand(const P4::IR::Expression *index_expr,
+        const P4::IR::MAU::Synth2Port *synth2port, const P4::IR::MAU::Table *tbl,
+        const P4::IR::MAU::StatefulCall *call) {
     if (!synth2port) return;
-    const IR::Expression* simpl_expr = nullptr;
-    std::vector<const IR::Expression*> expressions;
-    if (index_expr->is<IR::Concat>()) {
-        simpl_concat(expressions, index_expr->to<IR::Concat>());
+    const P4::IR::Expression* simpl_expr = nullptr;
+    std::vector<const P4::IR::Expression*> expressions;
+    if (index_expr->is<P4::IR::Concat>()) {
+        simpl_concat(expressions, index_expr->to<P4::IR::Concat>());
 
         if (expressions.size() == 1) {
             simpl_expr = expressions.at(0);
@@ -1557,11 +1557,11 @@ void StatefulAttachmentSetup::Scan::setup_index_operand(const IR::Expression *in
         }
     } else {
         simpl_expr = index_expr;
-        if (auto sl = index_expr->to<IR::Slice>()) {
+        if (auto sl = index_expr->to<P4::IR::Slice>()) {
             // corner case -- action arg used both for index and elsewhere in P4_14 which
             // is inferred as larger than the index size (due to the other use).  We end up
             // with a slice on the index which we want to ignore.
-            if (sl->e0->is<IR::MAU::ActionArg>() && sl->getL() == 0 &&
+            if (sl->e0->is<P4::IR::MAU::ActionArg>() && sl->getL() == 0 &&
                 (2 << sl->getH()) >= synth2port->size) {
                 simpl_expr = sl->e0; } }
     }
@@ -1587,7 +1587,7 @@ void StatefulAttachmentSetup::Scan::setup_index_operand(const IR::Expression *in
         if (self.addressed_by_index.count(index_check))
             both_hash_and_index = true;
         self.addressed_by_hash.insert(index_check);
-    } else if (!simpl_expr->is<IR::Constant>() && !simpl_expr->is<IR::MAU::ActionArg>()) {
+    } else if (!simpl_expr->is<P4::IR::Constant>() && !simpl_expr->is<P4::IR::MAU::ActionArg>()) {
         ::error("%s: The index is too complex for the primitive to be handled.",
              call->prim->srcInfo);
     } else {
@@ -1610,16 +1610,16 @@ void StatefulAttachmentSetup::Scan::setup_index_operand(const IR::Expression *in
  *  addressed by this TempVar.  This pass combines these instructions into one instruction,
  *  and correctly saves the HashDist IR into these attached tables
  */
-void StatefulAttachmentSetup::Scan::postorder(const IR::MAU::Table *tbl) {
+void StatefulAttachmentSetup::Scan::postorder(const P4::IR::MAU::Table *tbl) {
     for (auto act : Values(tbl->actions)) {
         for (auto call : act->stateful_calls) {
             auto prim = call->prim;
             // typechecking should have verified
             BUG_CHECK(prim->operands.size() >= 1, "Invalid primitive %s", prim);
-            auto gref = prim->operands[0]->to<IR::GlobalRef>();
+            auto gref = prim->operands[0]->to<P4::IR::GlobalRef>();
             // typechecking should catch this too
             BUG_CHECK(gref, "No object named %s", prim->operands[0]);
-            auto synth2port = gref->obj->to<IR::MAU::Synth2Port>();
+            auto synth2port = gref->obj->to<P4::IR::MAU::Synth2Port>();
 
             bool already_attached = false;
             for (auto back_at : tbl->attached) {
@@ -1659,10 +1659,10 @@ void StatefulAttachmentSetup::Scan::postorder(const IR::MAU::Table *tbl) {
 /**
  * Save the index operand into the StatefulCall IR Node
  */
-const IR::MAU::StatefulCall *
-    StatefulAttachmentSetup::Update::preorder(IR::MAU::StatefulCall *call) {
-    auto *tbl = findOrigCtxt<IR::MAU::Table>();
-    auto *orig_call = getOriginal()->to<IR::MAU::StatefulCall>();
+const P4::IR::MAU::StatefulCall *
+    StatefulAttachmentSetup::Update::preorder(P4::IR::MAU::StatefulCall *call) {
+    auto *tbl = findOrigCtxt<P4::IR::MAU::Table>();
+    auto *orig_call = getOriginal()->to<P4::IR::MAU::StatefulCall>();
 
     StatefulCallKey sck = std::make_pair(orig_call, tbl);
     if (auto expr = ::get(self.update_calls, sck))
@@ -1670,16 +1670,16 @@ const IR::MAU::StatefulCall *
 
     auto prim = call->prim;
     BUG_CHECK(prim->operands.size() >= 1, "Invalid primitive %s", prim);
-    auto gref = prim->operands[0]->to<IR::GlobalRef>();
-    auto attached = gref->obj->to<IR::MAU::AttachedMemory>();
-    auto act = findOrigCtxt<IR::MAU::Action>();
+    auto gref = prim->operands[0]->to<P4::IR::GlobalRef>();
+    auto attached = gref->obj->to<P4::IR::MAU::AttachedMemory>();
+    auto act = findOrigCtxt<P4::IR::MAU::Action>();
     use_t use = self.action_use[act][attached];
-    if (!(use == IR::MAU::StatefulUse::NO_USE ||
-          use == IR::MAU::StatefulUse::DIRECT ||
-          use == IR::MAU::StatefulUse::INDIRECT)) {
+    if (!(use == P4::IR::MAU::StatefulUse::NO_USE ||
+          use == P4::IR::MAU::StatefulUse::DIRECT ||
+          use == P4::IR::MAU::StatefulUse::INDIRECT)) {
         BUG_CHECK(call->index == nullptr, "%s: Primitive cannot both have index and use "
                   "counter index: %s", prim->srcInfo, prim);
-        call->index = new IR::MAU::StatefulCounter(prim->srcInfo, prim->type, attached);
+        call->index = new P4::IR::MAU::StatefulCounter(prim->srcInfo, prim->type, attached);
     }
 
     prune();
@@ -1689,17 +1689,17 @@ const IR::MAU::StatefulCall *
 /**
  * Save the Hash Distribution unit and the type of the stateful ALU counter
  */
-const IR::MAU::BackendAttached *
-        StatefulAttachmentSetup::Update::preorder(IR::MAU::BackendAttached *ba) {
-    auto *tbl = findOrigCtxt<IR::MAU::Table>();
+const P4::IR::MAU::BackendAttached *
+        StatefulAttachmentSetup::Update::preorder(P4::IR::MAU::BackendAttached *ba) {
+    auto *tbl = findOrigCtxt<P4::IR::MAU::Table>();
     HashDistKey hdk = std::make_pair(ba->attached, tbl);
     if (auto hd = ::get(self.update_hd, hdk)) {
         ba->hash_dist = hd; }
-    use_t use = IR::MAU::StatefulUse::NO_USE;
+    use_t use = P4::IR::MAU::StatefulUse::NO_USE;
     for (auto act : Values(tbl->actions)) {
         auto use2 = self.action_use[act][ba->attached];
-        if (use2 != IR::MAU::StatefulUse::NO_USE) {
-            if (use != IR::MAU::StatefulUse::NO_USE && use != use2) {
+        if (use2 != P4::IR::MAU::StatefulUse::NO_USE) {
+            if (use != P4::IR::MAU::StatefulUse::NO_USE && use != use2) {
                 error("inconsistent use of %s in table %s", ba->attached, tbl);
                 break;
             }
@@ -1710,8 +1710,8 @@ const IR::MAU::BackendAttached *
     return ba;
 }
 
-const IR::MAU::StatefulAlu *StatefulAttachmentSetup::Update::preorder(IR::MAU::StatefulAlu *salu) {
-    auto *orig = getOriginal<IR::MAU::StatefulAlu>();
+const P4::IR::MAU::StatefulAlu *StatefulAttachmentSetup::Update::preorder(P4::IR::MAU::StatefulAlu *salu) {
+    auto *orig = getOriginal<P4::IR::MAU::StatefulAlu>();
     if (self.salu_clears.count(orig)) {
         auto &info = self.salu_clears.at(orig);
         salu->clear_value = info.clear_value;
@@ -1724,12 +1724,12 @@ const IR::MAU::StatefulAlu *StatefulAttachmentSetup::Update::preorder(IR::MAU::S
     return salu;
 }
 
-const IR::MAU::Instruction *StatefulAttachmentSetup::Update::preorder(IR::MAU::Instruction *inst) {
+const P4::IR::MAU::Instruction *StatefulAttachmentSetup::Update::preorder(P4::IR::MAU::Instruction *inst) {
     if (self.remove_instr.count(getOriginal())) return nullptr;
     return inst;
 }
 
-Visitor::profile_t MeterSetup::Scan::init_apply(const IR::Node* root) {
+Visitor::profile_t MeterSetup::Scan::init_apply(const P4::IR::Node* root) {
     self.update_lpfs.clear();
     self.update_pre_colors.clear();
     self.pre_color_types.clear();
@@ -1738,18 +1738,18 @@ Visitor::profile_t MeterSetup::Scan::init_apply(const IR::Node* root) {
     return MauInspector::init_apply(root);
 }
 
-bool MeterSetup::Scan::preorder(const IR::MAU::Instruction *) {
+bool MeterSetup::Scan::preorder(const P4::IR::MAU::Instruction *) {
     return false;
 }
 
-void MeterSetup::Scan::find_input(const IR::MAU::Primitive *prim) {
+void MeterSetup::Scan::find_input(const P4::IR::MAU::Primitive *prim) {
     int input_index = input_operand(prim);
     if (input_index == -1)
         return;
 
-    auto gref = prim->operands[0]->to<IR::GlobalRef>();
+    auto gref = prim->operands[0]->to<P4::IR::GlobalRef>();
     if (!gref) return;
-    auto mtr = gref->obj->to<IR::MAU::Meter>();
+    auto mtr = gref->obj->to<P4::IR::MAU::Meter>();
     BUG_CHECK(mtr, "%s: Operand in LPF execute is not a meter", prim->srcInfo);
     auto input = prim->operands[input_index];
     auto *field = self.phv.field(input);
@@ -1763,9 +1763,9 @@ void MeterSetup::Scan::find_input(const IR::MAU::Primitive *prim) {
         return;
     }
 
-    auto *act = findContext<IR::MAU::Action>();
+    auto *act = findContext<P4::IR::MAU::Action>();
     if (!act) return;
-    auto *tbl = findContext<IR::MAU::Table>();
+    auto *tbl = findContext<P4::IR::MAU::Table>();
     if (!tbl) return;
     auto *other_field = self.phv.field(self.update_lpfs.at(mtr));
     if (!other_field) return;
@@ -1779,13 +1779,13 @@ void MeterSetup::Scan::find_input(const IR::MAU::Primitive *prim) {
 /** This determines the field to be used for the pre-cplor.  It will also mark a meter as
  *  color-aware or color-blind.
  */
-void MeterSetup::Scan::find_pre_color(const IR::MAU::Primitive *prim) {
-    auto act = findContext<IR::MAU::Action>();
+void MeterSetup::Scan::find_pre_color(const P4::IR::MAU::Primitive *prim) {
+    auto act = findContext<P4::IR::MAU::Action>();
     if (act == nullptr)
         return;
-    auto gref = prim->operands[0]->to<IR::GlobalRef>();
+    auto gref = prim->operands[0]->to<P4::IR::GlobalRef>();
     if (!gref) return;
-    auto mtr = gref->obj->to<IR::MAU::Meter>();
+    auto mtr = gref->obj->to<P4::IR::MAU::Meter>();
     int pre_color_index = precolor_operand(prim);
     BUG_CHECK(!(mtr == nullptr && pre_color_index != -1), "%s: Operation requiring pre-color is "
              "not a meter", prim->srcInfo);
@@ -1829,14 +1829,14 @@ void MeterSetup::Scan::find_pre_color(const IR::MAU::Primitive *prim) {
 /** Linking the input for an LPF found in the action call with the IR node.  The Scan pass finds
  *  the PHV field, and the Update pass updates the AttachedMemory object
  */
-bool MeterSetup::Scan::preorder(const IR::MAU::Primitive *prim) {
+bool MeterSetup::Scan::preorder(const P4::IR::MAU::Primitive *prim) {
     find_input(prim);
     find_pre_color(prim);
     return false;
 }
 
-void MeterSetup::Update::update_input(IR::MAU::Meter *mtr) {
-    auto orig_meter = getOriginal()->to<IR::MAU::Meter>();
+void MeterSetup::Update::update_input(P4::IR::MAU::Meter *mtr) {
+    auto orig_meter = getOriginal()->to<P4::IR::MAU::Meter>();
     bool should_have_input = mtr->implementation.name == "lpf" ||
                              mtr->implementation.name == "wred";
     bool has_input = self.update_lpfs.count(orig_meter) > 0;
@@ -1851,32 +1851,32 @@ void MeterSetup::Update::update_input(IR::MAU::Meter *mtr) {
     mtr->input = self.update_lpfs.at(orig_meter);
 }
 
-void MeterSetup::Update::update_pre_color(IR::MAU::Meter *mtr) {
-    auto orig_meter = getOriginal()->to<IR::MAU::Meter>();
+void MeterSetup::Update::update_pre_color(P4::IR::MAU::Meter *mtr) {
+    auto orig_meter = getOriginal()->to<P4::IR::MAU::Meter>();
     bool has_pre_color = self.update_pre_colors.count(orig_meter) > 0;
 
     if (has_pre_color) {
         auto pre_color = self.update_pre_colors.at(orig_meter);
-        auto hge = new IR::MAU::HashGenExpression(pre_color->srcInfo, IR::Type::Bits::get(2),
-                           pre_color, IR::MAU::HashFunction::identity());
-        auto hd = new IR::MAU::HashDist(hge->srcInfo, hge->type, hge);
+        auto hge = new P4::IR::MAU::HashGenExpression(pre_color->srcInfo, P4::IR::Type::Bits::get(2),
+                           pre_color, P4::IR::MAU::HashFunction::identity());
+        auto hd = new P4::IR::MAU::HashDist(hge->srcInfo, hge->type, hge);
         mtr->pre_color = hd;
     }
 }
 
 
-bool MeterSetup::Update::preorder(IR::MAU::Meter *mtr) {
+bool MeterSetup::Update::preorder(P4::IR::MAU::Meter *mtr) {
     update_input(mtr);
     update_pre_color(mtr);
     return true;
 }
 
-bool MeterSetup::Update::preorder(IR::MAU::Action *act) {
-    auto orig_act = getOriginal()->to<IR::MAU::Action>();
+bool MeterSetup::Update::preorder(P4::IR::MAU::Action *act) {
+    auto orig_act = getOriginal()->to<P4::IR::MAU::Action>();
     if (self.standard_types.count(orig_act) > 0) {
-        act->meter_types[self.standard_types.at(orig_act)] = IR::MAU::MeterType::COLOR_BLIND;
+        act->meter_types[self.standard_types.at(orig_act)] = P4::IR::MAU::MeterType::COLOR_BLIND;
     } else if (self.pre_color_types.count(orig_act) > 0) {
-        act->meter_types[self.pre_color_types.at(orig_act)] = IR::MAU::MeterType::COLOR_AWARE;
+        act->meter_types[self.pre_color_types.at(orig_act)] = P4::IR::MAU::MeterType::COLOR_AWARE;
     }
     return true;
 }
@@ -1884,12 +1884,12 @@ bool MeterSetup::Update::preorder(IR::MAU::Action *act) {
 struct CheckInvalidate : public Inspector {
     explicit CheckInvalidate(const PhvInfo& phv) : phv(phv) { }
 
-    void postorder(const IR::MAU::Primitive *prim) override {
+    void postorder(const P4::IR::MAU::Primitive *prim) override {
         if (prim->name == "invalidate") {
             auto* f = phv.field(prim->operands[0]);
             if (!f) {
                 std::string hdrInvalid = "";
-                if (prim->operands[0]->is<IR::ConcreteHeaderRef>()) {
+                if (prim->operands[0]->is<P4::IR::ConcreteHeaderRef>()) {
                     hdrInvalid += "\nTo invalidate a header, use .setInvalid()";
                 }
                 error("%s: invalid operand %s for primitive %s: not a field.%s", prim->srcInfo,
@@ -1947,16 +1947,16 @@ struct CheckInvalidate : public Inspector {
  *  this needs some work during TableFormat and TablePlacement, and does not yet fully
  *  work.
  */
-bool SetupAttachedAddressing::InitializeAttachedInfo::preorder(const IR::MAU::BackendAttached *ba) {
+bool SetupAttachedAddressing::InitializeAttachedInfo::preorder(const P4::IR::MAU::BackendAttached *ba) {
     auto at_mem = ba->attached;
-    if (!(at_mem->is<IR::MAU::Counter>() || at_mem->is<IR::MAU::Meter>()
-          || at_mem->is<IR::MAU::StatefulAlu>())) {
+    if (!(at_mem->is<P4::IR::MAU::Counter>() || at_mem->is<P4::IR::MAU::Meter>()
+          || at_mem->is<P4::IR::MAU::StatefulAlu>())) {
         return false;
     }
 
     AttachedActionCoord aac;
     aac.am = at_mem;
-    auto tbl = findContext<IR::MAU::Table>();
+    auto tbl = findContext<P4::IR::MAU::Table>();
     auto &attached_info = self.all_attached_info[tbl];
     attached_info[at_mem->unique_id()] = aac;
     return false;
@@ -1964,11 +1964,11 @@ bool SetupAttachedAddressing::InitializeAttachedInfo::preorder(const IR::MAU::Ba
 
 struct StatefulConflict {
     cstring act_name;
-    const IR::MAU::Action *act;
-    const IR::MAU::StatefulCall *calls[2];
+    const P4::IR::MAU::Action *act;
+    const P4::IR::MAU::StatefulCall *calls[2];
 
-    StatefulConflict(cstring act_name, const IR::MAU::Action *act,
-                     const IR::MAU::StatefulCall *a, const IR::MAU::StatefulCall *b)
+    StatefulConflict(cstring act_name, const P4::IR::MAU::Action *act,
+                     const P4::IR::MAU::StatefulCall *a, const P4::IR::MAU::StatefulCall *b)
         : act_name(act_name), act(act), calls{a, b}
     { }
 
@@ -1990,7 +1990,7 @@ struct StatefulConflict {
     }
 };
 
-bool SetupAttachedAddressing::ScanTables::preorder(const IR::MAU::Table *tbl) {
+bool SetupAttachedAddressing::ScanTables::preorder(const P4::IR::MAU::Table *tbl) {
     std::vector<StatefulConflict> state_issues;
     std::list<std::string> stats_issues, meter_issues;
     auto create_issue_item = [](const cstring &action,
@@ -2008,10 +2008,10 @@ bool SetupAttachedAddressing::ScanTables::preorder(const IR::MAU::Table *tbl) {
         if (act->miss_only())
             continue;
 
-        const IR::MAU::AttachedMemory *stats_enabled = nullptr;
-        const IR::MAU::AttachedMemory *stats_disabled = nullptr;
-        const IR::MAU::AttachedMemory *meter_enabled = nullptr;
-        const IR::MAU::AttachedMemory *meter_disabled = nullptr;
+        const P4::IR::MAU::AttachedMemory *stats_enabled = nullptr;
+        const P4::IR::MAU::AttachedMemory *stats_disabled = nullptr;
+        const P4::IR::MAU::AttachedMemory *meter_enabled = nullptr;
+        const P4::IR::MAU::AttachedMemory *meter_disabled = nullptr;
 
         auto &attached_info = self.all_attached_info[tbl];
         for (auto &kv : attached_info) {
@@ -2045,9 +2045,9 @@ bool SetupAttachedAddressing::ScanTables::preorder(const IR::MAU::Table *tbl) {
             meter_issues.push_back(create_issue_item(act_name,
                 meter_enabled->toString(), meter_disabled->toString()));
         }
-        const IR::MAU::StatefulCall *stats_call = nullptr, *meter_call = nullptr;
+        const P4::IR::MAU::StatefulCall *stats_call = nullptr, *meter_call = nullptr;
         for (auto *sc : act->stateful_calls) {
-            const IR::MAU::StatefulCall **prev;
+            const P4::IR::MAU::StatefulCall **prev;
             if (sc->attached_callee->usesStatsBus())
                 prev = &stats_call;
             else if (sc->attached_callee->usesMeterBus())
@@ -2102,14 +2102,14 @@ bool SetupAttachedAddressing::ScanTables::preorder(const IR::MAU::Table *tbl) {
  *  entry as the address is at the MSB of the payload.  This pass verifies that this
  *  behavior is correct.
  */
-bool SetupAttachedAddressing::VerifyAttached::preorder(const IR::MAU::BackendAttached *ba) {
+bool SetupAttachedAddressing::VerifyAttached::preorder(const P4::IR::MAU::BackendAttached *ba) {
     auto at_mem = ba->attached;
-    if (!(at_mem->is<IR::MAU::Counter>() || at_mem->is<IR::MAU::Meter>()
-        || at_mem->is<IR::MAU::StatefulAlu>())) {
+    if (!(at_mem->is<P4::IR::MAU::Counter>() || at_mem->is<P4::IR::MAU::Meter>()
+        || at_mem->is<P4::IR::MAU::StatefulAlu>())) {
         return false;
     }
 
-    auto tbl = findContext<IR::MAU::Table>();
+    auto tbl = findContext<P4::IR::MAU::Table>();
     BUG_CHECK(tbl != nullptr, "No associated table found for attached table - %1%", ba);
 
     bool direct = at_mem->direct;
@@ -2131,7 +2131,7 @@ bool SetupAttachedAddressing::VerifyAttached::preorder(const IR::MAU::BackendAtt
                                      : "objects attached to a hash action";
 
         std::string solution = direct ? "" : "either have match data or ";
-        std::string meter_type_problem = at_mem->is<IR::MAU::Meter>()
+        std::string meter_type_problem = at_mem->is<P4::IR::MAU::Meter>()
                                        ? "color aware per flow meters"
                                        : "multiple stateful ALU actions";
         ERROR_CHECK(aac.all_per_flow_enabled, "%s: Attached object %s in table %s is executed "
@@ -2148,53 +2148,53 @@ bool SetupAttachedAddressing::VerifyAttached::preorder(const IR::MAU::BackendAtt
     return false;
 }
 
-void SetupAttachedAddressing::UpdateAttached::simple_attached(IR::MAU::BackendAttached *ba) {
+void SetupAttachedAddressing::UpdateAttached::simple_attached(P4::IR::MAU::BackendAttached *ba) {
     auto at_mem = ba->attached;
     if (at_mem->direct)
-        ba->addr_location = IR::MAU::AddrLocation::DIRECT;
+        ba->addr_location = P4::IR::MAU::AddrLocation::DIRECT;
     else
-        ba->addr_location = IR::MAU::AddrLocation::OVERHEAD;
-    if (at_mem->is<IR::MAU::Selector>()) {
-        ba->pfe_location = IR::MAU::PfeLocation::OVERHEAD;
-        ba->type_location = IR::MAU::TypeLocation::DEFAULT;
+        ba->addr_location = P4::IR::MAU::AddrLocation::OVERHEAD;
+    if (at_mem->is<P4::IR::MAU::Selector>()) {
+        ba->pfe_location = P4::IR::MAU::PfeLocation::OVERHEAD;
+        ba->type_location = P4::IR::MAU::TypeLocation::DEFAULT;
     } else {
-        ba->pfe_location = IR::MAU::PfeLocation::DEFAULT;
+        ba->pfe_location = P4::IR::MAU::PfeLocation::DEFAULT;
     }
 }
 
-bool SetupAttachedAddressing::UpdateAttached::preorder(IR::MAU::BackendAttached *ba) {
+bool SetupAttachedAddressing::UpdateAttached::preorder(P4::IR::MAU::BackendAttached *ba) {
     auto at_mem = ba->attached;
-    if (!(at_mem->is<IR::MAU::Counter>() || at_mem->is<IR::MAU::Meter>()
-        || at_mem->is<IR::MAU::StatefulAlu>())) {
+    if (!(at_mem->is<P4::IR::MAU::Counter>() || at_mem->is<P4::IR::MAU::Meter>()
+        || at_mem->is<P4::IR::MAU::StatefulAlu>())) {
         simple_attached(ba);
         return false;
     }
 
-    auto orig_ba = getOriginal()->to<IR::MAU::BackendAttached>();
+    auto orig_ba = getOriginal()->to<P4::IR::MAU::BackendAttached>();
     auto &aac = self.attached_coord.at(orig_ba);
 
-    IR::MAU::PfeLocation pfe_loc = IR::MAU::PfeLocation::DEFAULT;
-    IR::MAU::TypeLocation type_loc = IR::MAU::TypeLocation::DEFAULT;
+    P4::IR::MAU::PfeLocation pfe_loc = P4::IR::MAU::PfeLocation::DEFAULT;
+    P4::IR::MAU::TypeLocation type_loc = P4::IR::MAU::TypeLocation::DEFAULT;
 
     if (!aac.all_per_flow_enabled)
-        pfe_loc = IR::MAU::PfeLocation::OVERHEAD;
+        pfe_loc = P4::IR::MAU::PfeLocation::OVERHEAD;
     if (!aac.all_same_meter_type)
-        type_loc = IR::MAU::TypeLocation::OVERHEAD;
+        type_loc = P4::IR::MAU::TypeLocation::OVERHEAD;
 
     if (at_mem->direct) {
-        ba->addr_location = IR::MAU::AddrLocation::DIRECT;
+        ba->addr_location = P4::IR::MAU::AddrLocation::DIRECT;
     } else if (ba->hash_dist != nullptr) {
-        ba->addr_location = IR::MAU::AddrLocation::HASH;
-    } else if (!(ba->use == IR::MAU::StatefulUse::NO_USE ||
-                 ba->use == IR::MAU::StatefulUse::DIRECT ||
-                 ba->use == IR::MAU::StatefulUse::INDIRECT)) {
-        ba->addr_location = IR::MAU::AddrLocation::STFUL_COUNTER;
+        ba->addr_location = P4::IR::MAU::AddrLocation::HASH;
+    } else if (!(ba->use == P4::IR::MAU::StatefulUse::NO_USE ||
+                 ba->use == P4::IR::MAU::StatefulUse::DIRECT ||
+                 ba->use == P4::IR::MAU::StatefulUse::INDIRECT)) {
+        ba->addr_location = P4::IR::MAU::AddrLocation::STFUL_COUNTER;
     } else {
-        ba->addr_location = IR::MAU::AddrLocation::OVERHEAD;
+        ba->addr_location = P4::IR::MAU::AddrLocation::OVERHEAD;
     }
 
     ba->pfe_location = pfe_loc;
-    if (at_mem->is<IR::MAU::StatefulAlu>() || at_mem->is<IR::MAU::Meter>())
+    if (at_mem->is<P4::IR::MAU::StatefulAlu>() || at_mem->is<P4::IR::MAU::Meter>())
         ba->type_location = type_loc;
     return false;
 }
@@ -2211,7 +2211,7 @@ bool SetupAttachedAddressing::UpdateAttached::preorder(IR::MAU::BackendAttached 
  * If other information is potentially relevant, it must be saved in other IR nodes
  * before this pass
  */
-bool NullifyAllStatefulCallPrim::preorder(IR::MAU::StatefulCall *sc) {
+bool NullifyAllStatefulCallPrim::preorder(P4::IR::MAU::StatefulCall *sc) {
     sc->prim = nullptr;
     return false;
 }
@@ -2263,13 +2263,13 @@ bool NullifyAllStatefulCallPrim::preorder(IR::MAU::StatefulCall *sc) {
  *  However, instruction with mutually exclusive bitranges would be completely acceptable.
  *  Note that no instructions are eliminated, as this should be the job of ElimUnused
  */
-const IR::MAU::Action *BackendCopyPropagation::preorder(IR::MAU::Action *a) {
+const P4::IR::MAU::Action *BackendCopyPropagation::preorder(P4::IR::MAU::Action *a) {
     visitOnce();
     copy_propagation_replacements.clear();
     return a;
 }
 
-const IR::Node *BackendCopyPropagation::preorder(IR::MAU::Instruction *instr) {
+const P4::IR::Node *BackendCopyPropagation::preorder(P4::IR::MAU::Instruction *instr) {
     instr->copy_propagated.clear();
     // In order to maintain the sequential property, the reads have to be visited before the writes
     split_set = nullptr;
@@ -2286,11 +2286,11 @@ const IR::Node *BackendCopyPropagation::preorder(IR::MAU::Instruction *instr) {
   * is a set instruction.  Otherwise, remove @p instr->operands[0] from the set of copy propagation
   * candidates.
   */
-void BackendCopyPropagation::update(const IR::MAU::Instruction *instr, const IR::Expression *e) {
-    if (findContext<IR::MAU::SaluAction>()) {
+void BackendCopyPropagation::update(const P4::IR::MAU::Instruction *instr, const P4::IR::Expression *e) {
+    if (findContext<P4::IR::MAU::SaluAction>()) {
         // don't propagate within or out of SALU actions
         return; }
-    auto act = findContext<IR::MAU::Action>();
+    auto act = findContext<P4::IR::MAU::Action>();
     if (act == nullptr) {
         return;
     }
@@ -2336,15 +2336,15 @@ void BackendCopyPropagation::update(const IR::MAU::Instruction *instr, const IR:
     }
 }
 
-const IR::Expression *BackendCopyPropagation::FieldImpact::getSlice(bool isSalu, le_bitrange bits) {
-    const IR::Expression *rv;
+const P4::IR::Expression *BackendCopyPropagation::FieldImpact::getSlice(bool isSalu, le_bitrange bits) {
+    const P4::IR::Expression *rv;
     BUG_CHECK(dest_bits.contains(bits), "%s is not a superset of %s", dest_bits, bits);
-    if (isSalu && read->is<IR::MAU::HashDist>()) {
+    if (isSalu && read->is<P4::IR::MAU::HashDist>()) {
         // FIXME -- SALU uses hash directly, not via hash dist; need refactoring
         // of IXBarExpression/HashGenExpression to make this more sane
-        auto *hd = read->to<IR::MAU::HashDist>();
+        auto *hd = read->to<P4::IR::MAU::HashDist>();
         rv = MakeSlice(hd->expr, bits.shiftedByBits(-dest_bits.lo));
-        rv = new IR::MAU::IXBarExpression(rv);
+        rv = new P4::IR::MAU::IXBarExpression(rv);
     } else {
         rv = MakeSlice(read, bits.shiftedByBits(-dest_bits.lo));
     }
@@ -2355,9 +2355,9 @@ const IR::Expression *BackendCopyPropagation::FieldImpact::getSlice(bool isSalu,
  * (setting \@elem_copy_propagated to true), or @p e if @p e cannot be replaced
  * (setting \@elem_copy_propagated to false).
  */
-const IR::Expression *BackendCopyPropagation::propagate(const IR::MAU::Instruction *instr,
-    const IR::Expression *e) {
-    auto act = findContext<IR::MAU::Action>();
+const P4::IR::Expression *BackendCopyPropagation::propagate(const P4::IR::MAU::Instruction *instr,
+    const P4::IR::Expression *e) {
+    auto act = findContext<P4::IR::MAU::Action>();
     if (act == nullptr) {
         prune();
         return e;
@@ -2368,13 +2368,13 @@ const IR::Expression *BackendCopyPropagation::propagate(const IR::MAU::Instructi
     if (field == nullptr) {
         return e;
     }
-    bool isSalu = findContext<IR::MAU::SaluAction>() != nullptr;
+    bool isSalu = findContext<P4::IR::MAU::SaluAction>() != nullptr;
     bitvec mask_bits(bits.lo, bits.size());
 
     prune();
     // If a read is possibly replaced with a copy propagated value, replace this value
     for (auto replacement : copy_propagation_replacements[field]) {
-        if (isSalu && replacement.read->is<IR::MAU::ActionArg>()) {
+        if (isSalu && replacement.read->is<P4::IR::MAU::ActionArg>()) {
             // can't access action args in the SALU
             continue; }
         if (replacement.dest_bits.contains(bits)) {
@@ -2385,9 +2385,9 @@ const IR::Expression *BackendCopyPropagation::propagate(const IR::MAU::Instructi
         } else if (replacement.dest_bits.intersectWith(bits).empty()) {
             continue;
         } else if (instr->name == "set") {
-            if (!split_set) split_set = new IR::Vector<IR::MAU::Primitive>;
+            if (!split_set) split_set = new P4::IR::Vector<P4::IR::MAU::Primitive>;
             le_bitrange range = replacement.dest_bits.intersectWith(bits);
-            split_set->push_back(new IR::MAU::Instruction(instr->srcInfo, "set"_cs,
+            split_set->push_back(new P4::IR::MAU::Instruction(instr->srcInfo, "set"_cs,
                 MakeSlice(instr->operands.at(0), range.shiftedByBits(-bits.lo)),
                 replacement.getSlice(isSalu, range)));
             mask_bits.clrrange(range.lo, range.size());
@@ -2403,7 +2403,7 @@ const IR::Expression *BackendCopyPropagation::propagate(const IR::MAU::Instructi
         while (!mask_bits.empty()) {
             int lo = mask_bits.ffs();
             le_bitrange range(lo, mask_bits.ffz(lo)-1);
-            split_set->push_back(new IR::MAU::Instruction(instr->srcInfo, "set"_cs,
+            split_set->push_back(new P4::IR::MAU::Instruction(instr->srcInfo, "set"_cs,
                 MakeSlice(instr->operands.at(0), range.shiftedByBits(-bits.lo)),
                 MakeSlice(instr->operands.at(1), range.shiftedByBits(-bits.lo))));
             mask_bits.clrrange(range.lo, range.size());
@@ -2411,8 +2411,8 @@ const IR::Expression *BackendCopyPropagation::propagate(const IR::MAU::Instructi
     return e;
 }
 
-const IR::Expression *BackendCopyPropagation::preorder(IR::Expression *expr) {
-    auto instr = findContext<IR::MAU::Instruction>();
+const P4::IR::Expression *BackendCopyPropagation::preorder(P4::IR::Expression *expr) {
+    auto instr = findContext<P4::IR::MAU::Instruction>();
     if (!instr) {
         prune();
     } else if (isWrite()) {
@@ -2424,7 +2424,7 @@ const IR::Expression *BackendCopyPropagation::preorder(IR::Expression *expr) {
     return expr;
 }
 
-const IR::MAU::Action *BackendCopyPropagation::postorder(IR::MAU::Action *action) {
+const P4::IR::MAU::Action *BackendCopyPropagation::postorder(P4::IR::MAU::Action *action) {
     // Instructions in actions are now parallel
     action->parallel = true;
     return action;
@@ -2436,7 +2436,7 @@ class VerifyInstructionParams : public Inspector {
  private:
     const PhvInfo* phv;
     VerifyParallelWritesAndReads::FieldWrites* writes;
-    const IR::MAU::Instruction* instruction;
+    const P4::IR::MAU::Instruction* instruction;
     bool is_write;
     int param_index;
 
@@ -2444,7 +2444,7 @@ class VerifyInstructionParams : public Inspector {
     explicit VerifyInstructionParams(
         const PhvInfo* phv_,
         VerifyParallelWritesAndReads::FieldWrites* writes_,
-        const IR::MAU::Instruction* instruction_,
+        const P4::IR::MAU::Instruction* instruction_,
         bool is_write_,
         int param_index_);
 
@@ -2452,11 +2452,11 @@ class VerifyInstructionParams : public Inspector {
     VerifyInstructionParams& operator=(VerifyInstructionParams&&) = delete;
 
     /* -- visitor interface */
-    bool preorder(const IR::MAU::HashDist* hd_) override;
-    bool preorder(const IR::MAU::HashGenExpression* hge_) override;
-    bool preorder(const IR::ListExpression* le_) override;
-    bool preorder(const IR::StructExpression *se_) override;
-    bool preorder(const IR::Expression *expr_) override;
+    bool preorder(const P4::IR::MAU::HashDist* hd_) override;
+    bool preorder(const P4::IR::MAU::HashGenExpression* hge_) override;
+    bool preorder(const P4::IR::ListExpression* le_) override;
+    bool preorder(const P4::IR::StructExpression *se_) override;
+    bool preorder(const P4::IR::Expression *expr_) override;
 
  private:
     bool isParallel(
@@ -2467,7 +2467,7 @@ class VerifyInstructionParams : public Inspector {
 VerifyInstructionParams::VerifyInstructionParams(
     const PhvInfo* phv_,
     VerifyParallelWritesAndReads::FieldWrites* writes_,
-    const IR::MAU::Instruction* instruction_,
+    const P4::IR::MAU::Instruction* instruction_,
     bool is_write_,
     int param_index_) :
     phv(phv_),
@@ -2477,23 +2477,23 @@ VerifyInstructionParams::VerifyInstructionParams(
     param_index(param_index_) {
 }
 
-bool VerifyInstructionParams::preorder(const IR::MAU::HashDist*) {
+bool VerifyInstructionParams::preorder(const P4::IR::MAU::HashDist*) {
     return true;
 }
 
-bool VerifyInstructionParams::preorder(const IR::MAU::HashGenExpression*) {
+bool VerifyInstructionParams::preorder(const P4::IR::MAU::HashGenExpression*) {
     return true;
 }
 
-bool VerifyInstructionParams::preorder(const IR::ListExpression*) {
+bool VerifyInstructionParams::preorder(const P4::IR::ListExpression*) {
     return true;
 }
 
-bool VerifyInstructionParams::preorder(const IR::StructExpression*) {
+bool VerifyInstructionParams::preorder(const P4::IR::StructExpression*) {
     return true;
 }
 
-bool VerifyInstructionParams::preorder(const IR::Expression* expr_) {
+bool VerifyInstructionParams::preorder(const P4::IR::Expression* expr_) {
     le_bitrange bits_ = { 0, 0 };
     const auto* field_(phv->field(expr_, &bits_));
     if (field_ == nullptr) {
@@ -2504,7 +2504,7 @@ bool VerifyInstructionParams::preorder(const IR::Expression* expr_) {
     if (!isParallel(field_, bits_)) {
         // Overlapping set will be handled in the EliminateAllButLastWrite pass
         if (instruction->name != "set") {
-            const auto* act_(findContext<IR::MAU::Action>());
+            const auto* act_(findContext<P4::IR::MAU::Action>());
             ::error(ErrorType::ERR_UNSUPPORTED,
                     "%1%: action spanning multiple stages. "
                     "Operations on operand %3% (%4%[%5%..%6%]) in action %2% require multiple "
@@ -2615,7 +2615,7 @@ bool VerifyInstructionParams::isParallel(
 /** Determines if any values of this particular instruction have previously been written
  *  within this action, and if so, throw an error
  */
-void VerifyParallelWritesAndReads::postorder(const IR::MAU::Instruction *instr) {
+void VerifyParallelWritesAndReads::postorder(const P4::IR::MAU::Instruction *instr) {
     for (ssize_t i = instr->operands.size() -1; i >= 0; i--) {
         // Skip copy propagated values
         if (instr->copy_propagated[i])
@@ -2626,7 +2626,7 @@ void VerifyParallelWritesAndReads::postorder(const IR::MAU::Instruction *instr) 
     }
 }
 
-bool VerifyParallelWritesAndReads::preorder(const IR::MAU::Action *) {
+bool VerifyParallelWritesAndReads::preorder(const P4::IR::MAU::Action *) {
     writes.clear();
     return true;
 }
@@ -2651,14 +2651,14 @@ bool VerifyParallelWritesAndReads::preorder(const IR::MAU::Action *) {
  *
  *  This could not be considered parallel, as long as the check happens before the elimination
  */
-bool EliminateAllButLastWrite::Scan::preorder(const IR::MAU::Action *) {
+bool EliminateAllButLastWrite::Scan::preorder(const P4::IR::MAU::Action *) {
     last_instr_map.clear();
     self.has_overlap_set.clear();
     self.fs_bits.clear();
     return true;
 }
 
-bool EliminateAllButLastWrite::Scan::preorder(const IR::MAU::Instruction *instr) {
+bool EliminateAllButLastWrite::Scan::preorder(const P4::IR::MAU::Instruction *instr) {
     if (instr->operands.size() == 0)
         return false;
 
@@ -2666,7 +2666,7 @@ bool EliminateAllButLastWrite::Scan::preorder(const IR::MAU::Instruction *instr)
     le_bitrange bits = { 0, 0 };
     auto field = self.phv.field(write, &bits);
     if (field == nullptr) {
-        auto *act = findContext<IR::MAU::Action>();
+        auto *act = findContext<P4::IR::MAU::Action>();
         BUG_CHECK(act != nullptr, "No associated action found for instruction - %1%", instr);
         ::error("%s: A write of an instruction in action %s is not a PHV field", instr->srcInfo,
                 act->name);
@@ -2689,17 +2689,17 @@ bool EliminateAllButLastWrite::Scan::preorder(const IR::MAU::Instruction *instr)
     return false;
 }
 
-void EliminateAllButLastWrite::Scan::postorder(const IR::MAU::Action *a) {
+void EliminateAllButLastWrite::Scan::postorder(const P4::IR::MAU::Action *a) {
     self.last_instr_per_action_map[a] = last_instr_map;
 }
 
-const IR::MAU::Action *EliminateAllButLastWrite::Update::preorder(IR::MAU::Action *act) {
-    current_af = getOriginal()->to<IR::MAU::Action>();
+const P4::IR::MAU::Action *EliminateAllButLastWrite::Update::preorder(P4::IR::MAU::Action *act) {
+    current_af = getOriginal()->to<P4::IR::MAU::Action>();
     return act;
 }
 
-const IR::Node *EliminateAllButLastWrite::Update::preorder(IR::MAU::Instruction *instr) {
-    auto orig_instr = getOriginal()->to<IR::MAU::Instruction>();
+const P4::IR::Node *EliminateAllButLastWrite::Update::preorder(P4::IR::MAU::Instruction *instr) {
+    auto orig_instr = getOriginal()->to<P4::IR::MAU::Instruction>();
     auto last_instr_map = self.last_instr_per_action_map[current_af];
     prune();
 
@@ -2724,7 +2724,7 @@ const IR::Node *EliminateAllButLastWrite::Update::preorder(IR::MAU::Instruction 
 
     // handle overlapping set instr if has_overlp_set is true in current action
     if ((instr->name == "set") && (self.has_overlap_set[field] == true)) {
-      IR::Vector<IR::MAU::Primitive> *split_overlap_set = nullptr;
+      P4::IR::Vector<P4::IR::MAU::Primitive> *split_overlap_set = nullptr;
       bitvec mask_bits(bits.lo, bits.size());
       mask_bits.setrange(bits.lo, bits.size());
 
@@ -2747,8 +2747,8 @@ const IR::Node *EliminateAllButLastWrite::Update::preorder(IR::MAU::Instruction 
           int lo = mask_bits.ffs();
           le_bitrange range(lo, mask_bits.ffz(lo)-1);
 
-          if (!split_overlap_set) split_overlap_set = new IR::Vector<IR::MAU::Primitive>;
-          split_overlap_set->push_back(new IR::MAU::Instruction(instr->srcInfo, "set"_cs,
+          if (!split_overlap_set) split_overlap_set = new P4::IR::Vector<P4::IR::MAU::Primitive>;
+          split_overlap_set->push_back(new P4::IR::MAU::Instruction(instr->srcInfo, "set"_cs,
               MakeSlice(instr->operands.at(0), range.shiftedByBits(-bits.lo)),
               MakeSlice(instr->operands.at(1), range.shiftedByBits(-bits.lo))));
           mask_bits.clrrange(range.lo, range.size());
@@ -2770,7 +2770,7 @@ const IR::Node *EliminateAllButLastWrite::Update::preorder(IR::MAU::Instruction 
  *
  *  Clear local state when entering an MAU action.
  */
-bool ArithCompareAdjustment::Scan::preorder(const IR::MAU::Action *) {
+bool ArithCompareAdjustment::Scan::preorder(const P4::IR::MAU::Action *) {
     comp_targets.clear();
     comp_or_set_zero_writes.clear();
     other_targets.clear();
@@ -2780,7 +2780,7 @@ bool ArithCompareAdjustment::Scan::preorder(const IR::MAU::Action *) {
 /** Identify comparison instructions or set 0 instructions that might be paired
  *  with comparison instructions.
  */
-bool ArithCompareAdjustment::Scan::preorder(const IR::MAU::Instruction *instr) {
+bool ArithCompareAdjustment::Scan::preorder(const P4::IR::MAU::Instruction *instr) {
     if (instr->operands.size() == 0)
         return false;
 
@@ -2792,7 +2792,7 @@ bool ArithCompareAdjustment::Scan::preorder(const IR::MAU::Instruction *instr) {
         auto field = self.phv.field(op, &bits);
 
         if (!write_field && !field) {
-            auto act = findContext<IR::MAU::Action>();
+            auto act = findContext<P4::IR::MAU::Action>();
             BUG_CHECK(act != nullptr, "No associated action found for instruction - %1%", instr);
             ::error("%sA write of an instruction in action %s is not a PHV field", instr->srcInfo,
                     act->name);
@@ -2816,7 +2816,7 @@ bool ArithCompareAdjustment::Scan::preorder(const IR::MAU::Instruction *instr) {
         bitvec &zero_bits = comp_or_set_zero_writes[write_field];
         zero_bits.setrange(write_bits.lo, write_bits.size());
     } else if (instr->name == "set") {
-        auto src = instr->operands[1]->to<IR::Constant>();
+        auto src = instr->operands[1]->to<P4::IR::Constant>();
         if (src && src->fitsInt() && src->asInt() == 0) {
             bitvec &zero_bits = comp_or_set_zero_writes[write_field];
             zero_bits.setrange(write_bits.lo, write_bits.size());
@@ -2834,7 +2834,7 @@ bool ArithCompareAdjustment::Scan::preorder(const IR::MAU::Instruction *instr) {
  *    - All bits of the field are written to by either the comparison (LSB) or
  *      by set 0 operations.
  */
-void ArithCompareAdjustment::Scan::postorder(const IR::MAU::Action *a) {
+void ArithCompareAdjustment::Scan::postorder(const P4::IR::MAU::Action *a) {
     std::set<const PHV::Field *> action_comp_adj_fields;
     for (auto target : comp_targets) {
         auto field = target.first;
@@ -2857,13 +2857,13 @@ void ArithCompareAdjustment::Scan::postorder(const IR::MAU::Action *a) {
     self.comp_adj_fields_per_action_map[a] = action_comp_adj_fields;
 }
 
-const IR::MAU::Action *ArithCompareAdjustment::Update::preorder(IR::MAU::Action *act) {
-    current_af = getOriginal()->to<IR::MAU::Action>();
+const P4::IR::MAU::Action *ArithCompareAdjustment::Update::preorder(P4::IR::MAU::Action *act) {
+    current_af = getOriginal()->to<P4::IR::MAU::Action>();
     comp_adj_fields = self.comp_adj_fields_per_action_map[current_af];
     return act;
 }
 
-const IR::MAU::Action *ArithCompareAdjustment::Update::postorder(IR::MAU::Action *act) {
+const P4::IR::MAU::Action *ArithCompareAdjustment::Update::postorder(P4::IR::MAU::Action *act) {
     current_af = nullptr;
     comp_adj_fields.clear();
     return act;
@@ -2875,8 +2875,8 @@ const IR::MAU::Action *ArithCompareAdjustment::Update::postorder(IR::MAU::Action
  *       the same action as the comparison. The comparison sets all bits except
  *       the LSB to 0.
  */
-const IR::MAU::Instruction *
-        ArithCompareAdjustment::Update::preorder(IR::MAU::Instruction *instr) {
+const P4::IR::MAU::Instruction *
+        ArithCompareAdjustment::Update::preorder(P4::IR::MAU::Instruction *instr) {
     if (instr->operands.size() == 0)
         return instr;
 
@@ -2896,13 +2896,13 @@ const IR::MAU::Instruction *
 
     int width = self.comp_adj_field_width_map[field];
     if (write->type->width_bits() != width) {
-        auto slice_op = write->to<IR::Slice>();
+        auto slice_op = write->to<P4::IR::Slice>();
         if (slice_op) {
             write = instr->operands[0] = slice_op->e0;
         }
         if (write->type->width_bits() != width) {
             auto dst = write->clone();
-            dst->type = IR::Type_Bits::get(width);
+            dst->type = P4::IR::Type_Bits::get(width);
             instr->operands[0] = dst;
         }
     }
@@ -2911,7 +2911,7 @@ const IR::MAU::Instruction *
 
 /** Update metadata field widths
  */
-const IR::Metadata *ArithCompareAdjustment::Update::preorder(IR::Metadata* h) {
+const P4::IR::Metadata *ArithCompareAdjustment::Update::preorder(P4::IR::Metadata* h) {
     prune();
 
     auto type_new = adjust_type_struct(h->type, h->name.name);
@@ -2922,13 +2922,13 @@ const IR::Metadata *ArithCompareAdjustment::Update::preorder(IR::Metadata* h) {
 
 /** Update field widths
  */
-const IR::ConcreteHeaderRef *ArithCompareAdjustment::Update::preorder(IR::ConcreteHeaderRef* chr) {
+const P4::IR::ConcreteHeaderRef *ArithCompareAdjustment::Update::preorder(P4::IR::ConcreteHeaderRef* chr) {
     // Don't prune -- allow to propagate into ref
 
-    if (!chr->type->is<IR::Type_Struct>())
+    if (!chr->type->is<P4::IR::Type_Struct>())
         return chr;
 
-    auto type = chr->type->to<IR::Type_Struct>();
+    auto type = chr->type->to<P4::IR::Type_Struct>();
     auto type_new = adjust_type_struct(type, chr->ref->name.name);
     if (type != type_new)
         chr->type = type_new;
@@ -2937,7 +2937,7 @@ const IR::ConcreteHeaderRef *ArithCompareAdjustment::Update::preorder(IR::Concre
 
 /** Update field widths if the member is a compare target field
  */
-const IR::Node *ArithCompareAdjustment::Update::preorder(IR::Member *m) {
+const P4::IR::Node *ArithCompareAdjustment::Update::preorder(P4::IR::Member *m) {
     auto name = m->toString();
     if (!self.comp_adj_name_width_map.count(name))
         return m;
@@ -2945,15 +2945,15 @@ const IR::Node *ArithCompareAdjustment::Update::preorder(IR::Member *m) {
     int orig_width = m->type->width_bits();
     int target_width = self.comp_adj_name_width_map[name];
     if (orig_width != target_width) {
-        if (getContext()->node->is<IR::MAU::Instruction>())
+        if (getContext()->node->is<P4::IR::MAU::Instruction>())
             LOG3("Changing field width of " << name
                     << " in " << getContext()->node);
         else
             LOG3("Changing field width of " << name
                     << " in " << getContext()->node->toString());
 
-        m->type = IR::Type_Bits::get(target_width);
-        return new IR::Slice(m, orig_width - 1, 0);
+        m->type = P4::IR::Type_Bits::get(target_width);
+        return new P4::IR::Slice(m, orig_width - 1, 0);
     }
 
     return m;
@@ -2964,8 +2964,8 @@ const IR::Node *ArithCompareAdjustment::Update::preorder(IR::Member *m) {
  *  Returns a new object if the struct is modified, otherwise returns the
  *  original object.
  */
-const IR::Type_StructLike *ArithCompareAdjustment::Update::adjust_type_struct(
-        const IR::Type_StructLike *ts, cstring prefix) {
+const P4::IR::Type_StructLike *ArithCompareAdjustment::Update::adjust_type_struct(
+        const P4::IR::Type_StructLike *ts, cstring prefix) {
     bool changed = false;
     auto rv = ts->clone();
     rv->fields.clear();
@@ -2975,7 +2975,7 @@ const IR::Type_StructLike *ArithCompareAdjustment::Update::adjust_type_struct(
         if (it != self.comp_adj_name_width_map.end() && f->type->width_bits() != it->second) {
             int width = it->second;
             auto fc = f->clone();
-            fc->type = IR::Type_Bits::get(width);
+            fc->type = P4::IR::Type_Bits::get(width);
             rv->fields.push_back(fc);
             changed = true;
         } else {
@@ -2994,17 +2994,17 @@ const IR::Type_StructLike *ArithCompareAdjustment::Update::adjust_type_struct(
  * to function on hash dist parameters, all operands in hash based instructions must
  * be the same size.  This pass guarantees this.
  */
-bool GuaranteeHashDistSize::Scan::preorder(const IR::MAU::Instruction *) {
+bool GuaranteeHashDistSize::Scan::preorder(const P4::IR::MAU::Instruction *) {
     contains_hash_dist = false;
     return true;
 }
 
-bool GuaranteeHashDistSize::Scan::preorder(const IR::MAU::HashDist *) {
+bool GuaranteeHashDistSize::Scan::preorder(const P4::IR::MAU::HashDist *) {
     contains_hash_dist = true;
     return false;
 }
 
-void GuaranteeHashDistSize::Scan::postorder(const IR::MAU::Instruction *instr) {
+void GuaranteeHashDistSize::Scan::postorder(const P4::IR::MAU::Instruction *instr) {
     if (!contains_hash_dist)
         return;
 
@@ -3032,14 +3032,14 @@ void GuaranteeHashDistSize::Scan::postorder(const IR::MAU::Instruction *instr) {
         self.hash_dist_instrs.insert(instr);
 }
 
-const IR::Node *GuaranteeHashDistSize::Update::postorder(IR::MAU::Instruction *instr) {
-    auto orig_instr = getOriginal()->to<IR::MAU::Instruction>();
+const P4::IR::Node *GuaranteeHashDistSize::Update::postorder(P4::IR::MAU::Instruction *instr) {
+    auto orig_instr = getOriginal()->to<P4::IR::MAU::Instruction>();
     if (self.hash_dist_instrs.count(orig_instr) == 0)
         return instr;
 
     BUG_CHECK(instr->name == "set", "Incorrectly adjusting a non-set hash instruction");
 
-    auto *rv_vec = new IR::Vector<IR::Node>();
+    auto *rv_vec = new P4::IR::Vector<P4::IR::Node>();
     auto write = instr->operands[0];
     auto read = instr->operands[1];
 
@@ -3047,13 +3047,13 @@ const IR::Node *GuaranteeHashDistSize::Update::postorder(IR::MAU::Instruction *i
     int read_size = read->type->width_bits();
 
     if (write_size > read_size) {
-        rv_vec->push_back(new IR::MAU::Instruction(instr->srcInfo, instr->name,
+        rv_vec->push_back(new P4::IR::MAU::Instruction(instr->srcInfo, instr->name,
                               MakeSlice(write, 0, read_size - 1), read));
-        auto zero = new IR::Constant(IR::Type::Bits::get(write_size - read_size), 0);
-        rv_vec->push_back(new IR::MAU::Instruction(instr->srcInfo, instr->name,
+        auto zero = new P4::IR::Constant(P4::IR::Type::Bits::get(write_size - read_size), 0);
+        rv_vec->push_back(new P4::IR::MAU::Instruction(instr->srcInfo, instr->name,
                               MakeSlice(write, read_size, write_size -1), zero));
     } else if (write->type->width_bits() < read->type->width_bits()) {
-        rv_vec->push_back(new IR::MAU::Instruction(instr->srcInfo, instr->name, write,
+        rv_vec->push_back(new P4::IR::MAU::Instruction(instr->srcInfo, instr->name, write,
                                                    MakeSlice(read, 0, write_size)));
     } else {
         BUG("Incorrectly adjusting a non-set hash instruction");
@@ -3068,10 +3068,10 @@ const IR::Node *GuaranteeHashDistSize::Update::postorder(IR::MAU::Instruction *i
  *
  * This was to deal with issue583.p4
  */
-const IR::Node *RemoveUnnecessaryActionArgSlice::preorder(IR::Slice *sl) {
-    if (!findContext<IR::MAU::Instruction>())
+const P4::IR::Node *RemoveUnnecessaryActionArgSlice::preorder(P4::IR::Slice *sl) {
+    if (!findContext<P4::IR::MAU::Instruction>())
        return sl;
-    auto aa = sl->e0->to<IR::MAU::ActionArg>();
+    auto aa = sl->e0->to<P4::IR::MAU::ActionArg>();
     if (aa == nullptr)
         return sl;
     if (sl->type->width_bits() == aa->type->width_bits() && sl->getL() == 0)
@@ -3080,8 +3080,8 @@ const IR::Node *RemoveUnnecessaryActionArgSlice::preorder(IR::Slice *sl) {
 }
 
 // Simplify "actionArg != 0 ? f0 : f1" to "actionArg ? f0 : f1"
-const IR::Node* SimplifyConditionalActionArg::postorder(IR::Mux* mux) {
-    Pattern::Match<IR::MAU::ActionArg> aa;
+const P4::IR::Node* SimplifyConditionalActionArg::postorder(P4::IR::Mux* mux) {
+    Pattern::Match<P4::IR::MAU::ActionArg> aa;
     if ((0 != aa).match(mux->e0))
         mux->e0 = aa;
     return mux;
@@ -3094,8 +3094,8 @@ const IR::Node* SimplifyConditionalActionArg::postorder(IR::Mux* mux) {
 class ExpandInstructions : public MauTransform {
     const PhvInfo& phv_i;
     const ReductionOrInfo &red_info;
-    std::vector<IR::MAU::Instruction*> m_precompute;
-    std::set<const IR::Expression*> m_preload;
+    std::vector<P4::IR::MAU::Instruction*> m_precompute;
+    std::set<const P4::IR::Expression*> m_preload;
 
     /**
      * For every instruction, Tofino can read only up to one non-PHV operand (action data,
@@ -3121,8 +3121,8 @@ class ExpandInstructions : public MauTransform {
      *          hash_dist(Ingress.copy_32_1.configure($field_list_1 : {ingress::hdr.mul32_64.a})));
      *
      */
-    void check_action_data_bus_params(const IR::MAU::Action* act) {
-        auto tbl = findContext<IR::MAU::Table>();
+    void check_action_data_bus_params(const P4::IR::MAU::Action* act) {
+        auto tbl = findContext<P4::IR::MAU::Table>();
         BUG_CHECK(tbl, "Action doesn't have any table context!");
         ActionAnalysis::FieldActionsMap field_actions_map;
         ActionAnalysis aa(phv_i, false, false, tbl, red_info, false, false);
@@ -3169,43 +3169,43 @@ class ExpandInstructions : public MauTransform {
         }
     }
 
-    IR::Node* preorder(IR::MAU::Action *act) {
+    P4::IR::Node* preorder(P4::IR::MAU::Action *act) {
         check_action_data_bus_params(act);
         return act;
     }
 
-    IR::Node* postorder(IR::Expression* expr) {
-        auto orig_expr = getOriginal<IR::Expression>();
+    P4::IR::Node* postorder(P4::IR::Expression* expr) {
+        auto orig_expr = getOriginal<P4::IR::Expression>();
         BUG_CHECK(orig_expr, "Couldn't find original IR node");
 
         auto it = m_preload.find(orig_expr);
         if (it == m_preload.end()) return expr;
         m_preload.erase(it);
 
-        auto temp_var = new IR::TempVar(orig_expr->type);
-        auto preload_inst = new IR::MAU::Instruction("set"_cs, {temp_var, orig_expr});
+        auto temp_var = new P4::IR::TempVar(orig_expr->type);
+        auto preload_inst = new P4::IR::MAU::Instruction("set"_cs, {temp_var, orig_expr});
         m_precompute.push_back(preload_inst);
 
         return temp_var;
     }
 
-    IR::Node* postorder(IR::MAU::Table* tbl) override {
+    P4::IR::Node* postorder(P4::IR::MAU::Table* tbl) override {
         if (m_precompute.empty()) {
             return tbl;
         }
 
-        auto precompute_action = new IR::MAU::Action("$precompute");
+        auto precompute_action = new P4::IR::MAU::Action("$precompute");
         precompute_action->action.append(m_precompute);
         m_precompute.clear();
         precompute_action->default_allowed = true;
         precompute_action->init_default = true;
 
-        auto t = new IR::MAU::Table(tbl->name + "$precompute", VisitingThread(this));
+        auto t = new P4::IR::MAU::Table(tbl->name + "$precompute", VisitingThread(this));
         t->is_compiler_generated = true;
-        t->match_table = new IR::P4Table(t->name.c_str(), new IR::TableProperties());
+        t->match_table = new P4::IR::P4Table(t->name.c_str(), new P4::IR::TableProperties());
         t->actions[precompute_action->name] = precompute_action;
 
-        return new IR::Vector<IR::MAU::Table>({t, tbl});
+        return new P4::IR::Vector<P4::IR::MAU::Table>({t, tbl});
     }
 
  public:

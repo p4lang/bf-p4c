@@ -5,25 +5,27 @@
 #include "bf-p4c/ir/gress.h"
 #include "bf-p4c/common/alloc.h"
 
+using namespace P4;
+
 class GenerateVLIWInstructions {
     PhvInfo &phv;
     ActionData::FormatType_t format_type;
     SplitAttachedInfo &split_attached;
-    const IR::MAU::Table* tbl;
+    const P4::IR::MAU::Table* tbl;
 
-    void generate_for_action(const IR::MAU::Action *);
-    ordered_map<const IR::MAU::Action *, bitvec> table_instrs;
-    ordered_map<const IR::MAU::Action *, bool> table_instrs_has_unalloc_tempvar;
+    void generate_for_action(const P4::IR::MAU::Action *);
+    ordered_map<const P4::IR::MAU::Action *, bitvec> table_instrs;
+    ordered_map<const P4::IR::MAU::Action *, bool> table_instrs_has_unalloc_tempvar;
 
  public:
-    bitvec get_instr(const IR::MAU::Action *act) {
+    bitvec get_instr(const P4::IR::MAU::Action *act) {
         return table_instrs[act];
     }
-    bool instr_has_unalloc_tempvar(const IR::MAU::Action *act) {
+    bool instr_has_unalloc_tempvar(const P4::IR::MAU::Action *act) {
         return table_instrs_has_unalloc_tempvar[act];
     }
     GenerateVLIWInstructions(PhvInfo &p, ActionData::FormatType_t ft,
-            SplitAttachedInfo &sai, const IR::MAU::Table* tbl);
+            SplitAttachedInfo &sai, const P4::IR::MAU::Table* tbl);
 };
 
 /** Algorithms for the allocation of the Instruction Memory.  The Instruction Memory is defined
@@ -128,7 +130,7 @@ struct InstructionMemory {
         friend std::ostream & operator<<(std::ostream &out, const Use &u);
     };
 
-    std::map<const IR::MAU::ActionData *, const Use *> shared_action_profiles;
+    std::map<const P4::IR::MAU::ActionData *, const Use *> shared_action_profiles;
         // std::map<cstring, InstructionMemory::Use::VLIW_Instruction>> shared_action_profiles;
 
     virtual BFN::Alloc2Dbase<cstring> &imem_use(gress_t gress) = 0;
@@ -141,17 +143,17 @@ struct InstructionMemory {
     bool is_noop_slot(int row, int color);
     bool find_row_and_color(bitvec current_bv, gress_t gress, int &row, int &color,
                             bool &first_noop, bool has_unalloc_temp = false);
-    bool shared_instr(const IR::MAU::Table *tbl, Use &alloc, bool gw_linked);
-    bool alloc_always_run_instr(const IR::MAU::Table *tbl, Use &alloc, bitvec current_bv);
+    bool shared_instr(const P4::IR::MAU::Table *tbl, Use &alloc, bool gw_linked);
+    bool alloc_always_run_instr(const P4::IR::MAU::Table *tbl, Use &alloc, bitvec current_bv);
 
  public:
-    bool allocate_imem(const IR::MAU::Table *tbl, Use &alloc, PhvInfo &phv, bool gw_linked,
+    bool allocate_imem(const P4::IR::MAU::Table *tbl, Use &alloc, PhvInfo &phv, bool gw_linked,
         ActionData::FormatType_t format_type, SplitAttachedInfo &sai);
     void update_always_run(const Use &alloc, gress_t gress);
     void update(cstring name, const Use &alloc, gress_t gress);
     void update(cstring name, const TableResourceAlloc *alloc, gress_t gress);
-    void update(cstring name, const TableResourceAlloc *alloc, const IR::MAU::Table *tbl);
-    void update(const IR::MAU::Table *tbl);
+    void update(cstring name, const TableResourceAlloc *alloc, const P4::IR::MAU::Table *tbl);
+    void update(const P4::IR::MAU::Table *tbl);
 
     static InstructionMemory *create();
 };

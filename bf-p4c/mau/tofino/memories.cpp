@@ -34,7 +34,7 @@ int Memories::table_alloc::analysis_priority() const {
 /** Building a UniqueId per table alloc.  The stage table comes from initialization, all other
  *  data must be provided
  */
-UniqueId Memories::table_alloc::build_unique_id(const IR::MAU::AttachedMemory *at,
+UniqueId Memories::table_alloc::build_unique_id(const P4::IR::MAU::AttachedMemory *at,
         bool is_gw, int logical_table, UniqueAttachedId::pre_placed_type_t ppt) const {
     return table->pp_unique_id(at, is_gw, stage_table, logical_table, ppt);
 }
@@ -65,7 +65,7 @@ UniqueId Memories::table_alloc::build_unique_id(const IR::MAU::AttachedMemory *a
 
 /**
  * Given the input parameters, this will return all of the UniqueIds associated with this
- * particular IR::MAU::Table object.  Generally this is a one-to-one relationship with
+ * particular P4::IR::MAU::Table object.  Generally this is a one-to-one relationship with
  * a few exceptions.
  *
  * ATCAM tables: The match portion and any direct BackendAttached tables (action data/idletime),
@@ -77,7 +77,7 @@ UniqueId Memories::table_alloc::build_unique_id(const IR::MAU::AttachedMemory *a
  *
  * This leaves room for any other odd corner casing we need to support
  */
-safe_vector<UniqueId> Memories::table_alloc::allocation_units(const IR::MAU::AttachedMemory *at,
+safe_vector<UniqueId> Memories::table_alloc::allocation_units(const P4::IR::MAU::AttachedMemory *at,
         bool is_gw, UniqueAttachedId::pre_placed_type_t ppt) const {
     safe_vector<UniqueId> rv;
     Log::TempIndent indent;
@@ -115,7 +115,7 @@ safe_vector<UniqueId> Memories::table_alloc::allocation_units(const IR::MAU::Att
  * DLEFT some point in the future, maybe if other tables are attached, not just the stateful
  * ALU table.
  */
-safe_vector<UniqueId> Memories::table_alloc::unattached_units(const IR::MAU::AttachedMemory *at,
+safe_vector<UniqueId> Memories::table_alloc::unattached_units(const P4::IR::MAU::AttachedMemory *at,
     UniqueAttachedId::pre_placed_type_t ppt) const {
     safe_vector<UniqueId> rv;
     if (table->layout.atcam) {
@@ -131,7 +131,7 @@ safe_vector<UniqueId> Memories::table_alloc::unattached_units(const IR::MAU::Att
 /**
  * The union of the allocation_units and the unattached_units
  */
-safe_vector<UniqueId> Memories::table_alloc::accounted_units(const IR::MAU::AttachedMemory *at,
+safe_vector<UniqueId> Memories::table_alloc::accounted_units(const P4::IR::MAU::AttachedMemory *at,
     UniqueAttachedId::pre_placed_type_t ppt) const {
     safe_vector<UniqueId> rv = allocation_units(at, false, ppt);
     safe_vector<UniqueId> vec2 = unattached_units(at, ppt);
@@ -257,7 +257,7 @@ void Memories::clear_allocation() {
 }
 
 /* Creates a new table_alloc object for each of the tables within the memory allocation */
-void Memories::add_table(const IR::MAU::Table *t, const IR::MAU::Table *gw,
+void Memories::add_table(const P4::IR::MAU::Table *t, const P4::IR::MAU::Table *gw,
         TableResourceAlloc *resources, const LayoutOption *lo, const ActionData::Format::Use *af,
         ActionData::FormatType_t ft, int entries, int stage_table,
         attached_entries_t attached_entries) {
@@ -369,7 +369,7 @@ class SetupAttachedTables : public MauInspector {
     Memories::mem_info &mi;
     bool stats_pushed = false, meter_pushed = false, stateful_pushed = false;
 
-    profile_t init_apply(const IR::Node *root) {
+    profile_t init_apply(const P4::IR::Node *root) {
         profile_t rv = MauInspector::init_apply(root);
         if (ta->layout_option == nullptr) return rv;
         bool tind_check = ta->layout_option->layout.ternary &&
@@ -417,7 +417,7 @@ class SetupAttachedTables : public MauInspector {
     /** For shared attached tables, this initializes the unattached maps, if the attached
      *  table is already associated with a table
      */
-    bool determine_unattached(const IR::MAU::AttachedMemory *at) {
+    bool determine_unattached(const P4::IR::MAU::AttachedMemory *at) {
         bool attached = false;
         safe_vector<UniqueId> attached_object_id;
         safe_vector<UniqueId> unattached_object_ids;
@@ -427,7 +427,7 @@ class SetupAttachedTables : public MauInspector {
             unattached_object_ids = ta->unattached_units(at);
             attached = true;
         } else {
-            // This P4 object is already attached to a different IR::MAU::Table object
+            // This P4 object is already attached to a different P4::IR::MAU::Table object
             attached_object_id = mem.shared_attached.at(at)->allocation_units(at);
             unattached_object_ids = ta->accounted_units(at);
         }
@@ -450,10 +450,10 @@ class SetupAttachedTables : public MauInspector {
 
 
     /* In order to only visit the attached tables of the current table */
-    bool preorder(const IR::MAU::TableSeq *) { return false; }
-    bool preorder(const IR::MAU::Action *) { return false; }
+    bool preorder(const P4::IR::MAU::TableSeq *) { return false; }
+    bool preorder(const P4::IR::MAU::Action *) { return false; }
 
-    bool preorder(const IR::MAU::ActionData *ad) {
+    bool preorder(const P4::IR::MAU::ActionData *ad) {
         BUG_CHECK(!ad->direct, "No direct action data tables before table placement");
         if (determine_unattached(ad))
             return false;
@@ -475,7 +475,7 @@ class SetupAttachedTables : public MauInspector {
         return false;
     }
 
-    bool preorder(const IR::MAU::Meter *mtr) {
+    bool preorder(const P4::IR::MAU::Meter *mtr) {
         if (determine_unattached(mtr))
             return false;
 
@@ -500,7 +500,7 @@ class SetupAttachedTables : public MauInspector {
         return false;
     }
 
-    bool preorder(const IR::MAU::Counter *cnt) {
+    bool preorder(const P4::IR::MAU::Counter *cnt) {
         if (determine_unattached(cnt))
             return false;
         for (auto u_id : ta->allocation_units(cnt)) {
@@ -524,7 +524,7 @@ class SetupAttachedTables : public MauInspector {
         return false;
     }
 
-    void init_dleft_learn_and_match(const IR::MAU::StatefulAlu *salu) {
+    void init_dleft_learn_and_match(const P4::IR::MAU::StatefulAlu *salu) {
         if (mem.shared_attached.count(salu)) {
             BUG("Currently sharing a dleft table between two tables is impossible");
         }
@@ -542,7 +542,7 @@ class SetupAttachedTables : public MauInspector {
         }
     }
 
-    bool preorder(const IR::MAU::StatefulAlu *salu) {
+    bool preorder(const P4::IR::MAU::StatefulAlu *salu) {
         if (determine_unattached(salu))
             return false;
 
@@ -571,11 +571,11 @@ class SetupAttachedTables : public MauInspector {
         return false;
     }
 
-    bool preorder(const IR::MAU::TernaryIndirect *) {
+    bool preorder(const P4::IR::MAU::TernaryIndirect *) {
         BUG("Should be no Ternary Indirect before table placement is complete");
     }
 
-    bool preorder(const IR::MAU::Selector *as) {
+    bool preorder(const P4::IR::MAU::Selector *as) {
         if (determine_unattached(as))
             return false;
 
@@ -591,12 +591,12 @@ class SetupAttachedTables : public MauInspector {
         return false;
     }
 
-    bool preorder(const IR::MAU::Table* tbl) {
+    bool preorder(const P4::IR::MAU::Table* tbl) {
         visit(tbl->attached);
         return false;
     }
 
-    bool preorder(const IR::MAU::IdleTime *idle) {
+    bool preorder(const P4::IR::MAU::IdleTime *idle) {
         for (auto u_id : ta->allocation_units(idle)) {
             auto &alloc = (*ta->memuse)[u_id];
             alloc.type = Memories::Use::IDLETIME;
@@ -631,7 +631,7 @@ bool Memories::analyze_tables(mem_info &mi) {
     for (auto *ta : tables) {
         auto table = ta->table;
         int entries = ta->provided_entries;
-        if (table->always_run == IR::MAU::AlwaysRun::ACTION) {
+        if (table->always_run == P4::IR::MAU::AlwaysRun::ACTION) {
             continue;
         } else if (entries == -1 || entries == 0) {
             auto unique_id = ta->build_unique_id(nullptr, true);
@@ -2029,8 +2029,8 @@ void Memories::swbox_bus_selectors_indirects() {
             auto at = back_at->attached;
             // FIXME: need to adjust if the action selector is larger than 2 RAMs, based
             // on the pragmas provided to the compiler
-            const IR::MAU::Selector *as = nullptr;
-            if ((as = at->to<IR::MAU::Selector>()) == nullptr)
+            const P4::IR::MAU::Selector *as = nullptr;
+            if ((as = at->to<P4::IR::MAU::Selector>()) == nullptr)
                 continue;
 
             BUG_CHECK(ta->allocation_units(as).size() == 1, "Cannot have multiple selector "
@@ -2051,8 +2051,8 @@ void Memories::swbox_bus_selectors_indirects() {
         for (auto back_at : ta->table->attached) {
             LOG5("For backend attached table : " << back_at);
             auto at = back_at->attached;
-            const IR::MAU::ActionData *ad = nullptr;
-            if ((ad = at->to<IR::MAU::ActionData>()) == nullptr)
+            const P4::IR::MAU::ActionData *ad = nullptr;
+            if ((ad = at->to<P4::IR::MAU::ActionData>()) == nullptr)
                 continue;
             BUG_CHECK(ta->allocation_units(ad).size() == 1, "Cannot have multiple action profile "
                       "objects");
@@ -2095,10 +2095,10 @@ void Memories::swbox_bus_selectors_indirects() {
  */
 void Memories::swbox_bus_stateful_alus() {
     for (auto *ta : stateful_tables) {
-        const IR::MAU::StatefulAlu *salu = nullptr;
+        const P4::IR::MAU::StatefulAlu *salu = nullptr;
         for (auto back_at : ta->table->attached) {
             auto at = back_at->attached;
-            if ((salu = at->to<IR::MAU::StatefulAlu>()) == nullptr)
+            if ((salu = at->to<P4::IR::MAU::StatefulAlu>()) == nullptr)
                 continue;
             if (salu->selector)
                 // use the selector's memory
@@ -2129,8 +2129,8 @@ void Memories::swbox_bus_meters_counters() {
     for (auto *ta : stats_tables) {
         for (auto back_at : ta->table->attached) {
             auto at = back_at->attached;
-            const IR::MAU::Counter *stats = nullptr;
-            if ((stats = at->to<IR::MAU::Counter>()) == nullptr)
+            const P4::IR::MAU::Counter *stats = nullptr;
+            if ((stats = at->to<P4::IR::MAU::Counter>()) == nullptr)
                 continue;
             int lt_entry = 0;
             for (auto u_id : ta->allocation_units(stats)) {
@@ -2170,10 +2170,10 @@ void Memories::swbox_bus_meters_counters() {
     }
 
     for (auto *ta : meter_tables) {
-        const IR::MAU::Meter *meter = nullptr;
+        const P4::IR::MAU::Meter *meter = nullptr;
         for (auto back_at : ta->table->attached) {
             auto at = back_at->attached;
-            if ((meter = at->to<IR::MAU::Meter>()) == nullptr)
+            if ((meter = at->to<P4::IR::MAU::Meter>()) == nullptr)
                 continue;
             int lt_entry = 0;
             for (auto u_id : ta->allocation_units(meter)) {
@@ -2208,10 +2208,10 @@ void Memories::swbox_bus_meters_counters() {
                         meter_group->cm.needed = mems_needed((top_half_ram_depth - 1) * SRAM_DEPTH,
                                                              SRAM_DEPTH, COLOR_MAPRAM_PER_ROW,
                                                              false);
-                        if (meter->mapram_possible(IR::MAU::ColorMapramAddress::IDLETIME))
-                            meter_group->cm.cma = IR::MAU::ColorMapramAddress::IDLETIME;
-                        else if (meter->mapram_possible(IR::MAU::ColorMapramAddress::STATS))
-                            meter_group->cm.cma = IR::MAU::ColorMapramAddress::STATS;
+                        if (meter->mapram_possible(P4::IR::MAU::ColorMapramAddress::IDLETIME))
+                            meter_group->cm.cma = P4::IR::MAU::ColorMapramAddress::IDLETIME;
+                        else if (meter->mapram_possible(P4::IR::MAU::ColorMapramAddress::STATS))
+                            meter_group->cm.cma = P4::IR::MAU::ColorMapramAddress::STATS;
                         else
                             BUG("The color mapram address scheme does not make sense");
                     } else {
@@ -2231,10 +2231,10 @@ void Memories::swbox_bus_meters_counters() {
                 if (meter->color_output()) {
                     meter_group->cm.needed = mems_needed(entries, SRAM_DEPTH,
                                                          COLOR_MAPRAM_PER_ROW, false);
-                    if (meter->mapram_possible(IR::MAU::ColorMapramAddress::IDLETIME))
-                        meter_group->cm.cma = IR::MAU::ColorMapramAddress::IDLETIME;
-                    else if (meter->mapram_possible(IR::MAU::ColorMapramAddress::STATS))
-                        meter_group->cm.cma = IR::MAU::ColorMapramAddress::STATS;
+                    if (meter->mapram_possible(P4::IR::MAU::ColorMapramAddress::IDLETIME))
+                        meter_group->cm.cma = P4::IR::MAU::ColorMapramAddress::IDLETIME;
+                    else if (meter->mapram_possible(P4::IR::MAU::ColorMapramAddress::STATS))
+                        meter_group->cm.cma = P4::IR::MAU::ColorMapramAddress::STATS;
                     else
                         BUG("The color mapram address scheme does not make sense");
                 } else {
@@ -2326,7 +2326,7 @@ void Memories::determine_synth_RAMs(int &RAMs_available, int row,
     // RAM to a synth2port table, as that RAM would require a corresponding map RAM as well.
     int possible_for_synth_RAMs = unallocated_RAMs - curr_oflow_synth_RAMs;
     if (possible_for_synth_RAMs > 0) {
-        if (curr_oflow->cm.cma == IR::MAU::ColorMapramAddress::STATS) {
+        if (curr_oflow->cm.cma == P4::IR::MAU::ColorMapramAddress::STATS) {
             // If the color mapram requires a stats address, then the mapram must appear on a stats
             // homerow.  Furthermore, all color maprams must be on the same row in order to not
             // use the overflow address, which is required for the meter address on color mapram
@@ -2340,7 +2340,7 @@ void Memories::determine_synth_RAMs(int &RAMs_available, int row,
             // need to change, however, in order for this to work.  Frankly it's so rare
             // to address a meter by hash, that it's not worth it to do at this point
             extra_synth_RAMs = 0;
-        } else if (curr_oflow->cm.cma == IR::MAU::ColorMapramAddress::IDLETIME) {
+        } else if (curr_oflow->cm.cma == P4::IR::MAU::ColorMapramAddress::IDLETIME) {
             // Anything that is impossible for synth2port RAMs is because a dedicated map RAM
             // must be on that particular RAM.  This RAM can be used for action data or for
             // matching
@@ -2956,7 +2956,7 @@ void Memories::one_color_map_RAM_mask(LogicalRowUser &lru, bitvec &map_RAM_in_us
         return;
 
     // Only can use one stats bus for the color map RAMs
-    if (candidate->cm.cma == IR::MAU::ColorMapramAddress::STATS) {
+    if (candidate->cm.cma == P4::IR::MAU::ColorMapramAddress::STATS) {
         if (candidate->cm.left_to_place() > available_map_RAMs)
             return;
         if ((row % 2) == 1)
@@ -3221,7 +3221,7 @@ void Memories::fill_color_map_RAM_use(LogicalRowUser &lru, int row) {
     auto name = unique_id.build_name();
 
     int bus = -1;
-    if (candidate->cm.cma == IR::MAU::ColorMapramAddress::IDLETIME) {
+    if (candidate->cm.cma == P4::IR::MAU::ColorMapramAddress::IDLETIME) {
         int half = row / (SRAM_ROWS / 2);
         // FIXME: This is the simple solution for color mapram.  There are cases when the
         // color mapram cannot use the idletime bus, i.e. when the information comes through
@@ -3240,7 +3240,7 @@ void Memories::fill_color_map_RAM_use(LogicalRowUser &lru, int row) {
         BUG_CHECK(bus >= 0, "Cannot have a negative color mapram bus.  Should always have a free "
                         "choice at this point");
         idletime_bus[half][bus] = name;
-    } else if (candidate->cm.cma == IR::MAU::ColorMapramAddress::STATS) {
+    } else if (candidate->cm.cma == P4::IR::MAU::ColorMapramAddress::STATS) {
         // On stats, bus 0 will for the stats homerow, which is the only possible bus
         bus = 0;
     } else {
@@ -3794,8 +3794,8 @@ bool Memories::find_result_bus_gw(Memories::Use &alloc, uint64_t payload, cstrin
     // match address to be invalid in case the PFE is defaulted.
     // FIXME -- this probably belongs somewhere else?
     for (auto at : table->table->attached) {
-        if (at->attached->direct && (at->attached->is<IR::MAU::Synth2Port>()
-                                    || at->attached->is<IR::MAU::IdleTime>())) {
+        if (at->attached->direct && (at->attached->is<P4::IR::MAU::Synth2Port>()
+                                    || at->attached->is<P4::IR::MAU::IdleTime>())) {
             LOG6("Forcing payload match address to 0x7ffff on attached table " << at);
             alloc.gateway.payload_match_address = 0x7ffff;
             break; } }
@@ -4057,8 +4057,8 @@ bool Memories::allocate_all_gw() {
 
         if (auto *mt = ta_gw->table_link ? ta_gw->table_link->table : nullptr) {
             for (auto at : mt->attached) {
-                if (at->attached->direct && (at->attached->is<IR::MAU::Synth2Port>()
-                                            || at->attached->is<IR::MAU::IdleTime>())) {
+                if (at->attached->direct && (at->attached->is<P4::IR::MAU::Synth2Port>()
+                                            || at->attached->is<P4::IR::MAU::IdleTime>())) {
                     LOG5("Adding payload gw for attached table : " << at);
                     /* direct attached synth2port / idletime tables will use the
                      * match address, so we need to make sure the gateway has an
@@ -4306,8 +4306,8 @@ bool Memories::allocate_all_idletime() {
     for (auto *ta : idletime_tables) {
         for (auto back_at : ta->table->attached) {
             auto at = back_at->attached;
-            const IR::MAU::IdleTime *id = nullptr;
-            if ((id = at->to<IR::MAU::IdleTime>()) == nullptr)
+            const P4::IR::MAU::IdleTime *id = nullptr;
+            if ((id = at->to<P4::IR::MAU::IdleTime>()) == nullptr)
                 continue;
             int lt_entry = 0;
             for (auto u_id : ta->allocation_units(id)) {

@@ -68,15 +68,15 @@ class IXBar : public ::IXBar {
         void dbprint(std::ostream &) const override;
 
         bool emit_gateway_asm(const MauAsmOutput &, std::ostream &, indent_t,
-                              const IR::MAU::Table *) const override;
+                              const P4::IR::MAU::Table *) const override;
         void emit_ixbar_hash_table(int hash_table, safe_vector<Slice> &match_data,
                 safe_vector<Slice> &ghost, const ::TableMatch *fmt,
                 std::map<int, std::map<int, Slice>> &sort) const override;
         void emit_salu_bytemasks(std::ostream &, indent_t) const override { BUG(""); }
         void emit_ixbar_asm(const PhvInfo &phv, std::ostream& out, indent_t indent,
-                            const ::TableMatch *fmt, const IR::MAU::Table *) const override;
+                            const ::TableMatch *fmt, const P4::IR::MAU::Table *) const override;
         bitvec galois_matrix_bits() const override { BUG(""); }
-        const std::map<int, const IR::Expression *>&
+        const std::map<int, const P4::IR::Expression *>&
             hash_computed_expressions() const override{ BUG(""); }
         int hash_groups() const override { BUG(""); return 0; }
         int hash_dist_hash_group() const override { BUG(""); return 0; }
@@ -94,7 +94,7 @@ class IXBar : public ::IXBar {
      private:
         int slot_size(int group) const;
         void gather_bytes(const PhvInfo &phv, std::map<int, std::map<int, Slice>> &sort,
-                          const IR::MAU::Table *tbl) const;
+                          const P4::IR::MAU::Table *tbl) const;
     };
     static Use &getUse(autoclone_ptr<::IXBar::Use> &ac);
     static const Use &getUse(const autoclone_ptr<::IXBar::Use> &ac);
@@ -173,28 +173,28 @@ class IXBar : public ::IXBar {
                          safe_vector<IXBar::Use::Byte *> &alloced);
     void replicate_alloc_bytes(const cmp_map_t &cmp_map, safe_vector<Use::Byte> &alloc_use);
 
-    bool allocGateway(const IR::MAU::Table *, const PhvInfo &, Use &, const LayoutOption *);
-    void setupMatchAlloc(const IR::MAU::Table *, const PhvInfo &, ContByteConversion &, Use &);
-    void setupActionAlloc(const IR::MAU::Table *, const PhvInfo &, ContByteConversion &, Use &);
-    bool allocProxyHash(const IR::MAU::Table *, const PhvInfo &, Use &,
+    bool allocGateway(const P4::IR::MAU::Table *, const PhvInfo &, Use &, const LayoutOption *);
+    void setupMatchAlloc(const P4::IR::MAU::Table *, const PhvInfo &, ContByteConversion &, Use &);
+    void setupActionAlloc(const P4::IR::MAU::Table *, const PhvInfo &, ContByteConversion &, Use &);
+    bool allocProxyHash(const P4::IR::MAU::Table *, const PhvInfo &, Use &,
                         const LayoutOption *, const ActionData::Format::Use *);
-    bool allocExact(const IR::MAU::Table *, const PhvInfo &, Use &,
+    bool allocExact(const P4::IR::MAU::Table *, const PhvInfo &, Use &,
                     const LayoutOption *, const ActionData::Format::Use *);
     bool allocAllHashWays(Use &, const LayoutOption *);
-    bool allocTernary(const IR::MAU::Table *, const PhvInfo &, Use &,
+    bool allocTernary(const P4::IR::MAU::Table *, const PhvInfo &, Use &,
                       const LayoutOption *, const ActionData::Format::Use *);
     class GetActionUse;
-    bool allocActions(const IR::MAU::Table *, const PhvInfo &, Use &);
-    bool allocSelector(const IR::MAU::Selector *, const IR::MAU::Table *, const PhvInfo &,
+    bool allocActions(const P4::IR::MAU::Table *, const PhvInfo &, Use &);
+    bool allocSelector(const P4::IR::MAU::Selector *, const P4::IR::MAU::Table *, const PhvInfo &,
                        Use &, cstring);
-    bool allocStateful(const IR::MAU::StatefulAlu *, const IR::MAU::Table *, const PhvInfo &,
+    bool allocStateful(const P4::IR::MAU::StatefulAlu *, const P4::IR::MAU::Table *, const PhvInfo &,
                        Use &);
-    bool allocMeter(const IR::MAU::Meter *, const IR::MAU::Table *, const PhvInfo &, Use &);
+    bool allocMeter(const P4::IR::MAU::Meter *, const P4::IR::MAU::Table *, const PhvInfo &, Use &);
 
-    bool allocTable(const IR::MAU::Table *, const PhvInfo &, TableResourceAlloc &,
+    bool allocTable(const P4::IR::MAU::Table *, const PhvInfo &, TableResourceAlloc &,
                     const LayoutOption *, const ActionData::Format::Use *,
                     const attached_entries_t &);
-    bool allocTable(const IR::MAU::Table *tbl, const IR::MAU::Table *gw, const PhvInfo &,
+    bool allocTable(const P4::IR::MAU::Table *tbl, const P4::IR::MAU::Table *gw, const PhvInfo &,
                     TableResourceAlloc &, const LayoutOption *, const ActionData::Format::Use *,
                     const attached_entries_t &) override;
     void update(cstring name, const ::IXBar::Use &alloc);

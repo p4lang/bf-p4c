@@ -35,10 +35,10 @@ struct AllConstraints {
     ordered_set<const Constraints::NoSplitConstraint*> noSplitConstraints;
 };
 
-using FieldListEntry = std::pair<int, const IR::Type*>;
+using FieldListEntry = std::pair<int, const P4::IR::Type*>;
 using AlignmentConstraint = Constraints::AlignmentConstraint;
 using SolitaryConstraint = Constraints::SolitaryConstraint;
-using RepackedHeaders = std::vector<std::pair<const IR::HeaderOrMetadata*, std::string>>;
+using RepackedHeaders = std::vector<std::pair<const P4::IR::HeaderOrMetadata*, std::string>>;
 using ExtractedTogether = ordered_map<cstring, ordered_set<cstring>>;
 using PackingCandidateFields = ordered_map<cstring, ordered_set<cstring>>;
 using PackedFields = ordered_map<cstring, std::vector<cstring>>;
@@ -61,10 +61,10 @@ using DebugInfo = ordered_map<cstring, ordered_map<cstring, ordered_set<cstring>
  *
  * Adjusted packing is then used in the ReplaceFlexibleType pass.
  */
-using RepackedHeaderTypes = ordered_map<cstring, const IR::Type_StructLike*>;
+using RepackedHeaderTypes = ordered_map<cstring, const P4::IR::Type_StructLike*>;
 
 /**
- * The inspector builds a map of aliased fields (IR::BFN::AliasMember) mapping
+ * The inspector builds a map of aliased fields (P4::IR::BFN::AliasMember) mapping
  * alias destinations to their sources. Only aliases with destinations annotated
  * with the \@flexible annotation are considered.
  *
@@ -79,21 +79,21 @@ using RepackedHeaderTypes = ordered_map<cstring, const IR::Type_StructLike*>;
  * </table>
  *
  * @pre The Alias pass needs to be performed before this one to create
- *      IR::BFN::AliasMember IR nodes.
+ *      P4::IR::BFN::AliasMember IR nodes.
  *      TODO: We could figure out the mapping from def-use analysis instead.
  */
 class CollectIngressBridgedFields : public Inspector {
  private:
     const PhvInfo& phv;
 
-    bool preorder(const IR::BFN::Unit* unit) override {
+    bool preorder(const P4::IR::BFN::Unit* unit) override {
         if (unit->thread() == EGRESS)
             return false;
         return true;
     }
 
-    profile_t init_apply(const IR::Node* root) override;
-    void postorder(const IR::BFN::AliasMember* mem) override;
+    profile_t init_apply(const P4::IR::Node* root) override;
+    void postorder(const P4::IR::BFN::AliasMember* mem) override;
     void end_apply() override;
 
  public:
@@ -126,10 +126,10 @@ class CollectIngressBridgedFields : public Inspector {
  */
 class CollectEgressBridgedFields : public Inspector {
     const PhvInfo& phv;
-    /// Map-map-set: destination (IR::BFN::ParserLVal) -> source (IR::BFN::SavedRVal) -> state
+    /// Map-map-set: destination (P4::IR::BFN::ParserLVal) -> source (P4::IR::BFN::SavedRVal) -> state
     ordered_map<const PHV::Field*,
                 ordered_map<const PHV::Field*,
-                            ordered_set<const IR::BFN::ParserState*>>> candidateSourcesInParser;
+                            ordered_set<const P4::IR::BFN::ParserState*>>> candidateSourcesInParser;
 
  public:
     explicit CollectEgressBridgedFields(const PhvInfo& p) : phv(p) {}
@@ -137,15 +137,15 @@ class CollectEgressBridgedFields : public Inspector {
     /// Map: bridged field name -> original field name
     ordered_map<cstring, cstring> bridged_to_orig;
 
-    Visitor::profile_t init_apply(const IR::Node* root) override;
-    bool preorder(const IR::BFN::Extract* extract) override;
+    Visitor::profile_t init_apply(const P4::IR::Node* root) override;
+    bool preorder(const P4::IR::BFN::Extract* extract) override;
     void end_apply() override;
 };
 
 /**
  * The inspector collects all fields extracted in parser and stores both directions
- * of mapping between source (original) fields (IR::BFN::SavedRVal)
- * and bridged (destination) fields (IR::BFN::FieldLVal).
+ * of mapping between source (original) fields (P4::IR::BFN::SavedRVal)
+ * and bridged (destination) fields (P4::IR::BFN::FieldLVal).
  *
  * The information is later used to induce alignment constraints.
  *
@@ -163,18 +163,18 @@ class GatherParserExtracts : public Inspector {
 
  private:
     const PhvInfo& phv;
-    /// Extracted fields (IR::BFN::FieldLVal -> IR::BFN::SavedRVal)
+    /// Extracted fields (P4::IR::BFN::FieldLVal -> P4::IR::BFN::SavedRVal)
     FieldToFieldSet parserAlignedFields;
-    /// Extracted fields (IR::BFN::SavedRVal -> IR::BFN::FieldLVal)
+    /// Extracted fields (P4::IR::BFN::SavedRVal -> P4::IR::BFN::FieldLVal)
     FieldToFieldSet reverseParserAlignMap;
 
-    profile_t init_apply(const IR::Node* root) override {
+    profile_t init_apply(const P4::IR::Node* root) override {
         parserAlignedFields.clear();
         reverseParserAlignMap.clear();
         return Inspector::init_apply(root);
     }
 
-    bool preorder(const IR::BFN::Extract* e) override;
+    bool preorder(const P4::IR::BFN::Extract* e) override;
 
  public:
     explicit GatherParserExtracts(const PhvInfo& p) : phv(p) { }
@@ -204,7 +204,7 @@ class GatherParserExtracts : public Inspector {
 };
 
 template <typename NodeType, typename Func, typename Func2>
-void forAllMatchingDoPreAndPostOrder(const IR::Node* root, Func&& function, Func2&& function2) {
+void forAllMatchingDoPreAndPostOrder(const P4::IR::Node* root, Func&& function, Func2&& function2) {
     struct NodeVisitor : public Inspector {
         explicit NodeVisitor(Func && function, Func2 && function2) :
             function(function), function2(function2) { }
@@ -217,7 +217,7 @@ void forAllMatchingDoPreAndPostOrder(const IR::Node* root, Func&& function, Func
 }
 
 template <typename NodeType, typename Func>
-void forAllMatchingDoPostOrder(const IR::Node* root, Func&& function) {
+void forAllMatchingDoPostOrder(const P4::IR::Node* root, Func&& function) {
     struct NodeVisitor : public Inspector {
         explicit NodeVisitor(Func&& function) : function(function) { }
         Func function;
@@ -261,8 +261,8 @@ class GatherDigestFields : public Inspector {
 
  public:
     explicit GatherDigestFields(const PhvInfo& p) : phv(p) { }
-    bool preorder(const IR::BFN::DigestFieldList* fl) override;
-    bool preorder(const IR::HeaderOrMetadata* hdr) override;
+    bool preorder(const P4::IR::BFN::DigestFieldList* fl) override;
+    bool preorder(const P4::IR::HeaderOrMetadata* hdr) override;
     void end_apply() override;
 };
 
@@ -314,7 +314,7 @@ class CollectConstraints : public Inspector {
     void computeAlignmentConstraint(const ordered_set<const PHV::Field*>&, bool);
 
     bool mustPack(const ordered_set<const PHV::Field*>& , const ordered_set<const PHV::Field*>&,
-                  const ordered_set<const IR::MAU::Action*>&);
+                  const ordered_set<const P4::IR::MAU::Action*>&);
     void computeMustPackConstraints(const ordered_set<const PHV::Field*>&, bool);
 
     void computeNoPackIfIntrinsicMeta(const ordered_set<const PHV::Field*>&, bool);
@@ -323,9 +323,9 @@ class CollectConstraints : public Inspector {
     void computeNoPackIfDigestUse(const ordered_set<const PHV::Field*>&, bool);
     void computeNoSplitConstraints(const ordered_set<const PHV::Field*>&, bool);
 
-    bool preorder(const IR::HeaderOrMetadata*) override;
-    bool preorder(const IR::BFN::DigestFieldList*) override;
-    profile_t init_apply(const IR::Node* root) override;
+    bool preorder(const P4::IR::HeaderOrMetadata*) override;
+    bool preorder(const P4::IR::BFN::DigestFieldList*) override;
+    profile_t init_apply(const P4::IR::Node* root) override;
     void end_apply() override;
 
     /**
@@ -334,7 +334,7 @@ class CollectConstraints : public Inspector {
      * Inspector. Extended with a lambda for preorder function.
      */
     template <typename NodeType, typename Func, typename Func2>
-    void forAllMatching(const IR::Node* root, Func&& function, Func2&& function2) {
+    void forAllMatching(const P4::IR::Node* root, Func&& function, Func2&& function2) {
         struct NodeVisitor : public Inspector {
             explicit NodeVisitor(Func && function, Func2 && function2) :
                 function(function), function2(function2) { }
@@ -467,8 +467,8 @@ class ConstraintSolver {
  * The candidates for packing adjustment can be delivered through the constructor.
  * This approach is used for bridged headers. If the list of candidates
  * (PackWithConstraintSolver::candidates) is empty, the inspector looks
- * for the candidates among all headers/metadata (IR::HeaderOrMetadata)
- * and digest field lists (IR::BFN::DigestFieldList).
+ * for the candidates among all headers/metadata (P4::IR::HeaderOrMetadata)
+ * and digest field lists (P4::IR::BFN::DigestFieldList).
  *
  * The class then computes the optimal field packing using the constraint solver
  * (PackWithConstraintSolver::solver).
@@ -512,7 +512,7 @@ class PackWithConstraintSolver : public Inspector {
     const ordered_set<cstring>& candidates;
 
     /// Adjusted packing
-    ordered_map<cstring, const IR::Type_StructLike*>& repackedTypes;
+    ordered_map<cstring, const P4::IR::Type_StructLike*>& repackedTypes;
 
     /// An ordered set of \@flexible fields whose width is not a multiply of eight bits
     /// for each header/metadata/digest field list
@@ -520,24 +520,24 @@ class PackWithConstraintSolver : public Inspector {
     /// An ordered set of \@flexible fields whose width is a multiply of eight bits
     /// for each header/metadata/digest field list
     ordered_map<cstring, ordered_set<const PHV::Field*>> byteAlignedFieldsMap;
-    /// A mapping from \@flexible PHV::Field to the corresponding IR::StructField
+    /// A mapping from \@flexible PHV::Field to the corresponding P4::IR::StructField
     /// for each header/metadata/digest field list
-    // XXX: make this a ordered_map<cstring, IR::StructField>
-    ordered_map<cstring, ordered_map<const PHV::Field*, const IR::StructField*>>
+    // XXX: make this a ordered_map<cstring, P4::IR::StructField>
+    ordered_map<cstring, ordered_map<const PHV::Field*, const P4::IR::StructField*>>
                                                          phvFieldToStructFieldMap;
 
     /// FIXME: remove
     /// A mapping from a path such as ingress::hdr.foo to the corresponding
     /// struct field of hdr_t
-    ordered_map<cstring, ordered_map<cstring, const IR::StructField*>>
+    ordered_map<cstring, ordered_map<cstring, const P4::IR::StructField*>>
                                                          pathToStructFieldMap;
 
     PackingCandidateFields&                              packingCandidateFields;
     PackingConstraints&                                  packingConstraints;
 
     /// A mapping from header/metadata/digest field list name to the corresponding
-    /// IR::Type_StructLike for each header/metadata/digest field list
-    ordered_map<cstring, const IR::Type_StructLike*>     headerMap;
+    /// P4::IR::Type_StructLike for each header/metadata/digest field list
+    ordered_map<cstring, const P4::IR::Type_StructLike*>     headerMap;
 
     // Pipeline name for printing debug messages
     cstring pipelineName;
@@ -546,7 +546,7 @@ class PackWithConstraintSolver : public Inspector {
     explicit PackWithConstraintSolver(const PhvInfo& p,
             ConstraintSolver& solver,
             const ordered_set<cstring>& c,
-            ordered_map<cstring, const IR::Type_StructLike*>& r,
+            ordered_map<cstring, const P4::IR::Type_StructLike*>& r,
             PackingCandidateFields& pcf,
             PackingConstraints& pc):
         phv(p), solver(solver),
@@ -554,9 +554,9 @@ class PackWithConstraintSolver : public Inspector {
         packingCandidateFields(pcf),
         packingConstraints(pc) {}
 
-    Visitor::profile_t init_apply(const IR::Node* root) override;
-    bool preorder(const IR::HeaderOrMetadata* hdr) override;
-    bool preorder(const IR::BFN::DigestFieldList* dfl) override;
+    Visitor::profile_t init_apply(const P4::IR::Node* root) override;
+    bool preorder(const P4::IR::HeaderOrMetadata* hdr) override;
+    bool preorder(const P4::IR::BFN::DigestFieldList* dfl) override;
     void end_apply() override;
 
     void set_pipeline_name(cstring name) { pipelineName = name; }
@@ -570,22 +570,22 @@ class PackWithConstraintSolver : public Inspector {
  * include a padding so that the headers have hardware-defined sizes.
  */
 class PadFixedSizeHeaders : public Inspector {
-    ordered_map<cstring, const IR::Type_StructLike*>& repackedTypes;
+    ordered_map<cstring, const P4::IR::Type_StructLike*>& repackedTypes;
 
  public:
     explicit PadFixedSizeHeaders(
-            ordered_map<cstring, const IR::Type_StructLike*>& r) :
+            ordered_map<cstring, const P4::IR::Type_StructLike*>& r) :
         repackedTypes(r) {}
 
-    bool preorder(const IR::BFN::Type_FixedSizeHeader* h) override {
-        auto width = [&](const IR::Type_StructLike* s) -> int {
+    bool preorder(const P4::IR::BFN::Type_FixedSizeHeader* h) override {
+        auto width = [&](const P4::IR::Type_StructLike* s) -> int {
             int rv = 0;
             for (auto f : s->fields)
                 rv += f->type->width_bits();
             return rv;
         };
 
-        auto countPadding = [&](const IR::IndexedVector<IR::StructField>& fields) -> int {
+        auto countPadding = [&](const P4::IR::IndexedVector<P4::IR::StructField>& fields) -> int {
             int count = 0;
             for (auto f = fields.begin(); f != fields.end(); f++) {
                 if ((*f)->getAnnotation("padding"_cs))
@@ -596,11 +596,11 @@ class PadFixedSizeHeaders : public Inspector {
         auto genPadding = [&](int size, int id) {
             cstring padFieldName = "__pad_" + cstring::to_cstring(id);
             auto* fieldAnnotations =
-                new IR::Annotations({ new IR::Annotation(IR::ID("padding"), { }),
-                    new IR::Annotation(IR::ID("overlayable"), { }) });
-            const IR::StructField* padField =
-                new IR::StructField(padFieldName, fieldAnnotations,
-                    IR::Type::Bits::get(size));
+                new P4::IR::Annotations({ new P4::IR::Annotation(P4::IR::ID("padding"), { }),
+                    new P4::IR::Annotation(P4::IR::ID("overlayable"), { }) });
+            const P4::IR::StructField* padField =
+                new P4::IR::StructField(padFieldName, fieldAnnotations,
+                    P4::IR::Type::Bits::get(size));
             return padField;
         };
 
@@ -610,7 +610,7 @@ class PadFixedSizeHeaders : public Inspector {
                 Device::pardeSpec().bitResubmitSize());
         auto pad_size = h->fixed_size - bits;
 
-        auto fields = new IR::IndexedVector<IR::StructField>();
+        auto fields = new P4::IR::IndexedVector<P4::IR::StructField>();
         fields->append(h->fields);
         auto index = countPadding(h->fields);
         if (pad_size != 0) {
@@ -618,7 +618,7 @@ class PadFixedSizeHeaders : public Inspector {
             fields->push_back(padding);
         }
 
-        auto newType = new IR::Type_Header(h->name, *fields);
+        auto newType = new P4::IR::Type_Header(h->name, *fields);
         repackedTypes.emplace(h->name, newType);
         return false;
     }
@@ -638,20 +638,20 @@ class ReplaceFlexibleType : public Transform {
     explicit ReplaceFlexibleType(const RepackedHeaderTypes& m) : repackedTypes(m) {}
 
     // if used in backend
-    const IR::Node* postorder(IR::HeaderOrMetadata* h) override;
-    const IR::Node* postorder(IR::BFN::DigestFieldList* d) override;
-    const IR::BFN::DigestFieldList* repackFieldList(cstring digest,
+    const P4::IR::Node* postorder(P4::IR::HeaderOrMetadata* h) override;
+    const P4::IR::Node* postorder(P4::IR::BFN::DigestFieldList* d) override;
+    const P4::IR::BFN::DigestFieldList* repackFieldList(cstring digest,
             std::vector<FieldListEntry> repackedFieldIndices,
-            const IR::Type_StructLike* repackedHeaderType,
-            const IR::BFN::DigestFieldList* origFieldList) const;
+            const P4::IR::Type_StructLike* repackedHeaderType,
+            const P4::IR::BFN::DigestFieldList* origFieldList) const;
 
     // if used in midend
-    const IR::Node* postorder(IR::Type_StructLike* h) override;
-    const IR::Node* postorder(IR::StructExpression* h) override;
+    const P4::IR::Node* postorder(P4::IR::Type_StructLike* h) override;
+    const P4::IR::Node* postorder(P4::IR::StructExpression* h) override;
 };
 
 
-bool findFlexibleAnnotation(const IR::Type_StructLike*);
+bool findFlexibleAnnotation(const P4::IR::Type_StructLike*);
 
 /// This class gathers all the bridged metadata fields also used as deparser parameters. The
 /// CollectPhvInfo pass sets the deparsed_bottom_bits() property for all deparser parameters to
@@ -663,12 +663,12 @@ class GatherDeparserParameters : public Inspector {
     /// Set of detected deparser parameters.
     ordered_set<const PHV::Field*>& params;
 
-    profile_t init_apply(const IR::Node* root) override {
+    profile_t init_apply(const P4::IR::Node* root) override {
         params.clear();
         return Inspector::init_apply(root);
     }
 
-    bool preorder(const IR::BFN::DeparserParameter* p) override;
+    bool preorder(const P4::IR::BFN::DeparserParameter* p) override;
 
  public:
     explicit GatherDeparserParameters(const PhvInfo& p, ordered_set<const PHV::Field*>& f)
@@ -685,14 +685,14 @@ class GatherPhase0Fields : public Inspector {
     ordered_set<const PHV::Field*>& noPackFields;
     static constexpr char const *PHASE0_PARSER_STATE_NAME = "ingress::$phase0";
 
-    profile_t init_apply(const IR::Node* root) override {
+    profile_t init_apply(const P4::IR::Node* root) override {
         noPackFields.clear();
         return Inspector::init_apply(root);
     }
 
-    bool preorder(const IR::BFN::ParserState* p) override;
+    bool preorder(const P4::IR::BFN::ParserState* p) override;
 
-    bool preorder(const IR::BFN::DigestFieldList* d) override;
+    bool preorder(const P4::IR::BFN::DigestFieldList* d) override;
 
  public:
     explicit GatherPhase0Fields(
@@ -718,16 +718,16 @@ class LogRepackedHeaders : public Inspector {
 
     // Collects all headers/metadatas that may have been repacked (i.e. have a field that is
     // flexible)
-    bool preorder(const IR::HeaderOrMetadata* h) override;
+    bool preorder(const P4::IR::HeaderOrMetadata* h) override;
 
     // Pretty print all of the flexible headers
     void end_apply() override;
 
     // Returns the full field name
-    std::string getFieldName(std::string hdr, const IR::StructField* field) const;
+    std::string getFieldName(std::string hdr, const P4::IR::StructField* field) const;
 
     // Pretty prints a single header/metadata
-    std::string pretty_print(const IR::HeaderOrMetadata* h, std::string hdr) const;
+    std::string pretty_print(const P4::IR::HeaderOrMetadata* h, std::string hdr) const;
 
     // Strips the given prefix from the front of the cstring, returns as string
     std::string strip_prefix(cstring str, std::string pre);
@@ -795,7 +795,7 @@ class GatherPackingConstraintFromSinglePipeline : public PassManager {
 // constraints over all pairs of ingress&egress pipelines. Therefore, it
 // is necessary to maintain z3 context as this level.
 class PackFlexibleHeaders : public PassManager {
-    std::vector<const IR::BFN::Pipe*> pipe;
+    std::vector<const P4::IR::BFN::Pipe*> pipe;
     PhvInfo phv;
     PhvUse uses;
     FieldDefUse defuse;
@@ -875,7 +875,7 @@ class PackFlexibleHeaders : public PassManager {
  *
  * Packets are processed in a "logical" pipe(line) that spans multiple "physical" pipe(line)s.
  * Using the backend's terminology, the packet is processed by four threads
- * of the IR::BFN::Pipe::thread_t type in a run-to-completion manner.
+ * of the P4::IR::BFN::Pipe::thread_t type in a run-to-completion manner.
  *
  * All bridged headers needs to be analyzed in all threads they are used in.
  * They are emitted by the source thread and extracted by the destination thread.
@@ -885,14 +885,14 @@ class PackFlexibleHeaders : public PassManager {
  *
  * Packing of bridged headers is performed only for the headers/structs
  * with the \@flexible annotation and for resubmit headers,
- * which are fixed-sized (transformed into the IR::BFN::Type_FixedSizeHeader type in midend).
+ * which are fixed-sized (transformed into the P4::IR::BFN::Type_FixedSizeHeader type in midend).
  *
  * The steps are as follows:
  *
  * 1. BFN::BridgedPacking:
  *    Perform some auxiliary passes and convert the midend IR towards the backend IR
  *    (BackendConverter).
- * 2. BFN::BridgedPacking -> ExtractBridgeInfo::preorder(IR::P4Program):
+ * 2. BFN::BridgedPacking -> ExtractBridgeInfo::preorder(P4::IR::P4Program):
  *    Find usages of bridged headers (CollectBridgedFieldsUse).
  * 3. BFN::BridgedPacking -> ExtractBridgeInfo::end_apply():
  *    For all pairs of gresses where the bridged headers are used, perform some auxiliary
@@ -917,7 +917,7 @@ class PackFlexibleHeaders : public PassManager {
 
 using PipeAndGress = std::pair<std::pair<cstring, gress_t>, std::pair<cstring, gress_t>>;
 
-using BridgeLocs = ordered_map<std::pair<cstring, gress_t>, IR::HeaderRef*>;
+using BridgeLocs = ordered_map<std::pair<cstring, gress_t>, P4::IR::HeaderRef*>;
 
 class CollectBridgedFieldsUse : public Inspector {
  public:
@@ -925,7 +925,7 @@ class CollectBridgedFieldsUse : public Inspector {
     P4::TypeMap *typeMap;
 
     struct Use {
-        const IR::Type* type;
+        const P4::IR::Type* type;
         cstring name;
         cstring method;
         gress_t thread;
@@ -947,13 +947,13 @@ class CollectBridgedFieldsUse : public Inspector {
     CollectBridgedFieldsUse(P4::ReferenceMap* refMap, P4::TypeMap* typeMap) :
     refMap(refMap), typeMap(typeMap) {}
 
-    void postorder(const IR::MethodCallExpression* mc) override;
+    void postorder(const P4::IR::MethodCallExpression* mc) override;
 };
 
 struct BridgeContext {
     int pipe_id;
     CollectBridgedFieldsUse::Use use;
-    IR::BFN::Pipe::thread_t thread;
+    P4::IR::BFN::Pipe::thread_t thread;
 };
 
 class ExtractBridgeInfo : public Inspector {
@@ -975,18 +975,18 @@ class ExtractBridgeInfo : public Inspector {
         options(options), refMap(refMap), typeMap(typeMap), conv(conv),
         bindings(bindings), map(ht) {}
 
-    std::vector<const IR::BFN::Pipe*>*
+    std::vector<const P4::IR::BFN::Pipe*>*
         generate_bridge_pairs(std::vector<BridgeContext>&);
 
-    bool preorder(const IR::P4Program* program) override;
-    void end_apply(const IR::Node*) override;
+    bool preorder(const P4::IR::P4Program* program) override;
+    void end_apply(const P4::IR::Node*) override;
 };
 
 /**
  * \ingroup bridged_packing
  * \brief The pass analyzes the usage of bridged headers and adjusts their packing.
  *
- * @pre Apply this pass manager to IR::P4Program after midend processing.
+ * @pre Apply this pass manager to P4::IR::P4Program after midend processing.
  * @post The RepackedHeaderTypes map filled in with adjusted packing of bridged headers.
  */
 class BridgedPacking : public PassManager {
@@ -1004,8 +1004,8 @@ class BridgedPacking : public PassManager {
     BridgedPacking(BFN_Options& options, RepackedHeaderTypes& repackMap,
                    CollectSourceInfoLogging& sourceInfoLogging);
 
-    IR::Vector<IR::BFN::Pipe> pipe;
-    ordered_map<int, const IR::BFN::Pipe*> pipes;
+    P4::IR::Vector<P4::IR::BFN::Pipe> pipe;
+    ordered_map<int, const P4::IR::BFN::Pipe*> pipes;
 };
 
 /**
@@ -1021,14 +1021,14 @@ class SubstitutePackedHeaders : public PassManager {
  public:
     P4::ReferenceMap refMap;
     P4::TypeMap typeMap;
-    IR::Vector<IR::BFN::Pipe> pipe;
-    ordered_map<int, const IR::BFN::Pipe*> pipes;
+    P4::IR::Vector<P4::IR::BFN::Pipe> pipe;
+    ordered_map<int, const P4::IR::BFN::Pipe*> pipes;
 
  public:
     SubstitutePackedHeaders(BFN_Options& options, const RepackedHeaderTypes& repackedMap,
                             CollectSourceInfoLogging& sourceInfoLogging);
     const BFN::ProgramPipelines &getPipelines() const { return conv->getPipelines(); }
-    const IR::ToplevelBlock *getToplevelBlock() const { return evaluator->toplevel; }
+    const P4::IR::ToplevelBlock *getToplevelBlock() const { return evaluator->toplevel; }
 };
 
 

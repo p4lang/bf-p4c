@@ -115,10 +115,10 @@ std::string ActionAnalysis::ActionParam::to_string() const {
     return str.str();
 }
 
-const IR::Expression *ActionAnalysis::ActionParam::unsliced_expr() const {
+const P4::IR::Expression *ActionAnalysis::ActionParam::unsliced_expr() const {
     if (expr == nullptr)
         return expr;
-    if (auto *sl = expr->to<IR::Slice>())
+    if (auto *sl = expr->to<P4::IR::Slice>())
         return sl->e0;
     return expr;
 }
@@ -133,12 +133,12 @@ std::string ActionAnalysis::FieldAction::to_string() const {
 auto ActionAnalysis::FieldAction::container_write_type() const
     -> std::pair<container_overwrite_t, source_type_t> {
     auto source = source_type_t::OTHER;
-    auto is_expr_const = [&](const IR::Expression *expr) {
-        if (expr->is<IR::MAU::ActionDataConstant>()) {
+    auto is_expr_const = [&](const P4::IR::Expression *expr) {
+        if (expr->is<P4::IR::MAU::ActionDataConstant>()) {
             source = source_type_t::ACTION_DATA_CONSTANT;
             return true;
         }
-        if (expr->is<IR::Constant>()) {
+        if (expr->is<P4::IR::Constant>()) {
             source = source_type_t::CONSTANT;
             return true;
         }
@@ -228,7 +228,7 @@ unsigned ActionAnalysis::ConstantInfo::valid_instruction_constant(int container_
     return constant_value;
 }
 
-void ActionAnalysis::initialize_phv_field(const IR::Expression *expr) {
+void ActionAnalysis::initialize_phv_field(const P4::IR::Expression *expr) {
     if (!phv.field(expr))
         return;
 
@@ -243,32 +243,32 @@ void ActionAnalysis::initialize_phv_field(const IR::Expression *expr) {
     }
 }
 
-void ActionAnalysis::initialize_action_data(const IR::Expression *expr) {
+void ActionAnalysis::initialize_action_data(const P4::IR::Expression *expr) {
     Log::TempIndent indent;
     LOG5("Initialize action data for expr : " << expr << indent);
     field_action.reads.emplace_back(ActionParam::ACTIONDATA, expr);
-    if (auto *ao = field_action.reads.back().unsliced_expr()->to<IR::MAU::AttachedOutput>()) {
+    if (auto *ao = field_action.reads.back().unsliced_expr()->to<P4::IR::MAU::AttachedOutput>()) {
         LOG5("Action Data is Attached Output");
         field_action.reads.back().speciality = classify_attached_output(ao); }
-    if (field_action.reads.back().unsliced_expr()->is<IR::MAU::HashDist>()) {
+    if (field_action.reads.back().unsliced_expr()->is<P4::IR::MAU::HashDist>()) {
         LOG5("Action Data is HASH_DIST");
         field_action.reads.back().speciality = ActionParam::HASH_DIST; }
-    if (field_action.reads.back().unsliced_expr()->is<IR::MAU::StatefulCounter>()) {
+    if (field_action.reads.back().unsliced_expr()->is<P4::IR::MAU::StatefulCounter>()) {
         LOG5("Action Data is STFUL_COUNTER");
         field_action.reads.back().speciality = ActionParam::STFUL_COUNTER; }
-    if (field_action.reads.back().unsliced_expr()->is<IR::MAU::RandomNumber>()) {
+    if (field_action.reads.back().unsliced_expr()->is<P4::IR::MAU::RandomNumber>()) {
         LOG5("Action Data is RANDOM");
         field_action.reads.back().speciality = ActionParam::RANDOM; }
-    if (field_action.reads.back().unsliced_expr()->is<IR::MAU::ConditionalArg>()) {
+    if (field_action.reads.back().unsliced_expr()->is<P4::IR::MAU::ConditionalArg>()) {
         LOG5("Action Data is Conditional");
         field_action.reads.back().is_conditional = true;
     }
 }
 
 ActionAnalysis::ActionParam::speciality_t
-ActionAnalysis::classify_attached_output(const IR::MAU::AttachedOutput *ao) {
+ActionAnalysis::classify_attached_output(const P4::IR::MAU::AttachedOutput *ao) {
     auto *at = ao->attached;
-    if (auto mtr = at->to<IR::MAU::Meter>()) {
+    if (auto mtr = at->to<P4::IR::MAU::Meter>()) {
         if (mtr->alu_output())
             return ActionParam::METER_ALU;
         else if (mtr->color_output())
@@ -276,7 +276,7 @@ ActionAnalysis::classify_attached_output(const IR::MAU::AttachedOutput *ao) {
         BUG("%s: Unrecognized implementation %s on meter %s", mtr->srcInfo,
             mtr->implementation, mtr->name);
         return ActionParam::NO_SPECIAL;
-    } else if (at->is<IR::MAU::StatefulAlu>()) {
+    } else if (at->is<P4::IR::MAU::StatefulAlu>()) {
         return ActionParam::METER_ALU;
     }
     BUG("%s: Unrecognizable Attached Output %s being used in an ALU operation",
@@ -287,27 +287,27 @@ ActionAnalysis::classify_attached_output(const IR::MAU::AttachedOutput *ao) {
  *  If it is an MAU::ActionArg, HashDist, or AttachedOutput then the type is ACTIONDATA
  *  If it is an ActionDataConstant, then the type is CONSTANT
  */
-const IR::Expression *ActionAnalysis::isActionParam(const IR::Expression *e,
+const P4::IR::Expression *ActionAnalysis::isActionParam(const P4::IR::Expression *e,
         le_bitrange *bits_out, ActionParam::type_t *type) {
     le_bitrange bits = { 0, e->type->width_bits() - 1};
-    if (auto *sl = e->to<IR::Slice>()) {
+    if (auto *sl = e->to<P4::IR::Slice>()) {
         bits.lo = sl->getL();
         bits.hi = sl->getH();
         e = sl->e0;;
-        if (e->is<IR::MAU::ActionDataConstant>())
+        if (e->is<P4::IR::MAU::ActionDataConstant>())
             BUG("No ActionDataConstant should be a member of a Slice");
     }
-    if (e->is<IR::MAU::ActionArg>() || e->is<IR::MAU::ActionDataConstant>()
-        || e->is<IR::MAU::AttachedOutput>() || e->is<IR::MAU::HashDist>()
-        || e->is<IR::MAU::IXBarExpression>() || e->is<IR::MAU::RandomNumber>()
-        || e->is<IR::MAU::StatefulCounter>()) {
+    if (e->is<P4::IR::MAU::ActionArg>() || e->is<P4::IR::MAU::ActionDataConstant>()
+        || e->is<P4::IR::MAU::AttachedOutput>() || e->is<P4::IR::MAU::HashDist>()
+        || e->is<P4::IR::MAU::IXBarExpression>() || e->is<P4::IR::MAU::RandomNumber>()
+        || e->is<P4::IR::MAU::StatefulCounter>()) {
         if (bits_out)
             *bits_out = bits;
-        if ((e->is<IR::MAU::ActionArg>() || e->is<IR::MAU::AttachedOutput>()
-             || e->is<IR::MAU::HashDist>() || e->is<IR::MAU::StatefulCounter>()
-             || e->is<IR::MAU::IXBarExpression>() || e->is<IR::MAU::RandomNumber>()) && type)
+        if ((e->is<P4::IR::MAU::ActionArg>() || e->is<P4::IR::MAU::AttachedOutput>()
+             || e->is<P4::IR::MAU::HashDist>() || e->is<P4::IR::MAU::StatefulCounter>()
+             || e->is<P4::IR::MAU::IXBarExpression>() || e->is<P4::IR::MAU::RandomNumber>()) && type)
             *type = ActionParam::ACTIONDATA;
-        else if (e->is<IR::MAU::ActionDataConstant>() && type)
+        else if (e->is<P4::IR::MAU::ActionDataConstant>() && type)
             *type = ActionParam::CONSTANT;
         return e;
     }
@@ -321,26 +321,26 @@ const IR::Expression *ActionAnalysis::isActionParam(const IR::Expression *e,
  * special treatment on 'sizeInBytes' and 'sizeInBits' function and not report
  * an error when a slice is applied to the output of the functions.
  */
-const IR::Expression *ActionAnalysis::isStrengthReducible(const IR::Expression *e) {
-    if (auto *sl = e->to<IR::Slice>())
+const P4::IR::Expression *ActionAnalysis::isStrengthReducible(const P4::IR::Expression *e) {
+    if (auto *sl = e->to<P4::IR::Slice>())
         e = sl->e0;
-    if (e->is<IR::MAU::TypedPrimitive>()) {
-        if (e->to<IR::MAU::TypedPrimitive>()->name == "sizeInBytes" ||
-            e->to<IR::MAU::TypedPrimitive>()->name == "sizeInBits") {
+    if (e->is<P4::IR::MAU::TypedPrimitive>()) {
+        if (e->to<P4::IR::MAU::TypedPrimitive>()->name == "sizeInBytes" ||
+            e->to<P4::IR::MAU::TypedPrimitive>()->name == "sizeInBits") {
             return e; } }
     return nullptr;
 }
 
-const IR::MAU::ActionArg *ActionAnalysis::isActionArg(const IR::Expression *e,
+const P4::IR::MAU::ActionArg *ActionAnalysis::isActionArg(const P4::IR::Expression *e,
     le_bitrange *bits_out) {
     le_bitrange bits = { 0, e->type->width_bits() - 1 };
-    if (auto *sl = e->to<IR::Slice>()) {
+    if (auto *sl = e->to<P4::IR::Slice>()) {
         bits.lo = sl->getL();
         bits.hi = sl->getH();
         e = sl->e0;
     }
 
-    if (auto aa = e->to<IR::MAU::ActionArg>()) {
+    if (auto aa = e->to<P4::IR::MAU::ActionArg>()) {
         if (bits_out)
            *bits_out = bits;
         return aa;
@@ -349,7 +349,7 @@ const IR::MAU::ActionArg *ActionAnalysis::isActionArg(const IR::Expression *e,
 }
 
 
-bool ActionAnalysis::preorder(const IR::MAU::Instruction *instr) {
+bool ActionAnalysis::preorder(const P4::IR::MAU::Instruction *instr) {
     LOG4("ActionAnalysis preorder on instruction : " << *instr);
     field_action.clear();
     field_action.name = instr->name;
@@ -357,16 +357,16 @@ bool ActionAnalysis::preorder(const IR::MAU::Instruction *instr) {
     return true;
 }
 
-bool ActionAnalysis::preorder(const IR::MAU::ActionArg *arg) {
+bool ActionAnalysis::preorder(const P4::IR::MAU::ActionArg *arg) {
     LOG4("ActionAnalysis preorder on ActionArg : " << *arg);
-    if (!findContext<IR::MAU::Instruction>())
+    if (!findContext<P4::IR::MAU::Instruction>())
         return false;
 
     initialize_action_data(arg);
     return false;
 }
 
-bool ActionAnalysis::preorder(const IR::MAU::ConditionalArg *ca) {
+bool ActionAnalysis::preorder(const P4::IR::MAU::ConditionalArg *ca) {
     LOG4("ActionAnalysis preorder on ConditionalArg : " << *ca);
     initialize_action_data(ca);
     return false;
@@ -375,60 +375,60 @@ bool ActionAnalysis::preorder(const IR::MAU::ConditionalArg *ca) {
 // continue analyzing the node underneath the cast.
 // An example is when a 1-bit action argument is casted to bool.
 // action (bit<1> arg) { bool m = (bool) arg; }
-bool ActionAnalysis::preorder(const IR::BFN::ReinterpretCast*) {
+bool ActionAnalysis::preorder(const P4::IR::BFN::ReinterpretCast*) {
     return true;
 }
 
-bool ActionAnalysis::preorder(const IR::Constant *constant) {
+bool ActionAnalysis::preorder(const P4::IR::Constant *constant) {
     LOG4("ActionAnalysis preorder on const : " << *constant);
     field_action.reads.emplace_back(ActionParam::CONSTANT, constant);
     return false;
 }
 
-bool ActionAnalysis::preorder(const IR::MAU::ActionDataConstant *adc) {
+bool ActionAnalysis::preorder(const P4::IR::MAU::ActionDataConstant *adc) {
     LOG4("ActionAnalysis preorder on ADConst : " << *adc);
     field_action.reads.emplace_back(ActionParam::ACTIONDATA, adc);
     return false;
 }
 
-bool ActionAnalysis::preorder(const IR::MAU::HashDist *hd) {
+bool ActionAnalysis::preorder(const P4::IR::MAU::HashDist *hd) {
     LOG4("ActionAnalysis preorder on HashDist : " << *hd);
     field_action.reads.emplace_back(ActionParam::ACTIONDATA, hd, ActionParam::HASH_DIST);
     return false;
 }
 
-bool ActionAnalysis::preorder(const IR::MAU::IXBarExpression *) {
+bool ActionAnalysis::preorder(const P4::IR::MAU::IXBarExpression *) {
     BUG("bare IXBarExpression in action");
     return false;
 }
 
-bool ActionAnalysis::preorder(const IR::MAU::AttachedOutput *ao) {
+bool ActionAnalysis::preorder(const P4::IR::MAU::AttachedOutput *ao) {
     LOG4("ActionAnalysis preorder on AttachedOutput: " << *ao);
     auto speciality = classify_attached_output(ao);
     field_action.reads.emplace_back(ActionParam::ACTIONDATA, ao, speciality);
     return false;
 }
 
-bool ActionAnalysis::preorder(const IR::MAU::RandomNumber *rn) {
+bool ActionAnalysis::preorder(const P4::IR::MAU::RandomNumber *rn) {
     LOG4("ActionAnalysis preorder on RandomNumber: " << *rn);
     field_action.reads.emplace_back(ActionParam::ACTIONDATA, rn, ActionParam::RANDOM);
     return false;
 }
 
-bool ActionAnalysis::preorder(const IR::MAU::StatefulAlu *) {
+bool ActionAnalysis::preorder(const P4::IR::MAU::StatefulAlu *) {
     return false;
 }
 
-bool ActionAnalysis::preorder(const IR::MAU::StatefulCall *) {
+bool ActionAnalysis::preorder(const P4::IR::MAU::StatefulCall *) {
     return false;
 }
 
-bool ActionAnalysis::preorder(const IR::MAU::StatefulCounter *sc) {
+bool ActionAnalysis::preorder(const P4::IR::MAU::StatefulCounter *sc) {
     initialize_action_data(sc);
     return false;
 }
 
-bool ActionAnalysis::preorder(const IR::Slice *sl) {
+bool ActionAnalysis::preorder(const P4::IR::Slice *sl) {
     LOG4("ActionAnalysis preorder on Slice : " << *sl);
     if (phv.field(sl)) {
         initialize_phv_field(sl);
@@ -444,18 +444,18 @@ bool ActionAnalysis::preorder(const IR::Slice *sl) {
     return false;
 }
 
-bool ActionAnalysis::preorder(const IR::Cast *) {
+bool ActionAnalysis::preorder(const P4::IR::Cast *) {
     BUG("No casts should ever reach this point in the Tofino backend");
 }
 
-bool ActionAnalysis::preorder(const IR::MAU::Primitive *prim) {
+bool ActionAnalysis::preorder(const P4::IR::MAU::Primitive *prim) {
     LOG4("ActionAnalysis preorder on Primitive : " << *prim);
     BUG("%s: Primitive %s was not correctly converted in Instruction Selection", prim->srcInfo,
         prim);
     return false;
 }
 
-bool ActionAnalysis::preorder(const IR::Expression *expr) {
+bool ActionAnalysis::preorder(const P4::IR::Expression *expr) {
     LOG4("ActionAnalysis preorder on Expression : " << *expr);
     if (phv.field(expr)) {
         initialize_phv_field(expr);
@@ -465,7 +465,7 @@ bool ActionAnalysis::preorder(const IR::Expression *expr) {
     return false;
 }
 
-bool ActionAnalysis::preorder(const IR::Mux *mux) {
+bool ActionAnalysis::preorder(const P4::IR::Mux *mux) {
     ::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
             "%1%\nConditions in an action must be simple comparisons of an action data "
             "parameter\nTry moving the test out of the action or making it part of the table key",
@@ -473,17 +473,17 @@ bool ActionAnalysis::preorder(const IR::Mux *mux) {
     return false;
 }
 
-bool ActionAnalysis::preorder(const IR::Member *mem) {
+bool ActionAnalysis::preorder(const P4::IR::Member *mem) {
     LOG4("ActionAnalysis postorder on member: " << mem);
-    if (mem->expr->is<IR::MAU::AttachedOutput>()) return true;
-    return preorder(static_cast<const IR::Expression *>(mem));
+    if (mem->expr->is<P4::IR::MAU::AttachedOutput>()) return true;
+    return preorder(static_cast<const P4::IR::Expression *>(mem));
 }
 
 /** Responsible for adding the instruction into which containers they actually affect.
  *  Thus multiple field based actions can be added to the same container, and then evalauted
  *  later.
  */
-void ActionAnalysis::postorder(const IR::MAU::Instruction *instr) {
+void ActionAnalysis::postorder(const P4::IR::MAU::Instruction *instr) {
     Log::TempIndent indent;
     LOG4("ActionAnalysis postorder on instruction : " << instr << indent);
     if (!field_action.write_found) {
@@ -829,10 +829,10 @@ bool ActionAnalysis::init_phv_alignment(const ActionParam &read, const op_type_t
     });
 
     // Check if this is read in a form of "0 ++ <PHV_field>"
-    if (auto concat = read.expr->to<IR::Concat>()) {
-        auto constant = concat->left->to<IR::Constant>();
+    if (auto concat = read.expr->to<P4::IR::Concat>()) {
+        auto constant = concat->left->to<P4::IR::Constant>();
         if (constant != nullptr && (constant->value == 0)) {
-            if (auto type = constant->type->to<IR::Type_Bits>()) {
+            if (auto type = constant->type->to<P4::IR::Type_Bits>()) {
                 int resize_size = type->size;
                 LOG4("Read expr is a Concat constant '" << type << "0 ++ PHV'");
                 // Check if the resize bits are unallocated on top of the field
@@ -903,15 +903,15 @@ bool ActionAnalysis::init_special_alignment(const ActionParam &read, ContainerAc
     if (read.speciality == ActionParam::HASH_DIST) {
         BuildP4HashFunction builder(phv);
         // Build the hash function from the expression
-        auto hd = read.unsliced_expr()->to<IR::MAU::HashDist>();
+        auto hd = read.unsliced_expr()->to<P4::IR::MAU::HashDist>();
         hd->apply(builder);
         P4HashFunction *func = builder.func();
-        if (auto sl = read.expr->to<IR::Slice>())
+        if (auto sl = read.expr->to<P4::IR::Slice>())
             func->slice({static_cast<int>(sl->getL()), static_cast<int>(sl->getH())});
 
         param = new ActionData::Hash(*func);
     } else if (read.speciality == ActionParam::RANDOM) {
-        auto rn = read.unsliced_expr()->to<IR::MAU::RandomNumber>();
+        auto rn = read.unsliced_expr()->to<P4::IR::MAU::RandomNumber>();
         param = new ActionData::RandomNumber(rn->name, action_name, read.range());
     } else {
         return init_simple_alignment(read, cont_action, write_bits);
@@ -975,9 +975,9 @@ bool ActionAnalysis::init_ad_alloc_alignment(const ActionParam &read, ContainerA
     // Find the location of the argument within the ActionData::Format::Use object
     ActionData::Parameter *param = nullptr;
     if (type == ActionParam::ACTIONDATA) {
-        param = new ActionData::Argument(action_arg->to<IR::MAU::ActionArg>()->name, read.range());
+        param = new ActionData::Argument(action_arg->to<P4::IR::MAU::ActionArg>()->name, read.range());
     } else if (type == ActionParam::CONSTANT) {
-        auto *adc = action_arg->to<IR::MAU::ActionDataConstant>();
+        auto *adc = action_arg->to<P4::IR::MAU::ActionDataConstant>();
         auto *ir_con = adc->constant;
         uint32_t constant_value = 0U;
         if (ir_con->fitsInt())
@@ -1025,9 +1025,9 @@ void ActionAnalysis::initialize_constant(const ActionParam &read,
         ContainerAction &cont_action, le_bitrange write_bits,
         safe_vector<le_bitrange> &read_bits_brs) {
     cont_action.ci.initialized = true;
-    auto constant = read.expr->to<IR::Constant>();
+    auto constant = read.expr->to<P4::IR::Constant>();
 
-    // FIXME: Could use a helper function on IR::Constant, but not pressing, though
+    // FIXME: Could use a helper function on P4::IR::Constant, but not pressing, though
     // for the purposes must fit within a 32 bit section
     // Constant can be from MINX_INT <= x <= MAX_UINT
     BUG_CHECK(constant->value >= INT_MIN && constant->value <= UINT_MAX, "%s: Constant "
@@ -1057,11 +1057,11 @@ bool ActionAnalysis::init_hash_constant_alignment(const ActionParam &read,
         ContainerAction &cont_action, le_bitrange write_bits, cstring action_name,
         PHV::Container container) {
     auto &action_format = tbl->resources->action_format;
-    auto constant = read.expr->to<IR::Constant>();
+    auto constant = read.expr->to<P4::IR::Constant>();
 
     P4HashFunction func;
     func.inputs.push_back(constant);
-    func.algorithm = IR::MAU::HashFunction::identity();
+    func.algorithm = P4::IR::MAU::HashFunction::identity();
     func.hash_bits = { 0, constant->type->width_bits() - 1 };
     ActionData::Hash *hash = new ActionData::Hash(func);
 
@@ -1077,7 +1077,7 @@ bool ActionAnalysis::init_hash_constant_alignment(const ActionParam &read,
     return true;
 }
 
-/** Handles a IR::Constant within an Instruction to determine whether the constant will
+/** Handles a P4::IR::Constant within an Instruction to determine whether the constant will
  *  be converted to an ActionDataConstant or not.  If is the constant is to be converted,
  *  the alignment must be pulled out of the table placement algorithm.
  */
@@ -1087,9 +1087,9 @@ bool ActionAnalysis::init_constant_alignment(const ActionParam &read,
     LOG5("init_constant_alignment: read:" << read << " write_bits:" << write_bits <<
          " action:" << action_name << " cont:" << container);
     auto &action_format = tbl->resources->action_format;
-    auto constant = read.expr->to<IR::Constant>();
+    auto constant = read.expr->to<P4::IR::Constant>();
 
-    // FIXME: Could use a helper function on IR::Constant, but not pressing, though
+    // FIXME: Could use a helper function on P4::IR::Constant, but not pressing, though
     // for the purposes must fit within a 32 bit section
     // Constant can be from MINX_INT <= x <= MAX_UINT
     BUG_CHECK(constant->fitsUint() || constant->fitsInt(), "%s: Constant "
@@ -1137,7 +1137,7 @@ bool ActionAnalysis::init_simple_alignment(const ActionParam &read,
         BUG_CHECK(isActionParam(read.expr), "Action Data parameter not configured properly "
                                              "in ActionAnalysis pass");
     else if (read.type == ActionParam::CONSTANT)
-        BUG_CHECK(read.expr->is<IR::Constant>(), "Constant parameter not configured properly "
+        BUG_CHECK(read.expr->is<P4::IR::Constant>(), "Constant parameter not configured properly "
                                                   "in ActionAnalysis pass");
 
     if (read.type == ActionParam::ACTIONDATA) {
@@ -1488,7 +1488,7 @@ bool ActionAnalysis::TotalAlignment::contiguous() const {
  *
  * This funciton returns true if the instruction has to be synthesized directly as a deposit-field
  * because the source slice is not a lo to hi range.  It also can return a lo and hi value for
- * the IR::MAU::WrappedSlice
+ * the P4::IR::MAU::WrappedSlice
  *
  * 2 corner cases:
  *     1. The source is the entire container (thus if the source is shifted at all, it is wrapped)
@@ -2115,13 +2115,13 @@ bool ActionAnalysis::ContainerAction::verify_alignment(PHV::Container &container
 bool ActionAnalysis::ContainerAction::verify_multiple_action_data() const {
     bitvec read_bits, write_bits;
     bool first_act = true;
-    const IR::Expression *prv_rexpr = nullptr, *prv_wexpr = nullptr;
+    const P4::IR::Expression *prv_rexpr = nullptr, *prv_wexpr = nullptr;
     for (auto& fa : field_actions) {
         LOG4("   FieldAction " << fa.name << "  write_bits: " << fa.write.range() <<
              "   # of read_params: " << fa.reads.size());
 
         auto *fa_wexpr = fa.write.expr;
-        if (auto *slice = fa_wexpr->to<IR::Slice>()) {
+        if (auto *slice = fa_wexpr->to<P4::IR::Slice>()) {
             fa_wexpr = slice->e0;
         }
         if (first_act) prv_wexpr = fa_wexpr;
@@ -2131,7 +2131,7 @@ bool ActionAnalysis::ContainerAction::verify_multiple_action_data() const {
         if (fa.reads.size() > 1) return true;
         for (const auto &r_param : fa.reads) {
             auto *r_expr = r_param.expr;
-            if (auto *slice = r_expr->to<IR::Slice>()) {
+            if (auto *slice = r_expr->to<P4::IR::Slice>()) {
                 r_expr = slice->e0;
             }
             LOG4("\t " << *r_expr <<"   read_bits: "<< r_param.range());
@@ -2354,7 +2354,7 @@ bool ActionAnalysis::ContainerAction::verify_only_read(const PhvInfo &phv, int n
 void ActionAnalysis::add_to_single_ad_params(ContainerAction &cont_action) {
     Log::TempIndent indent;
     LOG4("Adding to single/multiple AD params" << indent);
-    const IR::MAU::ActionArg *aa = nullptr;
+    const P4::IR::MAU::ActionArg *aa = nullptr;
     for (auto &field_action : cont_action.field_actions) {
         for (auto &param : field_action.reads) {
             le_bitrange aa_range = { 0, 0 };
@@ -2376,7 +2376,7 @@ void ActionAnalysis::add_to_single_ad_params(ContainerAction &cont_action) {
 void ActionAnalysis::check_single_ad_params(ContainerAction &cont_action) {
     if (cont_action.field_actions.size() != 1)
         return;
-    const IR::MAU::ActionArg *aa = nullptr;
+    const P4::IR::MAU::ActionArg *aa = nullptr;
     for (auto &param : cont_action.field_actions[0].reads) {
         le_bitrange aa_range = { 0, 0 };
         aa = isActionArg(param.expr, &aa_range);
@@ -2615,12 +2615,12 @@ bool ActionAnalysis::ContainerAction::verify_speciality(cstring &error_message,
          PHV::Container container, cstring action_name) {
     int ad_params = 0;
     ActionParam *speciality_read = nullptr;
-    const IR::Expression *param = nullptr;
+    const P4::IR::Expression *param = nullptr;
     for (auto &field_action : field_actions) {
         for (auto &read : field_action.reads) {
             if (read.type == ActionParam::ACTIONDATA || read.type == ActionParam::CONSTANT) {
                 auto *expr = read.expr;
-                if (auto *slice = expr->to<IR::Slice>()) {
+                if (auto *slice = expr->to<P4::IR::Slice>()) {
                     expr = slice->e0;
                 }
                 if (expr != param) {
@@ -2657,7 +2657,7 @@ bool ActionAnalysis::ContainerAction::verify_speciality(cstring &error_message,
 
     if (speciality_read && speciality_read->speciality == ActionParam::METER_ALU) {
         int lo = -1;  int hi = -1;
-        if (auto sl = speciality_read->expr->to<IR::Slice>()) {
+        if (auto sl = speciality_read->expr->to<P4::IR::Slice>()) {
             lo = sl->getL();
             hi = sl->getH();
         } else {
@@ -2880,7 +2880,7 @@ bool ActionAnalysis::ContainerAction::verify_possible(cstring &error_message,
     return true;
 }
 
-void ActionAnalysis::postorder(const IR::MAU::Action *act) {
+void ActionAnalysis::postorder(const P4::IR::MAU::Action *act) {
     Log::TempIndent indent;
     LOG3("ActionAnalysis postorder on action: " << act << indent);
     if (phv_alloc)

@@ -14,13 +14,13 @@ namespace BFN {
 class CollectIXBarInfo : public MauInspector {
     const PhvInfo &phv;
     std::map<int, safe_vector<IXBar::Use::Byte>> _stage;
-    std::map<IXBar::Use::Byte, const IR::MAU::Table*> _byteToTables;
+    std::map<IXBar::Use::Byte, const P4::IR::MAU::Table*> _byteToTables;
 
-    profile_t init_apply(const IR::Node *) override;
+    profile_t init_apply(const P4::IR::Node *) override;
 
-    void end_apply(const IR::Node *) override;
+    void end_apply(const P4::IR::Node *) override;
 
-    void postorder(const IR::MAU::Table *) override;
+    void postorder(const P4::IR::MAU::Table *) override;
 
     void sort_ixbar_byte();
     std::string print_ixbar_byte() const;

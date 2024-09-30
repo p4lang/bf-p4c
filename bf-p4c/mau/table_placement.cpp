@@ -68,7 +68,7 @@
  ** mode which use table placement as the first step. Both compilation mode use table
  ** placement algorithm in a similar way with some exceptions described below.
  **
- ** All of the decisions for placement are done in the preorder(IR::BFN::Pipe *) method --
+ ** All of the decisions for placement are done in the preorder(P4::IR::BFN::Pipe *) method --
  ** in this method we go over all the tables in the pipe (directly, not using the visitor
  ** infrastructure) making decisions about which tables should be allocated to which logical
  ** tables and what ixbar an memory resources to use for them.  All of these decisions are
@@ -99,7 +99,7 @@
  ** from the work list.  We record that removed seq as the 'parent' of the added seqs, so that
  ** we can add it back once those children are all placed.  These relationships are recorded
  ** in GroupPlace objects (which are what is actually in the work list) -- one for each
- ** IR::MAU::TableSeq being processed.
+ ** P4::IR::MAU::TableSeq being processed.
  **
  ** For Tofino2, we don't have the above restriction, so we don't remove the parent
  ** GroupPlace from the worklist, but we still maintain the parent/child info even though it
@@ -340,7 +340,7 @@ bool TablePlacement::backtrack(trigger &trig) {
     return false;
 }
 
-Visitor::profile_t TablePlacement::init_apply(const IR::Node *root) {
+Visitor::profile_t TablePlacement::init_apply(const P4::IR::Node *root) {
     auto rv = PassManager::init_apply(root);
     alloc_done = phv.alloc_done();
     summary.clearPlacementErrors();
@@ -348,7 +348,7 @@ Visitor::profile_t TablePlacement::init_apply(const IR::Node *root) {
          (ignoreContainerConflicts ? "," : ", not") << " ignoring container conflicts");
     if (BackendOptions().create_graphs) {
         static unsigned invocation = 0;
-        auto pipeId = root->to<IR::BFN::Pipe>()->canon_id();
+        auto pipeId = root->to<P4::IR::BFN::Pipe>()->canon_id();
         auto graphsDir = BFNContext::get().getOutputDirectory("graphs"_cs, pipeId);
         cstring fileName = "table_dep_graph_placement_"_cs + std::to_string(invocation++);
         std::ofstream dotStream(graphsDir + "/" + fileName + ".dot", std::ios_base::out);
@@ -361,62 +361,62 @@ Visitor::profile_t TablePlacement::init_apply(const IR::Node *root) {
 
 class TablePlacement::SetupInfo : public Inspector {
     TablePlacement &self;
-    bool preorder(const IR::MAU::Table *tbl) override {
+    bool preorder(const P4::IR::MAU::Table *tbl) override {
         BUG_CHECK(!self.tblInfo.count(tbl), "Table in both ingress and egress?");
         BUG_CHECK(self.tblInfo.size() == self.tblByUid.size(), "size mismatch in SetupInfo");
         auto &info = self.tblInfo[tbl];
         info.uid = self.tblByUid.size();
         info.table = tbl;
         self.tblByUid.push_back(&info);
-        auto *seq = getParent<IR::MAU::TableSeq>();
+        auto *seq = getParent<P4::IR::MAU::TableSeq>();
         BUG_CHECK(seq, "parent of Table is not TableSeq");
         info.refs.insert(seq);
         BUG_CHECK(!self.tblByName.count(tbl->name), "Duplicate tables named %s: %s and %s",
                   tbl->name, tbl, self.tblByName.at(tbl->name)->table);
         self.tblByName[tbl->name] = &info;
         return true; }
-    void revisit(const IR::MAU::Table *tbl) override {
-        auto *seq = getParent<IR::MAU::TableSeq>();
+    void revisit(const P4::IR::MAU::Table *tbl) override {
+        auto *seq = getParent<P4::IR::MAU::TableSeq>();
         BUG_CHECK(seq, "parent of Table is not TableSeq");
         self.tblInfo.at(tbl).refs.insert(seq); }
-    void postorder(const IR::MAU::Table *tbl) override {
+    void postorder(const P4::IR::MAU::Table *tbl) override {
         auto &info = self.tblInfo.at(tbl);
         info.tables[info.uid] = 1;
         for (auto &n : tbl->next)
             info.tables |= self.seqInfo.at(n.second).tables; }
-    bool preorder(const IR::MAU::BackendAttached *ba) override {
+    bool preorder(const P4::IR::MAU::BackendAttached *ba) override {
         visitAgain();
-        BUG_CHECK(getParent<IR::MAU::Table>(), "parent of BackendAttached is not Table");
-        self.attached_to[ba->attached].insert(getParent<IR::MAU::Table>());
+        BUG_CHECK(getParent<P4::IR::MAU::Table>(), "parent of BackendAttached is not Table");
+        self.attached_to[ba->attached].insert(getParent<P4::IR::MAU::Table>());
         return false; }
-    bool preorder(const IR::MAU::TableSeq *seq) override {
+    bool preorder(const P4::IR::MAU::TableSeq *seq) override {
         BUG_CHECK(!self.seqInfo.count(seq), "TableSeq in both ingress and egress?");
         auto &info = self.seqInfo[seq];
         info.uid = self.seqInfo.size() - 1;
-        if (auto tbl = getParent<IR::MAU::Table>()) {
+        if (auto tbl = getParent<P4::IR::MAU::Table>()) {
             info.refs.insert(tbl);
-        } else if (getParent<IR::BFN::Pipe>()) {
+        } else if (getParent<P4::IR::BFN::Pipe>()) {
             info.root = true;
         } else {
             BUG("parent of TableSeq is not a table or pipe");
         }
         return true; }
-    void revisit(const IR::MAU::TableSeq *seq) override {
+    void revisit(const P4::IR::MAU::TableSeq *seq) override {
         BUG_CHECK(self.seqInfo.count(seq), "TableSeq not present");
         BUG_CHECK(!self.seqInfo[seq].refs.empty(), "TableSeq is root and non-root");
-        auto tbl = getParent<IR::MAU::Table>();
+        auto tbl = getParent<P4::IR::MAU::Table>();
         BUG_CHECK(tbl, "parent of TableSeq is not a table");
         self.seqInfo[seq].refs.insert(tbl); }
-    void postorder(const IR::MAU::TableSeq *seq) override {
+    void postorder(const P4::IR::MAU::TableSeq *seq) override {
         auto &info = self.seqInfo.at(seq);
         for (auto t : seq->tables) {
             info.immed_tables[self.uid(t)] = 1;
             info.tables |= self.tblInfo.at(t).tables; } }
-    bool preorder(const IR::MAU::Action *) override { return false; }
-    bool preorder(const IR::Expression *) override { return false; }
-    bool preorder(const IR::V1Table *) override { return false; }
+    bool preorder(const P4::IR::MAU::Action *) override { return false; }
+    bool preorder(const P4::IR::Expression *) override { return false; }
+    bool preorder(const P4::IR::V1Table *) override { return false; }
 
-    profile_t init_apply(const IR::Node *node) override {
+    profile_t init_apply(const P4::IR::Node *node) override {
         auto rv = Inspector::init_apply(node);
         self.tblInfo.clear();
         self.tblByUid.clear();
@@ -449,18 +449,18 @@ class TablePlacement::SetupInfo : public Inspector {
 
 
 struct DecidePlacement::GroupPlace {
-    /* tracking the placement of a group of tables from an IR::MAU::TableSeq
+    /* tracking the placement of a group of tables from an P4::IR::MAU::TableSeq
      *   parents    groups that must wait until this group is fully placed before any more
      *              tables from them may be placed (so next_table setup works)
      *   ancestors  union of parents and all parent's ancestors
      *   seq        the TableSeq being placed for this group */
     const DecidePlacement                &self;
     ordered_set<const GroupPlace *>     parents, ancestors;
-    const IR::MAU::TableSeq             *seq;
+    const P4::IR::MAU::TableSeq             *seq;
     const TablePlacement::TableSeqInfo  &info;
     int                                 depth;  // just for debugging?
     GroupPlace(const DecidePlacement &self_, ordered_set<const GroupPlace*> &work,
-               const ordered_set<const GroupPlace *> &par, const IR::MAU::TableSeq *s)
+               const ordered_set<const GroupPlace *> &par, const P4::IR::MAU::TableSeq *s)
     : self(self_), parents(par), ancestors(par), seq(s), info(self.self.seqInfo.at(s)), depth(1) {
         for (auto p : parents) {
             if (depth <= p->depth)
@@ -497,7 +497,7 @@ struct DecidePlacement::GroupPlace {
             if (rv == work.end()) rv = t.first; }
         return rv; }
     void finish_if_placed(ordered_set<const GroupPlace*> &, const Placed *) const;
-    static bool in_work(ordered_set<const GroupPlace*> &work, const IR::MAU::TableSeq *s) {
+    static bool in_work(ordered_set<const GroupPlace*> &work, const P4::IR::MAU::TableSeq *s) {
         for (auto pl : work)
             if (pl->seq == s) return true;
         return false; }
@@ -540,14 +540,14 @@ struct TablePlacement::Placed {
     // be eliminated and uses replaced by checks of those bitvecs
 
     cstring                     gw_result_tag;
-    const IR::MAU::Table        *table, *gw = 0;
+    const P4::IR::MAU::Table        *table, *gw = 0;
     int                         stage = 0, logical_id = -1;
     /// Information on which stage table this table is associated with.  If the table is
     /// never split, then the stage_split should be -1
     int                         stage_split = -1;
     StageUseEstimate            use;
     TableResourceAlloc          resources;
-    Placed(TablePlacement &self_, const IR::MAU::Table *t, const Placed *done)
+    Placed(TablePlacement &self_, const P4::IR::MAU::Table *t, const Placed *done)
         : self(self_), id(getNextUid()), clone_id(id), prev(done), table(t) {
         if (t) { name = t->name; }
         if (done) {
@@ -558,25 +558,25 @@ struct TablePlacement::Placed {
     }
 
     // test if this table is placed
-    bool is_placed(const IR::MAU::Table *tbl) const {
+    bool is_placed(const P4::IR::MAU::Table *tbl) const {
         return placed[self.uid(tbl)]; }
     bool is_placed(cstring tbl) const {
         return placed[self.uid(tbl)]; }
-    bool is_match_placed(const IR::MAU::Table *tbl) const {
+    bool is_match_placed(const P4::IR::MAU::Table *tbl) const {
         return match_placed[self.uid(tbl)]; }
     // test if this table or seq and all its control dependent tables are placed
-    bool is_fully_placed(const IR::MAU::Table *tbl) const {
+    bool is_fully_placed(const P4::IR::MAU::Table *tbl) const {
         return placed.contains(self.tblInfo.at(tbl).tables); }
-    bool is_fully_placed(const IR::MAU::TableSeq *seq) const {
+    bool is_fully_placed(const P4::IR::MAU::TableSeq *seq) const {
         return placed.contains(self.seqInfo.at(seq).tables); }
-    const DecidePlacement::GroupPlace *find_group(const IR::MAU::Table *tbl) const {
+    const DecidePlacement::GroupPlace *find_group(const P4::IR::MAU::Table *tbl) const {
         for (auto p = this; p; p = p->prev) {
             if (p->table == tbl || p->gw == tbl)
                 return p->group; }
         BUG("Can't find group for %s", tbl->name);
         return nullptr; }
 
-    void gateway_merge(const IR::MAU::Table*, cstring);
+    void gateway_merge(const P4::IR::MAU::Table*, cstring);
 
     /// Update a Placed object to reflect attached tables being allocated in the same stage due
     /// to another table being added to the stage.
@@ -623,7 +623,7 @@ struct TablePlacement::Placed {
     // now unused -- maybe rotted
     // update the 'placed' bitvec to reflect tables that were previously partly placed and
     // are now fully placed.
-    void update_for_partly_placed(const ordered_set<const IR::MAU::Table *> &partly_placed) {
+    void update_for_partly_placed(const ordered_set<const P4::IR::MAU::Table *> &partly_placed) {
         for (auto *pp : partly_placed) {
             if (placed[self.uid(pp)]) continue;  // already done
             if (!match_placed[self.uid(pp)]) continue;  // not yet done match
@@ -726,7 +726,7 @@ struct TablePlacement::Placed {
 
     // Find initial position of a table in case this one is split across multiple stages
     int init_stage() const {
-        const IR::MAU::Table *search_tbl = table;
+        const P4::IR::MAU::Table *search_tbl = table;
         const Placed *prev_pl = prev;
         int first_stage = stage;
         while (prev_pl) {
@@ -993,7 +993,7 @@ class DecidePlacement::PlacementScore {
     BacktrackPlacement *bt;
     // These backtrack point are all of the other non-best first table possible placements on the
     // next stage.
-    ordered_map<const IR::MAU::Table *, BacktrackPlacement *> no_best;
+    ordered_map<const P4::IR::MAU::Table *, BacktrackPlacement *> no_best;
     // Metric relative to resource being allocated for this stage for this allocation
     StageUseEstimate stage_use;
 
@@ -1186,10 +1186,10 @@ class DecidePlacement::PlacementScore {
             return false; }
     bool operator<(const PlacementScore &other) const { return *this > other; }
     BacktrackPlacement *get_backtrack() { return bt; }
-    void add_no_best_bt(const IR::MAU::Table *tbl, BacktrackPlacement *bt) {
+    void add_no_best_bt(const P4::IR::MAU::Table *tbl, BacktrackPlacement *bt) {
         no_best.insert({tbl, bt});
     }
-    ordered_map<const IR::MAU::Table *, BacktrackPlacement *> &get_no_best_bt() { return no_best; }
+    ordered_map<const P4::IR::MAU::Table *, BacktrackPlacement *> &get_no_best_bt() { return no_best; }
 
     void printScore() const {
         LOG3("    num_log_id:" << stage_use.logical_ids);
@@ -1214,23 +1214,23 @@ class DecidePlacement::ResourceBasedAlloc {
     // These references are used to rebuild the active placed and work object when backtracking
     DecidePlacement &self;
     ordered_set<const GroupPlace *> &active_work;
-    ordered_set<const IR::MAU::Table *> &partly_placed;
+    ordered_set<const P4::IR::MAU::Table *> &partly_placed;
     const Placed *&active_placed;
 
     // Carry the tables visited for this particular stage. The algo try to include all of the
     // visited table in at least one solution.
-    ordered_set<const IR::MAU::Table *> visited;
+    ordered_set<const P4::IR::MAU::Table *> visited;
     // These incomplete placement refer to branch point where multiple choices was available and
     // some of them included unvisited tables. Incomplete position will be revisited later using
     // backtracking to produce a complete solution.
-    ordered_map<const IR::MAU::Table *, BacktrackPlacement *> incomplete;
+    ordered_map<const P4::IR::MAU::Table *, BacktrackPlacement *> incomplete;
     // Carry the various complete solutions that will be evaluated when all of the incomplete
     // placement will be finalized.
     ordered_set<PlacementScore *> complete;
 
  public:
     ResourceBasedAlloc(DecidePlacement &self, ordered_set<const GroupPlace *> &w,
-                       ordered_set<const IR::MAU::Table *> &p, const Placed *&a) :
+                       ordered_set<const P4::IR::MAU::Table *> &p, const Placed *&a) :
         self(self), active_work(w), partly_placed(p), active_placed(a) { }
 
     // Creating a backtracking position for this solution and return the placement score.
@@ -1356,7 +1356,7 @@ class DecidePlacement::FinalPlacement {
     // These references are used to rebuild the active placed and work object when backtracking
     DecidePlacement &self;
     ordered_set<const GroupPlace *> &active_work;
-    ordered_set<const IR::MAU::Table *> &partly_placed;
+    ordered_set<const P4::IR::MAU::Table *> &partly_placed;
     const Placed *&active_placed;
 
     ordered_set<BacktrackPlacement *> incomplete;
@@ -1367,7 +1367,7 @@ class DecidePlacement::FinalPlacement {
 
  public:
     FinalPlacement(DecidePlacement &self, ordered_set<const GroupPlace *> &w,
-                   ordered_set<const IR::MAU::Table *> &p, const Placed *&a) :
+                   ordered_set<const P4::IR::MAU::Table *> &p, const Placed *&a) :
         self(self), active_work(w), partly_placed(p), active_placed(a) { }
 
     void add_incomplete_placement(BacktrackPlacement * bp) {
@@ -1462,7 +1462,7 @@ class DecidePlacement::Backfill {
      */
     int                         stage = -1;
     struct table_t {
-        const IR::MAU::Table    *table;
+        const P4::IR::MAU::Table    *table;
         cstring                 before;
     };
     std::vector<table_t>        avail;
@@ -1494,7 +1494,7 @@ void DecidePlacement::GroupPlace::finish_if_placed(
 }
 
 TablePlacement::GatewayMergeChoices
-        TablePlacement::gateway_merge_choices(const IR::MAU::Table *table) {
+        TablePlacement::gateway_merge_choices(const P4::IR::MAU::Table *table) {
     GatewayMergeChoices rv;
     // Abort and return empty if we're not a gateway
     if (!table->uses_gateway() || table->match_table) {
@@ -1567,7 +1567,7 @@ TablePlacement::GatewayMergeChoices
     return rv;
 }
 
-void TablePlacement::Placed::gateway_merge(const IR::MAU::Table *match, cstring result_tag) {
+void TablePlacement::Placed::gateway_merge(const P4::IR::MAU::Table *match, cstring result_tag) {
     // Check that the table we're attempting to merge with is a gateway
     BUG_CHECK((table->uses_gateway() || !table->match_table),
               "Gateway merge called on a non-gateway!");
@@ -1586,7 +1586,7 @@ void TablePlacement::Placed::gateway_merge(const IR::MAU::Table *match, cstring 
  * they invoke -- multiple table actions that all call the same salu action should jsut be
  * counted as one sful action.
  */
-static int count_sful_actions(const IR::MAU::Table *tbl) {
+static int count_sful_actions(const P4::IR::MAU::Table *tbl) {
     int rv = 0;
     for (auto act : Values(tbl->actions))
         if (!act->stateful_calls.empty())
@@ -1626,7 +1626,7 @@ void TablePlacement::filter_layout_options(Placed *pl) {
     pl->use.layout_options = ok;
 }
 
-bool TablePlacement::disable_split_layout(const IR::MAU::Table *tbl) {
+bool TablePlacement::disable_split_layout(const P4::IR::MAU::Table *tbl) {
     if (BackendOptions().disable_split_attached || limit_tmp_creation)
         return true;
 
@@ -1636,11 +1636,11 @@ bool TablePlacement::disable_split_layout(const IR::MAU::Table *tbl) {
     for (auto *ba : tbl->attached) {
         // Stateful actions that don't require any indexes and are not supported by the actual
         // split attach framework.
-        if (ba->use == IR::MAU::StatefulUse::FAST_CLEAR ||
-            ba->use == IR::MAU::StatefulUse::STACK_PUSH ||
-            ba->use == IR::MAU::StatefulUse::STACK_POP ||
-            ba->use == IR::MAU::StatefulUse::FIFO_PUSH ||
-            ba->use == IR::MAU::StatefulUse::FIFO_POP)
+        if (ba->use == P4::IR::MAU::StatefulUse::FAST_CLEAR ||
+            ba->use == P4::IR::MAU::StatefulUse::STACK_PUSH ||
+            ba->use == P4::IR::MAU::StatefulUse::STACK_POP ||
+            ba->use == P4::IR::MAU::StatefulUse::FIFO_PUSH ||
+            ba->use == P4::IR::MAU::StatefulUse::FIFO_POP)
             return true;
     }
     return false;
@@ -1855,7 +1855,7 @@ bool TablePlacement::shrink_estimate(Placed *next, int &srams_left, int &tcams_l
 }
 
 bool TablePlacement::shrink_preferred_lo(Placed *next) {
-    const IR::MAU::Table* t = next->table;
+    const P4::IR::MAU::Table* t = next->table;
     LOG3("Shrinking table resource of the preferred layout");
     bool done_shrink = false;
     if (!shrink_attached_tbl(next, false, done_shrink))
@@ -1894,7 +1894,7 @@ struct TablePlacement::RewriteForSplitAttached : public Transform {
     const Placed *pl;
     RewriteForSplitAttached(TablePlacement &self, const Placed *p)
         : self(self), pl(p) {}
-    const IR::MAU::Table *preorder(IR::MAU::Table *tbl) {
+    const P4::IR::MAU::Table *preorder(P4::IR::MAU::Table *tbl) {
         self.setup_detached_gateway(tbl, pl);
         // don't visit most of the children
         for (auto it = tbl->actions.begin(); it != tbl->actions.end();)  {
@@ -1905,23 +1905,23 @@ struct TablePlacement::RewriteForSplitAttached : public Transform {
         visit(tbl->attached, "attached");
         prune();
         return tbl; }
-    const IR::MAU::BackendAttached *preorder(IR::MAU::BackendAttached *ba) {
-        auto *tbl = findContext<IR::MAU::Table>();
+    const P4::IR::MAU::BackendAttached *preorder(P4::IR::MAU::BackendAttached *ba) {
+        auto *tbl = findContext<P4::IR::MAU::Table>();
         for (auto act : Values(tbl->actions)) {
             if (auto *sc = act->stateful_call(ba->attached->name)) {
                 if (sc->index) {
-                    if (auto *hd = sc->index->to<IR::MAU::HashDist>()) {
+                    if (auto *hd = sc->index->to<P4::IR::MAU::HashDist>()) {
                         ba->hash_dist = hd;
                         break;
                     }
                 }
             }
         }
-        if (ba->attached->is<IR::MAU::Counter>() || ba->attached->is<IR::MAU::Meter>() ||
-            ba->attached->is<IR::MAU::StatefulAlu>()) {
-            ba->pfe_location = IR::MAU::PfeLocation::DEFAULT;
-            if (!ba->attached->is<IR::MAU::Counter>())
-                ba->type_location = IR::MAU::TypeLocation::DEFAULT;
+        if (ba->attached->is<P4::IR::MAU::Counter>() || ba->attached->is<P4::IR::MAU::Meter>() ||
+            ba->attached->is<P4::IR::MAU::StatefulAlu>()) {
+            ba->pfe_location = P4::IR::MAU::PfeLocation::DEFAULT;
+            if (!ba->attached->is<P4::IR::MAU::Counter>())
+                ba->type_location = P4::IR::MAU::TypeLocation::DEFAULT;
         }
         prune();
         return ba; }
@@ -2008,7 +2008,7 @@ bool TablePlacement::try_alloc_mem(Placed *next, std::vector<Placed *> whole_sta
     }
 #endif
 
-    const IR::MAU::Table *table_to_add = nullptr;
+    const P4::IR::MAU::Table *table_to_add = nullptr;
     for (auto *p : whole_stage) {
         if (!Device::threadsSharePipe(p->table->gress, next->table->gress)) continue;
         table_to_add = p->table;
@@ -2037,7 +2037,7 @@ bool TablePlacement::try_alloc_mem(Placed *next, std::vector<Placed *> whole_sta
             // All selector tables need a stateful table that can be used by the driver to set and
             // clear entries in the table. This should be abstracted from the customer when
             // reporting an error.
-            if (auto *salu = ae.first->to<IR::MAU::StatefulAlu>())
+            if (auto *salu = ae.first->to<P4::IR::MAU::StatefulAlu>())
                 if (salu->synthetic_for_selector)
                     continue;
 
@@ -2080,7 +2080,7 @@ bool TablePlacement::try_alloc_format(Placed *next, bool gw_linked) {
     // Remove them, so that pack fields for them dont clutter the table
     // that no longer has those resources
     auto *tbl = next->table->clone();
-    erase_if(tbl->attached, [next](const IR::MAU::BackendAttached *ba) {
+    erase_if(tbl->attached, [next](const P4::IR::MAU::BackendAttached *ba) {
         return !next->attached_entries.count(ba->attached) ||
                next->attached_entries.at(ba->attached).entries == 0; });
 
@@ -2305,27 +2305,27 @@ TableSummary::PlacementResult TablePlacement::try_alloc_all(Placed *next,
 /// must be only a single copy of (each element of) the table.  This does not consider
 /// whether it is a good idea to duplicate the table (not a good idea for large tables and
 /// pointless if it won't fit in a single stage anyways).
-bool TablePlacement::can_duplicate(const IR::MAU::AttachedMemory *att) {
+bool TablePlacement::can_duplicate(const P4::IR::MAU::AttachedMemory *att) {
     BUG_CHECK(!att->direct, "Not an indirect attached table");
-    if (att->is<IR::MAU::Counter>() || att->is<IR::MAU::ActionData>() ||
-        att->is<IR::MAU::Selector>())
+    if (att->is<P4::IR::MAU::Counter>() || att->is<P4::IR::MAU::ActionData>() ||
+        att->is<P4::IR::MAU::Selector>())
         return true;
-    if (auto *salu = att->to<IR::MAU::StatefulAlu>())
+    if (auto *salu = att->to<P4::IR::MAU::StatefulAlu>())
         return salu->synthetic_for_selector;
     return false;
 }
 
 /// Check if an indirect attached table can be split acorss stages
-bool TablePlacement::can_split(const IR::MAU::Table *tbl, const IR::MAU::AttachedMemory *att) {
+bool TablePlacement::can_split(const P4::IR::MAU::Table *tbl, const P4::IR::MAU::AttachedMemory *att) {
     BUG_CHECK(!att->direct, "Not an indirect attached table");
     if (Device::currentDevice() == Device::TOFINO) {
         // Tofino not supported yet -- need vpn check in gateway
         return false; }
     if (disable_split_layout(tbl))
         return false;
-    if (att->is<IR::MAU::Selector>())
+    if (att->is<P4::IR::MAU::Selector>())
         return false;
-    if (auto *salu = att->to<IR::MAU::StatefulAlu>()) {
+    if (auto *salu = att->to<P4::IR::MAU::StatefulAlu>()) {
         // FIXME is this synthetic_for_selector test still needed, or is it subsumed by the
         // selector test below.  If it is not still needed, could the flag go away completely?
         if (salu->synthetic_for_selector) return false;
@@ -2411,13 +2411,13 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, int &furthest_stage) 
     }
     /* Not yet placed tables that share an attached table with this table -- if any of them
      * have a dependency that prevents placement in the current stage, we want to defer */
-    ordered_set<const IR::MAU::Table *> tables_with_shared;
+    ordered_set<const P4::IR::MAU::Table *> tables_with_shared;
     for (auto *ba : rv->table->attached) {
         if (!rv->attached_entries.emplace(ba->attached, ba->attached->size).second)
             BUG("%s attached more than once", ba->attached);
         if (ba->attached->direct || can_duplicate(ba->attached)) continue;
-        bool stateful_selector = ba->attached->is<IR::MAU::StatefulAlu>() &&
-                                 ba->use == IR::MAU::StatefulUse::NO_USE;
+        bool stateful_selector = ba->attached->is<P4::IR::MAU::StatefulAlu>() &&
+                                 ba->use == P4::IR::MAU::StatefulUse::NO_USE;
         for (auto *att_to : attached_to.at(ba->attached)) {
             if (att_to == rv->table) continue;
             // If shared with another table that is not placed yet, need to
@@ -2441,14 +2441,14 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, int &furthest_stage) 
                     // to it are placed.
                     auto *att_ba = att_to->get_attached(ba->attached);
                     BUG_CHECK(att_ba, "%s not attached to %s?", ba->attached, att_to);
-                    if (att_ba->use != IR::MAU::StatefulUse::NO_USE)
+                    if (att_ba->use != P4::IR::MAU::StatefulUse::NO_USE)
                         return false;
                 } else {
                     break; } } } }
 
     int prev_stage_tables = 0;
     auto init_attached = rv->attached_entries;
-    std::set<const IR::MAU::AttachedMemory *> need_defer;
+    std::set<const P4::IR::MAU::AttachedMemory *> need_defer;
     for (auto *p = rv->prev; p; p = p->prev) {
         LOG5("For previous table : " << p->name);
         if (p->name == rv->name) {
@@ -2588,7 +2588,7 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, int &furthest_stage) 
  *  return a vector of these possible choices to the is_better function to choose
  */
 safe_vector<TablePlacement::Placed *>
-    TablePlacement::try_place_table(const IR::MAU::Table *t, const Placed *done,
+    TablePlacement::try_place_table(const P4::IR::MAU::Table *t, const Placed *done,
         const StageUseEstimate &current, GatewayMergeChoices& gmc,
         const TableSummary::PlacedTable *pt) {
     Log::TempIndent indent;
@@ -2937,7 +2937,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
  * logical ids of the later tables, but keeping all in the same stage.
  */
 TablePlacement::Placed *DecidePlacement::try_backfill_table(
-        const Placed *done, const IR::MAU::Table *tbl, cstring before) {
+        const Placed *done, const P4::IR::MAU::Table *tbl, cstring before) {
     LOG2("try to backfill " << tbl->name << " before " << before);
     std::vector<Placed *> whole_stage;
     Placed *place_before = nullptr;
@@ -3025,7 +3025,7 @@ const TablePlacement::Placed *TablePlacement::add_starter_pistols(const Placed *
         gress_t current_gress = static_cast<gress_t>(i);
         if (!placed_gress[i] && table_in_gress[i]) {
             cstring t_name = "$"_cs + toString(current_gress) + "_starter_pistol"_cs;
-            auto t = new IR::MAU::Table(t_name, current_gress);
+            auto t = new P4::IR::MAU::Table(t_name, current_gress);
             t->created_during_tp = true;
             LOG4("Adding starter pistol for " << current_gress);
             auto *rv = new Placed(*this, t, last_placed);
@@ -3174,7 +3174,7 @@ DecidePlacement::place_table(ordered_set<const GroupPlace *>&work, const Placed 
 }
 
 bool DecidePlacement::are_metadata_deps_satisfied(const Placed *placed,
-                                                 const IR::MAU::Table* t) const {
+                                                 const P4::IR::MAU::Table* t) const {
     // If there are no reverse metadata deps for this table, return true.
     LOG4("Checking table " << t->name << " for metadata dependencies");
     const ordered_set<cstring> set_of_tables = self.phv.getReverseMetadataDeps(t);
@@ -3199,8 +3199,8 @@ int DecidePlacement::get_control_anti_split_adj_score(const Placed *pl) const {
  * a is better and false if b is better */
 bool DecidePlacement::is_better(const Placed *a, const Placed *b,
                                 TablePlacement::choice_t& choice) {
-    const IR::MAU::Table *a_table_to_use = a->gw ? a->gw : a->table;
-    const IR::MAU::Table *b_table_to_use = b->gw ? b->gw : b->table;
+    const P4::IR::MAU::Table *a_table_to_use = a->gw ? a->gw : a->table;
+    const P4::IR::MAU::Table *b_table_to_use = b->gw ? b->gw : b->table;
 
     if (a_table_to_use == b_table_to_use) {
         a_table_to_use = a->table;
@@ -3213,7 +3213,7 @@ bool DecidePlacement::is_better(const Placed *a, const Placed *b,
     BUG_CHECK(a->prev == b->prev || a->prev->match_placed == b->prev->match_placed,
               "Inconsistent previously placed state in is_better");
     const Placed *done = a->prev;
-    self.ddm.update_placed_tables([done](const IR::MAU::Table *tbl)->bool {
+    self.ddm.update_placed_tables([done](const P4::IR::MAU::Table *tbl)->bool {
         return done ? done->is_match_placed(tbl) : false; });
     std::pair<int, int> down_score;
     // dynamic downward propagation compute only make sense on Tofino1 but keep it on non resource
@@ -3230,7 +3230,7 @@ bool DecidePlacement::is_better(const Placed *a, const Placed *b,
                                     get_control_anti_split_adj_score(b));
     }
 
-    ordered_set<const IR::MAU::Table *> already_placed_a;
+    ordered_set<const P4::IR::MAU::Table *> already_placed_a;
     for (auto p = a->prev; p && p->stage == a->stage; p = p->prev) {
         if (p->table)
             already_placed_a.emplace(p->table);
@@ -3238,7 +3238,7 @@ bool DecidePlacement::is_better(const Placed *a, const Placed *b,
             already_placed_a.emplace(p->gw);
     }
 
-    ordered_set<const IR::MAU::Table *> already_placed_b;
+    ordered_set<const P4::IR::MAU::Table *> already_placed_b;
     for (auto p = b->prev; p && p->stage == b->stage; p = p->prev) {
         if (p->table) {
             already_placed_b.emplace(p->table);
@@ -3406,11 +3406,11 @@ bool DecidePlacement::is_better(const Placed *a, const Placed *b,
 }
 
 class DumpSeqTables {
-    const IR::MAU::TableSeq     *seq;
+    const P4::IR::MAU::TableSeq     *seq;
     bitvec                      which;
     friend std::ostream &operator<<(std::ostream &out, const DumpSeqTables &);
  public:
-    DumpSeqTables(const IR::MAU::TableSeq *s, bitvec w) : seq(s), which(w) {}
+    DumpSeqTables(const P4::IR::MAU::TableSeq *s, bitvec w) : seq(s), which(w) {}
 };
 std::ostream &operator<<(std::ostream &out, const DumpSeqTables &s) {
     const char *sep = "";
@@ -3439,8 +3439,8 @@ std::ostream &operator<<(std::ostream &out, const ordered_set<const IR::MAU::Tab
  * This does not matter when long branches are turned on, as the next table is no longer the
  * limiting factor.
  */
-bool DecidePlacement::can_place_with_partly_placed(const IR::MAU::Table *tbl,
-        const ordered_set<const IR::MAU::Table *> &partly_placed,
+bool DecidePlacement::can_place_with_partly_placed(const P4::IR::MAU::Table *tbl,
+        const ordered_set<const P4::IR::MAU::Table *> &partly_placed,
         const Placed *placed) {
      if (!(Device::numLongBranchTags() == 0 || self.options.disable_long_branch))
          return true;
@@ -3504,7 +3504,7 @@ bool DecidePlacement::can_place_with_partly_placed(const IR::MAU::Table *tbl,
  * The eventual goal is to get rid of this check and just verify that the compiler is not
  * running out of long branches.
  */
-bool DecidePlacement::gateway_thread_can_start(const IR::MAU::Table *tbl, const Placed *placed) {
+bool DecidePlacement::gateway_thread_can_start(const P4::IR::MAU::Table *tbl, const Placed *placed) {
     if (!Device::hasLongBranches() || self.options.disable_long_branch)
         return true;
     if (!tbl->uses_gateway())
@@ -3536,7 +3536,7 @@ bool DecidePlacement::gateway_thread_can_start(const IR::MAU::Table *tbl, const 
     return placeable_table_found || non_cd_gw_tbls == 0;
 }
 
-void DecidePlacement::initForPipe(const IR::BFN::Pipe *pipe,
+void DecidePlacement::initForPipe(const P4::IR::BFN::Pipe *pipe,
         ordered_set<const GroupPlace *> &work) {
     size_t gress_index = 0;
     for (auto th : pipe->thread) {
@@ -3554,7 +3554,7 @@ void DecidePlacement::initForPipe(const IR::BFN::Pipe *pipe,
 }
 
 void DecidePlacement::recomputePartlyPlaced(const Placed *done,
-                                            ordered_set<const IR::MAU::Table *> &partly_placed) {
+                                            ordered_set<const P4::IR::MAU::Table *> &partly_placed) {
     partly_placed.clear();
     // Also update the starter pistol table from scratch
     self.starter_pistol = { { nullptr, nullptr } };
@@ -3620,13 +3620,13 @@ DecidePlacement::find_previous_placement(const Placed *best, int offset, bool lo
 std::optional<DecidePlacement::BacktrackPlacement*>
 DecidePlacement::find_backtrack_point(const Placed *best, int offset, bool local_bt) {
     std::optional<DecidePlacement::BacktrackPlacement*> cc = std::nullopt;
-    ordered_set<const IR::MAU::Table*> to_be_analyzed;
-    std::map<const IR::MAU::Table*, const Placed*> same_stage;
+    ordered_set<const P4::IR::MAU::Table*> to_be_analyzed;
+    std::map<const P4::IR::MAU::Table*, const Placed*> same_stage;
     int process_stage = best->stage;
     const Placed *last_stage = best;
 
     to_be_analyzed.insert(best->table);
-    ordered_set<const IR::MAU::Table*> to_be_analyzed_next_pre;
+    ordered_set<const P4::IR::MAU::Table*> to_be_analyzed_next_pre;
 
     LOG3("Find " << (local_bt ? "local" : "global") << " backtracking point for table " <<
          best->name << " and offset " << offset);
@@ -3658,17 +3658,17 @@ DecidePlacement::find_backtrack_point(const Placed *best, int offset, bool local
      * are available that would relaxe the actual constraint.
      */
     while (!to_be_analyzed.empty()) {
-        ordered_set<const IR::MAU::Table*> to_be_analyzed_next_post;
-        ordered_set<const IR::MAU::Table*> potential_container_conflict;
-        for (const IR::MAU::Table* t1 : to_be_analyzed) {
+        ordered_set<const P4::IR::MAU::Table*> to_be_analyzed_next_post;
+        ordered_set<const P4::IR::MAU::Table*> potential_container_conflict;
+        for (const P4::IR::MAU::Table* t1 : to_be_analyzed) {
             // Data dependency
-            ordered_set<const IR::MAU::Table*> prev = self.deps.happens_phys_after_map.at(t1);
+            ordered_set<const P4::IR::MAU::Table*> prev = self.deps.happens_phys_after_map.at(t1);
             to_be_analyzed_next_pre.insert(prev.begin(), prev.end());
             to_be_analyzed_next_pre.insert(t1);
 
             // Control dependency
-            ordered_set<const IR::MAU::Table*> log_prev = self.deps.happens_logi_after_map.at(t1);
-            for (const IR::MAU::Table* log_tbl : log_prev) {
+            ordered_set<const P4::IR::MAU::Table*> log_prev = self.deps.happens_logi_after_map.at(t1);
+            for (const P4::IR::MAU::Table* log_tbl : log_prev) {
                 // If the analyzed table is control dependent on another table located in the same
                 // stage then both table must be moved to an earlier stage.
                 if (same_stage.count(log_tbl)) {
@@ -3682,7 +3682,7 @@ DecidePlacement::find_backtrack_point(const Placed *best, int offset, bool local
                 }
                 // Data dependency of the control dependent table must also be analyzed.
                 if (!to_be_analyzed_next_pre.count(log_tbl)) {
-                    ordered_set<const IR::MAU::Table*> phys_prev =
+                    ordered_set<const P4::IR::MAU::Table*> phys_prev =
                                                        self.deps.happens_phys_after_map.at(log_tbl);
                     to_be_analyzed_next_pre.insert(phys_prev.begin(), phys_prev.end());
                 }
@@ -3694,7 +3694,7 @@ DecidePlacement::find_backtrack_point(const Placed *best, int offset, bool local
 
         // It is possible that a table can't be placed into a given stage because of container
         // conflict with another table in the same stage.
-        for (const IR::MAU::Table* t1 : to_be_analyzed) {
+        for (const P4::IR::MAU::Table* t1 : to_be_analyzed) {
             if (self.deps.container_conflicts.count(t1)) {
                 potential_container_conflict.insert(self.deps.container_conflicts.at(t1).begin(),
                                                     self.deps.container_conflicts.at(t1).end());
@@ -3792,13 +3792,13 @@ class DecidePlacement::TryPlacedPool {
 
     // Carry all the information needed to evaluate a table.
     struct request_arg {
-        const IR::MAU::Table *t;
+        const P4::IR::MAU::Table *t;
         const Placed *done;
         const StageUseEstimate &current;
         TablePlacement::GatewayMergeChoices *gmc;
         const GroupPlace *group;
 
-        request_arg(const IR::MAU::Table *t, const Placed *done, const StageUseEstimate &current,
+        request_arg(const P4::IR::MAU::Table *t, const Placed *done, const StageUseEstimate &current,
                     TablePlacement::GatewayMergeChoices *gmc, const GroupPlace *group) :
                         t(t), done(done), current(current), gmc(gmc), group(group) { }
     };
@@ -3849,7 +3849,7 @@ class DecidePlacement::TryPlacedPool {
     }
     void cleanup();
     void shutdown();
-    void addReq(const IR::MAU::Table *t, const Placed *done, const StageUseEstimate &current,
+    void addReq(const P4::IR::MAU::Table *t, const Placed *done, const StageUseEstimate &current,
                 const TablePlacement::GatewayMergeChoices &gmc, const GroupPlace *group);
     bool fillTrial(safe_vector<const Placed *> &trial, bitvec &trial_tables);
 };
@@ -3887,7 +3887,7 @@ void* DecidePlacement::TryPlacedPool::workerWait() {
 }
 
 // Add a request to be processed by one of the Worker Thread
-void DecidePlacement::TryPlacedPool::addReq(const IR::MAU::Table *t, const Placed *done,
+void DecidePlacement::TryPlacedPool::addReq(const P4::IR::MAU::Table *t, const Placed *done,
                                             const StageUseEstimate &current,
                                             const TablePlacement::GatewayMergeChoices &gmc,
                                             const GroupPlace *group) {
@@ -3971,7 +3971,7 @@ class DecidePlacement::BacktrackManagement {
 
     // These references are used to update local element of default_table_placement()
     ordered_set<const GroupPlace *> &active_work;
-    ordered_set<const IR::MAU::Table *> &partly_placed;
+    ordered_set<const P4::IR::MAU::Table *> &partly_placed;
     const Placed *&active_placed;
     Backfill &backfill;
 
@@ -3985,7 +3985,7 @@ class DecidePlacement::BacktrackManagement {
 
  public:
     BacktrackManagement(DecidePlacement &self, ordered_set<const GroupPlace *> &w,
-                        ordered_set<const IR::MAU::Table *> &p, const Placed *&a, Backfill &b) :
+                        ordered_set<const P4::IR::MAU::Table *> &p, const Placed *&a, Backfill &b) :
                         self(self), res_based_alloc(self, w, p, a), final_placement(self, w, p, a),
                         active_work(w), partly_placed(p), active_placed(a), backfill(b) {
         self.backtrack_count = 0;
@@ -4045,7 +4045,7 @@ class DecidePlacement::BacktrackManagement {
     // mean that a shared attach table was placed on a stage before all of the match table that
     // refer to that memory are placed. This is only a problem if we are moving from one stage to
     // the next and the previous stage was still invalid.
-    std::optional<const IR::MAU::AttachedMemory*> is_unstable_placement(const Placed *placed) {
+    std::optional<const P4::IR::MAU::AttachedMemory*> is_unstable_placement(const Placed *placed) {
         for (const Placed *p = placed->prev; p; p = p->prev) {
             for (auto *ba : p->table->attached) {
                 if (ba->attached->direct) continue;
@@ -4084,7 +4084,7 @@ class DecidePlacement::BacktrackManagement {
 
         // Apply that on stage transition
         if (best->prev && best->prev->stage != best->stage) {
-            std::optional<const IR::MAU::AttachedMemory*> att = is_unstable_placement(best->prev);
+            std::optional<const P4::IR::MAU::AttachedMemory*> att = is_unstable_placement(best->prev);
             // Stage was completed and the placement was invalid. We need to fix it or return an
             // error since the behaviour will be incorrect.
             if (att) {
@@ -4258,7 +4258,7 @@ class DecidePlacement::BacktrackManagement {
 };
 
 const DecidePlacement::Placed*
-DecidePlacement::default_table_placement(const IR::BFN::Pipe *pipe) {
+DecidePlacement::default_table_placement(const P4::IR::BFN::Pipe *pipe) {
     LOG1("Table placement starting on " << pipe->canon_name()
          << " with DEFAULT PLACEMENT approach");
 
@@ -4275,7 +4275,7 @@ DecidePlacement::default_table_placement(const IR::BFN::Pipe *pipe) {
      * list and restoring that point */
     initForPipe(pipe, work);
 
-    ordered_set<const IR::MAU::Table *> partly_placed;
+    ordered_set<const P4::IR::MAU::Table *> partly_placed;
     Backfill backfill(*this);
     BacktrackManagement bt_mgmt(*this, work, partly_placed, placed, backfill);
 #ifdef MULTITHREAD
@@ -4290,7 +4290,7 @@ DecidePlacement::default_table_placement(const IR::BFN::Pipe *pipe) {
             if (work.empty())
                 break;
         }
-        erase_if(partly_placed, [placed](const IR::MAU::Table *t) -> bool {
+        erase_if(partly_placed, [placed](const P4::IR::MAU::Table *t) -> bool {
                                         return placed->is_placed(t); });
         if (placed) backfill.set_stage(placed->stage);
         StageUseEstimate current = get_current_stage_use(placed);
@@ -4384,7 +4384,7 @@ DecidePlacement::default_table_placement(const IR::BFN::Pipe *pipe) {
                 // Find potential tables this table can be merged with (if it's a gateway)
                 TablePlacement::GatewayMergeChoices gmc = self.gateway_merge_choices(t);
                 // Prune these choices according to happens after
-                std::vector<const IR::MAU::Table*> to_erase;
+                std::vector<const P4::IR::MAU::Table*> to_erase;
                 for (auto mc : gmc) {
                     // Iterate through all of this merge choice's happens afters and make sure
                     // they're placed
@@ -4576,7 +4576,7 @@ DecidePlacement::default_table_placement(const IR::BFN::Pipe *pipe) {
     return placed;
 }
 
-bool DecidePlacement::preorder(const IR::BFN::Pipe *pipe) {
+bool DecidePlacement::preorder(const P4::IR::BFN::Pipe *pipe) {
     LOG_FEATURE("stage_advance", 2, "Stage advance for pipe " << pipe->canon_name() << " " <<
                 self.summary.getActualStateStr() <<
                 (self.ignoreContainerConflicts ? " " : " not ") << "ignoring container conflicts");
@@ -4619,7 +4619,7 @@ bool DecidePlacement::preorder(const IR::BFN::Pipe *pipe) {
 }
 
 std::pair<bool, const DecidePlacement::Placed*>
-DecidePlacement::alt_table_placement(const IR::BFN::Pipe *pipe) {
+DecidePlacement::alt_table_placement(const P4::IR::BFN::Pipe *pipe) {
     LOG1("Table placement starting on " << pipe->canon_name() << " with ALT PLACEMENT approach");
     LOG3(TableTree("ingress"_cs, pipe->thread[INGRESS].mau) <<
          TableTree("egress"_cs, pipe->thread[EGRESS].mau) <<
@@ -4646,8 +4646,8 @@ DecidePlacement::alt_table_placement(const IR::BFN::Pipe *pipe) {
         auto ptName = pt.second->internalTableName;
         const auto alt_table_to_place = self.getTblByName(ptName);
 
-        const IR::MAU::Table* alt_cond_to_place = nullptr;
-        const IR::MAU::Table* alt_try_place_table = nullptr;
+        const P4::IR::MAU::Table* alt_cond_to_place = nullptr;
+        const P4::IR::MAU::Table* alt_try_place_table = nullptr;
         if (pt.second->gatewayName) {
             alt_cond_to_place = self.getTblByName(pt.second->gatewayName);
             gmc[alt_table_to_place] = pt.second->gatewayMergeCond;
@@ -4802,12 +4802,12 @@ std::ostream &operator<<(std::ostream &out, TablePlacement::choice_t choice) {
     return out;
 }
 
-IR::Node *TransformTables::preorder(IR::BFN::Pipe *pipe) {
+P4::IR::Node *TransformTables::preorder(P4::IR::BFN::Pipe *pipe) {
     always_run_actions.clear();
     return pipe;
 }
 
-IR::Node *TransformTables::postorder(IR::BFN::Pipe *pipe) {
+P4::IR::Node *TransformTables::postorder(P4::IR::BFN::Pipe *pipe) {
     self.tblInfo.clear();
     self.tblByName.clear();
     self.seqInfo.clear();
@@ -4820,7 +4820,7 @@ IR::Node *TransformTables::postorder(IR::BFN::Pipe *pipe) {
     return pipe;
 }
 
-void TransformTables::table_set_resources(IR::MAU::Table *tbl, const TableResourceAlloc *resources,
+void TransformTables::table_set_resources(P4::IR::MAU::Table *tbl, const TableResourceAlloc *resources,
                                 const int entries) {
     tbl->resources = resources;
     tbl->layout.entries = entries;
@@ -4844,7 +4844,7 @@ void TransformTables::table_set_resources(IR::MAU::Table *tbl, const TableResour
 
 /* Sets the layout and ways for a table from the selected table layout option
    from table placement */
-static void select_layout_option(IR::MAU::Table *tbl, const LayoutOption *layout_option) {
+static void select_layout_option(P4::IR::MAU::Table *tbl, const LayoutOption *layout_option) {
     tbl->layout = layout_option->layout;
     if (!layout_option->layout.ternary) {
         tbl->ways.resize(layout_option->way_sizes.size());
@@ -4858,14 +4858,14 @@ static void select_layout_option(IR::MAU::Table *tbl, const LayoutOption *layout
 }
 
 /* Adds the potential ternary tables necessary for layout options */
-static void add_attached_tables(IR::MAU::Table *tbl, const LayoutOption *layout_option,
+static void add_attached_tables(P4::IR::MAU::Table *tbl, const LayoutOption *layout_option,
         const TableResourceAlloc *resources) {
     if (resources->has_tind()) {
         BUG_CHECK(layout_option->layout.no_match_miss_path() ||
                   layout_option->layout.ternary, "Illegally allocating a ternary indirect");
         LOG3("  Adding Ternary Indirect table to " << tbl->name);
-        auto *tern_indir = new IR::MAU::TernaryIndirect(tbl->name);
-        tbl->attached.push_back(new IR::MAU::BackendAttached(tern_indir->srcInfo, tern_indir));
+        auto *tern_indir = new P4::IR::MAU::TernaryIndirect(tbl->name);
+        tbl->attached.push_back(new P4::IR::MAU::BackendAttached(tern_indir->srcInfo, tern_indir));
     }
     if (layout_option->layout.direct_ad_required()) {
         LOG3("  Adding Action Data Table to " << tbl->name);
@@ -4875,19 +4875,19 @@ static void add_attached_tables(IR::MAU::Table *tbl, const LayoutOption *layout_
         if (tbl->layout.pre_classifier)
             ad_name = ad_name + "_preclassifier";
         ad_name = ad_name + "$action";
-        auto *act_data = new IR::MAU::ActionData(IR::ID(ad_name));
+        auto *act_data = new P4::IR::MAU::ActionData(P4::IR::ID(ad_name));
         act_data->size = layout_option->entries;
         act_data->direct = true;
-        auto *ba = new IR::MAU::BackendAttached(act_data->srcInfo, act_data);
-        ba->addr_location = IR::MAU::AddrLocation::DIRECT;
-        ba->pfe_location = IR::MAU::PfeLocation::DEFAULT;
+        auto *ba = new P4::IR::MAU::BackendAttached(act_data->srcInfo, act_data);
+        ba->addr_location = P4::IR::MAU::AddrLocation::DIRECT;
+        ba->pfe_location = P4::IR::MAU::PfeLocation::DEFAULT;
         ba->entries = act_data->size;
         tbl->attached.push_back(ba);
     }
 }
 
-/** Similar to splitting a IR::MAU::Table across stages, this is splitting an ATCAM
- *  IR::MAU::Table object into the multiple logical tables specified by the table placement
+/** Similar to splitting a P4::IR::MAU::Table across stages, this is splitting an ATCAM
+ *  P4::IR::MAU::Table object into the multiple logical tables specified by the table placement
  *  algorithm.  Like split tables, these tables are chained in a hit miss chain in order
  *  to maintain priority.
  *
@@ -4895,11 +4895,11 @@ static void add_attached_tables(IR::MAU::Table *tbl, const LayoutOption *layout_
  *  in the last pointer to chain the last table in the current stage to the first table in
  *  the next stage
  */
-IR::MAU::Table *TransformTables::break_up_atcam(IR::MAU::Table *tbl,
+P4::IR::MAU::Table *TransformTables::break_up_atcam(P4::IR::MAU::Table *tbl,
         const TablePlacement::Placed *placed,
-        int stage_table, IR::MAU::Table **last) {
-    IR::MAU::Table *rv = nullptr;
-    IR::MAU::Table *prev = nullptr;
+        int stage_table, P4::IR::MAU::Table **last) {
+    P4::IR::MAU::Table *rv = nullptr;
+    P4::IR::MAU::Table *prev = nullptr;
     int logical_tables = placed->use.preferred()->logical_tables();
 
     BUG_CHECK(stage_table == placed->stage_split, "mismatched stage table id");
@@ -4928,7 +4928,7 @@ IR::MAU::Table *TransformTables::break_up_atcam(IR::MAU::Table *tbl,
             rv = table_part;
             BUG_CHECK(!prev, "First logical table for %s is not first?", tbl->name);
         } else {
-            prev->next["$try_next_stage"_cs] = new IR::MAU::TableSeq(table_part);
+            prev->next["$try_next_stage"_cs] = new P4::IR::MAU::TableSeq(table_part);
             prev->next.erase("$miss"_cs);
         }
 
@@ -4944,9 +4944,9 @@ IR::MAU::Table *TransformTables::break_up_atcam(IR::MAU::Table *tbl,
  *  learn/match method is used to determine which table to run.  Thus, the algorithm differs
  *  from the hit miss chaining
  */
-IR::Vector<IR::MAU::Table> *TransformTables::break_up_dleft(IR::MAU::Table *tbl,
+P4::IR::Vector<P4::IR::MAU::Table> *TransformTables::break_up_dleft(P4::IR::MAU::Table *tbl,
         const TablePlacement::Placed *placed, int stage_table) {
-    auto dleft_vector = new IR::Vector<IR::MAU::Table>();
+    auto dleft_vector = new P4::IR::Vector<P4::IR::MAU::Table>();
     int logical_tables = placed->use.preferred()->logical_tables();
     BUG_CHECK(stage_table == placed->stage_split, "mismatched stage table id");
 
@@ -4959,9 +4959,9 @@ IR::Vector<IR::MAU::Table> *TransformTables::break_up_dleft(IR::MAU::Table *tbl,
         table_part->logical_split = lt;
         table_part->logical_tables_in_stage = logical_tables;
 
-        const IR::MAU::StatefulAlu *salu = nullptr;
+        const P4::IR::MAU::StatefulAlu *salu = nullptr;
         for (auto back_at : tbl->attached) {
-            salu = back_at->attached->to<IR::MAU::StatefulAlu>();
+            salu = back_at->attached->to<P4::IR::MAU::StatefulAlu>();
             if (salu != nullptr)
                 break;
         }
@@ -4980,7 +4980,7 @@ IR::Vector<IR::MAU::Table> *TransformTables::break_up_dleft(IR::MAU::Table *tbl,
     return dleft_vector;
 }
 
-void TablePlacement::setup_detached_gateway(IR::MAU::Table *tbl, const Placed *placed) {
+void TablePlacement::setup_detached_gateway(P4::IR::MAU::Table *tbl, const Placed *placed) {
     tbl->remove_gateway();
     BUG_CHECK(placed->entries == 0, "match entries present");
     for (auto *ba : placed->table->attached) {
@@ -4988,7 +4988,7 @@ void TablePlacement::setup_detached_gateway(IR::MAU::Table *tbl, const Placed *p
             continue;
         if (auto *ena = att_info.split_enable(ba->attached, tbl)) {
             tbl->gateway_rows.emplace_back(
-                new IR::Equ(ena, new IR::Constant(1)), cstring());
+                new P4::IR::Equ(ena, new P4::IR::Constant(1)), cstring());
             tbl->gateway_cond = ena->toString();
         }
     }
@@ -5120,8 +5120,8 @@ void TablePlacement::setup_detached_gateway(IR::MAU::Table *tbl, const Placed *p
  *
  * This ensure that the tables t1 and t3 are run on both pathways.
  */
-void TransformTables::merge_match_and_gateway(IR::MAU::Table *tbl,
-        const TablePlacement::Placed *placed, IR::MAU::Table::Layout &gw_layout) {
+void TransformTables::merge_match_and_gateway(P4::IR::MAU::Table *tbl,
+        const TablePlacement::Placed *placed, P4::IR::MAU::Table::Layout &gw_layout) {
     auto match = placed->table;
     BUG_CHECK(match && tbl->conditional_gateway_only() && !match->uses_gateway(),
         "Table IR is not set up in the preorder");
@@ -5210,10 +5210,10 @@ void TransformTables::merge_match_and_gateway(IR::MAU::Table *tbl,
 
     for (auto &gw : tbl->gateway_rows)
         if (gw.second && !tbl->next.count(gw.second))
-            tbl->next[gw.second] = new IR::MAU::TableSeq();
+            tbl->next[gw.second] = new P4::IR::MAU::TableSeq();
 }
 
-void TablePlacement::find_dependency_stages(const IR::MAU::Table *tbl,
+void TablePlacement::find_dependency_stages(const P4::IR::MAU::Table *tbl,
             std::map<int, ordered_map<const Placed *,
                                       DependencyGraph::dependencies_t>> &earliest_stage) const {
     auto &need_different_stage = deps.happens_phys_after_map.at(tbl);
@@ -5256,18 +5256,18 @@ void TablePlacement::find_dependency_stages(const IR::MAU::Table *tbl,
 
 namespace {
 class SplitEntriesList {
-    const IR::EntriesList* list;
-    IR::Vector<IR::Entry>::const_iterator next;
+    const P4::IR::EntriesList* list;
+    P4::IR::Vector<P4::IR::Entry>::const_iterator next;
     size_t available = 0;
 
  public:
-    explicit SplitEntriesList(const IR::EntriesList* list) : list(list) {
+    explicit SplitEntriesList(const P4::IR::EntriesList* list) : list(list) {
         if (list) {
             next = list->entries.begin();
             available = list->size();
         }
     }
-    const IR::EntriesList* split_off(size_t num_entries) {
+    const P4::IR::EntriesList* split_off(size_t num_entries) {
         if (!available)
             return nullptr;
         if (num_entries >= available) {
@@ -5282,14 +5282,14 @@ class SplitEntriesList {
         auto first = next;
         next = first + num_entries;
         available -= num_entries;
-        IR::Vector<IR::Entry> static_entries;
+        P4::IR::Vector<P4::IR::Entry> static_entries;
         static_entries.insert(static_entries.end(), first, next);
-        return new IR::EntriesList(static_entries);
+        return new P4::IR::EntriesList(static_entries);
      }
 };
 }  // namespace
 
-IR::Node *TransformTables::preorder(IR::MAU::Table *tbl) {
+P4::IR::Node *TransformTables::preorder(P4::IR::MAU::Table *tbl) {
     Log::TempIndent indent;
     LOG5("TransformTables preorder on " << tbl->name << indent);
     auto it = self.table_placed.find(tbl->name);
@@ -5348,11 +5348,11 @@ IR::Node *TransformTables::preorder(IR::MAU::Table *tbl) {
     // FIXME: Currently the gateway is laid out for every table, so I'm keeping the information
     // in split tables.  In the future, there should be no gw_layout for split tables
     // FIXME -- gw_layout should be unnecessary and should go away completely
-    IR::MAU::Table::Layout gw_layout;
+    P4::IR::MAU::Table::Layout gw_layout;
     bool gw_only = true;
     bool gw_layout_used = false;
-    ordered_map<cstring, const IR::MAU::TableSeq *> match_table_next;
-    IR::MAU::TableSeq *gw_result_tag_seq = nullptr;
+    ordered_map<cstring, const P4::IR::MAU::TableSeq *> match_table_next;
+    P4::IR::MAU::TableSeq *gw_result_tag_seq = nullptr;
 
     if (pl->use.preferred() && pl->use.preferred()->layout.gateway_match) {
         tbl = self.lc.fpc.convert_to_gateway(tbl);
@@ -5363,7 +5363,7 @@ IR::Node *TransformTables::preorder(IR::MAU::Table *tbl) {
         if (!pl->table->next.empty() && Device::currentDevice() != Device::TOFINO) {
             for (auto const &element : pl->table->next) {
                 // Create new TableSeqs rather than clones to have new unique IDs.
-                auto deepcopy = new IR::MAU::TableSeq();
+                auto deepcopy = new P4::IR::MAU::TableSeq();
                 deepcopy->tables = element.second->tables;
                 match_table_next[element.first] = deepcopy;
             }
@@ -5403,9 +5403,9 @@ IR::Node *TransformTables::preorder(IR::MAU::Table *tbl) {
     }
     int stage_table = 0;
     int prev_entries = 0;
-    IR::Vector<IR::MAU::Table> *rv = new IR::Vector<IR::MAU::Table>;
-    IR::MAU::Table *prev = 0;
-    IR::MAU::Table *atcam_last = nullptr;
+    P4::IR::Vector<P4::IR::MAU::Table> *rv = new P4::IR::Vector<P4::IR::MAU::Table>;
+    P4::IR::MAU::Table *prev = 0;
+    P4::IR::MAU::Table *atcam_last = nullptr;
     /* split the table into multiple parts per the placement */
     LOG1("splitting " << tbl->name << " across " << self.table_placed.count(tbl->name)
          << " stages");
@@ -5416,7 +5416,7 @@ IR::Node *TransformTables::preorder(IR::MAU::Table *tbl) {
         // splitting a table with an un-duplicatable indirect attached table
         // allocate TempVar to propagate index from match to attachment stage
         ++deferred_attached;
-        if (att->type_location == IR::MAU::TypeLocation::OVERHEAD)
+        if (att->type_location == P4::IR::MAU::TypeLocation::OVERHEAD)
             P4C_UNIMPLEMENTED("%s with multiple RegisterActions placed in separation stage from "
                               "%s; try using @stage to force them into the same stage",
                               tbl->match_table->name, att->attached->name); }
@@ -5465,7 +5465,7 @@ IR::Node *TransformTables::preorder(IR::MAU::Table *tbl) {
                         ++act;
                     else
                         act = table_part->actions.erase(act); }
-                erase_if(table_part->attached, [pl](const IR::MAU::BackendAttached *ba) {
+                erase_if(table_part->attached, [pl](const P4::IR::MAU::BackendAttached *ba) {
                     return pl->attached_entries.count(ba->attached) &&
                            pl->attached_entries.at(ba->attached).entries == 0; }); }
             if (table_part->layout.atcam) {
@@ -5494,18 +5494,18 @@ IR::Node *TransformTables::preorder(IR::MAU::Table *tbl) {
             self.setup_detached_gateway(table_part, pl);
             if (table_part->actions.size() != 1)
                 P4C_UNIMPLEMENTED("split attached table with multiple actions");
-            erase_if(table_part->attached, [pl](const IR::MAU::BackendAttached *ba) {
+            erase_if(table_part->attached, [pl](const P4::IR::MAU::BackendAttached *ba) {
                 return !pl->attached_entries.count(ba->attached) ||
                        pl->attached_entries.at(ba->attached).entries == 0; });
             for (size_t i = 0; i < table_part->attached.size(); i++) {
-                auto ba_clone = new IR::MAU::BackendAttached(*(table_part->attached.at(i)));
+                auto ba_clone = new P4::IR::MAU::BackendAttached(*(table_part->attached.at(i)));
                 // This needs to be reset, as the backend attached is initialized as DEFAULT
-                if (ba_clone->attached->is<IR::MAU::Counter>() ||
-                    ba_clone->attached->is<IR::MAU::Meter>() ||
-                    ba_clone->attached->is<IR::MAU::StatefulAlu>()) {
-                    ba_clone->pfe_location = IR::MAU::PfeLocation::DEFAULT;
-                    if (!ba_clone->attached->is<IR::MAU::Counter>())
-                        ba_clone->type_location = IR::MAU::TypeLocation::DEFAULT;
+                if (ba_clone->attached->is<P4::IR::MAU::Counter>() ||
+                    ba_clone->attached->is<P4::IR::MAU::Meter>() ||
+                    ba_clone->attached->is<P4::IR::MAU::StatefulAlu>()) {
+                    ba_clone->pfe_location = P4::IR::MAU::PfeLocation::DEFAULT;
+                    if (!ba_clone->attached->is<P4::IR::MAU::Counter>())
+                        ba_clone->type_location = P4::IR::MAU::TypeLocation::DEFAULT;
                 }
                 table_part->attached.at(i) = ba_clone;
             }
@@ -5534,7 +5534,7 @@ IR::Node *TransformTables::preorder(IR::MAU::Table *tbl) {
             //    - Create a noop action as miss_only
             //    - Get rid of the $try_next_stage and just go through the standard hit/miss
             // Separate control flow processing for try_next_stage vs miss
-            auto try_next_stage_seq = new IR::MAU::TableSeq(table_part);
+            auto try_next_stage_seq = new P4::IR::MAU::TableSeq(table_part);
             if (gw_result_tag_seq && Device::currentDevice() != Device::TOFINO) {
                 for (auto table : gw_result_tag_seq->tables) {
                     // Remove table_part, as try_next_stage_seq already includes it.
@@ -5592,39 +5592,39 @@ IR::Node *TransformTables::preorder(IR::MAU::Table *tbl) {
     return rv;
 }
 
-IR::Node *TransformTables::postorder(IR::MAU::Table *tbl) {
+P4::IR::Node *TransformTables::postorder(P4::IR::MAU::Table *tbl) {
     return Device::mauSpec().postTransformTables(tbl);
 }
 
-IR::Node *TransformTables::preorder(IR::MAU::BackendAttached *ba) {
+P4::IR::Node *TransformTables::preorder(P4::IR::MAU::BackendAttached *ba) {
     LOG5("TransformTables::preorder BackendAttached " << ba->attached->name);
     visitAgain();  // clone these for any table that has been cloned
-    auto tbl = findContext<IR::MAU::Table>();
+    auto tbl = findContext<P4::IR::MAU::Table>();
     if (!tbl || !tbl->resources) {
         BUG_CHECK(errorCount() > 0, "No table resources for %s", ba);
         return ba; }
     auto format = tbl->resources->table_format;
 
-    if (ba->attached->is<IR::MAU::Counter>()) {
-        if (format.stats_pfe_loc == IR::MAU::PfeLocation::OVERHEAD ||
-            format.stats_pfe_loc == IR::MAU::PfeLocation::GATEWAY_PAYLOAD)
+    if (ba->attached->is<P4::IR::MAU::Counter>()) {
+        if (format.stats_pfe_loc == P4::IR::MAU::PfeLocation::OVERHEAD ||
+            format.stats_pfe_loc == P4::IR::MAU::PfeLocation::GATEWAY_PAYLOAD)
             ba->pfe_location = format.stats_pfe_loc;
-    } else if (ba->attached->is<IR::MAU::Meter>() || ba->attached->is<IR::MAU::StatefulAlu>() ||
-               ba->attached->is<IR::MAU::Selector>()) {
-        if (format.meter_pfe_loc == IR::MAU::PfeLocation::OVERHEAD ||
-            format.meter_pfe_loc == IR::MAU::PfeLocation::GATEWAY_PAYLOAD)
+    } else if (ba->attached->is<P4::IR::MAU::Meter>() || ba->attached->is<P4::IR::MAU::StatefulAlu>() ||
+               ba->attached->is<P4::IR::MAU::Selector>()) {
+        if (format.meter_pfe_loc == P4::IR::MAU::PfeLocation::OVERHEAD ||
+            format.meter_pfe_loc == P4::IR::MAU::PfeLocation::GATEWAY_PAYLOAD)
             ba->pfe_location = format.meter_pfe_loc;
-        if (format.meter_type_loc == IR::MAU::TypeLocation::OVERHEAD ||
-            format.meter_type_loc == IR::MAU::TypeLocation::GATEWAY_PAYLOAD)
+        if (format.meter_type_loc == P4::IR::MAU::TypeLocation::OVERHEAD ||
+            format.meter_type_loc == P4::IR::MAU::TypeLocation::GATEWAY_PAYLOAD)
             ba->type_location = format.meter_type_loc;
     }
 
     for (auto act : Values(tbl->actions)) {
         if (auto *sc = act->stateful_call(ba->attached->name)) {
             if (!sc->index) continue;
-            if (auto *hd = sc->index->to<IR::MAU::HashDist>()) {
+            if (auto *hd = sc->index->to<P4::IR::MAU::HashDist>()) {
                 ba->hash_dist = hd;
-                ba->addr_location = IR::MAU::AddrLocation::HASH;
+                ba->addr_location = P4::IR::MAU::AddrLocation::HASH;
                 break; } } }
 
     // If the table has been converted to hash action, then the hash distribution unit has
@@ -5632,19 +5632,19 @@ IR::Node *TransformTables::preorder(IR::MAU::BackendAttached *ba) {
     if (tbl->layout.hash_action && ba->attached->direct) {
         for (auto &hd_use : tbl->resources->hash_dists) {
             for (auto &ir_alloc : hd_use.ir_allocations) {
-                if (ba->attached->is<IR::MAU::Counter>() &&
+                if (ba->attached->is<P4::IR::MAU::Counter>() &&
                     ir_alloc.dest != IXBar::HD_STATS_ADR)
                     continue;
-                if (ba->attached->is<IR::MAU::Meter>() &&
+                if (ba->attached->is<P4::IR::MAU::Meter>() &&
                     ir_alloc.dest != IXBar::HD_METER_ADR)
                     continue;
-                if (ba->attached->is<IR::MAU::ActionData>() &&
+                if (ba->attached->is<P4::IR::MAU::ActionData>() &&
                     ir_alloc.dest != IXBar::HD_ACTIONDATA_ADR)
                     continue;
                 BUG_CHECK(ir_alloc.created_hd != nullptr, "Hash Action did not create a "
                     "HashDist object during allocation");
                 ba->hash_dist = ir_alloc.created_hd;
-                ba->addr_location = IR::MAU::AddrLocation::HASH;
+                ba->addr_location = P4::IR::MAU::AddrLocation::HASH;
             }
         }
     }
@@ -5665,12 +5665,12 @@ IR::Node *TransformTables::preorder(IR::MAU::BackendAttached *ba) {
     return ba;
 }
 
-IR::Node *TransformTables::preorder(IR::MAU::TableSeq *seq) {
-    if (getParent<IR::BFN::Pipe>())
+P4::IR::Node *TransformTables::preorder(P4::IR::MAU::TableSeq *seq) {
+    if (getParent<P4::IR::BFN::Pipe>())
         BUG_CHECK(always_run_actions.empty(), "inconsistent always_run list");
 
     // Inserting the starter pistol tables
-    if (findContext<IR::MAU::Table>() == nullptr && seq->tables.size() > 0) {
+    if (findContext<P4::IR::MAU::Table>() == nullptr && seq->tables.size() > 0) {
         if (Device::currentDevice() == Device::TOFINO) {
             auto gress = seq->front()->gress;
             if (self.starter_pistol[gress] != nullptr) {
@@ -5681,9 +5681,9 @@ IR::Node *TransformTables::preorder(IR::MAU::TableSeq *seq) {
     return seq;
 }
 
-IR::Node *TransformTables::postorder(IR::MAU::TableSeq *seq) {
+P4::IR::Node *TransformTables::postorder(P4::IR::MAU::TableSeq *seq) {
     /* move all always run actions to the top-level seq in the pipe threads */
-    if (getParent<IR::BFN::Pipe>()) {
+    if (getParent<P4::IR::BFN::Pipe>()) {
         seq->tables.append(always_run_actions);
         always_run_actions.clear();
     } else {
@@ -5698,7 +5698,7 @@ IR::Node *TransformTables::postorder(IR::MAU::TableSeq *seq) {
         std::stable_sort(seq->tables.begin(), seq->tables.end(),
             // Always Run Action will appear logically after all tables in its stage but before
             // all tables in subsequent stages
-            [](const IR::MAU::Table *a, const IR::MAU::Table *b) -> bool {
+            [](const P4::IR::MAU::Table *a, const P4::IR::MAU::Table *b) -> bool {
                 bool a_always_run = a->is_always_run_action();
                 bool b_always_run = b->is_always_run_action();
                 if (!a_always_run && !b_always_run) {
@@ -5718,8 +5718,8 @@ IR::Node *TransformTables::postorder(IR::MAU::TableSeq *seq) {
 
 /**
  * The goal of this pass is to merge all of the pre table-placement always run objects into a
- * single IR::MAU::Table.  Each always run action during table placement is placed
- * separately, however in the hardware, the action is a single IR::MAU::Action, and thus
+ * single P4::IR::MAU::Table.  Each always run action during table placement is placed
+ * separately, however in the hardware, the action is a single P4::IR::MAU::Action, and thus
  * must be merged together.
  *
  * The idea behind this is that if each always run action is indeed always run, then this table
@@ -5732,7 +5732,7 @@ IR::Node *TransformTables::postorder(IR::MAU::TableSeq *seq) {
  * always run action per stage and gress, and replace it with this merged table.  All other
  * always run actions will be replaced with a nullptr.
  */
-bool MergeAlwaysRunActions::Scan::preorder(const IR::MAU::Table *tbl) {
+bool MergeAlwaysRunActions::Scan::preorder(const P4::IR::MAU::Table *tbl) {
     if (tbl->is_always_run_action()) {
         AlwaysRunKey ark(tbl->stage(), tbl->gress);
         self.ar_tables_per_stage[ark].insert(tbl);
@@ -5742,8 +5742,8 @@ bool MergeAlwaysRunActions::Scan::preorder(const IR::MAU::Table *tbl) {
     return true;
 }
 
-bool MergeAlwaysRunActions::Scan::preorder(const IR::MAU::Primitive *prim) {
-    auto *tbl = findContext<IR::MAU::Table>();
+bool MergeAlwaysRunActions::Scan::preorder(const P4::IR::MAU::Primitive *prim) {
+    auto *tbl = findContext<P4::IR::MAU::Table>();
     if (tbl != nullptr && tbl->is_always_run_action()) {
         for (uint32_t idx = 0; idx < prim->operands.size(); ++idx) {
             auto expr = prim->operands.at(idx);
@@ -5771,10 +5771,10 @@ void MergeAlwaysRunActions::Scan::end_apply() {
         const AlwaysRunKey& araKey = entry.first;
         auto& tables = entry.second;
 
-        IR::MAU::Table *merged_table = new IR::MAU::Table(cstring(), araKey.gress);
+        P4::IR::MAU::Table *merged_table = new P4::IR::MAU::Table(cstring(), araKey.gress);
         merged_table->stage_ = araKey.stage;
-        merged_table->always_run = IR::MAU::AlwaysRun::ACTION;
-        IR::MAU::Action *act = new IR::MAU::Action("$always_run_act"_cs);
+        merged_table->always_run = P4::IR::MAU::AlwaysRun::ACTION;
+        P4::IR::MAU::Action *act = new P4::IR::MAU::Action("$always_run_act"_cs);
         TableResourceAlloc *resources = new TableResourceAlloc();
         int ar_row = Device::alwaysRunIMemAddr() / 2;
         int ar_color = Device::alwaysRunIMemAddr() % 2;
@@ -5785,7 +5785,7 @@ void MergeAlwaysRunActions::Scan::end_apply() {
         for (auto tbl : tables) {
             LOG7("Physical stage for merge-scan table " << tbl->name << " : " << tbl->stage());
             BUG_CHECK(tbl->actions.size() == 1, "Always run tables can only have one action");
-            const IR::MAU::Action *local_act = *(Values(tbl->actions).begin());
+            const P4::IR::MAU::Action *local_act = *(Values(tbl->actions).begin());
             for (auto instr : local_act->action)
                 act->action.push_back(instr);
             resources->merge_instr(tbl->resources);
@@ -5803,8 +5803,8 @@ void MergeAlwaysRunActions::Scan::end_apply() {
     }
 }
 
-const IR::MAU::Table *MergeAlwaysRunActions::Update::preorder(IR::MAU::Table *tbl) {
-    auto orig_tbl = getOriginal()->to<IR::MAU::Table>();
+const P4::IR::MAU::Table *MergeAlwaysRunActions::Update::preorder(P4::IR::MAU::Table *tbl) {
+    auto orig_tbl = getOriginal()->to<P4::IR::MAU::Table>();
     if (!tbl->is_always_run_action())
         return tbl;
     AlwaysRunKey ark(tbl->stage(), tbl->gress);
@@ -5950,7 +5950,7 @@ void MergeAlwaysRunActions::Update::end_apply() {
     LOG7(self.self.deps);
 }
 
-bool MergeAlwaysRunActions::UpdateAffectedTableMinStage::preorder(const IR::MAU::Table *tbl) {
+bool MergeAlwaysRunActions::UpdateAffectedTableMinStage::preorder(const P4::IR::MAU::Table *tbl) {
     if (!PhvInfo::hasMinStageEntry(tbl) || !self.mergedARAwitNewStage)
         return false;
 
@@ -5967,11 +5967,11 @@ bool MergeAlwaysRunActions::UpdateAffectedTableMinStage::preorder(const IR::MAU:
 
 // Go through IR Expression's to identify slices that need their liverange updated
 // ---
-bool MergeAlwaysRunActions::UpdateAffectedTableMinStage::preorder(const IR::Expression *t_expr) {
+bool MergeAlwaysRunActions::UpdateAffectedTableMinStage::preorder(const P4::IR::Expression *t_expr) {
     if (!self.mergedARAwitNewStage)
         return false;
 
-    auto *tbl = findContext<IR::MAU::Table>();
+    auto *tbl = findContext<P4::IR::MAU::Table>();
     if (tbl == nullptr) {
         LOG4("\t\t\t" << tableMinStageShifts.count(tbl) << " tables found for Expression "
              << *t_expr);

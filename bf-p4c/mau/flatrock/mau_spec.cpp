@@ -1,7 +1,7 @@
 #include "bf-p4c/mau/mau_spec.h"
 #include "input_xbar.h"
 
-IR::Node *FlatrockMauSpec::postTransformTables(IR::MAU::Table *tbl) const {
+P4::IR::Node *FlatrockMauSpec::postTransformTables(P4::IR::MAU::Table *tbl) const {
     if (tbl->layout.hash_action) {
         // flatrock hash_action needs to run everything from the table -- can't use a
         // run_table miss action to do anything.

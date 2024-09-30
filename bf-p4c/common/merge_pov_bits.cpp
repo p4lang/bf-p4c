@@ -24,11 +24,11 @@ class IdentifyPovMergeTargets : public ParserInspector {
     const HeaderValidityAnalysis &hva;
     ordered_map<const PHV::Field*, const PHV::Field*>& merge_pov;
 
-    ordered_map<const PHV::Field *, std::set<const IR::BFN::ParserState *>> pov_states;
-    ordered_map<const IR::BFN::ParserState *, ordered_set<const PHV::Field *>> state_povs;
+    ordered_map<const PHV::Field *, std::set<const P4::IR::BFN::ParserState *>> pov_states;
+    ordered_map<const P4::IR::BFN::ParserState *, ordered_set<const PHV::Field *>> state_povs;
     std::set<const PHV::Field *> pov_zero_writes;
 
-    Visitor::profile_t init_apply(const IR::Node* root) override {
+    Visitor::profile_t init_apply(const P4::IR::Node* root) override {
         auto rv = Inspector::init_apply(root);
         merge_pov.clear();
         pov_states.clear();
@@ -37,27 +37,27 @@ class IdentifyPovMergeTargets : public ParserInspector {
         return rv;
     }
 
-    bool preorder(const IR::BFN::Extract *e) override {
+    bool preorder(const P4::IR::BFN::Extract *e) override {
         const auto *f = phv.field(e->dest->field);
         CHECK_NULL(f);
 
         // Skip temp fields: these like correspond to special valid bits that were added
         // FIXME: Is this necessary? Curretnly the fieldNameToExpressionMap does not contain
         // the valid bit because it's only adding HeaderOrMetadata objects.
-        if (e->dest->field->is<IR::TempVar>()) return true;
+        if (e->dest->field->is<P4::IR::TempVar>()) return true;
 
         // Don't attempt to merge $stkvalid
         if (f->name.endsWith("$stkvalid")) return true;
 
-        const auto *src = e->source->to<IR::BFN::ConstantRVal>();
+        const auto *src = e->source->to<P4::IR::BFN::ConstantRVal>();
         if (f->pov && src) {
             if (src->constant->value == 1) {
-                const auto *state = findContext<IR::BFN::ParserState>();
+                const auto *state = findContext<P4::IR::BFN::ParserState>();
                 LOG3("Found POV write: " << f << " in " << state->name);
                 pov_states[f].emplace(state);
                 state_povs[state].emplace(f);
             } else if (src->constant->value == 0) {
-                const auto *state = findContext<IR::BFN::ParserState>();
+                const auto *state = findContext<P4::IR::BFN::ParserState>();
                 LOG3("Found POV zero-write: " << f << " in " << state->name);
                 pov_zero_writes.emplace(f);
             }
@@ -129,11 +129,11 @@ class IdentifyPovMergeTargets : public ParserInspector {
                 auto& preds = graph.predecessors();
                 auto& succs = graph.successors();
 
-                std::set<const IR::BFN::ParserState *> f1_state_preds;
-                std::set<const IR::BFN::ParserState *> f1_state_succs;
+                std::set<const P4::IR::BFN::ParserState *> f1_state_preds;
+                std::set<const P4::IR::BFN::ParserState *> f1_state_succs;
 
-                std::set<const IR::BFN::ParserState *> f2_state_preds;
-                std::set<const IR::BFN::ParserState *> f2_state_succs;
+                std::set<const P4::IR::BFN::ParserState *> f2_state_preds;
+                std::set<const P4::IR::BFN::ParserState *> f2_state_succs;
 
                 // Don't know whether f1 or f2 is extracted first, so consider
                 // both orderings of f1 states and f2 states.
@@ -244,24 +244,24 @@ class UpdatePovBits : public Transform {
     const HeaderValidityAnalysis &hva;
     const ordered_map<const PHV::Field *, const PHV::Field *> &merge_pov;
 
-    /// Map of IR::Expression objects corresponding to the field names.
-    ordered_map<cstring, const IR::Member*> fieldNameToExpressionsMap;
+    /// Map of P4::IR::Expression objects corresponding to the field names.
+    ordered_map<cstring, const P4::IR::Member*> fieldNameToExpressionsMap;
 
     /// Names of stack POV bits
     std::set<cstring> stack_pov_bits;
     std::set<cstring> skip_stack_pov_bits;
 
-    Visitor::profile_t init_apply(const IR::Node* root) override {
+    Visitor::profile_t init_apply(const P4::IR::Node* root) override {
         profile_t rv = Transform::init_apply(root);
         fieldNameToExpressionsMap.clear();
         return rv;
     }
 
-    const IR::Node *preorder(IR::HeaderOrMetadata* h) override {
+    const P4::IR::Node *preorder(P4::IR::HeaderOrMetadata* h) override {
         LOG5("Header: " << h->name);
         LOG5("Header type: " << h->type);
-        const IR::HeaderStack *hs = h->to<IR::HeaderStack>();
-        if (!hs) hs = h->type->to<IR::HeaderStack>();
+        const P4::IR::HeaderStack *hs = h->to<P4::IR::HeaderStack>();
+        if (!hs) hs = h->type->to<P4::IR::HeaderStack>();
         if (hs) {
             cstring stkvalid_name = h->name + ".$stkvalid"_cs;
             const auto *stkvalid = phv.field(stkvalid_name);
@@ -270,19 +270,19 @@ class UpdatePovBits : public Transform {
                 cstring name = h->name + "[" + cstring::to_cstring(i)  + "].$valid";
                 stack_pov_bits.emplace(name);
                 if (skip) skip_stack_pov_bits.emplace(name);
-                IR::Member* mem = new IR::Member(
-                    IR::Type_Bits::get(1),
-                    new IR::HeaderStackItemRef(new IR::ConcreteHeaderRef(h), new IR::Constant(i)),
+                P4::IR::Member* mem = new P4::IR::Member(
+                    P4::IR::Type_Bits::get(1),
+                    new P4::IR::HeaderStackItemRef(new P4::IR::ConcreteHeaderRef(h), new P4::IR::Constant(i)),
                     "$valid");
                 if (mem) {
                     fieldNameToExpressionsMap[name] = mem;
                     LOG5("  Added stack field: " << name << ", " << mem);
                 }
             }
-        } else if (h->type->is<IR::Type_Header>()) {
+        } else if (h->type->is<P4::IR::Type_Header>()) {
             cstring name = h->name + ".$valid"_cs;
-            IR::Member* mem = new IR::Member(IR::Type_Bits::get(1),
-                    new IR::ConcreteHeaderRef(h), "$valid");
+            P4::IR::Member* mem = new P4::IR::Member(P4::IR::Type_Bits::get(1),
+                    new P4::IR::ConcreteHeaderRef(h), "$valid");
             if (mem) {
                 fieldNameToExpressionsMap[name] = mem;
                 LOG5("  Added field: " << name << ", " << mem);
@@ -291,11 +291,11 @@ class UpdatePovBits : public Transform {
         return h;
     }
 
-    const IR::Node *preorder(IR::BFN::Emit *emit) override {
+    const P4::IR::Node *preorder(P4::IR::BFN::Emit *emit) override {
         const auto *povBit = phv.field(emit->povBit->field);
 
         if (merge_pov.count(povBit)) {
-            const IR::Member *newMember = nullptr;
+            const P4::IR::Member *newMember = nullptr;
             if (stack_pov_bits.count(povBit->name) && skip_stack_pov_bits.count(povBit->name)) {
                 LOG1("Skipping " << povBit->name);
                 return emit;
@@ -313,11 +313,11 @@ class UpdatePovBits : public Transform {
         return emit;
     }
 
-    const IR::Node *preorder(IR::BFN::ChecksumEntry *csum) override {
+    const P4::IR::Node *preorder(P4::IR::BFN::ChecksumEntry *csum) override {
         const auto *povBit = phv.field(csum->povBit->field);
 
         if (merge_pov.count(povBit)) {
-            const IR::Member *newMember = nullptr;
+            const P4::IR::Member *newMember = nullptr;
             if (stack_pov_bits.count(povBit->name) && skip_stack_pov_bits.count(povBit->name)) {
                 LOG1("Skipping " << povBit->name);
                 return csum;
@@ -351,15 +351,15 @@ class ElimParserValidZeroWrites : public ParserTransform {
     const CollectParserInfo &parser_info;
     const MapFieldToParserStates &fs;
 
-    const IR::Node *preorder(IR::BFN::Extract *e) override {
+    const P4::IR::Node *preorder(P4::IR::BFN::Extract *e) override {
         const auto *f = phv.field(e->dest->field);
         if (!f || !f->pov) return e;
 
-        const auto *src = e->source->to<IR::BFN::ConstantRVal>();
+        const auto *src = e->source->to<P4::IR::BFN::ConstantRVal>();
         if (f->pov && src) {
             if (src->constant->value == 0) {
                 const auto &states = fs.field_to_parser_states.at(f);
-                const auto *state = findOrigCtxt<IR::BFN::ParserState>();
+                const auto *state = findOrigCtxt<P4::IR::BFN::ParserState>();
                 const auto& graph = parser_info.graph(state);
                 bool first_write = true;
                 for (const auto *otherState : states) {

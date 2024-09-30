@@ -1,7 +1,7 @@
 #include "bf-p4c/mau/dynamic_dep_metrics.h"
 
-void DynamicDependencyMetrics::score_on_seq(const IR::MAU::TableSeq *seq,
-        const IR::MAU::Table *tbl, int &max_dep_impact, char type) const {
+void DynamicDependencyMetrics::score_on_seq(const P4::IR::MAU::TableSeq *seq,
+        const P4::IR::MAU::Table *tbl, int &max_dep_impact, char type) const {
     for (auto seq_tbl : seq->tables) {
         LOG3("\t" << type << " table " << seq_tbl->externalName());
         if (seq_tbl == tbl)
@@ -60,16 +60,16 @@ void DynamicDependencyMetrics::score_on_seq(const IR::MAU::TableSeq *seq,
  *
  * This constraint is completely voided in Tofino2 
  */
-std::pair<int, int> DynamicDependencyMetrics::get_downward_prop_score(const IR::MAU::Table *a,
-        const IR::MAU::Table *b) const {
-    ordered_set<const IR::MAU::Table *> a_tables;
-    ordered_set<const IR::MAU::Table *> b_tables;
+std::pair<int, int> DynamicDependencyMetrics::get_downward_prop_score(const P4::IR::MAU::Table *a,
+        const P4::IR::MAU::Table *b) const {
+    ordered_set<const P4::IR::MAU::Table *> a_tables;
+    ordered_set<const P4::IR::MAU::Table *> b_tables;
     int a_max_dep_impact = 0;
     int b_max_dep_impact = 0;
 
 
-    for (safe_vector<const IR::Node *> a_path : con_paths.table_pathways.at(a)) {
-        for (safe_vector<const IR::Node *> b_path : con_paths.table_pathways.at(b)) {
+    for (safe_vector<const P4::IR::Node *> a_path : con_paths.table_pathways.at(a)) {
+        for (safe_vector<const P4::IR::Node *> b_path : con_paths.table_pathways.at(b)) {
             if (std::find(a_path.begin(), a_path.end(), b) != a_path.end())
                 continue;
             if (std::find(b_path.begin(), b_path.end(), a) != b_path.end())
@@ -84,7 +84,7 @@ std::pair<int, int> DynamicDependencyMetrics::get_downward_prop_score(const IR::
             }
 
             while (a_path_it != a_path.rend()) {
-                auto a_seq = (*a_path_it)->to<IR::MAU::TableSeq>();
+                auto a_seq = (*a_path_it)->to<P4::IR::MAU::TableSeq>();
                 if (a_seq != nullptr) {
                     score_on_seq(a_seq, a, a_max_dep_impact, 'A');
                 }
@@ -92,7 +92,7 @@ std::pair<int, int> DynamicDependencyMetrics::get_downward_prop_score(const IR::
             }
 
             while (b_path_it != b_path.rend()) {
-                auto b_seq = (*b_path_it)->to<IR::MAU::TableSeq>();
+                auto b_seq = (*b_path_it)->to<P4::IR::MAU::TableSeq>();
                 if (b_seq != nullptr) {
                     score_on_seq(b_seq, b, b_max_dep_impact, 'B');
                 }
@@ -115,7 +115,7 @@ std::pair<int, int> DynamicDependencyMetrics::get_downward_prop_score(const IR::
 /**
  * Based on how many dependencies are within the control dominating set.
  */
-int DynamicDependencyMetrics::total_deps_of_dom_frontier(const IR::MAU::Table *a) const {
+int DynamicDependencyMetrics::total_deps_of_dom_frontier(const P4::IR::MAU::Table *a) const {
     int rv = 0;
     for (auto tbl : ntp.control_dom_set.at(a)) {
         rv += dg.happens_before_dependences(tbl).size();
@@ -128,8 +128,8 @@ int DynamicDependencyMetrics::total_deps_of_dom_frontier(const IR::MAU::Table *a
  * next table has to be propagated into can be placed in this stage due to dependencies.  Relevant
  * for Tofino.
  */
-bool DynamicDependencyMetrics::can_place_cds_in_stage(const IR::MAU::Table *tbl,
-        ordered_set<const IR::MAU::Table *> &already_placed_in_stage) const {
+bool DynamicDependencyMetrics::can_place_cds_in_stage(const P4::IR::MAU::Table *tbl,
+        ordered_set<const P4::IR::MAU::Table *> &already_placed_in_stage) const {
     if (dg.stage_info.at(tbl).dep_stages_dom_frontier > 0)
         return false;
     for (auto cd_tbl : ntp.control_dom_set.at(tbl)) {
@@ -145,8 +145,8 @@ bool DynamicDependencyMetrics::can_place_cds_in_stage(const IR::MAU::Table *tbl,
  * Given what has already been placed within a stage, return the number of tables that can be placed
  * of this table next table dominating set
  */
-int DynamicDependencyMetrics::placeable_cds_count(const IR::MAU::Table *tbl,
-      ordered_set<const IR::MAU::Table *> &already_placed_in_stage) const {
+int DynamicDependencyMetrics::placeable_cds_count(const P4::IR::MAU::Table *tbl,
+      ordered_set<const P4::IR::MAU::Table *> &already_placed_in_stage) const {
     int rv = 0;
     for (auto cd_tbl : ntp.control_dom_set.at(tbl)) {
         bool can_fit = true;
@@ -171,7 +171,7 @@ int DynamicDependencyMetrics::placeable_cds_count(const IR::MAU::Table *tbl,
 /**
  * Return the average chain length of every table in the control dominating set 
  */
-double DynamicDependencyMetrics::average_cds_chain_length(const IR::MAU::Table *tbl) const {
+double DynamicDependencyMetrics::average_cds_chain_length(const P4::IR::MAU::Table *tbl) const {
     double sum = 0;
     for (auto cds_tbl : ntp.control_dom_set.at(tbl)) {
         sum += dg.happens_before_dependences(cds_tbl).size();

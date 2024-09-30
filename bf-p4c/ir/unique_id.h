@@ -5,8 +5,12 @@
 #include "lib/cstring.h"
 #include "lib/exceptions.h"
 
+namespace P4 {
 class JSONGenerator;
 class JSONLoader;
+}
+
+using namespace P4;
 
 /** The purpose of this class is to provide a unique identification of an BackendAttached table
  *  per IR::MAU::Table object.  The only way to guarantee to uniqueness is both by name and
@@ -63,8 +67,8 @@ class UniqueAttachedId {
             type = ACTION_DATA;
     }
 
-    void toJSON(JSONGenerator &json) const;
-    static UniqueAttachedId fromJSON(JSONLoader &json);
+    void toJSON(P4::JSONGenerator &json) const;
+    static UniqueAttachedId fromJSON(P4::JSONLoader &json);
 
     bool has_meter_type() const {
         return type == METER || type == STATEFUL_ALU || type == SELECTOR;

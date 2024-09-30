@@ -18,7 +18,7 @@
 #include "hex.h"
 #include "log.h"
 
-// using namespace P4;
+using namespace P4;
 
 static const char *signames[] = {
     "NONE", "HUP",  "INT",  "QUIT", "ILL",  "TRAP", "ABRT",   "BUS",  "FPE",   "KILL",
@@ -142,57 +142,57 @@ MTONLY(
 #if HAVE_UCONTEXT_H
 static void dumpregs(mcontext_t *mctxt) {
 #if defined(REG_EAX)
-    LOG1(" eax=" << hex(mctxt->gregs[REG_EAX], 8, '0') <<
-         " ebx=" << hex(mctxt->gregs[REG_EBX], 8, '0') <<
-         " ecx=" << hex(mctxt->gregs[REG_ECX], 8, '0') <<
-         " edx=" << hex(mctxt->gregs[REG_EDX], 8, '0'));
-    LOG1(" edi=" << hex(mctxt->gregs[REG_EDI], 8, '0') <<
-         " esi=" << hex(mctxt->gregs[REG_ESI], 8, '0') <<
-         " ebp=" << hex(mctxt->gregs[REG_EBP], 8, '0') <<
-         " esp=" << hex(mctxt->gregs[REG_ESP], 8, '0'));
+    LOG1(" eax=" << P4::hex(mctxt->gregs[REG_EAX], 8, '0') <<
+         " ebx=" << P4::hex(mctxt->gregs[REG_EBX], 8, '0') <<
+         " ecx=" << P4::hex(mctxt->gregs[REG_ECX], 8, '0') <<
+         " edx=" << P4::hex(mctxt->gregs[REG_EDX], 8, '0'));
+    LOG1(" edi=" << P4::hex(mctxt->gregs[REG_EDI], 8, '0') <<
+         " esi=" << P4::hex(mctxt->gregs[REG_ESI], 8, '0') <<
+         " ebp=" << P4::hex(mctxt->gregs[REG_EBP], 8, '0') <<
+         " esp=" << P4::hex(mctxt->gregs[REG_ESP], 8, '0'));
 #elif defined(REG_RAX)
-    LOG1(" rax=" << hex(mctxt->gregs[REG_RAX], 16, '0') <<
-         " rbx=" << hex(mctxt->gregs[REG_RBX], 16, '0') <<
-         " rcx=" << hex(mctxt->gregs[REG_RCX], 16, '0'));
-    LOG1(" rdx=" << hex(mctxt->gregs[REG_RDX], 16, '0') <<
-         " rdi=" << hex(mctxt->gregs[REG_RDI], 16, '0') <<
-         " rsi=" << hex(mctxt->gregs[REG_RSI], 16, '0'));
-    LOG1(" rbp=" << hex(mctxt->gregs[REG_RBP], 16, '0') <<
-         " rsp=" << hex(mctxt->gregs[REG_RSP], 16, '0') <<
-         "  r8=" << hex(mctxt->gregs[REG_R8],  16, '0'));
-    LOG1("  r9=" << hex(mctxt->gregs[REG_R9],  16, '0') <<
-         " r10=" << hex(mctxt->gregs[REG_R10], 16, '0') <<
-         " r11=" << hex(mctxt->gregs[REG_R11], 16, '0'));
-    LOG1(" r12=" << hex(mctxt->gregs[REG_R12], 16, '0') <<
-         " r13=" << hex(mctxt->gregs[REG_R13], 16, '0') <<
-         " r14=" << hex(mctxt->gregs[REG_R14], 16, '0'));
-    LOG1(" r15=" << hex(mctxt->gregs[REG_R15], 16, '0'));
+    LOG1(" rax=" << P4::hex(mctxt->gregs[REG_RAX], 16, '0') <<
+         " rbx=" << P4::hex(mctxt->gregs[REG_RBX], 16, '0') <<
+         " rcx=" << P4::hex(mctxt->gregs[REG_RCX], 16, '0'));
+    LOG1(" rdx=" << P4::hex(mctxt->gregs[REG_RDX], 16, '0') <<
+         " rdi=" << P4::hex(mctxt->gregs[REG_RDI], 16, '0') <<
+         " rsi=" << P4::hex(mctxt->gregs[REG_RSI], 16, '0'));
+    LOG1(" rbp=" << P4::hex(mctxt->gregs[REG_RBP], 16, '0') <<
+         " rsp=" << P4::hex(mctxt->gregs[REG_RSP], 16, '0') <<
+         "  r8=" << P4::hex(mctxt->gregs[REG_R8],  16, '0'));
+    LOG1("  r9=" << P4::hex(mctxt->gregs[REG_R9],  16, '0') <<
+         " r10=" << P4::hex(mctxt->gregs[REG_R10], 16, '0') <<
+         " r11=" << P4::hex(mctxt->gregs[REG_R11], 16, '0'));
+    LOG1(" r12=" << P4::hex(mctxt->gregs[REG_R12], 16, '0') <<
+         " r13=" << P4::hex(mctxt->gregs[REG_R13], 16, '0') <<
+         " r14=" << P4::hex(mctxt->gregs[REG_R14], 16, '0'));
+    LOG1(" r15=" << P4::hex(mctxt->gregs[REG_R15], 16, '0'));
 #elif defined(__i386__)
-    LOG1(" eax=" << hex(mctxt->mc_eax, 8, '0') <<
-         " ebx=" << hex(mctxt->mc_ebx, 8, '0') <<
-         " ecx=" << hex(mctxt->mc_ecx, 8, '0') <<
-         " edx=" << hex(mctxt->mc_edx, 8, '0'));
-    LOG1(" edi=" << hex(mctxt->mc_edi, 8, '0') <<
-         " esi=" << hex(mctxt->mc_esi, 8, '0') <<
-         " ebp=" << hex(mctxt->mc_ebp, 8, '0') <<
-         " esp=" << hex(mctxt->mc_esp, 8, '0'));
+    LOG1(" eax=" << P4::hex(mctxt->mc_eax, 8, '0') <<
+         " ebx=" << P4::hex(mctxt->mc_ebx, 8, '0') <<
+         " ecx=" << P4::hex(mctxt->mc_ecx, 8, '0') <<
+         " edx=" << P4::hex(mctxt->mc_edx, 8, '0'));
+    LOG1(" edi=" << P4::hex(mctxt->mc_edi, 8, '0') <<
+         " esi=" << P4::hex(mctxt->mc_esi, 8, '0') <<
+         " ebp=" << P4::hex(mctxt->mc_ebp, 8, '0') <<
+         " esp=" << P4::hex(mctxt->mc_esp, 8, '0'));
 #elif defined(__amd64__)
-    LOG1(" rax=" << hex(mctxt->mc_rax, 16, '0') <<
-         " rbx=" << hex(mctxt->mc_rbx, 16, '0') <<
-         " rcx=" << hex(mctxt->mc_rcx, 16, '0'));
-    LOG1(" rdx=" << hex(mctxt->mc_rdx, 16, '0') <<
-         " rdi=" << hex(mctxt->mc_rdi, 16, '0') <<
-         " rsi=" << hex(mctxt->mc_rsi, 16, '0'));
-    LOG1(" rbp=" << hex(mctxt->mc_rbp, 16, '0') <<
-         " rsp=" << hex(mctxt->mc_rsp, 16, '0') <<
-         "  r8=" << hex(mctxt->mc_r8,  16, '0'));
-    LOG1("  r9=" << hex(mctxt->mc_r9,  16, '0') <<
-         " r10=" << hex(mctxt->mc_r10, 16, '0') <<
-         " r11=" << hex(mctxt->mc_r11, 16, '0'));
-    LOG1(" r12=" << hex(mctxt->mc_r12, 16, '0') <<
-         " r13=" << hex(mctxt->mc_r13, 16, '0') <<
-         " r14=" << hex(mctxt->mc_r14, 16, '0'));
-    LOG1(" r15=" << hex(mctxt->mc_r15, 16, '0'));
+    LOG1(" rax=" << P4::hex(mctxt->mc_rax, 16, '0') <<
+         " rbx=" << P4::hex(mctxt->mc_rbx, 16, '0') <<
+         " rcx=" << P4::hex(mctxt->mc_rcx, 16, '0'));
+    LOG1(" rdx=" << P4::hex(mctxt->mc_rdx, 16, '0') <<
+         " rdi=" << P4::hex(mctxt->mc_rdi, 16, '0') <<
+         " rsi=" << P4::hex(mctxt->mc_rsi, 16, '0'));
+    LOG1(" rbp=" << P4::hex(mctxt->mc_rbp, 16, '0') <<
+         " rsp=" << P4::hex(mctxt->mc_rsp, 16, '0') <<
+         "  r8=" << P4::hex(mctxt->mc_r8,  16, '0'));
+    LOG1("  r9=" << P4::hex(mctxt->mc_r9,  16, '0') <<
+         " r10=" << P4::hex(mctxt->mc_r10, 16, '0') <<
+         " r11=" << P4::hex(mctxt->mc_r11, 16, '0'));
+    LOG1(" r12=" << P4::hex(mctxt->mc_r12, 16, '0') <<
+         " r13=" << P4::hex(mctxt->mc_r13, 16, '0') <<
+         " r14=" << P4::hex(mctxt->mc_r14, 16, '0'));
+    LOG1(" r15=" << P4::hex(mctxt->mc_r15, 16, '0'));
 #else
 #warning "unknown machine type"
 #endif

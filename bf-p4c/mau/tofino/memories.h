@@ -203,10 +203,10 @@ struct Memories : public ::Memories {
 
     friend class SetupAttachedTables;
 
-    // The resource information required for an individual IR::MAU::Table object in a single
+    // The resource information required for an individual P4::IR::MAU::Table object in a single
     // stage.  Could coordinate to multiple logical tables, (i.e. dleft or atcam tables)
     struct table_alloc {
-        const IR::MAU::Table *table;
+        const P4::IR::MAU::Table *table;
         const ::IXBar::Use *match_ixbar;
         const TableFormat::Use *table_format;
         const InstructionMemory::Use *instr_mem;
@@ -230,7 +230,7 @@ struct Memories : public ::Memories {
         // have a payload is to set the match address
         // JIRA-DOC: for P4C-2938
         bool payload_match_addr_only = false;
-        table_alloc(const IR::MAU::Table *t, const ::IXBar::Use *mi, const TableFormat::Use *tf,
+        table_alloc(const P4::IR::MAU::Table *t, const ::IXBar::Use *mi, const TableFormat::Use *tf,
                     const InstructionMemory::Use *im, const ActionData::Format::Use *af,
                     std::map<UniqueId, Memories::Use> *mu, const LayoutOption *lo,
                     ActionData::FormatType_t ft,
@@ -242,19 +242,19 @@ struct Memories : public ::Memories {
         void link_table(table_alloc *ta) {table_link = ta;}
         int analysis_priority() const;
 
-        UniqueId build_unique_id(const IR::MAU::AttachedMemory *at = nullptr,
+        UniqueId build_unique_id(const P4::IR::MAU::AttachedMemory *at = nullptr,
             bool is_gw = false, int logical_table = -1,
             UniqueAttachedId::pre_placed_type_t ppt = UniqueAttachedId::NO_PP) const;
 
-        safe_vector<UniqueId> allocation_units(const IR::MAU::AttachedMemory *at = nullptr,
+        safe_vector<UniqueId> allocation_units(const P4::IR::MAU::AttachedMemory *at = nullptr,
             bool is_gw = false,
             UniqueAttachedId::pre_placed_type_t ppt = UniqueAttachedId::NO_PP) const;
 
 
-        safe_vector<UniqueId> unattached_units(const IR::MAU::AttachedMemory *at = nullptr,
+        safe_vector<UniqueId> unattached_units(const P4::IR::MAU::AttachedMemory *at = nullptr,
             UniqueAttachedId::pre_placed_type_t ppt = UniqueAttachedId::NO_PP) const;
 
-        safe_vector<UniqueId> accounted_units(const IR::MAU::AttachedMemory *at = nullptr,
+        safe_vector<UniqueId> accounted_units(const P4::IR::MAU::AttachedMemory *at = nullptr,
             UniqueAttachedId::pre_placed_type_t ppt = UniqueAttachedId::NO_PP) const;
     };
     int logical_tables_allowed = LOGICAL_TABLES;
@@ -274,7 +274,7 @@ struct Memories : public ::Memories {
         int vpn_offset = 0;
         int vpn_spare = 0;
         bool direct = false;  // Whether the attached table is directly or indirectly addressed
-        const IR::MAU::AttachedMemory *attached = nullptr;
+        const P4::IR::MAU::AttachedMemory *attached = nullptr;
         UniqueAttachedId::pre_placed_type_t ppt = UniqueAttachedId::NO_PP;
         int recent_home_row = -1;  // For swbox users, most recent row to oflow to
         enum type_t { EXACT, ACTION, STATS, METER, REGISTER, SELECTOR, TIND, IDLETIME, ATCAM,
@@ -286,7 +286,7 @@ struct Memories : public ::Memories {
             int placed = 0;
             // Necessary for stats addressed color maprams
             int home_row = -1;
-            IR::MAU::ColorMapramAddress cma = IR::MAU::ColorMapramAddress::NOT_SET;
+            P4::IR::MAU::ColorMapramAddress cma = P4::IR::MAU::ColorMapramAddress::NOT_SET;
             bool all_placed() const {
                 BUG_CHECK(placed <= needed, "Placed more color map RAMs than actually needed");
                 return needed == placed;
@@ -296,7 +296,7 @@ struct Memories : public ::Memories {
                 return needed - placed;
             }
 
-            bool require_stats() const { return cma == IR::MAU::ColorMapramAddress::STATS; }
+            bool require_stats() const { return cma == P4::IR::MAU::ColorMapramAddress::STATS; }
         };
 
 
@@ -569,7 +569,7 @@ struct Memories : public ::Memories {
     // Switchbox related helper functions end
 
     int allocation_count = 0;
-    ordered_map<const IR::MAU::AttachedMemory *, table_alloc *> shared_attached;
+    ordered_map<const P4::IR::MAU::AttachedMemory *, table_alloc *> shared_attached;
     unsigned side_mask(RAM_side_t side) const;
     unsigned partition_mask(RAM_side_t side);
     int mems_needed(int entries, int depth, int per_mem_row, bool is_twoport);
@@ -658,12 +658,12 @@ struct Memories : public ::Memories {
     void remove(cstring name, const Use &alloc);
     void remove(const std::map<UniqueId, Use> &alloc);
     void clear();
-    void add_table(const IR::MAU::Table *t, const IR::MAU::Table *gw,
+    void add_table(const P4::IR::MAU::Table *t, const P4::IR::MAU::Table *gw,
                    TableResourceAlloc *resources, const LayoutOption *lo,
                    const ActionData::Format::Use *af, ActionData::FormatType_t ft,
                    int entries, int stage_table, attached_entries_t attached_entries);
     void shrink_allowed_lts() { logical_tables_allowed--; }
-    void fill_placed_scm_table(const IR::MAU::Table *, const TableResourceAlloc *) {
+    void fill_placed_scm_table(const P4::IR::MAU::Table *, const TableResourceAlloc *) {
         BUG("SCM Not supported on this device");
     }
     void printOn(std::ostream &) const;

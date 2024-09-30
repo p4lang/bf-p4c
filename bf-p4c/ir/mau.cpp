@@ -10,6 +10,7 @@
 // FIXME -- This is gcc specific, but allows p4test to link without breaking p4c-barefoot
 Device* Device::instance_ __attribute__((weak)) = nullptr;
 
+namespace P4 {
 namespace IR {
 namespace MAU {
 
@@ -383,9 +384,6 @@ void Table::visit_match_table(THIS* self, Visitor& v, payload_info_t &payload_in
     if (payload_info.post_payload && payload_info.post_payload != &v)
         v.flow_merge(*payload_info.post_payload);
 }
-
-}  // namespace MAU
-}  // namespace IR
 
 bool IR::MAU::Table::operator==(const IR::MAU::Table &a) const {
     return name == a.name &&
@@ -1024,3 +1022,7 @@ const IR::MAU::SaluAction *IR::MAU::StatefulAlu::calledAction(
 int IR::MAU::StatefulAlu::source_width() const {
     return std::min(Device::statefulAluSpec().MaxPhvInputWidth, width / (dual + 1));
 }
+
+}  // namespace MAU
+}  // namespace IR
+}  // namespace P4

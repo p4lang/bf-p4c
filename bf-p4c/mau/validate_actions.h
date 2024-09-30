@@ -20,8 +20,8 @@ class ValidateActions final : public MauInspector {
     // true if action analysis finds a PHV allocation that violates MAU constraints.
     bool error_found = false;
 
-    profile_t init_apply(const IR::Node* root) override;
-    bool preorder(const IR::MAU::Action *act) override;
+    profile_t init_apply(const P4::IR::Node* root) override;
+    bool preorder(const P4::IR::MAU::Action *act) override;
     void end_apply() override;
 
  public:

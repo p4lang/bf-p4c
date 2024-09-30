@@ -13,21 +13,21 @@ namespace BFN {
 // single value as adjust byte count. Post verification the value is stored in
 // the extern object
 class AdjustByteCountSetup : public PassManager {
-    std::map<const IR::MAU::AttachedMemory*, const int64_t> adjust_byte_counts;
+    std::map<const P4::IR::MAU::AttachedMemory*, const int64_t> adjust_byte_counts;
 
     class Scan : public MauInspector {
         AdjustByteCountSetup &self;
      public :
         explicit Scan(AdjustByteCountSetup &self) : self(self) {}
-        bool preorder(const IR::MAU::Primitive *prim) override;
+        bool preorder(const P4::IR::MAU::Primitive *prim) override;
     };
 
     class Update : public MauTransform {
         AdjustByteCountSetup &self;
      public :
-        int get_bytecount(IR::MAU::AttachedMemory *am);
-        const IR::MAU::Counter *preorder(IR::MAU::Counter *counter) override;
-        const IR::MAU::Meter *preorder(IR::MAU::Meter *meter) override;
+        int get_bytecount(P4::IR::MAU::AttachedMemory *am);
+        const P4::IR::MAU::Counter *preorder(P4::IR::MAU::Counter *counter) override;
+        const P4::IR::MAU::Meter *preorder(P4::IR::MAU::Meter *meter) override;
         explicit Update(AdjustByteCountSetup &self) : self(self) {}
     };
 

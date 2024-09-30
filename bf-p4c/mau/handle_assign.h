@@ -16,15 +16,15 @@
  */
 class AssignActionHandle : public PassManager {
     class ActionProfileImposedConstraints : public MauInspector {
-        ordered_map<const IR::MAU::ActionData *, std::set<cstring>> profile_actions;
-        bool preorder(const IR::MAU::ActionData *) override;
-        bool preorder(const IR::MAU::Table *) override { visitOnce(); return true; }
+        ordered_map<const P4::IR::MAU::ActionData *, std::set<cstring>> profile_actions;
+        bool preorder(const P4::IR::MAU::ActionData *) override;
+        bool preorder(const P4::IR::MAU::Table *) override { visitOnce(); return true; }
 
      public:
         ActionProfileImposedConstraints() { visitDagOnce = false; }
     };
 
-    typedef ordered_map<const IR::MAU::Action *, unsigned> HandleAssignments;
+    typedef ordered_map<const P4::IR::MAU::Action *, unsigned> HandleAssignments;
     HandleAssignments handle_assignments;
 
     class DetermineHandle : public MauInspector {
@@ -34,9 +34,9 @@ class AssignActionHandle : public PassManager {
 
         AssignActionHandle &self;
         typedef ordered_map<cstring, unsigned> ProfileAssignment;
-        ordered_map<const IR::MAU::ActionData *, ProfileAssignment> profile_assignments;
-        bool preorder(const IR::MAU::Action *) override;
-        profile_t init_apply(const IR::Node *root) override;
+        ordered_map<const P4::IR::MAU::ActionData *, ProfileAssignment> profile_assignments;
+        bool preorder(const P4::IR::MAU::Action *) override;
+        profile_t init_apply(const P4::IR::Node *root) override;
         unsigned next_handle() {
             unsigned rv = INIT_ACTION_HANDLE + handle_position;
             handle_position++;
@@ -49,37 +49,37 @@ class AssignActionHandle : public PassManager {
 
     class AssignHandle : public MauModifier {
         const AssignActionHandle &self;
-        bool preorder(IR::MAU::Action *) override;
+        bool preorder(P4::IR::MAU::Action *) override;
 
      public:
         explicit AssignHandle(const AssignActionHandle &aah) : self(aah) { }
     };
 
     class GuaranteeUniqueHandle : public MauInspector {
-        ordered_set<const IR::MAU::ActionData *> action_profiles;
-        std::map<unsigned, const IR::MAU::Action *> unique_handle;
-        profile_t init_apply(const IR::Node *root) override;
-        bool preorder(const IR::MAU::Action *) override;
+        ordered_set<const P4::IR::MAU::ActionData *> action_profiles;
+        std::map<unsigned, const P4::IR::MAU::Action *> unique_handle;
+        profile_t init_apply(const P4::IR::Node *root) override;
+        bool preorder(const P4::IR::MAU::Action *) override;
 
      public:
         GuaranteeUniqueHandle() {}
     };
 
     class ValidateSelectors : public PassManager {
-        ordered_map<const IR::MAU::Selector *, P4HashFunction *> selector_keys;
-        ordered_map<const IR::MAU::Selector *, const IR::MAU::Table *> initial_table;
-        ordered_map<const IR::MAU::Table *, const IR::MAU::Selector *> table_to_selector;
+        ordered_map<const P4::IR::MAU::Selector *, P4HashFunction *> selector_keys;
+        ordered_map<const P4::IR::MAU::Selector *, const P4::IR::MAU::Table *> initial_table;
+        ordered_map<const P4::IR::MAU::Table *, const P4::IR::MAU::Selector *> table_to_selector;
         const PhvInfo &phv;
 
-        profile_t init_apply(const IR::Node *root) override;
+        profile_t init_apply(const P4::IR::Node *root) override;
 
 
 
         class ValidateKey : public MauInspector {
             ValidateSelectors &self;
 
-            bool preorder(const IR::MAU::Selector *sel) override;
-            bool preorder(const IR::MAU::Table *) override { visitOnce(); return true; }
+            bool preorder(const P4::IR::MAU::Selector *sel) override;
+            bool preorder(const P4::IR::MAU::Table *) override { visitOnce(); return true; }
 
          public:
             explicit ValidateKey(ValidateSelectors &s) : self(s) { visitDagOnce = false; }
@@ -87,7 +87,7 @@ class AssignActionHandle : public PassManager {
 
         class SetSymmetricSelectorKeys : public MauModifier {
             ValidateSelectors &self;
-            bool preorder(IR::MAU::Table *tbl) override;
+            bool preorder(P4::IR::MAU::Table *tbl) override;
 
          public:
             explicit SetSymmetricSelectorKeys(ValidateSelectors &s) : self(s) { }

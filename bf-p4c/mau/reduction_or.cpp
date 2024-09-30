@@ -9,32 +9,32 @@
  * where the stateful ALU is part of a reduction or group found in the map.  This will return
  * the name of the key used by the stateful ALU.
  */
-bool ReductionOrInfo::is_reduction_or(const IR::MAU::Instruction *instr,
-        const IR::MAU::Table *tbl, cstring &reduction_or_key) const {
+bool ReductionOrInfo::is_reduction_or(const P4::IR::MAU::Instruction *instr,
+        const P4::IR::MAU::Table *tbl, cstring &reduction_or_key) const {
     if (instr == nullptr || tbl == nullptr)
         return false;
 
     if (!(instr->name == "or" || instr->operands.size() == 3))
         return false;
 
-    std::function<const IR::Node*(const IR::Node*)> ignoreSlice =
-        [&ignoreSlice](const IR::Node* n) {
-        if (auto s = n->to<IR::Slice>())
+    std::function<const P4::IR::Node*(const P4::IR::Node*)> ignoreSlice =
+        [&ignoreSlice](const P4::IR::Node* n) {
+        if (auto s = n->to<P4::IR::Slice>())
             return ignoreSlice(s->e0);
         return n; };
 
     int non_attached_index = 0;
-    const IR::MAU::AttachedOutput *attached = nullptr;
-    if ((attached = ignoreSlice(instr->operands.at(2))->to<IR::MAU::AttachedOutput>()))
+    const P4::IR::MAU::AttachedOutput *attached = nullptr;
+    if ((attached = ignoreSlice(instr->operands.at(2))->to<P4::IR::MAU::AttachedOutput>()))
         non_attached_index = 1;
-    else if ((attached = ignoreSlice(instr->operands.at(1))->to<IR::MAU::AttachedOutput>()))
+    else if ((attached = ignoreSlice(instr->operands.at(1))->to<P4::IR::MAU::AttachedOutput>()))
         non_attached_index = 2;
 
     if (!(non_attached_index > 0 &&
         instr->operands.at(0)->equiv(*instr->operands.at(non_attached_index))))
        return false;
 
-    auto salu = attached->attached->to<IR::MAU::StatefulAlu>();
+    auto salu = attached->attached->to<P4::IR::MAU::StatefulAlu>();
     if (salu == nullptr)
         return false;
 
@@ -47,14 +47,14 @@ bool ReductionOrInfo::is_reduction_or(const IR::MAU::Instruction *instr,
     return true;
 }
 
-Visitor::profile_t GatherReductionOrReqs::init_apply(const IR::Node *node) {
+Visitor::profile_t GatherReductionOrReqs::init_apply(const P4::IR::Node *node) {
     auto rv = MauInspector::init_apply(node);
     red_or_info.clear();
     return rv;
 }
 
-bool GatherReductionOrReqs::preorder(const IR::MAU::StatefulAlu *salu) {
-    auto tbl = findContext<IR::MAU::Table>();
+bool GatherReductionOrReqs::preorder(const P4::IR::MAU::StatefulAlu *salu) {
+    auto tbl = findContext<P4::IR::MAU::Table>();
     if (salu->reduction_or_group) {
         red_or_info.salu_reduction_or_group[salu->reduction_or_group].insert(salu);
         red_or_info.tbl_reduction_or_group[salu->reduction_or_group].insert(tbl);

@@ -5,7 +5,7 @@
 #include "lib/gc.h"
 
 #if BAREFOOT_INTERNAL
-bool DumpPipe::preorder(const IR::Node *pipe) {
+bool DumpPipe::preorder(const P4::IR::Node *pipe) {
     if (LOGGING(1)) {
         if (heading) {
             LOG1("-------------------------------------------------");

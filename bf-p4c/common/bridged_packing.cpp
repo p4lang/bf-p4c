@@ -49,13 +49,13 @@
 #include "bf-p4c/phv/create_thread_local_instances.h"
 #include "bf-p4c/phv/pragma/pa_no_overlay.h"
 
-Visitor::profile_t CollectIngressBridgedFields::init_apply(const IR::Node* root) {
+Visitor::profile_t CollectIngressBridgedFields::init_apply(const P4::IR::Node* root) {
     profile_t rv = Inspector::init_apply(root);
     bridged_to_orig.clear();
     return rv;
 }
 
-void CollectIngressBridgedFields::postorder(const IR::BFN::AliasMember* mem) {
+void CollectIngressBridgedFields::postorder(const P4::IR::BFN::AliasMember* mem) {
     const auto* dest = phv.field(mem);
     const auto* src = phv.field(mem->source);
     CHECK_NULL(dest);
@@ -82,8 +82,8 @@ void CollectIngressBridgedFields::end_apply() {
     }
 }
 
-bool CollectEgressBridgedFields::preorder(const IR::BFN::Extract* extract) {
-    const IR::BFN::ParserState* state = findContext<IR::BFN::ParserState>();
+bool CollectEgressBridgedFields::preorder(const P4::IR::BFN::Extract* extract) {
+    const P4::IR::BFN::ParserState* state = findContext<P4::IR::BFN::ParserState>();
     BUG_CHECK(extract->dest, "Extract %1% does not have a destination",
             cstring::to_cstring(extract));
     BUG_CHECK(extract->dest->field, "Extract %1% does not have a destination field",
@@ -94,9 +94,9 @@ bool CollectEgressBridgedFields::preorder(const IR::BFN::Extract* extract) {
     // if destination field is used in arithmetic operation, do not add alias constraint
     if (destField->is_solitary())
         return false;
-    if (auto rval = extract->source->to<IR::BFN::SavedRVal>()) {
-        if (auto mem = rval->source->to<IR::Member>()) {
-            if (mem->expr->is<IR::ConcreteHeaderRef>()) {
+    if (auto rval = extract->source->to<P4::IR::BFN::SavedRVal>()) {
+        if (auto mem = rval->source->to<P4::IR::Member>()) {
+            if (mem->expr->is<P4::IR::ConcreteHeaderRef>()) {
                 auto srcField = phv.field(mem);
                 CHECK_NULL(srcField);
                 // only aliasing meta = hdr.f where f is a field with flexible annotation
@@ -110,7 +110,7 @@ bool CollectEgressBridgedFields::preorder(const IR::BFN::Extract* extract) {
     return true;
 }
 
-Visitor::profile_t CollectEgressBridgedFields::init_apply(const IR::Node* root) {
+Visitor::profile_t CollectEgressBridgedFields::init_apply(const P4::IR::Node* root) {
     candidateSourcesInParser.clear();
     return Inspector::init_apply(root);
 }
@@ -136,12 +136,12 @@ void CollectEgressBridgedFields::end_apply() {
     }
 }
 
-bool GatherParserExtracts::preorder(const IR::BFN::Extract* e) {
-    auto* fieldLVal = e->dest->to<IR::BFN::FieldLVal>();
+bool GatherParserExtracts::preorder(const P4::IR::BFN::Extract* e) {
+    auto* fieldLVal = e->dest->to<P4::IR::BFN::FieldLVal>();
     if (!fieldLVal) return true;
     auto* f = phv.field(fieldLVal->field);
     if (!f) return true;
-    auto* source = e->source->to<IR::BFN::SavedRVal>();
+    auto* source = e->source->to<P4::IR::BFN::SavedRVal>();
     if (!source) return true;
     auto* sourceField = phv.field(source->source);
     if (!sourceField) return true;
@@ -151,12 +151,12 @@ bool GatherParserExtracts::preorder(const IR::BFN::Extract* e) {
     return true;
 }
 
-bool GatherDigestFields::preorder(const IR::BFN::DigestFieldList* fl) {
+bool GatherDigestFields::preorder(const P4::IR::BFN::DigestFieldList* fl) {
     /// TODO when does a field list not have a type?
     if (!fl->type)
         return false;
 
-    auto isFlexible = [&](const IR::Type_StructLike* st) -> bool {
+    auto isFlexible = [&](const P4::IR::Type_StructLike* st) -> bool {
         for (auto f : st->fields) {
             auto anno = f->getAnnotation("flexible"_cs);
             if (anno != nullptr)
@@ -167,8 +167,8 @@ bool GatherDigestFields::preorder(const IR::BFN::DigestFieldList* fl) {
 
     std::vector<const PHV::Field*> digest_fields;
     auto iter = fl->sources.begin();
-    forAllMatchingDoPostOrder<IR::StructField>(fl->type,
-        [&](const IR::StructField* f) {
+    forAllMatchingDoPostOrder<P4::IR::StructField>(fl->type,
+        [&](const P4::IR::StructField* f) {
             if (f->getAnnotation("flexible"_cs)) {
                 const auto* field = phv.field((*iter)->field);
                 digest_fields.push_back(field); }
@@ -178,8 +178,8 @@ bool GatherDigestFields::preorder(const IR::BFN::DigestFieldList* fl) {
     return false;
 }
 
-bool GatherDigestFields::preorder(const IR::HeaderOrMetadata* hdr) {
-    auto isFlexible = [&](const IR::Type_StructLike* st) -> bool {
+bool GatherDigestFields::preorder(const P4::IR::HeaderOrMetadata* hdr) {
+    auto isFlexible = [&](const P4::IR::Type_StructLike* st) -> bool {
         for (auto f : st->fields) {
             auto anno = f->getAnnotation("flexible"_cs);
             if (anno != nullptr)
@@ -190,10 +190,10 @@ bool GatherDigestFields::preorder(const IR::HeaderOrMetadata* hdr) {
 
     std::vector<const PHV::Field*> flexible_fields;
     std::vector<cstring> header_stack;
-    forAllMatchingDoPreAndPostOrder<IR::StructField>(hdr,
-        [&](const IR::StructField* f) {
+    forAllMatchingDoPreAndPostOrder<P4::IR::StructField>(hdr,
+        [&](const P4::IR::StructField* f) {
             header_stack.push_back(f->name); },
-        [&](const IR::StructField* f) {
+        [&](const P4::IR::StructField* f) {
             if (f->getAnnotation("flexible"_cs)) {
                 cstring fn = hdr->name;
                 for (auto hd : header_stack) {
@@ -252,14 +252,14 @@ void GatherDigestFields::end_apply() {
     }
 }
 
-bool CollectConstraints::preorder(const IR::HeaderOrMetadata* hdr) {
+bool CollectConstraints::preorder(const P4::IR::HeaderOrMetadata* hdr) {
     ordered_set<const PHV::Field*> flexible_fields;
     std::vector<cstring> header_stack;
-    forAllMatchingDoPreAndPostOrder<IR::StructField>(hdr,
-        [&](const IR::StructField* f) {
+    forAllMatchingDoPreAndPostOrder<P4::IR::StructField>(hdr,
+        [&](const P4::IR::StructField* f) {
             header_stack.push_back(f->name);
         },
-        [&](const IR::StructField* f) {
+        [&](const P4::IR::StructField* f) {
             if (f->getAnnotation("flexible"_cs)) {
                 cstring fn = hdr->name;
                 for (auto hd : header_stack) {
@@ -288,15 +288,15 @@ bool CollectConstraints::preorder(const IR::HeaderOrMetadata* hdr) {
     return false;
 }
 
-bool CollectConstraints::preorder(const IR::BFN::DigestFieldList* fl) {
+bool CollectConstraints::preorder(const P4::IR::BFN::DigestFieldList* fl) {
     /// TODO when does a field list not have a type?
     if (!fl->type)
         return false;
 
     ordered_set<const PHV::Field*> flexible_fields;
     auto iter = fl->sources.begin();
-    forAllMatchingDoPostOrder<IR::StructField>(fl->type,
-        [&](const IR::StructField* f) {
+    forAllMatchingDoPostOrder<P4::IR::StructField>(fl->type,
+        [&](const P4::IR::StructField* f) {
             if (f->getAnnotation("flexible"_cs)) {
                 const auto* field = phv.field((*iter)->field);
                 flexible_fields.push_back(field); }
@@ -653,7 +653,7 @@ void CollectConstraints::computeAlignmentConstraint(const ordered_set<const PHV:
 bool CollectConstraints::mustPack(
         const ordered_set<const PHV::Field*>& fs1,
         const ordered_set<const PHV::Field*>& fs2,
-        const ordered_set<const IR::MAU::Action*>& common_reads) {
+        const ordered_set<const P4::IR::MAU::Action*>& common_reads) {
     for (auto f1 : fs1) {
         for (auto f2 : fs2) {
             if (f1->gress != f2->gress) continue;
@@ -661,19 +661,19 @@ bool CollectConstraints::mustPack(
             if (f1->header() != f2->header()) continue;
             if (f1->offset / 8 != f2->offset / 8) continue;
 
-            ordered_set<const IR::MAU::Action*> common_writes;
+            ordered_set<const P4::IR::MAU::Action*> common_writes;
             auto f1_write = actionConstraints.actions_writing_fields(f1);
             auto f2_write = actionConstraints.actions_writing_fields(f2);
             std::copy_if(f1_write.begin(), f1_write.end(), std::back_inserter(common_writes),
-                    [&](const IR::MAU::Action *act) { return f2_write.count(act) > 0; });
+                    [&](const P4::IR::MAU::Action *act) { return f2_write.count(act) > 0; });
 
             LOG5("\t\t Write action: " << f1->name << " " << f2->name);
             for (auto w : common_writes)
                 LOG5("\t\t\t " << w->name);
 
-            ordered_set<const IR::MAU::Action*> overlap;
+            ordered_set<const P4::IR::MAU::Action*> overlap;
             std::copy_if(common_reads.begin(), common_reads.end(), std::back_inserter(overlap),
-                    [&](const IR::MAU::Action *act) { return common_writes.count(act) > 0; });
+                    [&](const P4::IR::MAU::Action *act) { return common_writes.count(act) > 0; });
             if (!overlap.size()) continue;
 
             LOG5("\t\t Overlap action: ");
@@ -711,7 +711,7 @@ void CollectConstraints::computeMustPackConstraints(
                 LOG6("\t  Related field " << f);
             bridged_to_orig[bridged_field].insert(f); } }
 
-    ordered_map<const PHV::Field*, ordered_set<const IR::MAU::Action*>> reads;
+    ordered_map<const PHV::Field*, ordered_set<const P4::IR::MAU::Action*>> reads;
     for (auto f : bridged_to_orig) {
         reads[f.first] = actionConstraints.actions_reading_fields(f.first);
 
@@ -730,10 +730,10 @@ void CollectConstraints::computeMustPackConstraints(
 
             auto f1_read = reads.at(it->first);
             auto f2_read = reads.at(it2->first);
-            ordered_set<const IR::MAU::Action*> common_reads;
+            ordered_set<const P4::IR::MAU::Action*> common_reads;
 
             std::copy_if(f1_read.begin(), f1_read.end(), std::back_inserter(common_reads),
-                    [&](const IR::MAU::Action *act) { return f2_read.count(act) > 0; });
+                    [&](const P4::IR::MAU::Action *act) { return f2_read.count(act) > 0; });
 
             LOG5("\t\t Read action " << it->first->name << " " << it2->first->name);
             if (debug)
@@ -878,7 +878,7 @@ void CollectConstraints::computeNoPackIfSpecialityRead(
             return;
         for (auto f : fields) {
             auto writeActions2 = actionConstraints.actions_writing_fields(f);
-            ordered_set<const IR::MAU::Action*> intersection;
+            ordered_set<const P4::IR::MAU::Action*> intersection;
             std::set_intersection(writeActions.sorted_begin(), writeActions.sorted_end(),
                     writeActions2.sorted_begin(), writeActions2.sorted_end(),
                     std::inserter(intersection, intersection.begin()));
@@ -936,7 +936,7 @@ void CollectConstraints::computeNoPackIfDigestUse(
     }
 }
 
-Visitor::profile_t CollectConstraints::init_apply(const IR::Node* root) {
+Visitor::profile_t CollectConstraints::init_apply(const P4::IR::Node* root) {
     constraints = Constraints();
     return Inspector::init_apply(root);
 }
@@ -1470,7 +1470,7 @@ ConstraintSolver::solve(
     return packedFields;
 }
 
-Visitor::profile_t PackWithConstraintSolver::init_apply(const IR::Node* root) {
+Visitor::profile_t PackWithConstraintSolver::init_apply(const P4::IR::Node* root) {
     // PHV::Field* from previous CollectPhvInfo are invalidated by now.
     // Must clear these maps.
     nonByteAlignedFieldsMap.clear();
@@ -1485,12 +1485,12 @@ Visitor::profile_t PackWithConstraintSolver::init_apply(const IR::Node* root) {
  * For those whose width is not a multiple of eight bits, it updates the
  * PackWithConstraintSolver::nonByteAlignedFieldsMap map.
  *
- * Also stores the mapping from a PHV::Field to the corresponding IR::StructField
+ * Also stores the mapping from a PHV::Field to the corresponding P4::IR::StructField
  * into the PackWithConstraintSolver::phvFieldToStructFieldMap map
- * and the mapping from a header/metadata name to the corresponding IR::Type_StructLike
+ * and the mapping from a header/metadata name to the corresponding P4::IR::Type_StructLike
  * into the PackWithConstraintSolver::headerMap map.
  */
-bool PackWithConstraintSolver::preorder(const IR::HeaderOrMetadata* hdr) {
+bool PackWithConstraintSolver::preorder(const P4::IR::HeaderOrMetadata* hdr) {
     // if we choose to only pack 'candidates' and
     // current header type is not one of the 'candidates', skip.
     for (auto c : candidates)
@@ -1503,8 +1503,8 @@ bool PackWithConstraintSolver::preorder(const IR::HeaderOrMetadata* hdr) {
     }
 
     ordered_set<const PHV::Field*> nonByteAlignedFields;
-    ordered_map<const PHV::Field*, const IR::StructField*> phvFieldToStructField;
-    auto isNonByteAlignedFlexibleField = [&](const IR::StructField* f) {
+    ordered_map<const PHV::Field*, const P4::IR::StructField*> phvFieldToStructField;
+    auto isNonByteAlignedFlexibleField = [&](const P4::IR::StructField* f) {
         return f->getAnnotation("flexible"_cs) != nullptr &&
                f->type->width_bits() % 8 != 0; };
     for (auto f : *hdr->type->fields.getEnumerator()->where(isNonByteAlignedFlexibleField)) {
@@ -1516,7 +1516,7 @@ bool PackWithConstraintSolver::preorder(const IR::HeaderOrMetadata* hdr) {
     }
 
     ordered_set<const PHV::Field*> byteAlignedFields;
-    auto isByteAlignedFlexibleField = [&](const IR::StructField* f) {
+    auto isByteAlignedFlexibleField = [&](const P4::IR::StructField* f) {
         return f->getAnnotation("flexible"_cs) != nullptr &&
                f->type->width_bits() % 8 == 0; };
     for (auto f : *hdr->type->fields.getEnumerator()->where(isByteAlignedFlexibleField)) {
@@ -1548,12 +1548,12 @@ bool PackWithConstraintSolver::preorder(const IR::HeaderOrMetadata* hdr) {
  * of eight bits and updates the PackWithConstraintSolver::byteAlignedFieldsMap,
  * and PackWithConstraintSolver::nonByteAlignedFieldsMap maps, respectively.
  *
- * Also stores the mapping from a PHV::Field to the corresponding IR::StructField
+ * Also stores the mapping from a PHV::Field to the corresponding P4::IR::StructField
  * into the PackWithConstraintSolver::phvFieldToStructFieldMap map
- * and the mapping from a header/metadata name to the corresponding IR::Type_StructLike
+ * and the mapping from a header/metadata name to the corresponding P4::IR::Type_StructLike
  * into the PackWithConstraintSolver::headerMap map.
  */
-bool PackWithConstraintSolver::preorder(const IR::BFN::DigestFieldList* d) {
+bool PackWithConstraintSolver::preorder(const P4::IR::BFN::DigestFieldList* d) {
     if (!d->type)
         return false;
 
@@ -1565,22 +1565,22 @@ bool PackWithConstraintSolver::preorder(const IR::BFN::DigestFieldList* d) {
     }
 
     LOG6("Packing " << d->type << " fieldlist " << d);
-    std::vector<std::tuple<const IR::StructField*, const IR::BFN::FieldLVal*>> sources;
+    std::vector<std::tuple<const P4::IR::StructField*, const P4::IR::BFN::FieldLVal*>> sources;
     // TODO: mirror digest has 'session_id' in the first element, which is not
     // part of the mirror field list.
-    auto digest = findContext<const IR::BFN::Digest>();
+    auto digest = findContext<const P4::IR::BFN::Digest>();
     if (!digest) return false;
     auto iter = d->sources.begin();
     if (digest->name == "mirror") {
         iter++; }
     std::transform(d->type->fields.begin(), d->type->fields.end(),
             iter, std::back_inserter(sources),
-            [](const IR::StructField* aa, const IR::BFN::FieldLVal* bb) {
+            [](const P4::IR::StructField* aa, const P4::IR::BFN::FieldLVal* bb) {
                 return std::make_tuple(aa, bb); });
 
     ordered_set<const PHV::Field*> nonByteAlignedFields;
-    ordered_map<const PHV::Field*, const IR::StructField*> phvFieldToStructField;
-    auto isNonByteAlignedFlexibleField = [&](const IR::StructField* f) {
+    ordered_map<const PHV::Field*, const P4::IR::StructField*> phvFieldToStructField;
+    auto isNonByteAlignedFlexibleField = [&](const P4::IR::StructField* f) {
         return f->getAnnotation("flexible"_cs) != nullptr &&
                f->type->width_bits() % 8 != 0; };
     for (auto s : sources) {
@@ -1592,7 +1592,7 @@ bool PackWithConstraintSolver::preorder(const IR::BFN::DigestFieldList* d) {
     }
 
     ordered_set<const PHV::Field*> byteAlignedFields;
-    auto isByteAlignedFlexibleField = [&](const IR::StructField* f) {
+    auto isByteAlignedFlexibleField = [&](const P4::IR::StructField* f) {
         return f->getAnnotation("flexible"_cs) != nullptr &&
                f->type->width_bits() % 8 == 0; };
     for (auto s : sources) {
@@ -1694,7 +1694,7 @@ void PackWithConstraintSolver::solve() {
         // TODO: note that the output is in reverse order.
         std::reverse(packedFields.begin(), packedFields.end());
 
-        IR::IndexedVector<IR::StructField> fields;
+        P4::IR::IndexedVector<P4::IR::StructField> fields;
         // Add non-flexible fields from the header.
         auto type = headerMap.at(name);
         for (auto f : type->fields) {
@@ -1714,19 +1714,19 @@ void PackWithConstraintSolver::solve() {
                 LOG6("Pushing field " << field);
             } else {
                 cstring padFieldName = "__pad_"_cs + cstring::to_cstring(padFieldId++);
-                auto* fieldAnnotations = new IR::Annotations(
-                        { new IR::Annotation(IR::ID("padding"), { }),
-                        new IR::Annotation(IR::ID("overlayable"), { }) });
-                const IR::StructField* padField =
-                    new IR::StructField(padFieldName, fieldAnnotations,
-                            IR::Type::Bits::get(f->size));
+                auto* fieldAnnotations = new P4::IR::Annotations(
+                        { new P4::IR::Annotation(P4::IR::ID("padding"), { }),
+                        new P4::IR::Annotation(P4::IR::ID("overlayable"), { }) });
+                const P4::IR::StructField* padField =
+                    new P4::IR::StructField(padFieldName, fieldAnnotations,
+                            P4::IR::Type::Bits::get(f->size));
 
                 fields.push_back(padField);
                 LOG6("Pushing field " << padField << ", overlayable: " << f->overlayable);
             }
         }
 
-        auto* newtype = new IR::Type_Header(type->name, type->annotations, fields);
+        auto* newtype = new P4::IR::Type_Header(type->name, type->annotations, fields);
         LOG6("Repacked header: " << newtype);
 
         repackedTypes.emplace(type->name, newtype);
@@ -1737,29 +1737,29 @@ void PackWithConstraintSolver::solve() {
     }
 }
 
-const IR::Node* ReplaceFlexibleType::postorder(IR::HeaderOrMetadata* h) {
+const P4::IR::Node* ReplaceFlexibleType::postorder(P4::IR::HeaderOrMetadata* h) {
     if (!repackedTypes.count(h->type->name))
         return h;
     auto newType = repackedTypes.at(h->type->name);
     auto* repackedHeaderType =
-        new IR::Type_Header(h->type->name, h->type->annotations, newType->fields);
-    return new IR::Header(h->name, repackedHeaderType);
+        new P4::IR::Type_Header(h->type->name, h->type->annotations, newType->fields);
+    return new P4::IR::Header(h->name, repackedHeaderType);
 }
 
-const IR::Node* ReplaceFlexibleType::postorder(IR::Type_StructLike* h) {
+const P4::IR::Node* ReplaceFlexibleType::postorder(P4::IR::Type_StructLike* h) {
     if (!repackedTypes.count(h->name))
         return h;
     return repackedTypes.at(h->name);
 }
 
-const IR::BFN::DigestFieldList* ReplaceFlexibleType::repackFieldList(cstring digest,
+const P4::IR::BFN::DigestFieldList* ReplaceFlexibleType::repackFieldList(cstring digest,
         std::vector<FieldListEntry> repackedFieldIndices,
-        const IR::Type_StructLike* repackedHeaderType,
-        const IR::BFN::DigestFieldList* origFieldList) const {
+        const P4::IR::Type_StructLike* repackedHeaderType,
+        const P4::IR::BFN::DigestFieldList* origFieldList) const {
     // map index -> fieldlval in the field list.
-    ordered_map<int, const IR::BFN::FieldLVal*> origFieldOrder;
+    ordered_map<int, const P4::IR::BFN::FieldLVal*> origFieldOrder;
     // repacked field list initializer
-    IR::Vector<IR::BFN::FieldLVal> newSources;
+    P4::IR::Vector<P4::IR::BFN::FieldLVal> newSources;
     // mirror digest sources contains session_id at the beginning
     // which is not part of the p4 field list.
     auto iter = origFieldList->sources.begin();
@@ -1773,28 +1773,28 @@ const IR::BFN::DigestFieldList* ReplaceFlexibleType::repackFieldList(cstring dig
 
     // reorder field from the original field list initializer
     // according to the new field list order.
-    std::map<int, const IR::BFN::FieldLVal*> repackedFieldOrder;
+    std::map<int, const P4::IR::BFN::FieldLVal*> repackedFieldOrder;
     index = 0;
     for (auto entry : repackedFieldIndices) {
         if (entry.first == -1) {
             repackedFieldOrder.emplace(index++,
-                    new IR::BFN::FieldLVal(new IR::Padding(entry.second)));
+                    new P4::IR::BFN::FieldLVal(new P4::IR::Padding(entry.second)));
             continue; }
         repackedFieldOrder.emplace(index++, origFieldOrder.at(entry.first)); }
 
     for (auto f : repackedFieldOrder) {
-        IR::BFN::FieldLVal* newSource = new IR::BFN::FieldLVal(f.second->field);
+        P4::IR::BFN::FieldLVal* newSource = new P4::IR::BFN::FieldLVal(f.second->field);
         newSources.push_back(newSource);
     }
-    IR::BFN::DigestFieldList* repackedFieldList =
-        new IR::BFN::DigestFieldList(origFieldList->srcInfo,
+    P4::IR::BFN::DigestFieldList* repackedFieldList =
+        new P4::IR::BFN::DigestFieldList(origFieldList->srcInfo,
                 origFieldList->idx, newSources, repackedHeaderType,
                 origFieldList->controlPlaneName);
     LOG6("Repacked digest: " << digest << " "  << repackedFieldList);
     return repackedFieldList;
 }
 
-const IR::Node* ReplaceFlexibleType::postorder(IR::BFN::DigestFieldList* d) {
+const P4::IR::Node* ReplaceFlexibleType::postorder(P4::IR::BFN::DigestFieldList* d) {
     if (!repackedTypes.count(d->type->name))
         return d;
     LOG6("Replacing " << d);
@@ -1819,7 +1819,7 @@ const IR::Node* ReplaceFlexibleType::postorder(IR::BFN::DigestFieldList* d) {
             LOG6("\t\trepacking " << i.first << " to " << i.second);
         } }
 
-    auto digest = findContext<IR::BFN::Digest>();
+    auto digest = findContext<P4::IR::BFN::Digest>();
     BUG_CHECK(digest != nullptr, "Unable to find digest for %1%", d);
     auto rd = repackFieldList(digest->name, repacked_field_indices,
                     repackedHeaderType, d);
@@ -1828,37 +1828,37 @@ const IR::Node* ReplaceFlexibleType::postorder(IR::BFN::DigestFieldList* d) {
     return rd;
 }
 
-const IR::Node*
-ReplaceFlexibleType::postorder(IR::StructExpression* expr) {
-    auto isPadding = [&](const IR::StructField* f) -> bool {
+const P4::IR::Node*
+ReplaceFlexibleType::postorder(P4::IR::StructExpression* expr) {
+    auto isPadding = [&](const P4::IR::StructField* f) -> bool {
         if (f->getAnnotation("padding"_cs))
             return true;
         return false; };
 
-    auto type = expr->type->to<IR::Type_StructLike>();
+    auto type = expr->type->to<P4::IR::Type_StructLike>();
     if (!type)
         return expr;
     if (!repackedTypes.count(type->name))
         return expr;
     auto newType = repackedTypes.at(type->name);
-    auto comp = new IR::IndexedVector<IR::NamedExpression>;
+    auto comp = new P4::IR::IndexedVector<P4::IR::NamedExpression>;
     for (auto f : newType->fields) {
         if (isPadding(f)) {
-            auto ne = new IR::NamedExpression(f->name,
-                    new IR::Constant(f->type, 0));
+            auto ne = new P4::IR::NamedExpression(f->name,
+                    new P4::IR::Constant(f->type, 0));
             comp->push_back(ne);
             continue; }
 
         auto decl = expr->components.getDeclaration(f->name);
         if (decl) {
-            auto c = decl->to<IR::NamedExpression>();
+            auto c = decl->to<P4::IR::NamedExpression>();
             comp->push_back(c); } }
-    return new IR::StructExpression(expr->structType, *comp);
+    return new P4::IR::StructExpression(expr->structType, *comp);
 }
 
 
 // helper function
-bool findFlexibleAnnotation(const IR::Type_StructLike* header) {
+bool findFlexibleAnnotation(const P4::IR::Type_StructLike* header) {
     for (auto f : header->fields) {
         auto anno = f->getAnnotation("flexible"_cs);
         if (anno != nullptr)
@@ -1867,7 +1867,7 @@ bool findFlexibleAnnotation(const IR::Type_StructLike* header) {
 }
 
 // JIRA-DOC: XXX(Deep): BRIG-333
-// We can do better with these IR::BFN::DeparserParameters in terms of packing. This IR type is only
+// We can do better with these P4::IR::BFN::DeparserParameters in terms of packing. This IR type is only
 // used to represent intrinsic metadata in ingress and egress at the moment. As noted in the
 // comments in line 698 in phv_fields.cpp, the constraints on bottom_bit for some of these TM
 // metadata is not necessary. We can theoretically place certain TM metadata field, such as
@@ -1875,7 +1875,7 @@ bool findFlexibleAnnotation(const IR::Type_StructLike* header) {
 // bypass_egress could be packed with any field anywhere. There are a few other TM metadata with the
 // same property: ct_disable, ct_mcast, qid, icos, meter_color, deflect_on_drop, copy_to_cpu_cos.
 // JIRA-DOC: BRIG-333 is tracking this issue.
-bool GatherDeparserParameters::preorder(const IR::BFN::DeparserParameter* p) {
+bool GatherDeparserParameters::preorder(const P4::IR::BFN::DeparserParameter* p) {
     BUG_CHECK(p->source, "Parameter %1% missing source", p->name);
     const PHV::Field* f = phv.field(p->source->field);
     BUG_CHECK(f, "Field %1% not found while gathering deparser parameters", p->source->field);
@@ -1885,8 +1885,8 @@ bool GatherDeparserParameters::preorder(const IR::BFN::DeparserParameter* p) {
 }
 
 // TODO: Remove reliance on phase0 parser state name by visiting Phase0 node in
-// IR::BFN::Parser and use phase0->fields to gather Phase0 fields. The fields
-// must be converted from an IR::StructField to a PHV::Field.
+// P4::IR::BFN::Parser and use phase0->fields to gather Phase0 fields. The fields
+// must be converted from an P4::IR::StructField to a PHV::Field.
 // TODO: Another chance for optimization is by allowing flexible packing of
 // fields. Right now, the fields are packed to Phase0 bit width (Tofino = 64 and
 // JBAY = 128) with padding inserted. This does not allow flexibility while
@@ -1894,15 +1894,15 @@ bool GatherDeparserParameters::preorder(const IR::BFN::DeparserParameter* p) {
 // arch/phase0.cpp - canPackDataIntoPhase0() method. The packing code can be
 // removed and we can work with only the fields in Phase0. Packing width can be
 // determined by Device::pardeSpec().bitPhase0Width()
-bool GatherPhase0Fields::preorder(const IR::BFN::ParserState* p) {
+bool GatherPhase0Fields::preorder(const P4::IR::BFN::ParserState* p) {
     // Not a phase 0 parser state
     if (p->name != PHASE0_PARSER_STATE_NAME)
         return true;
     // For phase 0 parser state, detect the fields written to.
     for (auto s : p->statements) {
-        auto* e = s->to<IR::BFN::Extract>();
+        auto* e = s->to<P4::IR::BFN::Extract>();
         if (!e) continue;
-        auto* dest = e->dest->to<IR::BFN::FieldLVal>();
+        auto* dest = e->dest->to<P4::IR::BFN::FieldLVal>();
         if (!dest) continue;
         const auto* f = phv.field(dest->field);
         if (!f) continue;
@@ -1914,7 +1914,7 @@ bool GatherPhase0Fields::preorder(const IR::BFN::ParserState* p) {
 // TODO: if a field is used in both bridging and mirror/resubmit/digest, we do
 // not pack these fields with other fields. The compiler should be able to do
 // better.
-bool GatherPhase0Fields::preorder(const IR::BFN::DigestFieldList* d) {
+bool GatherPhase0Fields::preorder(const P4::IR::BFN::DigestFieldList* d) {
     for (auto source : d->sources) {
         const auto* field = phv.field(source->field);
         if (!field) continue;
@@ -1938,7 +1938,7 @@ std::string LogRepackedHeaders::strip_prefix(cstring str, std::string pre) {
 }
 
 // Collect repacked headers
-bool LogRepackedHeaders::preorder(const IR::HeaderOrMetadata* h) {
+bool LogRepackedHeaders::preorder(const P4::IR::HeaderOrMetadata* h) {
     // Check if we have visited this header's ingress/egress version before
     cstring hname = h->name;
     std::string h_in = strip_prefix(hname, "ingress::");
@@ -1964,7 +1964,7 @@ bool LogRepackedHeaders::preorder(const IR::HeaderOrMetadata* h) {
 
     // Add it to our vector if it is repacked
     if (isRepacked) {
-        std::pair<const IR::HeaderOrMetadata*, std::string> pr(h, h_strip);
+        std::pair<const P4::IR::HeaderOrMetadata*, std::string> pr(h, h_strip);
         repacked.push_back(pr);
     }
 
@@ -1982,7 +1982,7 @@ void LogRepackedHeaders::end_apply() {
 }
 
 // TODO: Currently outputting backend name for each field. Should be changed to user facing name.
-std::string LogRepackedHeaders::getFieldName(std::string hdr, const IR::StructField* f) const {
+std::string LogRepackedHeaders::getFieldName(std::string hdr, const P4::IR::StructField* f) const {
     auto nm = hdr + "." + f->name;
     auto* fi = phv.field(nm);
     auto name = fi ? fi->name : nm;
@@ -1990,7 +1990,7 @@ std::string LogRepackedHeaders::getFieldName(std::string hdr, const IR::StructFi
     return s;
 }
 
-std::string LogRepackedHeaders::pretty_print(const IR::HeaderOrMetadata* h, std::string hdr) const {
+std::string LogRepackedHeaders::pretty_print(const P4::IR::HeaderOrMetadata* h, std::string hdr) const {
     // Number of bytes we have used
     unsigned byte_ctr = 0;
     // Number of bits in the current byte we have used
@@ -2297,7 +2297,7 @@ void PackFlexibleHeaders::end_apply() {
 // Collect the 'emit' and 'extract' call on @flexible headers. We need to
 // consider constraints both briding and mirror/resubmit, as a field may
 // be used in both places.
-void CollectBridgedFieldsUse::postorder(const IR::MethodCallExpression* expr) {
+void CollectBridgedFieldsUse::postorder(const P4::IR::MethodCallExpression* expr) {
     auto mi = P4::MethodInstance::resolve(expr, refMap, typeMap);
     if (!mi)
         return;
@@ -2316,11 +2316,11 @@ void CollectBridgedFieldsUse::postorder(const IR::MethodCallExpression* expr) {
         return;
 
     std::optional<gress_t> thread = std::nullopt;
-    auto parser = findContext<IR::BFN::TnaParser>();
+    auto parser = findContext<P4::IR::BFN::TnaParser>();
     if (parser)
         thread = parser->thread;
 
-    auto deparser = findContext<IR::BFN::TnaDeparser>();
+    auto deparser = findContext<P4::IR::BFN::TnaDeparser>();
     if (deparser)
         thread = deparser->thread;
 
@@ -2337,10 +2337,10 @@ void CollectBridgedFieldsUse::postorder(const IR::MethodCallExpression* expr) {
         return;
 
     auto dest = (*expr->arguments)[arg_count - 1]->expression;
-    const IR::Type* type = nullptr;
-    if (auto *hdr = dest->to<IR::HeaderRef>()) {
+    const P4::IR::Type* type = nullptr;
+    if (auto *hdr = dest->to<P4::IR::HeaderRef>()) {
         type = hdr->type;
-    } else if (auto *hdr = dest->to<IR::StructExpression>()) {
+    } else if (auto *hdr = dest->to<P4::IR::StructExpression>()) {
         type = hdr->type;
     }
 
@@ -2348,11 +2348,11 @@ void CollectBridgedFieldsUse::postorder(const IR::MethodCallExpression* expr) {
         return;
 
     bool need_packing = false;
-    if (auto ty = type->to<IR::Type_StructLike>()) {
+    if (auto ty = type->to<P4::IR::Type_StructLike>()) {
         if (findFlexibleAnnotation(ty)) {
             need_packing = true;
         }
-    } else if (type->is<IR::BFN::Type_FixedSizeHeader>()) {
+    } else if (type->is<P4::IR::BFN::Type_FixedSizeHeader>()) {
         need_packing = true;
     }
     if (!need_packing)
@@ -2363,7 +2363,7 @@ void CollectBridgedFieldsUse::postorder(const IR::MethodCallExpression* expr) {
     u.method = em->method->name;
     u.thread = *thread;
 
-    if (auto ty = type->to<IR::Type_StructLike>())
+    if (auto ty = type->to<P4::IR::Type_StructLike>())
         u.name = ty->name;
 
     bridge_uses.insert(u);
@@ -2378,7 +2378,7 @@ class PostMidEndLast : public PassManager {
  * TODO: some code duplication with extract_mau_pipe, needs to refactor ParseTna to
  * provide a mechanism to iterate directly on TNA pipelines.
  */
-bool ExtractBridgeInfo::preorder(const IR::P4Program* program) {
+bool ExtractBridgeInfo::preorder(const P4::IR::P4Program* program) {
     BFN::ApplyEvaluator eval(refMap, typeMap);
     auto new_program = program->apply(eval);
 
@@ -2403,7 +2403,7 @@ bool ExtractBridgeInfo::preorder(const IR::P4Program* program) {
         // collect per pipe bridge uses
         CollectBridgedFieldsUse collectBridgedFields(refMap, typeMap);
         if (!pkg.second) continue;
-        if (!pkg.second->is<IR::PackageBlock>()) continue;
+        if (!pkg.second->is<P4::IR::PackageBlock>()) continue;
         std::vector<gress_t> gresses = {INGRESS, EGRESS};
         for (auto gress : gresses) {
             if (!arch->pipelines.getPipeline(npipe).threads.count(gress)) {
@@ -2412,11 +2412,11 @@ bool ExtractBridgeInfo::preorder(const IR::P4Program* program) {
             auto thread = arch->pipelines.getPipeline(npipe).threads.at(gress);
             thread = thread->apply(*simplifyReferences);
             for (auto p : thread->parsers) {
-                if (auto parser = p->to<IR::BFN::TnaParser>()) {
+                if (auto parser = p->to<P4::IR::BFN::TnaParser>()) {
                     parser->apply(collectBridgedFields);
                 }
             }
-            if (auto dprsr = dynamic_cast<const IR::BFN::TnaDeparser *>(thread->deparser)) {
+            if (auto dprsr = dynamic_cast<const P4::IR::BFN::TnaDeparser *>(thread->deparser)) {
                 dprsr->apply(collectBridgedFields);
             }
         }
@@ -2427,7 +2427,7 @@ bool ExtractBridgeInfo::preorder(const IR::P4Program* program) {
     return false;
 }
 
-std::vector<const IR::BFN::Pipe*>*
+std::vector<const P4::IR::BFN::Pipe*>*
 ExtractBridgeInfo::generate_bridge_pairs(std::vector<BridgeContext>& all_context) {
     std::vector<BridgeContext> all_emits;
     std::vector<BridgeContext> all_extracts;
@@ -2440,7 +2440,7 @@ ExtractBridgeInfo::generate_bridge_pairs(std::vector<BridgeContext>& all_context
         }
     }
 
-    auto pipes = new std::vector<const IR::BFN::Pipe*>();
+    auto pipes = new std::vector<const P4::IR::BFN::Pipe*>();
     for (auto emit : all_emits) {
         for (auto extract : all_extracts) {
             // cannot bridge from ingress to ingress or egress to egress
@@ -2452,7 +2452,7 @@ ExtractBridgeInfo::generate_bridge_pairs(std::vector<BridgeContext>& all_context
                 continue;
             LOG6("pipe " << emit.pipe_id << " " << emit.use <<
                  " pipe " << extract.pipe_id << " " << extract.use);
-            auto pipe = new IR::BFN::Pipe;
+            auto pipe = new P4::IR::BFN::Pipe;
             // emit and extract has the same pointer to pragma
             pipe->global_pragmas = collect_pragma.global_pragmas();
             pipe->thread[INGRESS] = emit.thread;
@@ -2464,7 +2464,7 @@ ExtractBridgeInfo::generate_bridge_pairs(std::vector<BridgeContext>& all_context
     return pipes;
 }
 
-void ExtractBridgeInfo::end_apply(const IR::Node*) {
+void ExtractBridgeInfo::end_apply(const P4::IR::Node*) {
     ordered_map<cstring, ordered_set<std::pair<int, CollectBridgedFieldsUse::Use>>> uses_by_name;
     for (auto kv : all_uses) {
         for (auto u : kv.second) {
@@ -2501,13 +2501,13 @@ void ExtractBridgeInfo::end_apply(const IR::Node*) {
 }
 
 // Invariants:
-//  - must be applied to IR::P4Program node that can be type-checked
-//  - must generated IR::P4Program node that can still be type-checked.
+//  - must be applied to P4::IR::P4Program node that can be type-checked
+//  - must generated P4::IR::P4Program node that can still be type-checked.
 // Post condition:
 //  - vector of backend pipes for the corresponding p4 program.
-//  - if bridge_packing is enabled, a transformed IR::P4Program
+//  - if bridge_packing is enabled, a transformed P4::IR::P4Program
 //        with @flexible header repacked.
-// SimplifyReference transforms IR::P4Program towards the
+// SimplifyReference transforms P4::IR::P4Program towards the
 // backend IR representation, as a result, the transformed
 // P4Program no longer type-check.
 BridgedPacking::BridgedPacking(BFN_Options& options, RepackedHeaderTypes& map,
@@ -2536,7 +2536,7 @@ BridgedPacking::BridgedPacking(BFN_Options& options, RepackedHeaderTypes& map,
         new FillFromBlockMap(&refMap, &typeMap),
         evaluator,
         bindings,
-        conv,  // map name to IR::BFN::Pipe
+        conv,  // map name to P4::IR::BFN::Pipe
         extractBridgeInfo,
         new PadFixedSizeHeaders(map),
     });
@@ -2575,7 +2575,7 @@ SubstitutePackedHeaders::SubstitutePackedHeaders(BFN_Options& options,
 
 std::ostream& operator<<(std::ostream &out, const CollectBridgedFieldsUse::Use& u) {
     out << u.method;
-    if (auto type = u.type->to<IR::Type_StructLike>()) {
+    if (auto type = u.type->to<P4::IR::Type_StructLike>()) {
         out << " " << type->name.name;
     }
     out << " in " << u.thread << ";";

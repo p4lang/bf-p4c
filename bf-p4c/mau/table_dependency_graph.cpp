@@ -23,7 +23,7 @@
 #include "lib/log.h"
 
 
-bool NameToTableMapBuilder::preorder(const IR::MAU::Table *tbl) {
+bool NameToTableMapBuilder::preorder(const P4::IR::MAU::Table *tbl) {
     dg.name_to_table[tbl->externalName()] = tbl;
     return true;
 }
@@ -116,9 +116,9 @@ std::ostream &operator<<(std::ostream &out, const DependencyGraph &dg) {
     DependencyGraph::Graph::edge_iterator edges, edges_end;
     for (boost::tie(edges, edges_end) = boost::edges(dg.g); edges != edges_end; ++edges) {
         auto src = boost::source(*edges, dg.g);
-        const IR::MAU::Table* source = dg.get_vertex(src);
+        const P4::IR::MAU::Table* source = dg.get_vertex(src);
         auto dst = boost::target(*edges, dg.g);
-        const IR::MAU::Table* target = dg.get_vertex(dst);
+        const P4::IR::MAU::Table* target = dg.get_vertex(dst);
         out << "    " << source->name << " -- " << dep_types(dg.g[*edges]) << " --> " <<
             target->name << std::endl; }
 
@@ -130,7 +130,7 @@ std::ostream &operator<<(std::ostream &out, const DependencyGraph &dg) {
     out << "    Second number refers to a dependency chain from which each tables are split as on "
         << " last allocation pass" << std::endl;
 
-    std::map<int, safe_vector<std::pair<const IR::MAU::Table *,
+    std::map<int, safe_vector<std::pair<const P4::IR::MAU::Table *,
                                         DependencyGraph::StageInfo>>> min_stage_info;
     for (auto &kv : dg.stage_info)
         min_stage_info[kv.second.min_stage].emplace_back(kv.first, kv.second);
@@ -169,7 +169,7 @@ void DependencyGraph::print_dep_type_map(std::ostream &out) const {
 }
 
 void DependencyGraph::print_container_access(std::ostream &out) const {
-    ordered_set<const IR::MAU::Table*> tbls;
+    ordered_set<const P4::IR::MAU::Table*> tbls;
     for (auto t1 : containers_write_) {
         tbls.insert(t1.first); }
     for (auto t1 : containers_read_xbar_) {
@@ -239,7 +239,7 @@ void DependencyGraph::dump_viz(std::ostream &out, const DependencyGraph &dg) {
             std::make_pair("control_exit"_cs,               "green"_cs)}
     };
 
-    auto tableName = [](const IR::MAU::Table *tbl) {
+    auto tableName = [](const P4::IR::MAU::Table *tbl) {
         if (tbl) {
             if (tbl->match_table)
                 return tbl->match_table->externalName();
@@ -250,7 +250,7 @@ void DependencyGraph::dump_viz(std::ostream &out, const DependencyGraph &dg) {
         }
     };
 
-    auto edgeName = [dg](const IR::MAU::Table *source, const IR::MAU::Table *dest) {
+    auto edgeName = [dg](const P4::IR::MAU::Table *source, const P4::IR::MAU::Table *dest) {
         auto depInfo = dg.get_data_dependency_info(source, dest);
         cstring res("");
         if (depInfo == std::nullopt) return res;
@@ -291,9 +291,9 @@ void DependencyGraph::dump_viz(std::ostream &out, const DependencyGraph &dg) {
     DependencyGraph::Graph::edge_iterator edges, edges_end;
     for (boost::tie(edges, edges_end) = boost::edges(dg.g); edges != edges_end; ++edges) {
         auto src = boost::source(*edges, dg.g);
-        const IR::MAU::Table* source = dg.get_vertex(src);
+        const P4::IR::MAU::Table* source = dg.get_vertex(src);
         auto dst = boost::target(*edges, dg.g);
-        const IR::MAU::Table* target = dg.get_vertex(dst);
+        const P4::IR::MAU::Table* target = dg.get_vertex(dst);
         auto src_name = tableName(source);
         auto dst_name = tableName(target);
         cstring edge_name = cstring(dep_types(dg.g[*edges]));
@@ -388,8 +388,8 @@ void DependencyGraph::dump_viz(std::ostream &out, const DependencyGraph &dg) {
  * newly-created edge.  If false, then the edge descriptor points to the
  * edge from src to dst with edge_label that already existed.  */
 std::pair<typename DependencyGraph::Graph::edge_descriptor*, bool> DependencyGraph::add_edge(
-    const IR::MAU::Table* src,
-    const IR::MAU::Table* dst,
+    const P4::IR::MAU::Table* src,
+    const P4::IR::MAU::Table* dst,
     DependencyGraph::dependencies_t edge_label) {
     typename Graph::vertex_descriptor src_v, dst_v;
     src_v = add_vertex(src);
@@ -432,7 +432,7 @@ std::pair<typename DependencyGraph::Graph::edge_descriptor*, bool> DependencyGra
     return { e, true };
 }
 
-TableGraphNode DependencyGraph::create_node(const int id, const IR::MAU::Table *tbl) const {
+TableGraphNode DependencyGraph::create_node(const int id, const P4::IR::MAU::Table *tbl) const {
     TableGraphNode node;
     TableGraphNode::TableGraphNodeTable nodeTable;
 
@@ -481,19 +481,19 @@ TableGraphNode DependencyGraph::create_node(const int id, const IR::MAU::Table *
         if (!attMem) continue;
         TableGraphNode::TableGraphNodeTable attNode;
         attNode.name = cstring::to_cstring(canon_name(attMem->name));
-        if (attMem->to<IR::MAU::Counter>())
+        if (attMem->to<P4::IR::MAU::Counter>())
             attNode.table_type = "statistics"_cs;
-        else if (attMem->to<IR::MAU::Meter>())
+        else if (attMem->to<P4::IR::MAU::Meter>())
             attNode.table_type = "meter"_cs;
-        else if (attMem->to<IR::MAU::StatefulAlu>())
+        else if (attMem->to<P4::IR::MAU::StatefulAlu>())
             attNode.table_type = "stateful"_cs;
-        else if (attMem->to<IR::MAU::Selector>())
+        else if (attMem->to<P4::IR::MAU::Selector>())
             attNode.table_type = "selection"_cs;
-        else if (attMem->to<IR::MAU::ActionData>())
+        else if (attMem->to<P4::IR::MAU::ActionData>())
             attNode.table_type = "action"_cs;
-        else if (attMem->to<IR::MAU::TernaryIndirect>())
+        else if (attMem->to<P4::IR::MAU::TernaryIndirect>())
             attNode.table_type = "ternary_indirect"_cs;
-        else if (attMem->to<IR::MAU::IdleTime>())
+        else if (attMem->to<P4::IR::MAU::IdleTime>())
             attNode.table_type = "idletime"_cs;
         node.nodeTables.push_back(attNode);
     }
@@ -589,8 +589,8 @@ void DependencyGraph::to_json(Util::JsonObject* dgsJson, const FlowGraph &fg,
 
         edge.source = boost::source(*edges, g);
         edge.target = boost::target(*edges, g);
-        const IR::MAU::Table* source = get_vertex(edge.source);
-        const IR::MAU::Table* target = get_vertex(edge.target);
+        const P4::IR::MAU::Table* source = get_vertex(edge.source);
+        const P4::IR::MAU::Table* target = get_vertex(edge.target);
         BUG_CHECK(source || target, "Edge has no source and no destination table");
         if (source && target && source->gress != target->gress)
             BUG("Invalid dependency graph edge from %1% (gress = %2%) --> %3% (gress = %4%) ",
@@ -652,8 +652,8 @@ void DependencyGraph::to_json(Util::JsonObject* dgsJson, const FlowGraph &fg,
 
             auto fsource = boost::source(*fedges, fg.g);
             auto ftarget = boost::target(*fedges, fg.g);
-            const IR::MAU::Table* source = fg.get_vertex(fsource);
-            const IR::MAU::Table* target = fg.get_vertex(ftarget);
+            const P4::IR::MAU::Table* source = fg.get_vertex(fsource);
+            const P4::IR::MAU::Table* target = fg.get_vertex(ftarget);
             std::string src_name = std::string(source ? source->name : "SOURCE");
             std::string tgt_name = std::string(target ? target->name : "SINK");
             if (!source && !target)
@@ -676,7 +676,7 @@ void DependencyGraph::to_json(Util::JsonObject* dgsJson, const FlowGraph &fg,
                 edge.source = labelToVertex.at(source);
             } else {
                 if (source_node_id[src_gress] < 0) {
-                    source = new IR::MAU::Table(src_name, src_gress);
+                    source = new P4::IR::MAU::Table(src_name, src_gress);
                     auto node = create_node(++node_id, source);
                     nodesJson[static_cast<int>(src_gress)]->append(node.create_node_json());
                     source_node_id[src_gress] = node_id;
@@ -687,7 +687,7 @@ void DependencyGraph::to_json(Util::JsonObject* dgsJson, const FlowGraph &fg,
                 edge.target = labelToVertex.at(target);
             } else {
                 if (sink_node_id[tgt_gress] < 0) {
-                    target = new IR::MAU::Table(tgt_name, tgt_gress);
+                    target = new P4::IR::MAU::Table(tgt_name, tgt_gress);
                     auto node = create_node(++node_id, target);
                     nodesJson[static_cast<int>(tgt_gress)]->append(node.create_node_json());
                     sink_node_id[tgt_gress] = node_id;
@@ -777,21 +777,21 @@ std::set<cstring> FindDataDependencyGraph::getFieldNameSlice(const PHV::Field *f
  */
 class FindDataDependencyGraph::AddDependencies : public MauInspector, TofinoWriteContext {
     FindDataDependencyGraph             &self;
-    const IR::MAU::Table                *table;
+    const P4::IR::MAU::Table                *table;
     ordered_map<PHV::Container, ordered_set<write_op_t>>    cont_writes;
 
  public:
     AddDependencies(FindDataDependencyGraph &self,
-                    const IR::MAU::Table *t) :
+                    const P4::IR::MAU::Table *t) :
         self(self), table(t) { }
 
  private:
-    profile_t init_apply(const IR::Node* root) override {
+    profile_t init_apply(const P4::IR::Node* root) override {
         cont_writes.clear();
         return Inspector::init_apply(root);
     }
 
-    void addDeps(ordered_set<std::pair<const IR::MAU::Table*, const IR::MAU::Action*>> tables,
+    void addDeps(ordered_set<std::pair<const P4::IR::MAU::Table*, const P4::IR::MAU::Action*>> tables,
                  DependencyGraph::dependencies_t dep, const PHV::Field *field) {
         for (auto upstream_t_pair : tables) {
             auto upstream_t = upstream_t_pair.first;
@@ -830,7 +830,7 @@ class FindDataDependencyGraph::AddDependencies : public MauInspector, TofinoWrit
 
             auto edge_pair = self.dg.add_edge(upstream_t, table, new_dep);
             if (!edge_pair.first) continue;
-            const IR::MAU::Action *action_use_context = findContext<IR::MAU::Action>();
+            const P4::IR::MAU::Action *action_use_context = findContext<P4::IR::MAU::Action>();
             if (upstream_t_pair.second) {
                 LOG5("\tAdd " << dep_types(dep) << " dependency from " << upstream_t->name
                         << " to " << table->name << " because of field " << field->name <<
@@ -946,7 +946,7 @@ class FindDataDependencyGraph::AddDependencies : public MauInspector, TofinoWrit
         }
     }
 
-    bool preorder(const IR::Expression *e) override {
+    bool preorder(const P4::IR::Expression *e) override {
         le_bitrange range;
         auto* originalField = self.phv.field(e, &range);
         if (!originalField) return true;
@@ -956,7 +956,7 @@ class FindDataDependencyGraph::AddDependencies : public MauInspector, TofinoWrit
             candidateFields.insert(self.phv.getAliasMap().at(originalField));
         for (const PHV::Field* field : candidateFields) {
             cstring red_or_key;
-            bool is_red_or = self.dg.red_info.is_reduction_or(findContext<IR::MAU::Instruction>(),
+            bool is_red_or = self.dg.red_info.is_reduction_or(findContext<P4::IR::MAU::Instruction>(),
                                                               table, red_or_key);
             bool non_first_write_red_or = false;
 
@@ -1050,13 +1050,13 @@ class FindDataDependencyGraph::AddDependencies : public MauInspector, TofinoWrit
         return false;
     }
 
-    bool preorder(const IR::Annotation *) override { return false; }
+    bool preorder(const P4::IR::Annotation *) override { return false; }
 
-    bool preorder(const IR::MAU::StatefulCall *) override {
+    bool preorder(const P4::IR::MAU::StatefulCall *) override {
         return false;
     }
 
-    bool preorder(const IR::MAU::Instruction *) override {
+    bool preorder(const P4::IR::MAU::Instruction *) override {
         return true;
     }
 
@@ -1078,16 +1078,16 @@ class FindDataDependencyGraph::AddDependencies : public MauInspector, TofinoWrit
 
 class FindDataDependencyGraph::UpdateAccess : public MauInspector , TofinoWriteContext {
     FindDataDependencyGraph                &self;
-    const IR::MAU::Table                   *table;
+    const P4::IR::MAU::Table                   *table;
     bool gateway_context = false;
     ordered_map<PHV::Container, ordered_set<write_op_t>>    cont_writes;
 
  public:
-    UpdateAccess(FindDataDependencyGraph &self, const IR::MAU::Table *t) : self(self), table(t) {}
-    UpdateAccess(FindDataDependencyGraph &self, const IR::MAU::Table *t, bool gw_ctxt) :
+    UpdateAccess(FindDataDependencyGraph &self, const P4::IR::MAU::Table *t) : self(self), table(t) {}
+    UpdateAccess(FindDataDependencyGraph &self, const P4::IR::MAU::Table *t, bool gw_ctxt) :
       self(self), table(t), gateway_context(gw_ctxt) {}
 
-    profile_t init_apply(const IR::Node* root) override {
+    profile_t init_apply(const P4::IR::Node* root) override {
         cont_writes.clear();
         return Inspector::init_apply(root);
     }
@@ -1096,16 +1096,16 @@ class FindDataDependencyGraph::UpdateAccess : public MauInspector , TofinoWriteC
     // attached tables left as primitives by exploring
     // via the primitive. Instead track them by exploring
     // the attached tables directly.
-    bool preorder(const IR::MAU::StatefulCall *) override {
+    bool preorder(const P4::IR::MAU::StatefulCall *) override {
         return false;
     }
 
     // We do still want to explore instructions.
-    bool preorder(const IR::MAU::Instruction *) override {
+    bool preorder(const P4::IR::MAU::Instruction *) override {
         return true;
     }
 
-    bool preorder(const IR::Expression *e) override {
+    bool preorder(const P4::IR::Expression *e) override {
         le_bitrange range;
         auto* originalField = self.phv.field(e, &range);
         if (!originalField) {
@@ -1116,7 +1116,7 @@ class FindDataDependencyGraph::UpdateAccess : public MauInspector , TofinoWriteC
             candidateFields.insert(self.phv.getAliasMap().at(originalField));
 
         // This will often be null for expressions that don't appear within actions
-        const IR::MAU::Action *action_context = findContext<IR::MAU::Action>();
+        const P4::IR::MAU::Action *action_context = findContext<P4::IR::MAU::Action>();
 
         for (const PHV::Field* field : candidateFields) {
             cstring red_or_key;
@@ -1132,7 +1132,7 @@ class FindDataDependencyGraph::UpdateAccess : public MauInspector , TofinoWriteC
                     a.reduction_or_read.clear();
                     a.write.clear();
                     bool is_red_or = self.dg.red_info.is_reduction_or(
-                                                    findContext<IR::MAU::Instruction>(),
+                                                    findContext<P4::IR::MAU::Instruction>(),
                                                     table, red_or_key);
                     if (is_red_or) {
                         a.reduction_or_write.insert(std::make_pair(table, action_context));
@@ -1147,7 +1147,7 @@ class FindDataDependencyGraph::UpdateAccess : public MauInspector , TofinoWriteC
                         a.ixbar_read.insert(std::make_pair(table, action_context));
                     } else {
                         bool is_red_or = self.dg.red_info.is_reduction_or(
-                                                        findContext<IR::MAU::Instruction>(),
+                                                        findContext<P4::IR::MAU::Instruction>(),
                                                         table, red_or_key);
                         if (is_red_or) {
                             a.reduction_or_read.insert(std::make_pair(table, action_context));
@@ -1192,14 +1192,14 @@ class FindDataDependencyGraph::UpdateAccess : public MauInspector , TofinoWriteC
     }
 };
 
-bool FindDataDependencyGraph::preorder(const IR::MAU::TableSeq * seq ) {
+bool FindDataDependencyGraph::preorder(const P4::IR::MAU::TableSeq * seq ) {
     visitAgain();
     const Context *ctxt = getContext();
     LOG5("\t TableSeq (" << seq->size() << ")   front: " <<
          (seq->front() ? seq->front()->name : "null") << " back: " <<
          (seq->back() ? seq->back()->name : "null"));
 
-    if (ctxt && ctxt->node->is<IR::BFN::Pipe>()) {
+    if (ctxt && ctxt->node->is<P4::IR::BFN::Pipe>()) {
         LOG5("\t Hit Top of pipe - clearing access");
         access.clear();
     }
@@ -1208,7 +1208,7 @@ bool FindDataDependencyGraph::preorder(const IR::MAU::TableSeq * seq ) {
 }
 
 /**
- * Due to an IR::MAU::Table object appearing in multiple TableSeq objects, it is now
+ * Due to an P4::IR::MAU::Table object appearing in multiple TableSeq objects, it is now
  * important to include a visitAgain function call in all Table objects.
  *
  * Examine the following program:
@@ -1222,7 +1222,7 @@ bool FindDataDependencyGraph::preorder(const IR::MAU::TableSeq * seq ) {
  * runs, t3 and its associated effects needs to be run on both of these sequences, and not
  * visited in only one of the sequence.  Thus visitAgain is now necessary
  */
-bool FindDataDependencyGraph::preorder(const IR::MAU::Table *t) {
+bool FindDataDependencyGraph::preorder(const P4::IR::MAU::Table *t) {
     visitAgain();
     LOG5("\tFindDep table " << t->name);
 
@@ -1253,17 +1253,17 @@ bool FindDataDependencyGraph::preorder(const IR::MAU::Table *t) {
     return true;
 }
 
-bool FindDataDependencyGraph::preorder(const IR::MAU::TableKey *read) {
+bool FindDataDependencyGraph::preorder(const P4::IR::MAU::TableKey *read) {
     visitAgain();
-    auto tbl = findContext<IR::MAU::Table>();
+    auto tbl = findContext<P4::IR::MAU::Table>();
     LOG5("\t TableKey for table " << (tbl ? tbl->name : "null"));
     read->apply(UpdateAccess(*this, tbl));
     return false;
 }
 
-bool FindDataDependencyGraph::preorder(const IR::MAU::Action *act) {
+bool FindDataDependencyGraph::preorder(const P4::IR::MAU::Action *act) {
     visitAgain();
-    auto tbl = findContext<IR::MAU::Table>();
+    auto tbl = findContext<P4::IR::MAU::Table>();
     LOG5("\t Action for table " << (tbl ? tbl->name : "null"));
     act->apply(UpdateAccess(*this, tbl));
     return false;
@@ -1305,11 +1305,11 @@ void DependencyGraph::fill_dep_stages_from_topo(
         bool include_stages, const TableSummary *summary) {
     for (int i = int(topo.size()) - 1; i >= 0; --i) {
         for (const auto& vertex : topo[i]) {
-            const IR::MAU::Table* table = get_vertex(vertex);
+            const P4::IR::MAU::Table* table = get_vertex(vertex);
             auto& happens_later = happens_before_work_map[table];
             int tbl_dep_stages =
                 std::accumulate(happens_later.begin(), happens_later.end(), 0,
-                        [&] (int sz, const IR::MAU::Table* later) {
+                        [&] (int sz, const P4::IR::MAU::Table* later) {
                     int stage_addition = 0;
                     if (dep_type_map.count(table) && dep_type_map.at(table).count(later)
                         && (!(is_ctrl_edge(dep_type_map.at(table).at(later))) ||
@@ -1379,9 +1379,9 @@ bool DependencyGraph::is_edge_critical(typename Graph::edge_descriptor e) const 
 
 std::optional<ordered_map<
     std::pair<const PHV::Field *, DependencyGraph::dependencies_t>,
-    std::pair<ordered_set<const IR::MAU::Action *>, ordered_set<const IR::MAU::Action *>>>>
-DependencyGraph::get_data_dependency_info(const IR::MAU::Table *upstream,
-                                          const IR::MAU::Table *downstream) const {
+    std::pair<ordered_set<const P4::IR::MAU::Action *>, ordered_set<const P4::IR::MAU::Action *>>>>
+DependencyGraph::get_data_dependency_info(const P4::IR::MAU::Table *upstream,
+                                          const P4::IR::MAU::Table *downstream) const {
     if (!labelToVertex.count(upstream)) {
         LOG4("Upstream vertex " << upstream->name << " not found in graph");
         return std::nullopt;
@@ -1394,11 +1394,11 @@ DependencyGraph::get_data_dependency_info(const IR::MAU::Table *upstream,
     typename Graph::out_edge_iterator out, end;
     ordered_map<
         std::pair<const PHV::Field *, DependencyGraph::dependencies_t>,
-        std::pair<ordered_set<const IR::MAU::Action *>, ordered_set<const IR::MAU::Action *>>>
+        std::pair<ordered_set<const P4::IR::MAU::Action *>, ordered_set<const P4::IR::MAU::Action *>>>
         gathered_data;
     bool found_downstream = false;
     for (boost::tie(out, end) = boost::out_edges(upstream_v, g); out != end; ++out) {
-        const IR::MAU::Table *test_v = get_vertex(boost::target(*out, g));
+        const P4::IR::MAU::Table *test_v = get_vertex(boost::target(*out, g));
         if (test_v == downstream && (!is_ctrl_edge(g[*out]))) {
             found_downstream = true;
             auto edge_type = g[*out];
@@ -1419,9 +1419,9 @@ DependencyGraph::get_data_dependency_info(const IR::MAU::Table *upstream,
 }
 
 DependencyGraph::mau_dependencies_t DependencyGraph::find_mau_dependency(
-        const IR::MAU::Table *from, const IR::MAU::Table *to) {
+        const P4::IR::MAU::Table *from, const P4::IR::MAU::Table *to) {
     check_finalized();
-    std::pair<const IR::MAU::Table *, const IR::MAU::Table *> p = std::make_pair(from, to);
+    std::pair<const P4::IR::MAU::Table *, const P4::IR::MAU::Table *> p = std::make_pair(from, to);
     if (table_dep_.find(p) != table_dep_.end()) return table_dep_.at(p);
     if (from && to && from->gress == to->gress) {
         if (containers_write_.find(to) != containers_write_.end()) {
@@ -1544,9 +1544,9 @@ FindDependencyGraph::calc_topological_stage(unsigned dep_flags,
     if (curr_dg.has_cycle())
         LOG7("The graph has a cycle");
 
-    std::vector<const IR::MAU::Table*> id_to_table;
-    std::unordered_map<const IR::MAU::Table *, int> table_to_id;
-    ordered_map<const IR::MAU::Table*, bitvec> happens_after_work_map;
+    std::vector<const P4::IR::MAU::Table*> id_to_table;
+    std::unordered_map<const P4::IR::MAU::Table *, int> table_to_id;
+    ordered_map<const P4::IR::MAU::Table*, bitvec> happens_after_work_map;
 
     curr_dg.happens_after_work_map.clear();
     curr_dg.happens_before_work_map.clear();
@@ -1554,7 +1554,7 @@ FindDependencyGraph::calc_topological_stage(unsigned dep_flags,
     for (boost::tie(v, v_end) = boost::vertices(dep_graph); v != v_end; ++v) {
         n_depending_on[*v] = 0;
 
-        const IR::MAU::Table* label_table = curr_dg.get_vertex(*v);
+        const P4::IR::MAU::Table* label_table = curr_dg.get_vertex(*v);
         if (!table_to_id.count(label_table)) {
             int new_id = table_to_id.size();
             table_to_id[label_table] = new_id;
@@ -1680,7 +1680,7 @@ FindDependencyGraph::calc_topological_stage(unsigned dep_flags,
  * calculated in InjectControlDependencies are not what the next table needs to propagate
  * through before the table can fully be placed.
  */
-void CalculateNextTableProp::postorder(const IR::MAU::Table *tbl) {
+void CalculateNextTableProp::postorder(const P4::IR::MAU::Table *tbl) {
     bool empty_seq = true;
     name_to_table[tbl->name] = tbl;
     for (auto seq : Values(tbl->next)) {
@@ -1704,8 +1704,8 @@ void CalculateNextTableProp::postorder(const IR::MAU::Table *tbl) {
     }
 }
 
-bool ControlPathwaysToTable::equiv_seqs(const IR::MAU::TableSeq *a,
-        const IR::MAU::TableSeq *b) const {
+bool ControlPathwaysToTable::equiv_seqs(const P4::IR::MAU::TableSeq *a,
+        const P4::IR::MAU::TableSeq *b) const {
     if (a == b) return true;
     return a->tables == b->tables;
 }
@@ -1716,10 +1716,10 @@ ControlPathwaysToTable::Path ControlPathwaysToTable::common_reverse_path(const P
     auto a_it = a.rbegin();
     auto b_it = b.rbegin();
     while (a_it != a.rend() && b_it != b.rend()) {
-        const IR::Node *a_node = *a_it;
-        const IR::Node *b_node = *b_it;
-        auto a_seq = a_node->to<IR::MAU::TableSeq>();
-        auto b_seq = b_node->to<IR::MAU::TableSeq>();
+        const P4::IR::Node *a_node = *a_it;
+        const P4::IR::Node *b_node = *b_it;
+        auto a_seq = a_node->to<P4::IR::MAU::TableSeq>();
+        auto b_seq = b_node->to<P4::IR::MAU::TableSeq>();
         if (a_seq && b_seq && equiv_seqs(a_seq, b_seq)) {
             rv.push_back(a_node);
         } else if (a_node == b_node) {
@@ -1747,7 +1747,7 @@ bool ControlPathwaysToTable::equiv(const Path &a, const Path &b) const {
     return path.size() == a.size() && path.size() == b.size();
 }
 
-bool ControlPathwaysToTable::preorder(const IR::MAU::Table *tbl) {
+bool ControlPathwaysToTable::preorder(const P4::IR::MAU::Table *tbl) {
     const Context *ctxt = getContext();
     Path pathway;
     pathway.emplace_back(tbl);
@@ -1791,15 +1791,15 @@ bool ControlPathwaysToTable::preorder(const IR::MAU::Table *tbl) {
  * where this inherent next table propagation is found.
  */
 ControlPathwaysToTable::InjectPoints
-        ControlPathwaysToTable::get_inject_points(const IR::MAU::Table *a,
-        const IR::MAU::Table *b, bool tbls_only) const {
+        ControlPathwaysToTable::get_inject_points(const P4::IR::MAU::Table *a,
+        const P4::IR::MAU::Table *b, bool tbls_only) const {
     InjectPoints rv;
 
-    for (safe_vector<const IR::Node *> a_path : table_pathways.at(a)) {
-        for (safe_vector<const IR::Node *> b_path : table_pathways.at(b)) {
+    for (safe_vector<const P4::IR::Node *> a_path : table_pathways.at(a)) {
+        for (safe_vector<const P4::IR::Node *> b_path : table_pathways.at(b)) {
             // Attempting to find the first divergence
-            const IR::Node *a_first_div = nullptr;
-            const IR::Node *b_first_div = nullptr;
+            const P4::IR::Node *a_first_div = nullptr;
+            const P4::IR::Node *b_first_div = nullptr;
 
             // If one table is within the next table pathway propagation pathway of another,
             // then there is nothing to inject, as this is already control dependendent
@@ -1824,17 +1824,17 @@ ControlPathwaysToTable::InjectPoints
                 break;
             }
 
-            if (a_first_div->is<IR::MAU::TableSeq>()) {
-                BUG_CHECK(b_first_div->is<IR::MAU::TableSeq>(), "The first divergence is not "
+            if (a_first_div->is<P4::IR::MAU::TableSeq>()) {
+                BUG_CHECK(b_first_div->is<P4::IR::MAU::TableSeq>(), "The first divergence is not "
                     "the same IR node, thus the IR tree is inconsistent");
                 if (!tbls_only)
                     rv.emplace_back(a_first_div, b_first_div);
                 continue;
             }
 
-            auto a_dom = a_first_div->to<IR::MAU::Table>();
+            auto a_dom = a_first_div->to<P4::IR::MAU::Table>();
             if (a_dom != nullptr) {
-                auto b_dom = b_first_div->to<IR::MAU::Table>();
+                auto b_dom = b_first_div->to<P4::IR::MAU::Table>();
                 BUG_CHECK(b_dom != nullptr, "The first divergence is not the same IR Node, thus "
                           "the IR tree is inconsistent");
                 rv.emplace_back(a_dom, b_dom);
@@ -1850,12 +1850,12 @@ void ControlPathwaysToTable::print_paths(safe_vector<Path> &paths) const {
     for (auto path : paths) {
         LOG1("    Printing path in reverse:");
         for (auto it = path.rbegin(); it != path.rend(); it++) {
-            if (auto tbl = (*it)->to<IR::MAU::Table>()) {
+            if (auto tbl = (*it)->to<P4::IR::MAU::Table>()) {
                 if (tbl->is_placed())
                     LOG1("\tTable " << tbl->unique_id().build_name());
                 else
                     LOG1("\tTable " << tbl->externalName());
-            } else if (auto seq = (*it)->to<IR::MAU::TableSeq>()) {
+            } else if (auto seq = (*it)->to<P4::IR::MAU::TableSeq>()) {
                 std::string print = "[ ";
                 std::string sep = "";
                 for (auto tbl : seq->tables) {
@@ -1865,7 +1865,7 @@ void ControlPathwaysToTable::print_paths(safe_vector<Path> &paths) const {
                 }
                 print += " ]";
                 LOG1("\tSeq " << print);
-            } else if (auto pipe = (*it)->to<IR::BFN::Pipe>()) {
+            } else if (auto pipe = (*it)->to<P4::IR::BFN::Pipe>()) {
                 LOG1("\tPipe " << pipe->canon_name());
             } else {
                 LOG1("\tIDK?");
@@ -1875,7 +1875,7 @@ void ControlPathwaysToTable::print_paths(safe_vector<Path> &paths) const {
 }
 
 /**
- * The purpose of this pass is to determine the dominator of a IR::MAU::Table object within
+ * The purpose of this pass is to determine the dominator of a P4::IR::MAU::Table object within
  * the IR graph.  If a table is applied multiple times, in accordance with the rules of the
  * IR, due to the mutually exclusion rules of the tables, a table is only applied once per
  * packet.  This means something like the following:
@@ -1916,7 +1916,7 @@ void ControlPathwaysToTable::print_paths(safe_vector<Path> &paths) const {
  * table.  At that point, this function might have to change in order to capture this
  * kind of dominator
  */
-const IR::MAU::Table *ControlPathwaysToTable::find_dominator(const IR::MAU::Table *init) const {
+const P4::IR::MAU::Table *ControlPathwaysToTable::find_dominator(const P4::IR::MAU::Table *init) const {
     auto paths = table_pathways.at(init);
 
     BUG_CHECK(paths.size() >= 1, "Path calculation is incorrect");
@@ -1933,12 +1933,12 @@ const IR::MAU::Table *ControlPathwaysToTable::find_dominator(const IR::MAU::Tabl
 
     BUG_CHECK(common_path.size() > 0, "Dominator pathway is incorrect");
 
-    auto dom = common_path[0]->to<IR::MAU::Table>();
+    auto dom = common_path[0]->to<P4::IR::MAU::Table>();
     BUG_CHECK(dom, "Dominator pathway is incorrect");
     return dom;
 }
 
-void DepStagesThruDomFrontier::postorder(const IR::MAU::Table *tbl) {
+void DepStagesThruDomFrontier::postorder(const P4::IR::MAU::Table *tbl) {
     LOG3("DepStagesThruDomFrontier postorder : " << tbl->name);
     auto &dom_frontier = ntp.control_dom_set.at(tbl);
     if (dom_frontier.size() == 1) {
@@ -1947,7 +1947,7 @@ void DepStagesThruDomFrontier::postorder(const IR::MAU::Table *tbl) {
     }
 
     DependencyGraph local_dg;
-    ordered_map<const IR::MAU::Table *,
+    ordered_map<const P4::IR::MAU::Table *,
         DependencyGraph::Graph::vertex_descriptor> local_labelToVertex;
     for (auto cd_tbl : dom_frontier) {
         local_dg.add_vertex(cd_tbl);
@@ -1983,8 +1983,8 @@ void DepStagesThruDomFrontier::postorder(const IR::MAU::Table *tbl) {
     typename DependencyGraph::Graph::edge_iterator edges, edges_end;
     local_dg.dep_type_map.clear();
     for (boost::tie(edges, edges_end) = boost::edges(local_dg.g); edges != edges_end; ++edges) {
-        const IR::MAU::Table* src = local_dg.get_vertex(boost::source(*edges, local_dg.g));
-        const IR::MAU::Table* dst = local_dg.get_vertex(boost::target(*edges, local_dg.g));
+        const P4::IR::MAU::Table* src = local_dg.get_vertex(boost::source(*edges, local_dg.g));
+        const P4::IR::MAU::Table* dst = local_dg.get_vertex(boost::target(*edges, local_dg.g));
         if ((local_dg.dep_type_map.count(src) == 0) ||
             (local_dg.dep_type_map.at(src).count(dst) == 0)
             || local_dg.is_ctrl_edge(local_dg.dep_type_map.at(src).at(dst))
@@ -2054,12 +2054,12 @@ void FindDependencyGraph::add_logical_deps_from_control_deps(void) {
     std::vector<ordered_set<DependencyGraph::Graph::vertex_descriptor>>
         topo_rst = calc_topological_stage(DependencyGraph::ANTI);
 
-    typedef std::pair<const IR::MAU::Table*, const IR::MAU::Table*> tpair;
+    typedef std::pair<const P4::IR::MAU::Table*, const P4::IR::MAU::Table*> tpair;
     ordered_map<tpair, DependencyGraph::Graph::edge_descriptor> edges_to_add;
 
     for (int i = int(topo_rst.size()) - 1; i >= 0; --i) {
         for (auto& v : topo_rst[i]) {
-            const IR::MAU::Table* table = dg.get_vertex(v);
+            const P4::IR::MAU::Table* table = dg.get_vertex(v);
             auto out_edge_itr_pair = boost::out_edges(v, dg.g);
             auto& out = out_edge_itr_pair.first;
             auto& out_end = out_edge_itr_pair.second;
@@ -2075,7 +2075,7 @@ void FindDependencyGraph::add_logical_deps_from_control_deps(void) {
                 for (auto frontier_leaf : table_nt_leaves) {
                     if (mutex(table_later, frontier_leaf)) continue;
                     for (auto table_seq_pair : inject_points) {
-                         auto tbl = table_seq_pair.second->to<IR::MAU::Table>();
+                         auto tbl = table_seq_pair.second->to<P4::IR::MAU::Table>();
                          auto key = std::make_pair(frontier_leaf, tbl);
                          edges_to_add[key] = *out;
                     }
@@ -2092,8 +2092,8 @@ void FindDependencyGraph::add_logical_deps_from_control_deps(void) {
         auto dep = DependencyGraph::ANTI_NEXT_TABLE_DATA;
         auto source = boost::source(pair.second, dg.g);
         auto target = boost::target(pair.second, dg.g);
-        const IR::MAU::Table* tsource = dg.get_vertex(source);
-        const IR::MAU::Table* ttarget = dg.get_vertex(target);
+        const P4::IR::MAU::Table* tsource = dg.get_vertex(source);
+        const P4::IR::MAU::Table* ttarget = dg.get_vertex(target);
         std::string src_name = std::string(tsource ? tsource->name : "SINK");
         std::string dst_name = std::string(ttarget ? ttarget->name : "SINK");
         LOG4("\t\tadd_dependency " << dep_types(dep) << " " << pair.first.first->name << "-"
@@ -2133,11 +2133,11 @@ void FindDependencyGraph::finalize_dependence_graph(void) {
     // Build dep_stages
     for (int i = int(topo_rst.size()) - 1; i >= 0; --i) {
         for (const auto& vertex : topo_rst[i]) {
-            const IR::MAU::Table* table = dg.get_vertex(vertex);
+            const P4::IR::MAU::Table* table = dg.get_vertex(vertex);
             auto& happens_later = dg.happens_before_work_map[table];
             dg.stage_info[table].dep_stages =
                 std::accumulate(happens_later.begin(), happens_later.end(), 0,
-                                [this] (int sz, const IR::MAU::Table* later) {
+                                [this] (int sz, const P4::IR::MAU::Table* later) {
                                     return std::max(sz, dg.stage_info[later].dep_stages + 1); });
         }
     }
@@ -2145,8 +2145,8 @@ void FindDependencyGraph::finalize_dependence_graph(void) {
     typename DependencyGraph::Graph::edge_iterator edges, edges_end;
     dg.dep_type_map.clear();
     for (boost::tie(edges, edges_end) = boost::edges(dg.g); edges != edges_end; ++edges) {
-        const IR::MAU::Table* src = dg.get_vertex(boost::source(*edges, dg.g));
-        const IR::MAU::Table* dst = dg.get_vertex(boost::target(*edges, dg.g));
+        const P4::IR::MAU::Table* src = dg.get_vertex(boost::source(*edges, dg.g));
+        const P4::IR::MAU::Table* dst = dg.get_vertex(boost::target(*edges, dg.g));
         if ((dg.dep_type_map.count(src) == 0) || (dg.dep_type_map.at(src).count(dst) == 0)
             || dg.is_ctrl_edge(dg.dep_type_map.at(src).at(dst))
             || (dg.dep_type_map.at(src).at(dst) == DependencyGraph::CONT_CONFLICT)
@@ -2166,10 +2166,10 @@ void FindDependencyGraph::finalize_dependence_graph(void) {
         topo_rst_control = calc_topological_stage(DependencyGraph::CONTROL);
     for (int i = int(topo_rst_control.size()) - 1; i >= 0; --i) {
         for (const auto& vertex : topo_rst_control[i]) {
-            const IR::MAU::Table* table = dg.get_vertex(vertex);
+            const P4::IR::MAU::Table* table = dg.get_vertex(vertex);
             auto& happens_later = dg.happens_before_work_map[table];
             dg.stage_info[table].dep_stages_control = std::accumulate(happens_later.begin(),
-                happens_later.end(), 0, [this, table] (int sz, const IR::MAU::Table* later) {
+                happens_later.end(), 0, [this, table] (int sz, const P4::IR::MAU::Table* later) {
                     int stage_addition = 0;
                     if (dg.dep_type_map.count(table) && dg.dep_type_map.at(table).count(later)
                         && !(dg.is_ctrl_edge(dg.dep_type_map.at(table).at(later)))
@@ -2269,8 +2269,8 @@ void FindDependencyGraph::finalize_dependence_graph(void) {
     typename DependencyGraph::Graph::edge_iterator edges2, edges2_end;
     dg.dep_type_map.clear();
     for (boost::tie(edges2, edges2_end) = boost::edges(dg.g); edges2 != edges2_end; ++edges2) {
-        const IR::MAU::Table* src = dg.get_vertex(boost::source(*edges2, dg.g));
-        const IR::MAU::Table* dst = dg.get_vertex(boost::target(*edges2, dg.g));
+        const P4::IR::MAU::Table* src = dg.get_vertex(boost::source(*edges2, dg.g));
+        const P4::IR::MAU::Table* dst = dg.get_vertex(boost::target(*edges2, dg.g));
         if ((dg.dep_type_map.count(src) == 0) || (dg.dep_type_map.at(src).count(dst) == 0)
             || (dg.dep_type_map.at(src).at(dst) == DependencyGraph::CONT_CONFLICT)
             || dg.is_ctrl_edge(dg.dep_type_map.at(src).at(dst))
@@ -2295,7 +2295,7 @@ void FindDependencyGraph::finalize_dependence_graph(void) {
     // min_stage of 4.
     for (size_t i = 0; i < topo_rst_logical.size(); ++i) {
         for (const auto& vertex : topo_rst_logical[i]) {
-            const IR::MAU::Table* table = dg.get_vertex(vertex);
+            const P4::IR::MAU::Table* table = dg.get_vertex(vertex);
             dg.stage_info[table].min_stage = i;
         }
     }
@@ -2411,14 +2411,14 @@ void FindDependencyGraph::verify_dependence_graph() {
     for (boost::tie(out, out_end) = boost::edges(dg.g);
          out != out_end;
          ++out) {
-        const IR::MAU::Table *t1 = dg.get_vertex(boost::source(*out, dg.g));
-        const IR::MAU::Table *t2 = dg.get_vertex(boost::target(*out, dg.g));
+        const P4::IR::MAU::Table *t1 = dg.get_vertex(boost::source(*out, dg.g));
+        const P4::IR::MAU::Table *t2 = dg.get_vertex(boost::target(*out, dg.g));
         if ((t1->gress == EGRESS && t2->gress == INGRESS)
             || (t1->gress == INGRESS && t2->gress == EGRESS))
             BUG("Ingress table '%s' depends on egress table '%s'.", t1->name, t2->name); }
 }
 
-bool PrintPipe::preorder(const IR::BFN::Pipe *pipe) {
+bool PrintPipe::preorder(const P4::IR::BFN::Pipe *pipe) {
     LOG2(TableTree("ingress"_cs, pipe->thread[INGRESS].mau) <<
          TableTree("egress"_cs, pipe->thread[EGRESS].mau) <<
          TableTree("ghost"_cs, pipe->ghost_thread.ghost_mau) );
@@ -2447,7 +2447,7 @@ FindDependencyGraph::FindDependencyGraph(const PhvInfo &phv,
     });
 }
 
-Visitor::profile_t FindDependencyGraph::init_apply(const IR::Node *node) {
+Visitor::profile_t FindDependencyGraph::init_apply(const P4::IR::Node *node) {
     auto rv = Logging::PassManager::init_apply(node);
     if (!passContext.isNullOrEmpty())
         LOG1("FindDependencyGraph : " << passContext << " : "
@@ -2456,12 +2456,12 @@ Visitor::profile_t FindDependencyGraph::init_apply(const IR::Node *node) {
     return rv;
 }
 
-void FindDependencyGraph::end_apply(const IR::Node *root) {
+void FindDependencyGraph::end_apply(const P4::IR::Node *root) {
     finalize_dependence_graph();
 
     LOG2(dg);
     if (BackendOptions().create_graphs && dotFile != "") {
-        auto pipeId = root->to<IR::BFN::Pipe>()->canon_id();
+        auto pipeId = root->to<P4::IR::BFN::Pipe>()->canon_id();
         auto graphsDir = BFNContext::get().getOutputDirectory("graphs"_cs, pipeId);
         std::ofstream dotStream(graphsDir + "/" + dotFile + ".dot", std::ios_base::out);
         DependencyGraph::dump_viz(dotStream, dg);
@@ -2492,7 +2492,7 @@ std::ostream &operator<<(std::ostream &out, DependencyGraph::dependencies_t deps
 }
 
 
-bool PrintDependencyGraph::preorder(const IR::BFN::Pipe *p) {
+bool PrintDependencyGraph::preorder(const P4::IR::BFN::Pipe *p) {
     vertex_names.clear();
     edge_names.clear();
     bitvec_to_char.clear();
@@ -2614,17 +2614,17 @@ std::stringstream PrintDependencyGraph::print_graph(const DependencyGraph& dg) {
     return ss;
 }
 
-void PrintDependencyGraph::reverse_dfs(const IR::MAU::Table *tbl,
-                                       std::stack<const IR::MAU::Table*>& chain,
-                                       std::vector<std::vector<const IR::MAU::Table*>>& crit_chains,
-                                       std::map<const IR::MAU::Table*, bool>& visited_tbls,
+void PrintDependencyGraph::reverse_dfs(const P4::IR::MAU::Table *tbl,
+                                       std::stack<const P4::IR::MAU::Table*>& chain,
+                                       std::vector<std::vector<const P4::IR::MAU::Table*>>& crit_chains,
+                                       std::map<const P4::IR::MAU::Table*, bool>& visited_tbls,
                                        int last_stg) {
     chain.push(tbl);
     LOG7(Log::indent << "reverse_dfs table: " << tbl->name);
     BUG_CHECK(dg.stage_info.count(tbl), "Table %1% not in stage_info  ...? ", tbl->name);
 
     if (dg.min_stage_edges.count(tbl)) {
-        std::set<const IR::MAU::Table*> prev_tbls;
+        std::set<const P4::IR::MAU::Table*> prev_tbls;
         for (auto [p_tbl, dep] : dg.min_stage_edges.at(tbl)) {
             if (!visited_tbls[tbl] && !(prev_tbls.count(p_tbl)))
                 reverse_dfs(p_tbl, chain, crit_chains, visited_tbls, last_stg);
@@ -2638,8 +2638,8 @@ void PrintDependencyGraph::reverse_dfs(const IR::MAU::Table *tbl,
     LOG7(Log::indent << "pipe_size: " << pipe_size << Log::unindent << Log::unindent);
 
     if (pipe_size > min_path_len) {
-        std::vector<const IR::MAU::Table*> crit_chain;
-        std::stack<const IR::MAU::Table*> chain_stack(chain);
+        std::vector<const P4::IR::MAU::Table*> crit_chain;
+        std::stack<const P4::IR::MAU::Table*> chain_stack(chain);
         while (!chain_stack.empty()) {
             crit_chain.push_back(chain_stack.top());
             chain_stack.pop();
@@ -2654,10 +2654,10 @@ void PrintDependencyGraph::reverse_dfs(const IR::MAU::Table *tbl,
 
 
 void PrintDependencyGraph::print_critical_chains(const DependencyGraph& dg) {
-    std::list<std::vector<const IR::MAU::Table*>> chains;
-    std::vector<std::vector<const IR::MAU::Table*>> crit_chains;
-    std::map<int, std::vector<const IR::MAU::Table*>> tablesPerMinStage;
-    std::map<const IR::MAU::Table*, bool> visited_tbls;
+    std::list<std::vector<const P4::IR::MAU::Table*>> chains;
+    std::vector<std::vector<const P4::IR::MAU::Table*>> crit_chains;
+    std::map<int, std::vector<const P4::IR::MAU::Table*>> tablesPerMinStage;
+    std::map<const P4::IR::MAU::Table*, bool> visited_tbls;
     LOG6("Looking for Table dependency chains wih minimum length of " << min_path_len <<
          Log::indent);
 
@@ -2674,7 +2674,7 @@ void PrintDependencyGraph::print_critical_chains(const DependencyGraph& dg) {
     // and min_stage_edges to build vectors of table chains that are
     // at least as long as 70% of the device pipeline length
 
-    std::stack<const IR::MAU::Table*> cur_chain;
+    std::stack<const P4::IR::MAU::Table*> cur_chain;
     bool stop_search = false;
 
     for (auto rItr = tablesPerMinStage.rbegin(); rItr!=tablesPerMinStage.rend(); ++rItr) {
@@ -2729,7 +2729,7 @@ void PrintDependencyGraph::print_critical_chains(const DependencyGraph& dg) {
     }
 }
 
-void PrintDependencyGraph::end_apply(const IR::Node *) {
+void PrintDependencyGraph::end_apply(const P4::IR::Node *) {
     LOG_FEATURE("table_dependency_summary", 3, print_graph(dg));
     print_critical_chains(dg);
 }

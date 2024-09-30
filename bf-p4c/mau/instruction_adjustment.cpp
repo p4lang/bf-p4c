@@ -35,20 +35,20 @@
  *
  *  In this example, it is possible to carry tmp0/1 on 32, 16 or 8-bit field.
  */
-static void split_shl_instruction(IR::Vector<IR::MAU::Primitive> *split,
+static void split_shl_instruction(P4::IR::Vector<P4::IR::MAU::Primitive> *split,
                                   std::vector<le_bitrange> &slices, const PHV::Field *field,
-                                  IR::MAU::Instruction *inst) {
+                                  P4::IR::MAU::Instruction *inst) {
     std::queue<le_bitrange> slices_q;
     int container_size = 0;
     int shift_val;
 
     // Instruction format is "instruction:shl(dest, src, shift);"
-    const IR::Constant *c = inst->operands[2]->to<IR::Constant>();
+    const P4::IR::Constant *c = inst->operands[2]->to<P4::IR::Constant>();
     BUG_CHECK(c != nullptr, "No shift constant found");
     shift_val = c->asInt();
 
-    const IR::Expression* dest_expr = inst->operands[0];
-    const IR::Expression* src_expr = inst->operands[1];
+    const P4::IR::Expression* dest_expr = inst->operands[0];
+    const P4::IR::Expression* src_expr = inst->operands[1];
 
     for (auto slice : slices) {
         const PHV::AllocSlice &alloc_slice = field->for_bit(slice.lo);
@@ -59,7 +59,7 @@ static void split_shl_instruction(IR::Vector<IR::MAU::Primitive> *split,
                       "Trying to funnel shift on PHV with different size");
 
         le_bitrange dst_range = alloc_slice.field_slice();
-        const IR::Expression* slice_expr = new IR::Slice(dest_expr, dst_range.hi, dst_range.lo);
+        const P4::IR::Expression* slice_expr = new P4::IR::Slice(dest_expr, dst_range.hi, dst_range.lo);
         slices_q.push(dst_range);
 
         // Shifting with a value greater than the container slice high bit result in zero value
@@ -73,9 +73,9 @@ static void split_shl_instruction(IR::Vector<IR::MAU::Primitive> *split,
         // ****|-->  instruction:set(ingress::hdr.mul32_64.res[31:0], 0);
         //     |-->  instruction:shl(ingress::hdr.mul32_64.res[63:32], ingress::tmp0_0[31:0], 8);
         if (shift_val > slice.hi) {
-            const IR::Expression* zero = new IR::Constant(
-                                            IR::Type_Bits::get(alloc_slice.width()), 0);
-            auto* prim = new IR::MAU::Instruction("set"_cs, { slice_expr, zero });
+            const P4::IR::Expression* zero = new P4::IR::Constant(
+                                            P4::IR::Type_Bits::get(alloc_slice.width()), 0);
+            auto* prim = new P4::IR::MAU::Instruction("set"_cs, { slice_expr, zero });
             split->push_back(prim);
         // Shifting with a value equal to a container boundary result in a set instruction with
         // shifted slices. e.g.:
@@ -92,8 +92,8 @@ static void split_shl_instruction(IR::Vector<IR::MAU::Primitive> *split,
         } else if (shift_val >= container_size && (shift_val % container_size) == 0) {
             le_bitrange src_range = slices_q.front();
             slices_q.pop();
-            const IR::Expression* slice_src = new IR::Slice(src_expr, src_range.hi, src_range.lo);
-            auto* prim = new IR::MAU::Instruction("set"_cs, { slice_expr, slice_src });
+            const P4::IR::Expression* slice_src = new P4::IR::Slice(src_expr, src_range.hi, src_range.lo);
+            auto* prim = new P4::IR::MAU::Instruction("set"_cs, { slice_expr, slice_src });
             split->push_back(prim);
         // First container to be shifted normally. e.g.:
         // bit<64> tmp0 = 0;
@@ -110,10 +110,10 @@ static void split_shl_instruction(IR::Vector<IR::MAU::Primitive> *split,
         //     |-->  instruction:funnel-shift(ingress::hdr.mul32_64.res[63:48],
         //                                    ingress::tmp0_0[63:48], ingress::tmp0_0[47:32], 6);
         } else if (shift_val >= slice.lo) {
-            const IR::Expression* shift_adj = new IR::Constant(shift_val % container_size);
+            const P4::IR::Expression* shift_adj = new P4::IR::Constant(shift_val % container_size);
             le_bitrange src_range = slices_q.front();
-            const IR::Expression* slice_src = new IR::Slice(src_expr, src_range.hi, src_range.lo);
-            auto* prim = new IR::MAU::Instruction("shl"_cs, { slice_expr, slice_src, shift_adj });
+            const P4::IR::Expression* slice_src = new P4::IR::Slice(src_expr, src_range.hi, src_range.lo);
+            auto* prim = new P4::IR::MAU::Instruction("shl"_cs, { slice_expr, slice_src, shift_adj });
             split->push_back(prim);
         // Following container to be shifted normally. e.g.:
         // bit<64> tmp0 = 0;
@@ -130,16 +130,16 @@ static void split_shl_instruction(IR::Vector<IR::MAU::Primitive> *split,
         // ****|-->  instruction:funnel-shift(ingress::hdr.mul32_64.res[63:48],
         //                                    ingress::tmp0_0[63:48], ingress::tmp0_0[47:32], 6);
         } else {
-            const IR::Expression* shift_adj = new IR::Constant(container_size -
+            const P4::IR::Expression* shift_adj = new P4::IR::Constant(container_size -
                                                                (shift_val % container_size));
             le_bitrange src_range_lo = slices_q.front();
             slices_q.pop();
             le_bitrange src_range_hi = slices_q.front();
-            const IR::Expression* slice_src2 = new IR::Slice(src_expr, src_range_hi.hi,
+            const P4::IR::Expression* slice_src2 = new P4::IR::Slice(src_expr, src_range_hi.hi,
                                                              src_range_hi.lo);
-            const IR::Expression* slice_src1 = new IR::Slice(src_expr, src_range_lo.hi,
+            const P4::IR::Expression* slice_src1 = new P4::IR::Slice(src_expr, src_range_lo.hi,
                                                              src_range_lo.lo);
-            auto* prim = new IR::MAU::Instruction("funnel-shift"_cs,
+            auto* prim = new P4::IR::MAU::Instruction("funnel-shift"_cs,
                                                 { slice_expr, slice_src2, slice_src1, shift_adj });
             split->push_back(prim);
         }
@@ -169,21 +169,21 @@ static void split_shl_instruction(IR::Vector<IR::MAU::Primitive> *split,
  *
  *  In this example, it is possible to carry tmp0/1 on 32, 16 or 8-bit field.
  */
-static void split_shr_instruction(IR::Vector<IR::MAU::Primitive> *split,
+static void split_shr_instruction(P4::IR::Vector<P4::IR::MAU::Primitive> *split,
                                   std::vector<le_bitrange> &slices, const PHV::Field *field,
-                                  IR::MAU::Instruction *inst, bool signed_opcode) {
+                                  P4::IR::MAU::Instruction *inst, bool signed_opcode) {
     std::queue<le_bitrange> slices_q;
     int container_size = 0;
     int shift_val;
     int high_bit;
 
     // Instruction format is "instruction:shrx(dest, src, shift);"
-    const IR::Constant *c = inst->operands[2]->to<IR::Constant>();
+    const P4::IR::Constant *c = inst->operands[2]->to<P4::IR::Constant>();
     BUG_CHECK(c != nullptr, "No shift constant found");
     shift_val = c->asInt();
 
-    const IR::Expression* dest_expr = inst->operands[0];
-    const IR::Expression* src_expr = inst->operands[1];
+    const P4::IR::Expression* dest_expr = inst->operands[0];
+    const P4::IR::Expression* src_expr = inst->operands[1];
 
     // Process the slices from the highest bit range to the lowest.
     for (auto slice : boost::adaptors::reverse(slices)) {
@@ -197,7 +197,7 @@ static void split_shr_instruction(IR::Vector<IR::MAU::Primitive> *split,
         }
 
         le_bitrange dst_range = alloc_slice.field_slice();
-        const IR::Expression* slice_expr = new IR::Slice(dest_expr, dst_range.hi, dst_range.lo);
+        const P4::IR::Expression* slice_expr = new P4::IR::Slice(dest_expr, dst_range.hi, dst_range.lo);
         slices_q.push(dst_range);
 
         // Shifting with a value greater than the container slice high bit result in zero value
@@ -217,17 +217,17 @@ static void split_shr_instruction(IR::Vector<IR::MAU::Primitive> *split,
         //     |-->  instruction:shrs(ingress::hdr.mul32_64.res[31:0], ingress::tmp0_0[63:32], 8);
         if (shift_val > high_bit - slice.lo) {
             if (signed_opcode) {
-                const IR::Expression* shift_adj = new IR::Constant(container_size - 1);
+                const P4::IR::Expression* shift_adj = new P4::IR::Constant(container_size - 1);
                 le_bitrange src_range = slices_q.front();
-                const IR::Expression* slice_src = new IR::Slice(src_expr, src_range.hi,
+                const P4::IR::Expression* slice_src = new P4::IR::Slice(src_expr, src_range.hi,
                                                                 src_range.lo);
                 auto *prim =
                     new IR::MAU::Instruction("shrs"_cs, {slice_expr, slice_src, shift_adj});
                 split->push_back(prim);
             } else {
-                const IR::Expression *zero = new IR::Constant(
-                                                IR::Type_Bits::get(alloc_slice.width()), 0);
-                auto* prim = new IR::MAU::Instruction("set"_cs, { slice_expr, zero });
+                const P4::IR::Expression *zero = new P4::IR::Constant(
+                                                P4::IR::Type_Bits::get(alloc_slice.width()), 0);
+                auto* prim = new P4::IR::MAU::Instruction("set"_cs, { slice_expr, zero });
                 split->push_back(prim);
             }
         // Shifting with a value equal to a container boundary result in a set instruction with
@@ -245,8 +245,8 @@ static void split_shr_instruction(IR::Vector<IR::MAU::Primitive> *split,
         } else if (shift_val >= container_size && (shift_val % container_size) == 0) {
             le_bitrange src_range = slices_q.front();
             slices_q.pop();
-            const IR::Expression* slice_src = new IR::Slice(src_expr, src_range.hi, src_range.lo);
-            auto* prim = new IR::MAU::Instruction("set"_cs, { slice_expr, slice_src });
+            const P4::IR::Expression* slice_src = new P4::IR::Slice(src_expr, src_range.hi, src_range.lo);
+            auto* prim = new P4::IR::MAU::Instruction("set"_cs, { slice_expr, slice_src });
             split->push_back(prim);
         // First container to be shifted normally. e.g.:
         // bit<64> tmp0 = 0;
@@ -263,10 +263,10 @@ static void split_shr_instruction(IR::Vector<IR::MAU::Primitive> *split,
         //     |-->  instruction:funnel-shift(ingress::hdr.mul32_64.res[15:0],
         //                                    ingress::tmp0_0[31:16], ingress::tmp0_0[15:0], 10);
         } else if (shift_val >= high_bit - slice.hi) {
-            const IR::Expression* shift_adj = new IR::Constant(shift_val % container_size);
+            const P4::IR::Expression* shift_adj = new P4::IR::Constant(shift_val % container_size);
             le_bitrange src_range = slices_q.front();
-            const IR::Expression* slice_src = new IR::Slice(src_expr, src_range.hi, src_range.lo);
-            auto* prim = new IR::MAU::Instruction(signed_opcode ? "shrs"_cs : "shru"_cs,
+            const P4::IR::Expression* slice_src = new P4::IR::Slice(src_expr, src_range.hi, src_range.lo);
+            auto* prim = new P4::IR::MAU::Instruction(signed_opcode ? "shrs"_cs : "shru"_cs,
                                                   { slice_expr, slice_src, shift_adj });
             split->push_back(prim);
         // Following container to be shifted normally. e.g.:
@@ -284,15 +284,15 @@ static void split_shr_instruction(IR::Vector<IR::MAU::Primitive> *split,
         // ****|-->  instruction:funnel-shift(ingress::hdr.mul32_64.res[15:0],
         //                                    ingress::tmp0_0[31:16], ingress::tmp0_0[15:0], 10);
         } else {
-            const IR::Expression* shift_adj = new IR::Constant(shift_val % container_size);
+            const P4::IR::Expression* shift_adj = new P4::IR::Constant(shift_val % container_size);
             le_bitrange src_range_hi = slices_q.front();
             slices_q.pop();
             le_bitrange src_range_lo = slices_q.front();
-            const IR::Expression* slice_src2 = new IR::Slice(src_expr, src_range_hi.hi,
+            const P4::IR::Expression* slice_src2 = new P4::IR::Slice(src_expr, src_range_hi.hi,
                                                              src_range_hi.lo);
-            const IR::Expression* slice_src1 = new IR::Slice(src_expr, src_range_lo.hi,
+            const P4::IR::Expression* slice_src1 = new P4::IR::Slice(src_expr, src_range_lo.hi,
                                                              src_range_lo.lo);
-            auto* prim = new IR::MAU::Instruction("funnel-shift"_cs,
+            auto* prim = new P4::IR::MAU::Instruction("funnel-shift"_cs,
                                                 { slice_expr, slice_src2, slice_src1, shift_adj });
             split->push_back(prim);
         }
@@ -343,7 +343,7 @@ static void split_shr_instruction(IR::Vector<IR::MAU::Primitive> *split,
   *  ----> shl(ingress::hdr.my_header.b[7:0], ingress::ig_md.b[15:8], 3);
   *  -> No Translation needed
   */
-const IR::Node *AdjustShiftInstructions::preorder(IR::MAU::Instruction *inst) {
+const P4::IR::Node *AdjustShiftInstructions::preorder(P4::IR::MAU::Instruction *inst) {
     cstring opcode = inst->name;
 
     // Currently only support signed shift right operation since all of the other shift operation
@@ -357,7 +357,7 @@ const IR::Node *AdjustShiftInstructions::preorder(IR::MAU::Instruction *inst) {
     int num_slices = 0;
     int dst_cont_size;
     const PHV::FieldUse use(PHV::FieldUse::WRITE);
-    field->foreach_alloc(bits, findContext<IR::MAU::Table>(), &use,
+    field->foreach_alloc(bits, findContext<P4::IR::MAU::Table>(), &use,
                          [&](const PHV::AllocSlice& alloc) {
         num_slices++;
         dst_cont_size = alloc.container().size();
@@ -372,7 +372,7 @@ const IR::Node *AdjustShiftInstructions::preorder(IR::MAU::Instruction *inst) {
     if (src_field->size <= dst_cont_size) return inst;
 
     // Instruction format is "instruction:shrx(dest, src, shift);"
-    const IR::Constant *c = inst->operands[2]->to<IR::Constant>();
+    const P4::IR::Constant *c = inst->operands[2]->to<P4::IR::Constant>();
     BUG_CHECK(c != nullptr, "No shift constant found");
     int shift_val = c->asInt();
 
@@ -380,11 +380,11 @@ const IR::Node *AdjustShiftInstructions::preorder(IR::MAU::Instruction *inst) {
               "Destination slice does not cover the entire destination container");
 
     LOG5("Adjusting signed shift right instruction: " << inst);
-    IR::MAU::Instruction *adjust = nullptr;
-    const IR::Expression* dest_expr = inst->operands[0];
-    const IR::Expression* src_expr = inst->operands[1];
+    P4::IR::MAU::Instruction *adjust = nullptr;
+    const P4::IR::Expression* dest_expr = inst->operands[0];
+    const P4::IR::Expression* src_expr = inst->operands[1];
 
-    const IR::Slice *src_slice = src_expr->to<IR::Slice>();
+    const P4::IR::Slice *src_slice = src_expr->to<P4::IR::Slice>();
     BUG_CHECK(src_slice != nullptr, "No source slice found");
     unsigned low_bit = src_slice->getL();
     int offset = shift_val + low_bit;
@@ -392,9 +392,9 @@ const IR::Node *AdjustShiftInstructions::preorder(IR::MAU::Instruction *inst) {
     // Translating instruction:shrs(ingress::my_header.a[7:0], ingress::my_md.a[7:0], 24);
     // ******|-->  instruction:set(ingress::my_header.a[7:0], ingress::my_md.a[31:24]);
     if ((offset % dst_cont_size) == 0 && (offset < src_field->size)) {
-        const IR::Expression *new_src_expr = new IR::Slice(src_slice->e0,
+        const P4::IR::Expression *new_src_expr = new P4::IR::Slice(src_slice->e0,
                                                            offset + dst_cont_size - 1, offset);
-        adjust = new IR::MAU::Instruction("set"_cs, { dest_expr, new_src_expr });
+        adjust = new P4::IR::MAU::Instruction("set"_cs, { dest_expr, new_src_expr });
 
     // Translating instruction:shrs(ingress::my_header.a[7:0], ingress::my_md.a[7:0], 25);
     // ******|-->  instruction:shrs(ingress::my_header.a[7:0], ingress::my_md.a[31:24], 1);
@@ -403,24 +403,24 @@ const IR::Node *AdjustShiftInstructions::preorder(IR::MAU::Instruction *inst) {
         if (shift_val >= dst_cont_size)
             shift_val = dst_cont_size - 1;
 
-        const IR::Expression* shift_adj = new IR::Constant(shift_val);
-        const IR::Expression *new_src_expr = new IR::Slice(src_slice->e0, src_field->size - 1,
+        const P4::IR::Expression* shift_adj = new P4::IR::Constant(shift_val);
+        const P4::IR::Expression *new_src_expr = new P4::IR::Slice(src_slice->e0, src_field->size - 1,
                                                            src_field->size - dst_cont_size);
-        adjust = new IR::MAU::Instruction("shrs"_cs, { dest_expr, new_src_expr, shift_adj });
+        adjust = new P4::IR::MAU::Instruction("shrs"_cs, { dest_expr, new_src_expr, shift_adj });
 
     // Translating instruction:shrs(ingress::my_header.a[7:0], ingress::my_md.a[7:0], 9);
     // ******|-->  instruction:funnel-shift(ingress::my_header.a[7:0], ingress::my_md.a[23:16],
     //                                      ingress::my_md.a[15:8], 1);
     } else {
-        const IR::Expression* shift_adj = new IR::Constant(offset % dst_cont_size);
+        const P4::IR::Expression* shift_adj = new P4::IR::Constant(offset % dst_cont_size);
         int container_offset = offset / dst_cont_size;
         int high_bit = ((container_offset + 1) * dst_cont_size) - 1;
         int low_bit = container_offset * dst_cont_size;
 
-        const IR::Expression* slice_src1 = new IR::Slice(src_slice->e0, high_bit, low_bit);
-        const IR::Expression* slice_src2 = new IR::Slice(src_slice->e0, high_bit + dst_cont_size,
+        const P4::IR::Expression* slice_src1 = new P4::IR::Slice(src_slice->e0, high_bit, low_bit);
+        const P4::IR::Expression* slice_src2 = new P4::IR::Slice(src_slice->e0, high_bit + dst_cont_size,
                                                          low_bit + dst_cont_size);
-        adjust = new IR::MAU::Instruction("funnel-shift"_cs,
+        adjust = new P4::IR::MAU::Instruction("funnel-shift"_cs,
                                           { dest_expr, slice_src2, slice_src1, shift_adj });
     }
 
@@ -429,14 +429,14 @@ const IR::Node *AdjustShiftInstructions::preorder(IR::MAU::Instruction *inst) {
 }
 
 /** SplitInstructions */
-const IR::Node *SplitInstructions::preorder(IR::MAU::Instruction *inst) {
+const P4::IR::Node *SplitInstructions::preorder(P4::IR::MAU::Instruction *inst) {
     le_bitrange bits;
     auto* field = phv.field(inst->operands.at(0), &bits);
     if (!field) return inst;  // error?
 
     std::vector<le_bitrange> slices;
     PHV::FieldUse use(PHV::FieldUse::WRITE);
-    field->foreach_alloc(bits, findContext<IR::MAU::Table>(), &use,
+    field->foreach_alloc(bits, findContext<P4::IR::MAU::Table>(), &use,
                          [&](const PHV::AllocSlice& alloc) {
         slices.push_back(alloc.field_slice());
     });
@@ -453,7 +453,7 @@ const IR::Node *SplitInstructions::preorder(IR::MAU::Instruction *inst) {
             opcode != "ssubu" && opcode != "ssubs",
             "Saturating arithmetic operations cannot be split");
 
-    auto split = new IR::Vector<IR::MAU::Primitive>();
+    auto split = new P4::IR::Vector<P4::IR::MAU::Primitive>();
 
     if (opcode == "shl") {
         split_shl_instruction(split, slices, field, inst);
@@ -500,11 +500,11 @@ const IR::Node *SplitInstructions::preorder(IR::MAU::Instruction *inst) {
  *  action_analysis pass, but summarized are restricted from a load_const, and a src2 limitation
  *  on all instructions.
  */
-const IR::MAU::Action *ConstantsToActionData::preorder(IR::MAU::Action *act) {
+const P4::IR::MAU::Action *ConstantsToActionData::preorder(P4::IR::MAU::Action *act) {
     LOG1("ConstantsToActionData preorder on action: " << act);
     container_actions_map.clear();
     constant_containers.clear();
-    auto tbl = findContext<IR::MAU::Table>();
+    auto tbl = findContext<P4::IR::MAU::Table>();
     ActionAnalysis aa(phv, true, true, tbl, red_info);
     aa.set_container_actions_map(&container_actions_map);
     act->apply(aa);
@@ -529,32 +529,32 @@ const IR::MAU::Action *ConstantsToActionData::preorder(IR::MAU::Action *act) {
 }
 
 
-const IR::Node *ConstantsToActionData::preorder(IR::Node *node) {
+const P4::IR::Node *ConstantsToActionData::preorder(P4::IR::Node *node) {
     visitOnce();
     return node;
 }
 
-const IR::MAU::Instruction *ConstantsToActionData::preorder(IR::MAU::Instruction *instr) {
+const P4::IR::MAU::Instruction *ConstantsToActionData::preorder(P4::IR::MAU::Instruction *instr) {
     LOG1("ConstantsToActionData preorder on instruction : " << instr);
     write_found = false;
     has_constant = false;
-    if (auto act = findContext<IR::MAU::Action>()) {
+    if (auto act = findContext<P4::IR::MAU::Action>()) {
         constant_rename_key.action_name = act->name;
         LOG3("  Setting constant_rename_key action name : : " << constant_rename_key.action_name);
     }
     return instr;
 }
 
-const IR::MAU::ActionArg *ConstantsToActionData::preorder(IR::MAU::ActionArg *arg) {
+const P4::IR::MAU::ActionArg *ConstantsToActionData::preorder(P4::IR::MAU::ActionArg *arg) {
     return arg;
 }
 
-const IR::MAU::Primitive *ConstantsToActionData::preorder(IR::MAU::Primitive *prim) {
+const P4::IR::MAU::Primitive *ConstantsToActionData::preorder(P4::IR::MAU::Primitive *prim) {
     prune();
     return prim;
 }
 
-const IR::Constant *ConstantsToActionData::preorder(IR::Constant *constant) {
+const P4::IR::Constant *ConstantsToActionData::preorder(P4::IR::Constant *constant) {
     LOG1("ConstantsToActionData preorder on constant : " << constant);
     has_constant = true;
     unsigned constant_value = constant->value < 0 ?
@@ -567,7 +567,7 @@ const IR::Constant *ConstantsToActionData::preorder(IR::Constant *constant) {
     return constant;
 }
 
-void ConstantsToActionData::analyze_phv_field(IR::Expression *expr) {
+void ConstantsToActionData::analyze_phv_field(P4::IR::Expression *expr) {
     le_bitrange bits;
     auto *field = phv.field(expr, &bits);
 
@@ -584,7 +584,7 @@ void ConstantsToActionData::analyze_phv_field(IR::Expression *expr) {
         le_bitrange container_bits;
         PHV::Container container;
         PHV::FieldUse use(PHV::FieldUse::WRITE);
-        field->foreach_alloc(bits, findContext<IR::MAU::Table>(), &use,
+        field->foreach_alloc(bits, findContext<P4::IR::MAU::Table>(), &use,
                              [&](const PHV::AllocSlice &alloc) {
             write_count++;
             container_bits = alloc.container_slice();
@@ -601,7 +601,7 @@ void ConstantsToActionData::analyze_phv_field(IR::Expression *expr) {
     }
 }
 
-const IR::Slice *ConstantsToActionData::preorder(IR::Slice *sl) {
+const P4::IR::Slice *ConstantsToActionData::preorder(P4::IR::Slice *sl) {
     LOG1(" ConstantsToActionData preorder on Slice " << sl);
     if (phv.field(sl))
         analyze_phv_field(sl);
@@ -610,8 +610,8 @@ const IR::Slice *ConstantsToActionData::preorder(IR::Slice *sl) {
     return sl;
 }
 
-const IR::Expression *ConstantsToActionData::preorder(IR::Expression *expr) {
-    if (!findContext<IR::MAU::Instruction>()) {
+const P4::IR::Expression *ConstantsToActionData::preorder(P4::IR::Expression *expr) {
+    if (!findContext<P4::IR::MAU::Instruction>()) {
         prune();
         return expr;
     }
@@ -623,24 +623,24 @@ const IR::Expression *ConstantsToActionData::preorder(IR::Expression *expr) {
     return expr;
 }
 
-const IR::MAU::AttachedOutput *ConstantsToActionData::preorder(IR::MAU::AttachedOutput *ao) {
+const P4::IR::MAU::AttachedOutput *ConstantsToActionData::preorder(P4::IR::MAU::AttachedOutput *ao) {
     prune();
     return ao;
 }
 
-const IR::MAU::StatefulAlu *ConstantsToActionData::preorder(IR::MAU::StatefulAlu *salu) {
+const P4::IR::MAU::StatefulAlu *ConstantsToActionData::preorder(P4::IR::MAU::StatefulAlu *salu) {
     prune();
     return salu;
 }
 
-const IR::MAU::HashDist *ConstantsToActionData::preorder(IR::MAU::HashDist *hd) {
+const P4::IR::MAU::HashDist *ConstantsToActionData::preorder(P4::IR::MAU::HashDist *hd) {
     prune();
     return hd;
 }
 
-/** Replace any constant in these particular instructions with the an IR::MAU::ActionDataConstant
+/** Replace any constant in these particular instructions with the an P4::IR::MAU::ActionDataConstant
  */
-const IR::MAU::Instruction *ConstantsToActionData::postorder(IR::MAU::Instruction *instr) {
+const P4::IR::MAU::Instruction *ConstantsToActionData::postorder(P4::IR::MAU::Instruction *instr) {
     LOG1(" ConstantsToActionData postorder on instruction " << instr);
     if (!write_found)
         BUG("No write found in an instruction in ConstantsToActionData?");
@@ -652,7 +652,7 @@ const IR::MAU::Instruction *ConstantsToActionData::postorder(IR::MAU::Instructio
 
     LOG1("   instruction has constant : " << has_constant);
 
-    auto tbl = findContext<IR::MAU::Table>();
+    auto tbl = findContext<P4::IR::MAU::Table>();
     BUG_CHECK(tbl != nullptr, "No associated table found for instruction - %1%", instr);
 
     auto &action_format = tbl->resources->action_format;
@@ -669,35 +669,35 @@ const IR::MAU::Instruction *ConstantsToActionData::postorder(IR::MAU::Instructio
     auto alias = alu_parameter->param->to<ActionData::Constant>()->alias();
 
     for (size_t i = 0; i < instr->operands.size(); i++) {
-        const IR::Constant *c = instr->operands[i]->to<IR::Constant>();
+        const P4::IR::Constant *c = instr->operands[i]->to<P4::IR::Constant>();
         if (c == nullptr)
             continue;
         int size = c->type->width_bits();
-        auto *adc = new IR::MAU::ActionDataConstant(IR::Type::Bits::get(size), alias, c);
+        auto *adc = new P4::IR::MAU::ActionDataConstant(P4::IR::Type::Bits::get(size), alias, c);
         instr->operands[i] = adc;
     }
     return instr;
 }
 
-const IR::MAU::Action *ConstantsToActionData::postorder(IR::MAU::Action *act) {
+const P4::IR::MAU::Action *ConstantsToActionData::postorder(P4::IR::MAU::Action *act) {
     LOG1(" ConstantsToActionData postorder on action " << act);
     return act;
 }
 
 
 /**
- * Certain Expressions (currently only IR::Constants) because of their associated uses in
+ * Certain Expressions (currently only P4::IR::Constants) because of their associated uses in
  * ALU Operations with HashDists as well, must be converted to HashDists.  (At some point,
  * the immediate_adr_default could be used to generate constants rather than Hash, as this
  * is excessive resources.
  *
  * Currently the instruction adjustment cannot work with these default constants
  */
-const IR::MAU::Action *ExpressionsToHash::preorder(IR::MAU::Action *act) {
+const P4::IR::MAU::Action *ExpressionsToHash::preorder(P4::IR::MAU::Action *act) {
     LOG5("ExpressionsToHash preorder on action: " << act);
     container_actions_map.clear();
     expr_to_hash_containers.clear();
-    auto tbl = findContext<IR::MAU::Table>();
+    auto tbl = findContext<P4::IR::MAU::Table>();
     ActionAnalysis aa(phv, true, true, tbl, red_info);
     aa.set_container_actions_map(&container_actions_map);
     act->apply(aa);
@@ -715,19 +715,19 @@ const IR::MAU::Action *ExpressionsToHash::preorder(IR::MAU::Action *act) {
     return act;
 }
 
-const IR::MAU::Instruction *ExpressionsToHash::preorder(IR::MAU::Instruction *instr) {
+const P4::IR::MAU::Instruction *ExpressionsToHash::preorder(P4::IR::MAU::Instruction *instr) {
     prune();
     le_bitrange bits;
     auto write_expr = phv.field(instr->operands[0], &bits);
     PHV::Container container;
     ActionData::UniqueLocationKey expr_lookup;
 
-    auto act = findContext<IR::MAU::Action>();
+    auto act = findContext<P4::IR::MAU::Action>();
     BUG_CHECK(act != nullptr, "No associated action found for instruction - %1%", instr);
 
     expr_lookup.action_name = act->name;
 
-    auto tbl = findContext<IR::MAU::Table>();
+    auto tbl = findContext<P4::IR::MAU::Table>();
     BUG_CHECK(tbl != nullptr, "No associated table found for instruction - %1%", instr);
 
     PHV::FieldUse use(PHV::FieldUse::WRITE);
@@ -743,7 +743,7 @@ const IR::MAU::Instruction *ExpressionsToHash::preorder(IR::MAU::Instruction *in
     if (expr_to_hash_containers.count(expr_lookup.container) == 0)
         return instr;
 
-    IR::MAU::Instruction *rv = new IR::MAU::Instruction(instr->srcInfo, instr->name);
+    P4::IR::MAU::Instruction *rv = new P4::IR::MAU::Instruction(instr->srcInfo, instr->name);
     rv->operands.push_back(instr->operands[0]);
 
     auto &action_format = tbl->resources->action_format;
@@ -752,21 +752,21 @@ const IR::MAU::Instruction *ExpressionsToHash::preorder(IR::MAU::Instruction *in
         expr_lookup.param = nullptr;
 
         auto operand = instr->operands[i];
-        const IR::Expression *rv_operand = nullptr;
+        const P4::IR::Expression *rv_operand = nullptr;
         // Build a hash from a single constant
-        if (auto con = operand->to<IR::Constant>()) {
+        if (auto con = operand->to<P4::IR::Constant>()) {
             P4HashFunction func;
             func.inputs.push_back(con);
-            func.algorithm = IR::MAU::HashFunction::identity();
+            func.algorithm = P4::IR::MAU::HashFunction::identity();
             func.hash_bits = { 0, con->type->width_bits() - 1 };
             ActionData::Hash *param = new ActionData::Hash(func);
             expr_lookup.param = param;
             auto alu_parameter = action_format.find_param_alloc(expr_lookup, nullptr);
             BUG_CHECK(alu_parameter != nullptr, "%1% Constant in instruction has not correctly "
                    "been converted to hash");
-            auto *hge = new IR::MAU::HashGenExpression(con->srcInfo, con->type, con,
-                                                       IR::MAU::HashFunction::identity());
-            auto *hd = new IR::MAU::HashDist(hge->srcInfo, hge->type, hge);
+            auto *hge = new P4::IR::MAU::HashGenExpression(con->srcInfo, con->type, con,
+                                                       P4::IR::MAU::HashFunction::identity());
+            auto *hd = new P4::IR::MAU::HashDist(hge->srcInfo, hge->type, hge);
             rv_operand = hd;
         } else {
             rv_operand = operand;
@@ -783,12 +783,12 @@ const IR::MAU::Instruction *ExpressionsToHash::preorder(IR::MAU::Instruction *in
  *  merged instructions must be initially removed, and then added back as a single instruction
  *  over a container
  */
-const IR::MAU::Action *MergeInstructions::preorder(IR::MAU::Action *act) {
+const P4::IR::MAU::Action *MergeInstructions::preorder(P4::IR::MAU::Action *act) {
     Log::TempIndent indent;
     LOG5("MergeInstructions preorder on action: " << act << indent);
     container_actions_map.clear();
     merged_fields.clear();
-    auto tbl = findContext<IR::MAU::Table>();
+    auto tbl = findContext<P4::IR::MAU::Table>();
     ActionAnalysis aa(phv, true, true, tbl, red_info);
     aa.set_container_actions_map(&container_actions_map);
     aa.set_verbose();
@@ -830,12 +830,12 @@ const IR::MAU::Action *MergeInstructions::preorder(IR::MAU::Action *act) {
     return act;
 }
 
-const IR::Node *MergeInstructions::preorder(IR::Node *node) {
+const P4::IR::Node *MergeInstructions::preorder(P4::IR::Node *node) {
     visitOnce();
     return node;
 }
 
-const IR::MAU::Instruction *MergeInstructions::preorder(IR::MAU::Instruction *instr) {
+const P4::IR::MAU::Instruction *MergeInstructions::preorder(P4::IR::MAU::Instruction *instr) {
     LOG5("MergeInstructions preorder on Instruction: " << instr);
     merged_location = merged_fields.end();
     write_found = false;
@@ -845,7 +845,7 @@ const IR::MAU::Instruction *MergeInstructions::preorder(IR::MAU::Instruction *in
     return instr;
 }
 
-void MergeInstructions::analyze_phv_field(IR::Expression *expr) {
+void MergeInstructions::analyze_phv_field(P4::IR::Expression *expr) {
     le_bitrange bits;
     auto *field = phv.field(expr, &bits);
     if (field != nullptr && isWrite()) {
@@ -854,7 +854,7 @@ void MergeInstructions::analyze_phv_field(IR::Expression *expr) {
 
         PHV::FieldUse use(PHV::FieldUse::WRITE);
         PHV::Container cntr = PHV::Container();
-        field->foreach_alloc(bits, findContext<IR::MAU::Table>(), &use,
+        field->foreach_alloc(bits, findContext<P4::IR::MAU::Table>(), &use,
                              [&](const PHV::AllocSlice &alloc) {
             if (cntr == PHV::Container())
                 cntr = alloc.container();
@@ -875,7 +875,7 @@ void MergeInstructions::analyze_phv_field(IR::Expression *expr) {
     }
 }
 
-const IR::Slice *MergeInstructions::preorder(IR::Slice *sl) {
+const P4::IR::Slice *MergeInstructions::preorder(P4::IR::Slice *sl) {
     if (phv.field(sl))
         analyze_phv_field(sl);
     prune();
@@ -884,9 +884,9 @@ const IR::Slice *MergeInstructions::preorder(IR::Slice *sl) {
 
 /** Mark instructions that have a write corresponding to the expression being removed
  */
-const IR::Expression *MergeInstructions::preorder(IR::Expression *expr) {
+const P4::IR::Expression *MergeInstructions::preorder(P4::IR::Expression *expr) {
     LOG5("MergeInstructions preorder on expression: " << *expr);
-    if (!findContext<IR::MAU::Instruction>()) {
+    if (!findContext<P4::IR::MAU::Instruction>()) {
         prune();
         return expr;
     }
@@ -897,44 +897,44 @@ const IR::Expression *MergeInstructions::preorder(IR::Expression *expr) {
     return expr;
 }
 
-const IR::MAU::ActionArg *MergeInstructions::preorder(IR::MAU::ActionArg *aa) {
+const P4::IR::MAU::ActionArg *MergeInstructions::preorder(P4::IR::MAU::ActionArg *aa) {
     prune();
     return aa;
 }
 
-const IR::MAU::ActionDataConstant *MergeInstructions::preorder(IR::MAU::ActionDataConstant *adc) {
+const P4::IR::MAU::ActionDataConstant *MergeInstructions::preorder(P4::IR::MAU::ActionDataConstant *adc) {
     prune();
     return adc;
 }
 
-const IR::Constant *MergeInstructions::preorder(IR::Constant *cst) {
+const P4::IR::Constant *MergeInstructions::preorder(P4::IR::Constant *cst) {
     prune();
     return cst;
 }
 
-const IR::MAU::Primitive *MergeInstructions::preorder(IR::MAU::Primitive *prim) {
+const P4::IR::MAU::Primitive *MergeInstructions::preorder(P4::IR::MAU::Primitive *prim) {
     prune();
     return prim;
 }
 
-const IR::MAU::AttachedOutput *MergeInstructions::preorder(IR::MAU::AttachedOutput *ao) {
+const P4::IR::MAU::AttachedOutput *MergeInstructions::preorder(P4::IR::MAU::AttachedOutput *ao) {
     prune();
     return ao;
 }
 
-const IR::MAU::StatefulAlu *MergeInstructions::preorder(IR::MAU::StatefulAlu *salu) {
+const P4::IR::MAU::StatefulAlu *MergeInstructions::preorder(P4::IR::MAU::StatefulAlu *salu) {
     prune();
     return salu;
 }
 
-const IR::MAU::HashDist *MergeInstructions::preorder(IR::MAU::HashDist *hd) {
+const P4::IR::MAU::HashDist *MergeInstructions::preorder(P4::IR::MAU::HashDist *hd) {
     prune();
     return hd;
 }
 
 /** If marked for a merge, remove the original instruction to be added back later
  */
-const IR::MAU::Instruction *MergeInstructions::postorder(IR::MAU::Instruction *instr) {
+const P4::IR::MAU::Instruction *MergeInstructions::postorder(P4::IR::MAU::Instruction *instr) {
     LOG5("MergeInstructions::postorder on Instruction: " << instr);
     saturationArith = false;
 
@@ -951,7 +951,7 @@ const IR::MAU::Instruction *MergeInstructions::postorder(IR::MAU::Instruction *i
 /** Merge the Expressions as a MultiOperand, and then set the operands of these instructions
  *  as a multi-operand
  */
-const IR::MAU::Action *MergeInstructions::postorder(IR::MAU::Action *act) {
+const P4::IR::MAU::Action *MergeInstructions::postorder(P4::IR::MAU::Action *act) {
     Log::TempIndent indent;
     LOG5("MergeInstructions::postorder on Action : " << act->name << indent);
     if (merged_fields.empty()) {
@@ -969,16 +969,16 @@ const IR::MAU::Action *MergeInstructions::postorder(IR::MAU::Action *act) {
     return act;
 }
 
-/** Given that a constant will only appear once, this will find the IR::Constant node within
+/** Given that a constant will only appear once, this will find the P4::IR::Constant node within
  *  the field actions.  Thus the size of the IR node is still maintained.
  */
-const IR::Constant *MergeInstructions::find_field_action_constant(
+const P4::IR::Constant *MergeInstructions::find_field_action_constant(
          ActionAnalysis::ContainerAction &cont_action) {
     for (auto &fa : cont_action.field_actions) {
         for (auto read : fa.reads) {
             if (read.type == ActionAnalysis::ActionParam::CONSTANT) {
-                BUG_CHECK(read.expr->is<IR::Constant>(), "Value incorrectly saved as a constant");
-                return read.expr->to<IR::Constant>();
+                BUG_CHECK(read.expr->is<P4::IR::Constant>(), "Value incorrectly saved as a constant");
+                return read.expr->to<P4::IR::Constant>();
             }
         }
     }
@@ -994,9 +994,9 @@ const IR::Constant *MergeInstructions::find_field_action_constant(
  * immed_lo/immed_hi to use, as well as the input_xbar alloc, in order to understand which
  * unit coordinates to hash_dist lo/hash_dist hi
  */
-const IR::Expression * MergeInstructions::fill_out_hash_operand(PHV::Container container,
+const P4::IR::Expression * MergeInstructions::fill_out_hash_operand(PHV::Container container,
         ActionAnalysis::ContainerAction &cont_action) {
-    auto tbl = findContext<IR::MAU::Table>();
+    auto tbl = findContext<P4::IR::MAU::Table>();
     BUG_CHECK(tbl != nullptr, "No table found while building action data for hash operands");
 
     auto &adi = cont_action.adi;
@@ -1019,7 +1019,7 @@ const IR::Expression * MergeInstructions::fill_out_hash_operand(PHV::Container c
 
     BUG_CHECK(!hash_dist_units_used.empty(), "Hash Dist in %s has no allocation", cont_action);
 
-    IR::Vector<IR::Expression> hash_dist_parts;
+    P4::IR::Vector<P4::IR::Expression> hash_dist_parts;
     for (auto &fa : cont_action.field_actions) {
         for (auto read : fa.reads) {
             if (read.speciality != ActionAnalysis::ActionParam::HASH_DIST)
@@ -1028,9 +1028,9 @@ const IR::Expression * MergeInstructions::fill_out_hash_operand(PHV::Container c
         }
     }
 
-    IR::ListExpression *le = new IR::ListExpression(hash_dist_parts);
-    auto type = IR::Type::Bits::get(hash_dist_units_used.popcount() * ixbSpec.hashDistBits());
-    auto *hd = new IR::MAU::HashDist(tbl->srcInfo, type, le);
+    P4::IR::ListExpression *le = new P4::IR::ListExpression(hash_dist_parts);
+    auto type = P4::IR::Type::Bits::get(hash_dist_units_used.popcount() * ixbSpec.hashDistBits());
+    auto *hd = new P4::IR::MAU::HashDist(tbl->srcInfo, type, le);
 
     auto tbl_hash_dists = tbl->resources->hash_dist_immed_units();
     for (auto bit : hash_dist_units_used) {
@@ -1060,9 +1060,9 @@ const IR::Expression * MergeInstructions::fill_out_hash_operand(PHV::Container c
  * The RNG_unit is assigned in this particular function (coordinated through ActionAnalysis)
  * and the rng allocation in the action data bus
  */
-const IR::Expression *MergeInstructions::fill_out_rand_operand(PHV::Container container,
+const P4::IR::Expression *MergeInstructions::fill_out_rand_operand(PHV::Container container,
         ActionAnalysis::ContainerAction &cont_action) {
-    auto tbl = findContext<IR::MAU::Table>();
+    auto tbl = findContext<P4::IR::MAU::Table>();
     BUG_CHECK(tbl != nullptr, "No table found for building action data for random operands");
 
     auto &adi = cont_action.adi;
@@ -1071,8 +1071,8 @@ const IR::Expression *MergeInstructions::fill_out_rand_operand(PHV::Container co
               "Can only create random number from random number associated objects");
 
     int unit = tbl->resources->rng_unit();
-    auto *rn = new IR::MAU::RandomNumber(tbl->srcInfo,
-                                          IR::Type::Bits::get(ActionData::Format::IMMEDIATE_BITS),
+    auto *rn = new P4::IR::MAU::RandomNumber(tbl->srcInfo,
+                                          P4::IR::Type::Bits::get(ActionData::Format::IMMEDIATE_BITS),
                                           "hw_rng"_cs);
     rn->rng_unit = unit;
 
@@ -1097,7 +1097,7 @@ const IR::Expression *MergeInstructions::fill_out_rand_operand(PHV::Container co
  */
 void MergeInstructions::fill_out_read_multi_operand(ActionAnalysis::ContainerAction &cont_action,
         ActionAnalysis::ActionParam::type_t type, cstring match_name,
-        IR::MAU::MultiOperand *mo) {
+        P4::IR::MAU::MultiOperand *mo) {
     for (auto &fa : cont_action.field_actions) {
          for (auto read : fa.reads) {
              if (read.type != type) continue;
@@ -1113,7 +1113,7 @@ void MergeInstructions::fill_out_read_multi_operand(ActionAnalysis::ContainerAct
                     split_count++;
                     if (alloc.container().toString() != match_name)
                        return;
-                    const IR::Expression* read_mo_expr = read.expr;
+                    const P4::IR::Expression* read_mo_expr = read.expr;
                     if (alloc.width() != read.size()) {
                         int start = alloc.field_slice().lo - bits.lo;
                         read_mo_expr = MakeSlice(read.expr, start, start + alloc.width() - 1);
@@ -1125,11 +1125,11 @@ void MergeInstructions::fill_out_read_multi_operand(ActionAnalysis::ContainerAct
     }
 }
 
-/** Fills out the IR::MAU::MultiOperand will all of the underlying fields that are part of a
+/** Fills out the P4::IR::MAU::MultiOperand will all of the underlying fields that are part of a
  *  write.
  */
 void MergeInstructions::fill_out_write_multi_operand(ActionAnalysis::ContainerAction &cont_action,
-        IR::MAU::MultiOperand *mo) {
+        P4::IR::MAU::MultiOperand *mo) {
     for (auto &fa : cont_action.field_actions) {
         mo->push_back(fa.write.expr);
     }
@@ -1142,14 +1142,14 @@ void MergeInstructions::fill_out_write_multi_operand(ActionAnalysis::ContainerAc
  *  verify_overwritten check in ActionAnalysis in order to determine that a partial overwrite of
  *  the container is actually valid, due to the rest of the container being unoccupied.
  */
-IR::MAU::Instruction *MergeInstructions::dest_slice_to_container(PHV::Container container,
+P4::IR::MAU::Instruction *MergeInstructions::dest_slice_to_container(PHV::Container container,
         ActionAnalysis::ContainerAction &cont_action) {
     LOG3("Convert destination slice to container");
     BUG_CHECK(cont_action.field_actions.size() == 1, "Can only call this function on an operation "
                                                      "that has one field action");
-    IR::MAU::Instruction *rv = new IR::MAU::Instruction(cont_action.name);
-    IR::Vector<IR::Expression> components;
-    auto *dst_mo = new IR::MAU::MultiOperand(components, container.toString(), true);
+    P4::IR::MAU::Instruction *rv = new P4::IR::MAU::Instruction(cont_action.name);
+    P4::IR::Vector<P4::IR::Expression> components;
+    auto *dst_mo = new P4::IR::MAU::MultiOperand(components, container.toString(), true);
     fill_out_write_multi_operand(cont_action, dst_mo);
     rv->operands.push_back(dst_mo);
     for (auto &read : cont_action.field_actions[0].reads) {
@@ -1160,11 +1160,11 @@ IR::MAU::Instruction *MergeInstructions::dest_slice_to_container(PHV::Container 
 }
 
 void MergeInstructions::build_actiondata_source(ActionAnalysis::ContainerAction &cont_action,
-        const IR::Expression **src1_p, bitvec &src1_writebits, ByteRotateMergeInfo &brm_info,
+        const P4::IR::Expression **src1_p, bitvec &src1_writebits, ByteRotateMergeInfo &brm_info,
         PHV::Container container) {
     Log::TempIndent indent;
     LOG5("Building action data source " << indent);
-    IR::Vector<IR::Expression> components;
+    P4::IR::Vector<P4::IR::Expression> components;
     auto &adi = cont_action.adi;
     if (adi.specialities.getbit(ActionAnalysis::ActionParam::HASH_DIST)) {
         *src1_p = fill_out_hash_operand(container, cont_action);
@@ -1175,14 +1175,14 @@ void MergeInstructions::build_actiondata_source(ActionAnalysis::ContainerAction 
         src1_writebits = adi.alignment.write_bits();
         LOG5("random " << cont_action.name << "  writebits:" << src1_writebits);
     } else if (cont_action.ad_renamed()) {
-        auto mo = new IR::MAU::MultiOperand(components, adi.action_data_name, false);
+        auto mo = new P4::IR::MAU::MultiOperand(components, adi.action_data_name, false);
         fill_out_read_multi_operand(cont_action, ActionAnalysis::ActionParam::ACTIONDATA,
                                     adi.action_data_name, mo);
         *src1_p = mo;
         src1_writebits = adi.alignment.write_bits();
         LOG5("multiOp " << adi.action_data_name << "  writebits:" << src1_writebits);
     } else {
-        const IR::Expression *prv_expr = nullptr;
+        const P4::IR::Expression *prv_expr = nullptr;
         bitvec read_bits;
         for (auto &field_action : cont_action.field_actions) {
             for (auto &read : field_action.reads) {
@@ -1199,7 +1199,7 @@ void MergeInstructions::build_actiondata_source(ActionAnalysis::ContainerAction 
                 LOG5("field " << field_action.name << " src1_p:" << **src1_p << "  writebits:" <<
                      src1_writebits << "  readbits: " << read_bits);
 
-                if (auto *slc = (*src1_p)->to<IR::Slice>()) {
+                if (auto *slc = (*src1_p)->to<P4::IR::Slice>()) {
                     // Store first source AD expression
                     if (prv_expr == nullptr) {
                         // Store first source AD expression
@@ -1211,7 +1211,7 @@ void MergeInstructions::build_actiondata_source(ActionAnalysis::ContainerAction 
                                   "Non contiguous slices of AD sources?");
                     }
                     // Update returned source expression as merged slice of multiple source slices
-                    *src1_p = new IR::Slice(prv_expr, (read_bits.ffs() + read_bits.popcount() - 1),
+                    *src1_p = new P4::IR::Slice(prv_expr, (read_bits.ffs() + read_bits.popcount() - 1),
                                             read_bits.ffs());
                 } else {
                     if (prv_expr == nullptr) {
@@ -1242,17 +1242,17 @@ void MergeInstructions::build_actiondata_source(ActionAnalysis::ContainerAction 
 }
 
 void MergeInstructions::build_phv_source(ActionAnalysis::ContainerAction &cont_action,
-        const IR::Expression **src1_p, const IR::Expression **src2_p, bitvec &src1_writebits,
+        const P4::IR::Expression **src1_p, const P4::IR::Expression **src2_p, bitvec &src1_writebits,
         bitvec &src2_writebits, ByteRotateMergeInfo &brm_info, PHV::Container container) {
     Log::TempIndent indent;
     LOG5("Building PHV Source on container " << container << indent);
-    IR::Vector<IR::Expression> components;
+    P4::IR::Vector<P4::IR::Expression> components;
     for (auto &phv_ta : cont_action.phv_alignment) {
         auto read_container = phv_ta.first;
         auto read_alignment = phv_ta.second;
         LOG5("PHV Align: " << read_container << ":" << read_alignment);
         if (read_alignment.is_src1) {
-            auto mo = new IR::MAU::MultiOperand(components, read_container.toString(), true);
+            auto mo = new P4::IR::MAU::MultiOperand(components, read_container.toString(), true);
             fill_out_read_multi_operand(cont_action, ActionAnalysis::ActionParam::PHV,
                                         read_container.toString(), mo);
             *src1_p = mo;
@@ -1272,7 +1272,7 @@ void MergeInstructions::build_phv_source(ActionAnalysis::ContainerAction &cont_a
             }
             LOG5("Src1: " << *src1_p);
         } else {
-            auto mo = new IR::MAU::MultiOperand(components, read_container.toString(), true);
+            auto mo = new P4::IR::MAU::MultiOperand(components, read_container.toString(), true);
             fill_out_read_multi_operand(cont_action, ActionAnalysis::ActionParam::PHV,
                                         read_container.toString(), mo);
             *src2_p = mo;
@@ -1308,7 +1308,7 @@ void MergeInstructions::build_phv_source(ActionAnalysis::ContainerAction &cont_a
  *  The instruction formats are setup as a destination and two sources.  ActionAnalysis can
  *  now determine which parameters go to which source.
  */
-IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container container,
+P4::IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container container,
          ActionAnalysis::ContainerAction &cont_action) {
     Log::TempIndent indent;
     LOG3("Building merge instruction for container : " << std::dec
@@ -1320,9 +1320,9 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
         return dest_slice_to_container(container, cont_action);
     }
 
-    const IR::Expression *dst = nullptr, *src1 = nullptr, *src2 = nullptr;
+    const P4::IR::Expression *dst = nullptr, *src1 = nullptr, *src2 = nullptr;
     bitvec src1_writebits, src2_writebits;
-    IR::Vector<IR::Expression> components;
+    P4::IR::Vector<P4::IR::Expression> components;
     ByteRotateMergeInfo brm_info;
 
     BUG_CHECK(cont_action.counts[ActionAnalysis::ActionParam::ACTIONDATA] <= 1, "At most "
@@ -1337,7 +1337,7 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
     build_phv_source(cont_action, &src1, &src2, src1_writebits, src2_writebits, brm_info,
                      container);
 
-    auto build_non_phv_source = [&](const IR::Expression **src, bitvec &src_writebits) {
+    auto build_non_phv_source = [&](const P4::IR::Expression **src, bitvec &src_writebits) {
         if (cont_action.counts[ActionAnalysis::ActionParam::ACTIONDATA] == 1) {
             build_actiondata_source(cont_action, src, src_writebits, brm_info, container);
             LOG5("ACTION DATA SOURCE for " << cont_action.name << " : " << src1_writebits);
@@ -1350,7 +1350,7 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
                 width_bits = cont_action.ci.alignment.bitrange_cover_size();
             else
                 width_bits = container.size();
-            *src = new IR::Constant(IR::Type::Bits::get(width_bits), constant_value);
+            *src = new P4::IR::Constant(P4::IR::Type::Bits::get(width_bits), constant_value);
             src_writebits = cont_action.ci.alignment.write_bits();
             LOG5("CONSTANT SOURCE for " << cont_action.name
                     << " : " << src_writebits << ", value: " << *src);
@@ -1373,7 +1373,7 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
     // JIRA-DOC: P4C-914
     if (cont_action.implicit_src1) {
         BUG_CHECK(src1 == nullptr, "Src1 found in an implicit_src1 calculation");
-        src1 = new IR::MAU::MultiOperand(components, container.toString(), true);
+        src1 = new P4::IR::MAU::MultiOperand(components, container.toString(), true);
         bitvec reverse = bitvec(0, container.size()) - src2_writebits;
         src1 = MakeSlice(src1, reverse.min().index(), reverse.max().index());
         src1_writebits = reverse;
@@ -1384,10 +1384,10 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
     // JIRA-DOC: BRIG-883
     if (cont_action.implicit_src2) {
         BUG_CHECK(src2 == nullptr, "Src2 found in an implicit_src2 calculation");
-        src2 = new IR::MAU::MultiOperand(components, container.toString(), true);
+        src2 = new P4::IR::MAU::MultiOperand(components, container.toString(), true);
     }
 
-    auto *dst_mo = new IR::MAU::MultiOperand(components, container.toString(), true);
+    auto *dst_mo = new P4::IR::MAU::MultiOperand(components, container.toString(), true);
     fill_out_write_multi_operand(cont_action, dst_mo);
     dst = dst_mo;
     LOG5("Partial overwrite: " << cont_action.partial_overwrite()
@@ -1409,7 +1409,7 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
     else if (cont_action.convert_instr_to_byte_rotate_merge)
         instr_name = "byte-rotate-merge"_cs;
 
-    IR::MAU::Instruction *merged_instr = new IR::MAU::Instruction(instr_name);
+    P4::IR::MAU::Instruction *merged_instr = new P4::IR::MAU::Instruction(instr_name);
     merged_instr->operands.push_back(dst);
     LOG5("PUSHED DESTINATION for " << cont_action.name << " : " << dst);
 
@@ -1432,11 +1432,11 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
     // and the src1 byte mask
     if (cont_action.convert_instr_to_byte_rotate_merge) {
         merged_instr->operands.push_back(
-            new IR::Constant(IR::Type::Bits::get(container.size() / 16), brm_info.src1_shift));
+            new P4::IR::Constant(P4::IR::Type::Bits::get(container.size() / 16), brm_info.src1_shift));
         merged_instr->operands.push_back(
-            new IR::Constant(IR::Type::Bits::get(container.size() / 16), brm_info.src2_shift));
+            new P4::IR::Constant(P4::IR::Type::Bits::get(container.size() / 16), brm_info.src2_shift));
         merged_instr->operands.push_back(
-            new IR::Constant(IR::Type::Bits::get(container.size() / 8),
+            new P4::IR::Constant(P4::IR::Type::Bits::get(container.size() / 8),
                              brm_info.src1_byte_mask.getrange(0, container.size() / 8)));
     }
     return merged_instr;
@@ -1458,12 +1458,12 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
  *  Simple `set` instructions should be used instead of `or` for those SALUs in the first
  *  stage (if split across stages, SALUs in later stages still need to `or`)
  */
-const IR::Annotations *AdjustStatefulInstructions::preorder(IR::Annotations *annot) {
+const P4::IR::Annotations *AdjustStatefulInstructions::preorder(P4::IR::Annotations *annot) {
     prune();
     return annot;
 }
 
-const IR::MAU::IXBarExpression *AdjustStatefulInstructions::preorder(IR::MAU::IXBarExpression *e) {
+const P4::IR::MAU::IXBarExpression *AdjustStatefulInstructions::preorder(P4::IR::MAU::IXBarExpression *e) {
     prune();
     return e;
 }
@@ -1486,7 +1486,7 @@ bool AdjustStatefulInstructions::check_bit_positions(std::map<int, le_bitrange> 
     return true;
 }
 
-bool AdjustStatefulInstructions::verify_on_search_bus(const IR::MAU::StatefulAlu *salu,
+bool AdjustStatefulInstructions::verify_on_search_bus(const P4::IR::MAU::StatefulAlu *salu,
         const Tofino::IXBar::Use &salu_ixbar, const PHV::Field *field, le_bitrange &bits,
         bool &is_hi) {
     std::map<int, le_bitrange> salu_inputs;
@@ -1566,12 +1566,12 @@ bool AdjustStatefulInstructions::verify_on_search_bus(const IR::MAU::StatefulAlu
     return true;
 }
 
-bool AdjustStatefulInstructions::verify_on_hash_bus(const IR::MAU::StatefulAlu *salu,
-        const Tofino::IXBar::Use::MeterAluHash &mah, const IR::Expression *expr, le_bitrange &bits,
+bool AdjustStatefulInstructions::verify_on_hash_bus(const P4::IR::MAU::StatefulAlu *salu,
+        const Tofino::IXBar::Use::MeterAluHash &mah, const P4::IR::Expression *expr, le_bitrange &bits,
         bool &is_hi) {
     for (auto &exp : mah.computed_expressions) {
-        const IR::Expression *pos_expr;
-        if (auto *neg = exp.second->to<IR::Neg>())
+        const P4::IR::Expression *pos_expr;
+        if (auto *neg = exp.second->to<P4::IR::Neg>())
             pos_expr = neg->expr;
         else
             pos_expr = exp.second;
@@ -1590,9 +1590,9 @@ bool AdjustStatefulInstructions::verify_on_hash_bus(const IR::MAU::StatefulAlu *
  *  comes through the hash bus, then the stateful ALU cannot resolve the name without
  *  phv_lo or phv_hi anyway.
  */
-const IR::Expression *AdjustStatefulInstructions::preorder(IR::Expression *expr) {
+const P4::IR::Expression *AdjustStatefulInstructions::preorder(P4::IR::Expression *expr) {
     visitAgain();
-    if (!findContext<IR::MAU::SaluAction>()) {
+    if (!findContext<P4::IR::MAU::SaluAction>()) {
         return expr;
     }
 
@@ -1602,17 +1602,17 @@ const IR::Expression *AdjustStatefulInstructions::preorder(IR::Expression *expr)
         return expr;
     }
 
-    auto tbl = findContext<IR::MAU::Table>();
+    auto tbl = findContext<P4::IR::MAU::Table>();
     if (!tbl) return expr;
 
-    auto salu = findContext<IR::MAU::StatefulAlu>();
+    auto salu = findContext<P4::IR::MAU::StatefulAlu>();
     if (!salu) return expr;
 
     auto *salu_ixbar = dynamic_cast<const Tofino::IXBar::Use *>(tbl->resources->salu_ixbar.get());
     bool is_hi = false;
-    const IR::Expression *pos_expr;
+    const P4::IR::Expression *pos_expr;
     cstring name = ""_cs;
-    if (auto *neg = expr->to<IR::Neg>()) {
+    if (auto *neg = expr->to<P4::IR::Neg>()) {
         pos_expr = neg->expr;
         name += "-phv";
     } else {
@@ -1641,12 +1641,12 @@ const IR::Expression *AdjustStatefulInstructions::preorder(IR::Expression *expr)
     else
         name += "_lo";
 
-    IR::MAU::SaluReg *salu_reg
-        = new IR::MAU::SaluReg(expr->srcInfo, IR::Type::Bits::get(salu->source_width()), name,
+    P4::IR::MAU::SaluReg *salu_reg
+        = new P4::IR::MAU::SaluReg(expr->srcInfo, P4::IR::Type::Bits::get(salu->source_width()), name,
                                is_hi);
     int phv_width = ((bits.size() + 7) / 8) * 8;
     salu_reg->phv_src = pos_expr;
-    const IR::Expression *rv = salu_reg;
+    const P4::IR::Expression *rv = salu_reg;
     // Sets the byte_mask for the input for the stateful alu
     if (phv_width < salu->source_width()) {
         unsigned lo = bits.lo % salu->source_width();
@@ -1659,12 +1659,12 @@ const IR::Expression *AdjustStatefulInstructions::preorder(IR::Expression *expr)
 class RewriteReductionOr : public MauModifier {
     const PhvInfo &phv;
     const ReductionOrInfo &red_info;
-    std::set<const IR::MAU::Instruction *> reduction_or;
+    std::set<const P4::IR::MAU::Instruction *> reduction_or;
 
-    bool preorder(IR::MAU::Action *act) {
+    bool preorder(P4::IR::MAU::Action *act) {
         reduction_or.clear();
         ActionAnalysis::ContainerActionsMap container_actions_map;
-        auto tbl = findOrigCtxt<IR::MAU::Table>();
+        auto tbl = findOrigCtxt<P4::IR::MAU::Table>();
         ActionAnalysis aa(phv, true, true, tbl, red_info);
         aa.set_container_actions_map(&container_actions_map);
         act->apply(aa);
@@ -1678,16 +1678,16 @@ class RewriteReductionOr : public MauModifier {
         }
         return true;
     }
-    const IR::Expression *ignoreSlice(const IR::Expression *e) {
-        while (auto sl = e->to<IR::Slice>()) e = sl->e0;
+    const P4::IR::Expression *ignoreSlice(const P4::IR::Expression *e) {
+        while (auto sl = e->to<P4::IR::Slice>()) e = sl->e0;
         return e;
     }
-    bool preorder(IR::MAU::Instruction *inst) {
-        if (reduction_or.count(getOriginal<IR::MAU::Instruction>())) {
+    bool preorder(P4::IR::MAU::Instruction *inst) {
+        if (reduction_or.count(getOriginal<P4::IR::MAU::Instruction>())) {
             BUG_CHECK(inst->name == "or" && inst->operands.size() == 3, "not an or: %s", inst);
             inst->name = "set"_cs;
             auto op2 = inst->operands.at(2);
-            if (!ignoreSlice(op2)->to<IR::MAU::AttachedOutput>()) op2 = nullptr;
+            if (!ignoreSlice(op2)->to<P4::IR::MAU::AttachedOutput>()) op2 = nullptr;
             inst->operands.resize(2);
             if (op2) inst->operands[1] = op2;
         }
@@ -1699,14 +1699,14 @@ class RewriteReductionOr : public MauModifier {
 };
 
 /** Eliminate Instructions */
-const IR::MAU::Synth2Port* EliminateNoopInstructions::preorder(IR::MAU::Synth2Port *s) {
+const P4::IR::MAU::Synth2Port* EliminateNoopInstructions::preorder(P4::IR::MAU::Synth2Port *s) {
     LOG3("EliminateNoopInstructions preorder on synth2port: " << s);
     // Skip these tables
     prune();
     return s;
 }
 
-bool EliminateNoopInstructions::get_alloc_slice(IR::MAU::Instruction *ins,
+bool EliminateNoopInstructions::get_alloc_slice(P4::IR::MAU::Instruction *ins,
                                     OP_TYPE type, AllocContainerSlice &op_alloc) const {
     le_bitrange op_bits;
     auto op = ins->operands[type];
@@ -1716,7 +1716,7 @@ bool EliminateNoopInstructions::get_alloc_slice(IR::MAU::Instruction *ins,
 
     PHV::FieldUse use(type == DST ? PHV::FieldUse::WRITE : PHV::FieldUse::READ);
 
-    auto tbl = findContext<IR::MAU::Table>();
+    auto tbl = findContext<P4::IR::MAU::Table>();
     field->foreach_alloc(op_bits, tbl, &use, [&](const PHV::AllocSlice& sl) {
         le_bitrange cs = sl.container_slice();
         PHV::Container cont = sl.container();
@@ -1733,13 +1733,13 @@ bool EliminateNoopInstructions::get_alloc_slice(IR::MAU::Instruction *ins,
     return true;
 }
 
-const IR::MAU::Instruction*
-EliminateNoopInstructions::preorder(IR::MAU::Instruction *ins) {
+const P4::IR::MAU::Instruction*
+EliminateNoopInstructions::preorder(P4::IR::MAU::Instruction *ins) {
     LOG3("EliminateNoopInstructions preorder on instruction: " << ins);
 
     int numOps = ins->operands.size();
     bool opsWithSameAlloc = false;
-    auto tbl = findContext<IR::MAU::Table>();
+    auto tbl = findContext<P4::IR::MAU::Table>();
     if (!tbl) return ins;
     if (numOps >= 2) {
         AllocContainerSlice dst_alloc, src1_alloc;

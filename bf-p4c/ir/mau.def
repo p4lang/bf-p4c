@@ -385,7 +385,7 @@ class Table : BFN::Unit, IAnnotated  {
         return gName; }
     bool uses_idletime() const {
         for (auto back_at : attached)
-            if (back_at->attached->is<IR::MAU::IdleTime>()) return true;
+            if (back_at->attached->is<P4::IR::MAU::IdleTime>()) return true;
         return false; }
     int stage() const override { return stage_ ? *stage_ : -1; }
     gress_t thread() const override { return gress; }
@@ -1211,7 +1211,7 @@ class RangeMatch : Operation_Unary {
 
 #emit
 // defined down here to resolve order of declaration issues
-template<class T> inline const T *IR::MAU::Table::get_attached() const {
+template<class T> inline const T *P4::IR::MAU::Table::get_attached() const {
     for (auto *at : attached)
         if (auto rv = at->attached->to<T>())
             return rv;

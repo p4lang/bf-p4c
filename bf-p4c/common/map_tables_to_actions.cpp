@@ -1,34 +1,34 @@
 #include "bf-p4c/common/map_tables_to_actions.h"
 
-Visitor::profile_t MapTablesToActions::init_apply(const IR::Node* root) {
+Visitor::profile_t MapTablesToActions::init_apply(const P4::IR::Node* root) {
     tableToActionsMap.clear();
     defaultActions.clear();
     actionMap.clear();
     return Inspector::init_apply(root);
 }
 
-const PHV::ActionSet& MapTablesToActions::getActionsForTable(const IR::MAU::Table* t) const {
+const PHV::ActionSet& MapTablesToActions::getActionsForTable(const P4::IR::MAU::Table* t) const {
     BUG_CHECK(t, "Null table encountered");
     static const PHV::ActionSet emptySet;
     if (!tableToActionsMap.count(t)) return emptySet;
     return tableToActionsMap.at(t);
 }
 
-const PHV::ActionSet& MapTablesToActions::getDefaultActionsForTable(const IR::MAU::Table* t) const {
+const PHV::ActionSet& MapTablesToActions::getDefaultActionsForTable(const P4::IR::MAU::Table* t) const {
     BUG_CHECK(t, "Null table encountered");
     static const PHV::ActionSet emptySet;
     if (!defaultActions.count(t)) return emptySet;
     return defaultActions.at(t);
 }
 
-std::optional<const IR::MAU::Table*>
-MapTablesToActions::getTableForAction(const IR::MAU::Action* act) const {
+std::optional<const P4::IR::MAU::Table*>
+MapTablesToActions::getTableForAction(const P4::IR::MAU::Action* act) const {
     BUG_CHECK(act, "Null action encountered.");
     if (actionMap.count(act)) {
         return actionMap.at(act);
     } else {
         // This is to workaround a problem with the getInitPoints() from AllocSlice that carry
-        // old IR::MAU::Action pointer. Using the clone_id instead is less efficient but resilient
+        // old P4::IR::MAU::Action pointer. Using the clone_id instead is less efficient but resilient
         // over IR transformation.
         for (auto kv : actionMap) {
             if (kv.first->clone_id == act->clone_id)
@@ -38,7 +38,7 @@ MapTablesToActions::getTableForAction(const IR::MAU::Action* act) const {
     return std::nullopt;
 }
 
-bool MapTablesToActions::preorder(const IR::MAU::Table* t) {
+bool MapTablesToActions::preorder(const P4::IR::MAU::Table* t) {
     for (auto kv : t->actions) {
         const auto* action = kv.second;
         tableToActionsMap[t].insert(action);

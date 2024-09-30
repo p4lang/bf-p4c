@@ -5,8 +5,8 @@
 
 class NextTable : public virtual Visitor {
  public:
-    virtual ordered_set<UniqueId> next_for(const IR::MAU::Table *tbl, cstring what) const = 0;
-    virtual bool uses_next_table(const IR::MAU::Table *tbl) const = 0;
+    virtual ordered_set<UniqueId> next_for(const P4::IR::MAU::Table *tbl, cstring what) const = 0;
+    virtual bool uses_next_table(const P4::IR::MAU::Table *tbl) const = 0;
     virtual void dbprint(std::ostream &) const = 0;
     virtual const std::unordered_map<int, std::set<UniqueId>> &long_branches(UniqueId) const {
         static std::unordered_map<int, std::set<UniqueId>> empty;
@@ -24,9 +24,9 @@ class DynamicNextTable : public DynamicVisitor, public NextTable, public IHasDbP
     NextTable   *pass = nullptr;
 
  public:
-    ordered_set<UniqueId> next_for(const IR::MAU::Table *tbl, cstring what) const override {
+    ordered_set<UniqueId> next_for(const P4::IR::MAU::Table *tbl, cstring what) const override {
         return pass->next_for(tbl, what); }
-    bool uses_next_table(const IR::MAU::Table *tbl) const override {
+    bool uses_next_table(const P4::IR::MAU::Table *tbl) const override {
         return pass->uses_next_table(tbl); }
     void dbprint(std::ostream &out) const override { pass->dbprint(out); }
     const std::unordered_map<int, std::set<UniqueId>> &long_branches(UniqueId id) const override {

@@ -47,7 +47,7 @@ class FormatType_t {
     bool operator!=(const FormatType_t &a) const { return !(*this == a); }
     bool valid() const { return value != 0; }
     void invalidate() { value = 0; }
-    void check_valid(const IR::MAU::Table *tbl = nullptr) const;  // sanity check for
+    void check_valid(const P4::IR::MAU::Table *tbl = nullptr) const;  // sanity check for
                                                                   // insane combinations
     bool normal() const {  // valid format that does not require any action changes
         // either everything is in this stage OR there are no attached tabled
@@ -66,12 +66,12 @@ class FormatType_t {
     bool anyAttachedLaterStage() const { return (value & (ALL_ATTACHED*LATER_STAGE)) != 0; }
 
     FormatType_t() : value(0) {}
-    void initialize(const IR::MAU::Table *tbl, int entries, bool prev_stages,
+    void initialize(const P4::IR::MAU::Table *tbl, int entries, bool prev_stages,
                     const attached_entries_t &attached);
     // which attached tables are we tracking in the FormatType_t
-    static bool track(const IR::MAU::AttachedMemory *at);
-    static std::vector<const IR::MAU::AttachedMemory *> tracking(const IR::MAU::Table *);
-    static FormatType_t default_for_table(const IR::MAU::Table *);
+    static bool track(const P4::IR::MAU::AttachedMemory *at);
+    static std::vector<const P4::IR::MAU::AttachedMemory *> tracking(const P4::IR::MAU::Table *);
+    static FormatType_t default_for_table(const P4::IR::MAU::Table *);
     friend std::ostream &operator<<(std::ostream &, FormatType_t);
     std::string toString() const;
 };
@@ -80,13 +80,13 @@ class FormatType_t {
 class ValidateAttachedOfSingleTable : public MauInspector {
  public:
     enum addr_type_t { STATS, METER, ACTIONDATA, TYPES };
-    using TypeToAddressMap = std::map<addr_type_t, IR::MAU::Table::IndirectAddress>;
+    using TypeToAddressMap = std::map<addr_type_t, P4::IR::MAU::Table::IndirectAddress>;
 
  private:
-    const IR::MAU::Table *tbl;
+    const P4::IR::MAU::Table *tbl;
     TypeToAddressMap &ind_addrs;
 
-    std::map<addr_type_t, const IR::MAU::BackendAttached *> users;
+    std::map<addr_type_t, const P4::IR::MAU::BackendAttached *> users;
 
     cstring addr_type_name(addr_type_t type) {
         switch (type) {
@@ -97,27 +97,27 @@ class ValidateAttachedOfSingleTable : public MauInspector {
         }
     }
 
-    bool compatible(const IR::MAU::BackendAttached *, const IR::MAU::BackendAttached *);
-    void free_address(const IR::MAU::AttachedMemory *am, addr_type_t type);
+    bool compatible(const P4::IR::MAU::BackendAttached *, const P4::IR::MAU::BackendAttached *);
+    void free_address(const P4::IR::MAU::AttachedMemory *am, addr_type_t type);
 
-    bool preorder(const IR::MAU::Counter *cnt) override;
-    bool preorder(const IR::MAU::Meter *mtr) override;
-    bool preorder(const IR::MAU::StatefulAlu *salu) override;
-    bool preorder(const IR::MAU::Selector *as) override;
-    bool preorder(const IR::MAU::TernaryIndirect *) override {
+    bool preorder(const P4::IR::MAU::Counter *cnt) override;
+    bool preorder(const P4::IR::MAU::Meter *mtr) override;
+    bool preorder(const P4::IR::MAU::StatefulAlu *salu) override;
+    bool preorder(const P4::IR::MAU::Selector *as) override;
+    bool preorder(const P4::IR::MAU::TernaryIndirect *) override {
         BUG("No ternary indirect should exist before table placement");
         return false; }
-    bool preorder(const IR::MAU::ActionData *ad) override;
-    bool preorder(const IR::MAU::IdleTime *) override {
+    bool preorder(const P4::IR::MAU::ActionData *ad) override;
+    bool preorder(const P4::IR::MAU::IdleTime *) override {
         return false;
     }
-    bool preorder(const IR::Attached *att) override {
+    bool preorder(const P4::IR::Attached *att) override {
         BUG("Unknown attached table type %s", typeid(*att).name());
     }
 
 
  public:
-    ValidateAttachedOfSingleTable(TypeToAddressMap &ia, const IR::MAU::Table *t)
+    ValidateAttachedOfSingleTable(TypeToAddressMap &ia, const P4::IR::MAU::Table *t)
         : tbl(t), ind_addrs(ia) {}
 };
 
@@ -156,11 +156,11 @@ class PhvInfo;
 /// Search for references to a set of AttachedMemory in instruction -- returns a bitmap of which
 /// operands refer to the AttachedMemories
 class HasAttachedMemory : public MauInspector {
-    ordered_map<const IR::MAU::AttachedMemory *, unsigned> am_match;
+    ordered_map<const P4::IR::MAU::AttachedMemory *, unsigned> am_match;
     std::vector<unsigned> _found;
     unsigned _found_all = 0U;
 
-    profile_t init_apply(const IR::Node *node) {
+    profile_t init_apply(const P4::IR::Node *node) {
         auto rv = MauInspector::init_apply(node);
         _found_all = 0;
         _found.clear();
@@ -168,10 +168,10 @@ class HasAttachedMemory : public MauInspector {
         return rv;
     }
 
-    bool preorder(const IR::MAU::AttachedMemory *am) {
+    bool preorder(const P4::IR::MAU::AttachedMemory *am) {
         unsigned mask = 1U;
         const Visitor::Context *ctxt = nullptr;
-        if (findContext<IR::MAU::Primitive>(ctxt)) {
+        if (findContext<P4::IR::MAU::Primitive>(ctxt)) {
             BUG_CHECK(ctxt->child_index >= 0 && ctxt->child_index < 32, "mask overflow");
             mask <<= ctxt->child_index; }
         if (am_match.count(am)) {
@@ -182,14 +182,14 @@ class HasAttachedMemory : public MauInspector {
 
  public:
     HasAttachedMemory() = default;
-    void add(const IR::MAU::AttachedMemory *am) {
+    void add(const P4::IR::MAU::AttachedMemory *am) {
         if (!am_match.count(am)) {
             unsigned idx = am_match.size();
             am_match[am] = idx; } }
-    HasAttachedMemory(std::initializer_list<const IR::MAU::AttachedMemory *> am) {
+    HasAttachedMemory(std::initializer_list<const P4::IR::MAU::AttachedMemory *> am) {
         for (auto *a : am) add(a); }
     unsigned found() const { return _found_all; }
-    unsigned found(const IR::MAU::AttachedMemory *am) const { return _found[am_match.at(am)]; }
+    unsigned found(const P4::IR::MAU::AttachedMemory *am) const { return _found[am_match.at(am)]; }
     auto begin() const -> decltype(Keys(am_match).begin()) { return Keys(am_match).begin(); }
     auto end() const -> decltype(Keys(am_match).end()) { return Keys(am_match).end(); }
 };
@@ -202,17 +202,17 @@ class SplitAttachedInfo : public PassManager {
     typedef ActionData::FormatType_t  FormatType_t;
     PhvInfo     &phv;
 
-    // Can't use IR::Node * as keys in a map, as they change in transforms.  Names
+    // Can't use P4::IR::Node * as keys in a map, as they change in transforms.  Names
     // are unique and stable, so use them instead.  However, the pointers in the
     // sets may be out-of-date and not refer to the current IR.  Turns out we only
     // ever use this to get a count of the number of tables (to detect shared attached
     // tables) so it doesn't matter for now...
-    ordered_map<cstring, ordered_set<const IR::MAU::Table *>> attached_to_table_map;
+    ordered_map<cstring, ordered_set<const P4::IR::MAU::Table *>> attached_to_table_map;
 
     struct IndexTemp {
-        const IR::TempVar *index = nullptr;
-        const IR::TempVar *enable = nullptr;
-        const IR::TempVar *type = nullptr;
+        const P4::IR::TempVar *index = nullptr;
+        const P4::IR::TempVar *enable = nullptr;
+        const P4::IR::TempVar *type = nullptr;
     };
     std::map<cstring, IndexTemp>  index_tempvars;
 
@@ -236,7 +236,7 @@ class SplitAttachedInfo : public PassManager {
 
     ordered_map<cstring, ordered_map<cstring, AddressInfo>> address_info_per_table;
 
-    profile_t init_apply(const IR::Node *node) {
+    profile_t init_apply(const P4::IR::Node *node) {
         auto rv = PassManager::init_apply(node);
         attached_to_table_map.clear();
         address_info_per_table.clear();
@@ -249,7 +249,7 @@ class SplitAttachedInfo : public PassManager {
      */
     class BuildSplitMaps : public MauInspector {
         SplitAttachedInfo &self;
-        bool preorder(const IR::MAU::Table *) override;
+        bool preorder(const P4::IR::MAU::Table *) override;
 
      public:
         explicit BuildSplitMaps(SplitAttachedInfo &s) : self(s) {}
@@ -263,7 +263,7 @@ class SplitAttachedInfo : public PassManager {
      */
     class EnableAndTypesOnActions : public MauInspector {
         SplitAttachedInfo &self;
-        bool preorder(const IR::MAU::Action *) override;
+        bool preorder(const P4::IR::MAU::Action *) override;
 
      public:
         explicit EnableAndTypesOnActions(SplitAttachedInfo &s) : self(s) {}
@@ -271,7 +271,7 @@ class SplitAttachedInfo : public PassManager {
 
     class ValidateAttachedOfAllTables : public MauInspector {
         SplitAttachedInfo &self;
-        bool preorder(const IR::MAU::Table *) override;
+        bool preorder(const P4::IR::MAU::Table *) override;
 
      public:
         explicit ValidateAttachedOfAllTables(SplitAttachedInfo &s) : self(s) {}
@@ -286,40 +286,40 @@ class SplitAttachedInfo : public PassManager {
         });
     }
 
-    const ordered_set<const IR::MAU::Table *> &
-    tables_from_attached(const IR::Attached *att) const {
+    const ordered_set<const P4::IR::MAU::Table *> &
+    tables_from_attached(const P4::IR::Attached *att) const {
         return attached_to_table_map.at(att->name); }
 
  private:
-    int addr_bits_to_phv_on_split(const IR::MAU::Table *tbl,
-                                  const IR::MAU::AttachedMemory *at) const;
-    bool enable_to_phv_on_split(const IR::MAU::Table *tbl,
-                                const IR::MAU::AttachedMemory *at) const;
-    int type_bits_to_phv_on_split(const IR::MAU::Table *tbl,
-                                  const IR::MAU::AttachedMemory *at) const;
+    int addr_bits_to_phv_on_split(const P4::IR::MAU::Table *tbl,
+                                  const P4::IR::MAU::AttachedMemory *at) const;
+    bool enable_to_phv_on_split(const P4::IR::MAU::Table *tbl,
+                                const P4::IR::MAU::AttachedMemory *at) const;
+    int type_bits_to_phv_on_split(const P4::IR::MAU::Table *tbl,
+                                  const P4::IR::MAU::AttachedMemory *at) const;
 
-    const IR::MAU::Instruction *pre_split_addr_instr(const IR::MAU::Action *act,
-        const IR::MAU::Table *tbl, const IR::MAU::AttachedMemory *at);
-    const IR::MAU::Instruction *pre_split_enable_instr(const IR::MAU::Action *act,
-        const IR::MAU::Table *tbl, const IR::MAU::AttachedMemory *at);
-    const IR::MAU::Instruction *pre_split_type_instr(const IR::MAU::Action *act,
-        const IR::MAU::Table *tbl, const IR::MAU::AttachedMemory *at);
+    const P4::IR::MAU::Instruction *pre_split_addr_instr(const P4::IR::MAU::Action *act,
+        const P4::IR::MAU::Table *tbl, const P4::IR::MAU::AttachedMemory *at);
+    const P4::IR::MAU::Instruction *pre_split_enable_instr(const P4::IR::MAU::Action *act,
+        const P4::IR::MAU::Table *tbl, const P4::IR::MAU::AttachedMemory *at);
+    const P4::IR::MAU::Instruction *pre_split_type_instr(const P4::IR::MAU::Action *act,
+        const P4::IR::MAU::Table *tbl, const P4::IR::MAU::AttachedMemory *at);
 
     // memoization cache for get/create_split_action
     typedef std::tuple<cstring /* table name */, cstring /* action name */, FormatType_t> memo_key;
-    std::map<memo_key, const IR::MAU::Action *>  cache;
+    std::map<memo_key, const P4::IR::MAU::Action *>  cache;
 
  public:
-    const IR::Expression *split_enable(const IR::MAU::AttachedMemory *, const IR::MAU::Table *);
-    const IR::Expression *split_index(const IR::MAU::AttachedMemory *, const IR::MAU::Table *);
-    const IR::Expression *split_type(const IR::MAU::AttachedMemory *, const IR::MAU::Table *);
+    const P4::IR::Expression *split_enable(const P4::IR::MAU::AttachedMemory *, const P4::IR::MAU::Table *);
+    const P4::IR::Expression *split_index(const P4::IR::MAU::AttachedMemory *, const P4::IR::MAU::Table *);
+    const P4::IR::Expression *split_type(const P4::IR::MAU::AttachedMemory *, const P4::IR::MAU::Table *);
 
-    const IR::MAU::Action *get_split_action(const IR::MAU::Action *act,
-        const IR::MAU::Table *tbl, FormatType_t format_type);
+    const P4::IR::MAU::Action *get_split_action(const P4::IR::MAU::Action *act,
+        const P4::IR::MAU::Table *tbl, FormatType_t format_type);
 
  private:
-    const IR::MAU::Action *create_split_action(const IR::MAU::Action *act,
-        const IR::MAU::Table *tbl, FormatType_t format_type);
+    const P4::IR::MAU::Action *create_split_action(const P4::IR::MAU::Action *act,
+        const P4::IR::MAU::Table *tbl, FormatType_t format_type);
 };
 
 #endif  /* BF_P4C_MAU_ATTACHED_INFO_H_ */

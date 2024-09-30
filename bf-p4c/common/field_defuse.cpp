@@ -18,16 +18,16 @@ static std::ostream &operator<<(std::ostream &out, const FieldDefUse::locpair &l
 
 class FieldDefUse::ClearBeforeEgress : public Inspector, TofinoWriteContext {
     FieldDefUse &self;
-    bool preorder(const IR::Expression *e) override {
+    bool preorder(const P4::IR::Expression *e) override {
         auto *f = self.phv.field(e);
         if (f && isWrite()) {
             LOG4("CLEARING FIELD: " << e);
             self.defuse[f->id] = info();
             return false; }
-        if (e->is<IR::Member>())
+        if (e->is<P4::IR::Member>())
             return false;
         return true; }
-    bool preorder(const IR::HeaderRef *hr) override {
+    bool preorder(const P4::IR::HeaderRef *hr) override {
         for (int id : self.phv.struct_info(hr).field_ids()) {
             if (isWrite()) {
                 self.defuse[id] = info();
@@ -39,13 +39,13 @@ class FieldDefUse::ClearBeforeEgress : public Inspector, TofinoWriteContext {
 
 class FieldDefUse::CollectAliasDestinations : public Inspector {
     FieldDefUse& self;
-    bool preorder(const IR::BFN::AliasMember *e) override {
+    bool preorder(const P4::IR::BFN::AliasMember *e) override {
         const auto* f = self.phv.field(e);
         if (!f) return false;
         self.alias_destinations.insert(f);
         return false;
     }
-    bool preorder(const IR::BFN::AliasSlice* sl) override {
+    bool preorder(const P4::IR::BFN::AliasSlice* sl) override {
         const auto* f = self.phv.field(sl);
         if (!f) return false;
         self.alias_destinations.insert(f);
@@ -55,7 +55,7 @@ class FieldDefUse::CollectAliasDestinations : public Inspector {
     explicit CollectAliasDestinations(FieldDefUse &s) : self(s) {}
 };
 
-Visitor::profile_t FieldDefUse::init_apply(const IR::Node *root) {
+Visitor::profile_t FieldDefUse::init_apply(const P4::IR::Node *root) {
     auto rv = Inspector::init_apply(root);
     static int callctr;
     LOG2("FieldDefUse starting #" << ++callctr << IndentCtl::indent);
@@ -95,7 +95,7 @@ FieldDefUse::info &FieldDefUse::field(const PHV::Field *f) {
 }
 
 void FieldDefUse::read(const PHV::Field *f, std::optional<le_bitrange> range,
-    const IR::BFN::Unit *unit, const IR::Expression *e, bool needsIXBar) {
+    const P4::IR::BFN::Unit *unit, const P4::IR::Expression *e, bool needsIXBar) {
     // If range is std::nullopt, then it means the whole field is read.
     if (!f) return;
     auto &info = field(f);
@@ -126,8 +126,8 @@ void FieldDefUse::read(const PHV::Field *f, std::optional<le_bitrange> range,
     LOG5("\t Adding IXBar " << needsIXBar << " for use  " << use <<
          "  ixbar_refs:" << ixbar_refs.size());
 }
-void FieldDefUse::read(const IR::HeaderRef *hr, const IR::BFN::Unit *unit,
-                       const IR::Expression *e, bool needsIXBar) {
+void FieldDefUse::read(const P4::IR::HeaderRef *hr, const P4::IR::BFN::Unit *unit,
+                       const P4::IR::Expression *e, bool needsIXBar) {
     if (!hr) return;
     PhvInfo::StructInfo info = phv.struct_info(hr);
     for (int id : info.field_ids())
@@ -188,7 +188,7 @@ void FieldDefUse::shadow_previous_ranges(FieldDefUse::info &info, le_bitrange &b
 }
 
 void FieldDefUse::write(const PHV::Field *f, std::optional<le_bitrange> range,
-                        const IR::BFN::Unit *unit, const IR::Expression *e, bool needsIXBar) {
+                        const P4::IR::BFN::Unit *unit, const P4::IR::Expression *e, bool needsIXBar) {
     // If range is std::nullopt, then it means that the whole field is written.
     if (!f) return;
     auto &info = field(f);
@@ -211,7 +211,7 @@ void FieldDefUse::write(const PHV::Field *f, std::optional<le_bitrange> range,
     } else {
         bit_range = *range;
     }
-    if (unit->is<IR::BFN::ParserState>()) {
+    if (unit->is<P4::IR::BFN::ParserState>()) {
         // parser can't rewrite PHV (it ors), so need to treat it as a read for conflicts, but
         // we don't mark it as a use of previous writes, and don't clobber those previous writes.
         if (!range) {
@@ -251,8 +251,8 @@ void FieldDefUse::write(const PHV::Field *f, std::optional<le_bitrange> range,
     LOG5("\t Adding IXBar " << needsIXBar << " for def " << def <<
          "  ixbar_refs:" << ixbar_refs.size());
 }
-void FieldDefUse::write(const IR::HeaderRef *hr, const IR::BFN::Unit *unit,
-                        const IR::Expression *e, bool needsIXBar) {
+void FieldDefUse::write(const P4::IR::HeaderRef *hr, const P4::IR::BFN::Unit *unit,
+                        const P4::IR::Expression *e, bool needsIXBar) {
     if (!hr) return;
     PhvInfo::StructInfo info = phv.struct_info(hr);
     for (int id : info.field_ids())
@@ -261,12 +261,12 @@ void FieldDefUse::write(const IR::HeaderRef *hr, const IR::BFN::Unit *unit,
         write(phv.field(hr->toString() + ".$valid"), std::nullopt, unit, e, needsIXBar);
 }
 
-bool FieldDefUse::preorder(const IR::BFN::Pipe *p) {
+bool FieldDefUse::preorder(const P4::IR::BFN::Pipe *p) {
     p->apply(CollectAliasDestinations(*this));
     return true;
 }
 
-bool FieldDefUse::preorder(const IR::BFN::Parser *p) {
+bool FieldDefUse::preorder(const P4::IR::BFN::Parser *p) {
     LOG6("FieldDefUse " << p->gress << " Parser" << IndentCtl::indent);
     if (p->gress == EGRESS) {
         /* after processing the ingress pipe, before proceeding to the egress pipe, we
@@ -298,7 +298,7 @@ bool FieldDefUse::preorder(const IR::BFN::Parser *p) {
             auto *parser_begin = p->start;
             const PHV::Field *f_p = phv.field(f.id);
             BUG_CHECK(f_p != nullptr, "Dereferencing an invalid field id");
-            IR::Expression *parser_err_expr = new WriteParserError(f_p);
+            P4::IR::Expression *parser_err_expr = new WriteParserError(f_p);
             auto &info = field(f_p);
             info.def.emplace(parser_begin, parser_err_expr);
             info.def_covered_ranges_map[locpair(parser_begin, parser_err_expr)].insert(
@@ -309,7 +309,7 @@ bool FieldDefUse::preorder(const IR::BFN::Parser *p) {
             auto *parser_begin = p->start;
             const PHV::Field *f_p = phv.field(f.id);
             BUG_CHECK(f_p != nullptr, "Dereferencing an invalid field id");
-            IR::Expression *dummy_expr = new ImplicitParserInit(f_p);
+            P4::IR::Expression *dummy_expr = new ImplicitParserInit(f_p);
             auto &info = field(f_p);
             parser_zero_inits.emplace(parser_begin, dummy_expr);
             info.def.emplace(parser_begin, dummy_expr);
@@ -320,33 +320,33 @@ bool FieldDefUse::preorder(const IR::BFN::Parser *p) {
     }
     return true;
 }
-void FieldDefUse::postorder(const IR::BFN::Parser *) {
+void FieldDefUse::postorder(const P4::IR::BFN::Parser *) {
     LOG6_UNINDENT;
 }
 
-bool FieldDefUse::preorder(const IR::BFN::ParserState *ps) {
+bool FieldDefUse::preorder(const P4::IR::BFN::ParserState *ps) {
     LOG6("FieldDefUse " << ps->gress << " ParserState " << ps->name << IndentCtl::indent);
     return true;
 }
-void FieldDefUse::postorder(const IR::BFN::ParserState *) {
+void FieldDefUse::postorder(const P4::IR::BFN::ParserState *) {
     LOG6_UNINDENT;
 }
 
-bool FieldDefUse::preorder(const IR::BFN::LoweredParser*) {
+bool FieldDefUse::preorder(const P4::IR::BFN::LoweredParser*) {
     BUG("Running FieldDefUse after the parser IR has been lowered; "
         "this will produce invalid results.");
     return false;
 }
 
-bool FieldDefUse::preorder(const IR::MAU::Table *t) {
+bool FieldDefUse::preorder(const P4::IR::MAU::Table *t) {
     LOG6("FieldDefUse " << t->gress << " table " << t->name << IndentCtl::indent);
     return true;
 }
-void FieldDefUse::postorder(const IR::MAU::Table *) {
+void FieldDefUse::postorder(const P4::IR::MAU::Table *) {
     LOG6_UNINDENT;
 }
 
-bool FieldDefUse::preorder(const IR::MAU::Action *act) {
+bool FieldDefUse::preorder(const P4::IR::MAU::Action *act) {
     // stateful table arguments are read before the the action code runs which reads
     // them.  FIXME -- should only visit the SaluAction that is triggered by this action,
     // not all of them.
@@ -365,13 +365,13 @@ bool FieldDefUse::preorder(const IR::MAU::Action *act) {
     return false;
 }
 
-bool FieldDefUse::preorder(const IR::MAU::Primitive* prim) {
+bool FieldDefUse::preorder(const P4::IR::MAU::Primitive* prim) {
     // TODO: consider h.f1 = h.f1 + 1; When we visit it,
     // we should first visit the source on the RHS, as how hardware does.
     // The h.f1 on RHS is an use of previous def, and the one on LHS is a
     // write that clears the previous defs from this point.
     // TODO: The long-term fix for this is to change the order of visiting when
-    // visiting IR::MAU::Primitive to the evaluation order defined in spec,
+    // visiting P4::IR::MAU::Primitive to the evaluation order defined in spec,
     // to make control flow visit correct.
     LOG6("FieldDefUse preorder Primitive : " << prim << IndentCtl::indent);
     if (prim->operands.size() > 0) {
@@ -395,11 +395,11 @@ bool FieldDefUse::preorder(const IR::MAU::Primitive* prim) {
  * - Visit only the collected actions in the list
  * This ensures only the actions relevant to the current thread are visited.
  */
-bool FieldDefUse::preorder(const IR::MAU::StatefulAlu *salu) {
+bool FieldDefUse::preorder(const P4::IR::MAU::StatefulAlu *salu) {
     LOG6("FieldDefUse preorder Stateful : " << salu << IndentCtl::indent);
     visitAgain();
     std::set<cstring> salu_actions_to_visit;
-    if (auto tbl = findContext<IR::MAU::Table>()) {
+    if (auto tbl = findContext<P4::IR::MAU::Table>()) {
         for (auto act : tbl->actions) {
             auto tblActIdx = tbl->name + "-" + act.first;
             if (salu->action_map.count(tblActIdx)) {
@@ -415,29 +415,29 @@ bool FieldDefUse::preorder(const IR::MAU::StatefulAlu *salu) {
     return false;
 }
 
-bool FieldDefUse::preorder(const IR::Expression *e) {
+bool FieldDefUse::preorder(const P4::IR::Expression *e) {
     le_bitrange bits;
     auto *f = phv.field(e, &bits);
-    auto *hr = e->to<IR::HeaderRef>();
+    auto *hr = e->to<P4::IR::HeaderRef>();
 
     // Prevent visiting HeaderRefs in Members when PHV lookup fails, eg. for
     // $valid fields before allocatePOV.
-    if (!f && e->is<IR::Member>()) return false;
+    if (!f && e->is<P4::IR::Member>()) return false;
     if (!f && !hr) return true;
     LOG6("FieldDefUse preorder : " << e << IndentCtl::indent);
 
-    if (auto unit = findContext<IR::BFN::Unit>()) {
+    if (auto unit = findContext<P4::IR::BFN::Unit>()) {
         bool needsIXBar = true, ok = false;
         for (auto c = getContext(); c; c = c->parent) {
-            if (c->node->is<IR::MAU::IXBarExpression>() || c->node->is<IR::MAU::StatefulCall>() ||
-                c->node->is<IR::MAU::StatefulAlu>() || c->node->is<IR::MAU::Table>() ||
-                c->node->is<IR::MAU::Meter>()) {
+            if (c->node->is<P4::IR::MAU::IXBarExpression>() || c->node->is<P4::IR::MAU::StatefulCall>() ||
+                c->node->is<P4::IR::MAU::StatefulAlu>() || c->node->is<P4::IR::MAU::Table>() ||
+                c->node->is<P4::IR::MAU::Meter>()) {
                 needsIXBar = true;
                 ok = true;
                 break;
             }
-            if (c->node->is<IR::MAU::Action>() || c->node->is<IR::BFN::ParserState>() ||
-                c->node->is<IR::BFN::Deparser>() || c->node->is<IR::BFN::GhostParser>()) {
+            if (c->node->is<P4::IR::MAU::Action>() || c->node->is<P4::IR::BFN::ParserState>() ||
+                c->node->is<P4::IR::BFN::Deparser>() || c->node->is<P4::IR::BFN::GhostParser>()) {
                 needsIXBar = false;
                 ok = true;
                 break;
@@ -468,11 +468,11 @@ bool FieldDefUse::preorder(const IR::Expression *e) {
     return false;
 }
 
-bool FieldDefUse::preorder(const IR::BFN::AbstractDeparser *d) {
+bool FieldDefUse::preorder(const P4::IR::BFN::AbstractDeparser *d) {
     LOG6("FieldDefUse " << d->gress << " Deparser" << IndentCtl::indent);
     return true;
 }
-void FieldDefUse::postorder(const IR::BFN::AbstractDeparser *) {
+void FieldDefUse::postorder(const P4::IR::BFN::AbstractDeparser *) {
     LOG6_UNINDENT;
 }
 
@@ -587,21 +587,21 @@ std::string to_string(const code &a) {
 
 bool FieldDefUse::isUsedInParser(const PHV::Field* f) const {
     for (const FieldDefUse::locpair def : getAllDefs(f->id))
-        if (def.first->is<IR::BFN::ParserState>() || def.first->is<IR::BFN::Parser>())
+        if (def.first->is<P4::IR::BFN::ParserState>() || def.first->is<P4::IR::BFN::Parser>())
             return true;
     for (const FieldDefUse::locpair use : getAllUses(f->id))
-        if (use.first->is<IR::BFN::ParserState>() || use.first->is<IR::BFN::Parser>())
+        if (use.first->is<P4::IR::BFN::ParserState>() || use.first->is<P4::IR::BFN::Parser>())
             return true;
     return false;
 }
 
-bool FieldDefUse::hasUseAt(const PHV::Field* f, const IR::BFN::Unit* u) const {
+bool FieldDefUse::hasUseAt(const PHV::Field* f, const P4::IR::BFN::Unit* u) const {
     for (auto& use : getAllUses(f->id))
         if (u == use.first) return true;
     return false;
 }
 
-bool FieldDefUse::hasDefAt(const PHV::Field* f, const IR::BFN::Unit* u) const {
+bool FieldDefUse::hasDefAt(const PHV::Field* f, const P4::IR::BFN::Unit* u) const {
     for (auto& def : getAllDefs(f->id))
         if (def.first == u) return true;
     return false;
@@ -615,7 +615,7 @@ getParserRangeDefMatcher(const PhvInfo& phv, const PHV::Field* f,
     // but phv by reference (it is large and we got it by reference)
     return [&phv, range, f](const FieldDefUse::locpair& lp) {
             le_bitrange rng;
-            if (!(lp.first->is<IR::BFN::ParserState>() || lp.first->is<IR::BFN::Parser>()))
+            if (!(lp.first->is<P4::IR::BFN::ParserState>() || lp.first->is<P4::IR::BFN::Parser>()))
                 return false;
 
             // Cannot extract field - e.g. ImplicitParserInit
@@ -652,7 +652,7 @@ void FieldDefUse::collect_uninitalized() {
     }
 }
 
-void FieldDefUse::end_apply(const IR::Node *) {
+void FieldDefUse::end_apply(const P4::IR::Node *) {
     collect_uninitalized();
 
     LOG_FEATURE("defuse_graph", 3, std::bind(&FieldDefUse::dotgraph, this, std::placeholders::_1));

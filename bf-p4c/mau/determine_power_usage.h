@@ -39,7 +39,7 @@ class DeterminePowerUsage: public MauInspector {
 
   // Need to update these to include accesses from 'attached_memory_usage'
   // once that information is found.
-  IR::Vector<IR::MAU::Table> match_tables_with_unattached_;
+  P4::IR::Vector<P4::IR::MAU::Table> match_tables_with_unattached_;
 
   // map from table to Boolean indicating if the table accesses mocha containers
   // in the match input crossbar.
@@ -48,12 +48,12 @@ class DeterminePowerUsage: public MauInspector {
   /* --------------------------------------------------------
    *  Function definitions.
    * --------------------------------------------------------*/
-  void end_apply(const IR::Node *root) override;
-  void postorder(const IR::BFN::Pipe *p) override;
-  void postorder(const IR::MAU::Table* t) override;
-  bool preorder(const IR::MAU::Meter *m) override;
-  bool preorder(const IR::MAU::Counter *c) override;
-  bool preorder(const IR::MAU::Selector *sel) override;
+  void end_apply(const P4::IR::Node *root) override;
+  void postorder(const P4::IR::BFN::Pipe *p) override;
+  void postorder(const P4::IR::MAU::Table* t) override;
+  bool preorder(const P4::IR::MAU::Meter *m) override;
+  bool preorder(const P4::IR::MAU::Counter *c) override;
+  bool preorder(const P4::IR::MAU::Selector *sel) override;
 
  private:
   /**
@@ -81,7 +81,7 @@ class DeterminePowerUsage: public MauInspector {
     * @return Boolean indicating if a mocha PHV container is used by this table in
     *         an match input crossbar usage.
     */
-  bool uses_mocha_containers_in_ixbar(const IR::MAU::Table* t) const;
+  bool uses_mocha_containers_in_ixbar(const P4::IR::MAU::Table* t) const;
 
   const PhvInfo& phv_;
   DependencyGraph& dep_graph_;

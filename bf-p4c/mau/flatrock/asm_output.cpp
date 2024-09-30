@@ -19,7 +19,7 @@ int IXBar::Use::slot_size(int group) const {
 }
 
 void IXBar::Use::gather_bytes(const PhvInfo &phv, std::map<int, std::map<int, Slice>> &sort,
-                              const IR::MAU::Table *tbl) const {
+                              const P4::IR::MAU::Table *tbl) const {
     PHV::FieldUse f_use(PHV::FieldUse::READ);
     for (auto &b : use) {
         BUG_CHECK(b.loc.allocated(), "Byte not allocated by assembly");
@@ -60,7 +60,7 @@ void IXBar::Use::gather_bytes(const PhvInfo &phv, std::map<int, std::map<int, Sl
 }
 
 void IXBar::Use::emit_ixbar_asm(const PhvInfo &phv, std::ostream &out, indent_t indent,
-                                const ::TableMatch *fmt, const IR::MAU::Table *tbl) const {
+                                const ::TableMatch *fmt, const P4::IR::MAU::Table *tbl) const {
     typedef std::map<int, std::map<int, Slice>> SortMap;
     SortMap sort_all, sort_word, sort_byte;
     cstring group_type;
@@ -138,7 +138,7 @@ void IXBar::Use::emit_ixbar_asm(const PhvInfo &phv, std::ostream &out, indent_t 
 }
 
 bool IXBar::Use::emit_gateway_asm(const MauAsmOutput &mauasm, std::ostream &out, indent_t indent,
-                                  const IR::MAU::Table *tbl) const {
+                                  const P4::IR::MAU::Table *tbl) const {
     if (num_gw_rows <= 0) return false;
     out << indent << "row: " << first_gw_row << std::endl;
     // FIXME -- we need this code if we want to use the gateway payload to specify the
@@ -157,7 +157,7 @@ bool IXBar::Use::emit_gateway_asm(const MauAsmOutput &mauasm, std::ostream &out,
     return true;
 }
 
-bool ActionDataBus::Use::emit_adb_asm(std::ostream &out, const IR::MAU::Table *tbl,
+bool ActionDataBus::Use::emit_adb_asm(std::ostream &out, const P4::IR::MAU::Table *tbl,
                                       bitvec source) const {
     LOG1("Emitting action data bus asm for table " << tbl->name);
     auto &format = tbl->resources->action_format;
@@ -248,7 +248,7 @@ bool ActionDataBus::Use::emit_adb_asm(std::ostream &out, const IR::MAU::Table *t
                 // FIXME -- this is probably all wrong for flatrock
                 for (auto back_at : tbl->attached) {
                     auto at = back_at->attached;
-                    auto *mtr = at->to<IR::MAU::Meter>();
+                    auto *mtr = at->to<P4::IR::MAU::Meter>();
                     if (mtr == nullptr) continue;
                     out << MauAsmOutput::find_attached_name(tbl, mtr) << " color";
                     break;
@@ -258,7 +258,7 @@ bool ActionDataBus::Use::emit_adb_asm(std::ostream &out, const IR::MAU::Table *t
                 out << format.get_format_name(rs.location.type, rs.source, rs.byte_offset);
             } else if (source_is_meter) {
                 // FIXME -- this is probably all wrong for flatrock
-                auto *at = tbl->get_attached<IR::MAU::MeterBus2Port>();
+                auto *at = tbl->get_attached<P4::IR::MAU::MeterBus2Port>();
                 BUG_CHECK(at != nullptr, "Trying to emit meter alu without meter alu user");
                 cstring ret_name = MauAsmOutput::find_attached_name(tbl, at);
                 out << ret_name;
@@ -447,7 +447,7 @@ void PpuAsmOutput::emit_table_format(std::ostream &out, indent_t indent,
     if (!first) out << " ]" << std::endl;
 }
 
-bool PpuAsmOutput::gateway_uses_inhibit_index(const IR::MAU::Table *tbl) const {
+bool PpuAsmOutput::gateway_uses_inhibit_index(const P4::IR::MAU::Table *tbl) const {
     // FIXME -- the decision on which to use (payload or inhibit_index) should probably be
     // stored in the layout somewhere.  For now we use inhibit_index when there are 2+
     // choices as the payload can only provide one.
@@ -460,7 +460,7 @@ bool PpuAsmOutput::gateway_uses_inhibit_index(const IR::MAU::Table *tbl) const {
 
 // FIXME -- Remove stuff no longer required for Flatrock
 void PpuAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memories::Use &mem,
-         const IR::MAU::Table::Layout *layout, const TableFormat::Use *format) const {
+         const P4::IR::MAU::Table::Layout *layout, const TableFormat::Use *format) const {
     safe_vector<int> row, bus, result_bus, word;
     std::map<int, safe_vector<int>> home_rows;
     safe_vector<int> alu_rows;
@@ -636,9 +636,9 @@ void PpuAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memorie
             out << indent << "vpns:" << mem.color_mapram[0].vpn << std::endl;
         }
         out << indent << "address: ";
-        if (mem.cma == IR::MAU::ColorMapramAddress::IDLETIME)
+        if (mem.cma == P4::IR::MAU::ColorMapramAddress::IDLETIME)
             out << "idletime";
-        else if (mem.cma == IR::MAU::ColorMapramAddress::STATS)
+        else if (mem.cma == P4::IR::MAU::ColorMapramAddress::STATS)
             out << "stats";
         else
             BUG("Color mapram has not been allocated an address");
@@ -715,7 +715,7 @@ void TableMatch::populate_match_fields() {
     LOG7("\tMatch fields : " << match_fields);
 }
 
-TableMatch::TableMatch(const PhvInfo &phv, const IR::MAU::Table *tbl) : ::TableMatch(phv) {
+TableMatch::TableMatch(const PhvInfo &phv, const P4::IR::MAU::Table *tbl) : ::TableMatch(phv) {
     table = tbl;
 
     Log::TempIndent indent;

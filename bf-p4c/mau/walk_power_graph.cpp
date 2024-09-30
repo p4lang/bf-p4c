@@ -25,7 +25,7 @@
 
 namespace MauPower {
 
-bool WalkPowerGraph::preorder(const IR::MAU::Table *t) {
+bool WalkPowerGraph::preorder(const P4::IR::MAU::Table *t) {
     // Strip the possible "." at the beginning
     // This uses canon_name class, which does this when writting to output
     canon_name strip_dot_prefix(t->externalName());
@@ -46,7 +46,7 @@ bool WalkPowerGraph::preorder(const IR::MAU::Table *t) {
  * 3. Update dependencies if can (if power exceeded) and go back to step 0
  * 4. Log results, send info to assembly generation.
  */
-void WalkPowerGraph::end_apply(const IR::Node *root) {
+void WalkPowerGraph::end_apply(const P4::IR::Node *root) {
     bool updated_deps = true;
     auto &spec = Device::mauPowerSpec();
     double rounding = spec.get_max_power() / 104729.0;
@@ -258,12 +258,12 @@ void WalkPowerGraph::compute_mpr() {
                 for (auto tbl : mau_features_->stage_to_tables_[g][stage]) {
                     BUG_CHECK(tbl->gress == g, "%s not in %s", tbl, g);
                     if (!tbl->logical_id) continue;  // ignore unplaced and non- tables
-                    if (tbl->always_run == IR::MAU::AlwaysRun::TABLE) {
+                    if (tbl->always_run == P4::IR::MAU::AlwaysRun::TABLE) {
                         always_run |= (1 << *tbl->logical_id);
                         continue;
                     }
                     // ordered_set can be safely appended to while iterating over it
-                    ordered_set<const IR::MAU::Table *> tables = {tbl};
+                    ordered_set<const P4::IR::MAU::Table *> tables = {tbl};
                     // First we need to find all the tables that might directly or indirectly invoke
                     // this table that are in the same non-match-dep group of stages.  We then need
                     // enable match power for this table if any of them might run.
@@ -284,7 +284,7 @@ void WalkPowerGraph::compute_mpr() {
                     for (auto t : tables) {
                         BUG_CHECK(t->gress == g, "%s not in %s", tbl, g);
                         auto &predecessors = graph->predecessors(t->unique_id());
-                        if (t->always_run == IR::MAU::AlwaysRun::TABLE || predecessors.empty()) {
+                        if (t->always_run == P4::IR::MAU::AlwaysRun::TABLE || predecessors.empty()) {
                             always_run |= (1 << *tbl->logical_id);
                             break;
                         } else {
@@ -367,13 +367,13 @@ void WalkPowerGraph::compute_mpr() {
                 int always_run = 0;
                 for (auto tbl : mau_features_->stage_to_tables_[g][stage]) {
                     switch (tbl->always_run) {
-                        case IR::MAU::AlwaysRun::NONE:
+                        case P4::IR::MAU::AlwaysRun::NONE:
                             break;
 
-                        case IR::MAU::AlwaysRun::ACTION:
+                        case P4::IR::MAU::AlwaysRun::ACTION:
                             continue;
 
-                        case IR::MAU::AlwaysRun::TABLE:
+                        case P4::IR::MAU::AlwaysRun::TABLE:
                             LOG4("Table " << tbl->externalName() << " was marked as always run.");
                             break;
                     }
@@ -723,7 +723,7 @@ double WalkPowerGraph::estimate_power_non_tofino() {
  * will require it to be turned on.
  */
 bool WalkPowerGraph::is_mpr_powered_on(gress_t gress, int stage,
-                                       const IR::MAU::Table *table) const {
+                                       const P4::IR::MAU::Table *table) const {
     int last_match_dep_stage = mpr_settings_.at(gress)->get_mpr_stage(stage);
     if (stage == last_match_dep_stage)  // Function cannot be called when already match-dependent.
         return false;
@@ -747,13 +747,13 @@ bool WalkPowerGraph::is_mpr_powered_on(gress_t gress, int stage,
     return false;
 }
 
-void WalkPowerGraph::create_mau_power_log(const IR::Node *root) const {
+void WalkPowerGraph::create_mau_power_log(const P4::IR::Node *root) const {
     if (!options_.display_power_budget) {
         return;
     }
     std::ofstream myfile;
     auto logDir =
-        BFNContext::get().getOutputDirectory("logs"_cs, root->to<IR::BFN::Pipe>()->canon_id());
+        BFNContext::get().getOutputDirectory("logs"_cs, root->to<P4::IR::BFN::Pipe>()->canon_id());
     if (logDir) {
         std::filesystem::path fullPath =
             std::filesystem::path(logDir.string_view()) / "mau.power.log";
@@ -788,9 +788,9 @@ void WalkPowerGraph::create_mau_power_log(const IR::Node *root) const {
 
 // TODO: Add input pps load % value to json
 // JIRA-DOC: P4C-3332
-void WalkPowerGraph::create_mau_power_json(const IR::Node *root) {
+void WalkPowerGraph::create_mau_power_json(const P4::IR::Node *root) {
     auto logDir =
-        BFNContext::get().getOutputDirectory("logs"_cs, root->to<IR::BFN::Pipe>()->canon_id());
+        BFNContext::get().getOutputDirectory("logs"_cs, root->to<P4::IR::BFN::Pipe>()->canon_id());
     if (!logDir) return;
     cstring powerFile = logDir + "/power.json"_cs;
     logger_ = new PowerLogging(powerFile, Logging::Logger::buildDate(), BF_P4C_VERSION,
@@ -798,15 +798,15 @@ void WalkPowerGraph::create_mau_power_json(const IR::Node *root) {
                                POWER_SCHEMA_VERSION);
 
     produce_json_tables();
-    produce_json_total_power(root->to<IR::BFN::Pipe>()->canon_id());
+    produce_json_total_power(root->to<P4::IR::BFN::Pipe>()->canon_id());
     produce_json_stage_characteristics();
-    produce_json_total_latency(root->to<IR::BFN::Pipe>()->canon_id());
+    produce_json_total_latency(root->to<P4::IR::BFN::Pipe>()->canon_id());
     logger_->log();
     delete logger_;
 
     Logging::Manifest &manifest = Logging::Manifest::getManifest();
     // relative path to the output directory
-    manifest.addLog(root->to<IR::BFN::Pipe>()->canon_id(), "power"_cs, "power.json"_cs);
+    manifest.addLog(root->to<P4::IR::BFN::Pipe>()->canon_id(), "power"_cs, "power.json"_cs);
 }
 
 void WalkPowerGraph::print_features(std::ofstream &out) const {

@@ -2,14 +2,14 @@
 #include "split_gateways.h"
 #include "lib/log.h"
 
-Visitor::profile_t SpreadGatewayAcrossSeq::init_apply(const IR::Node *root) {
+Visitor::profile_t SpreadGatewayAcrossSeq::init_apply(const P4::IR::Node *root) {
     auto rv = MauTransform::init_apply(root);
     root->apply(uses);
     LOG2(uses);
     return rv;
 }
 
-const IR::Node *SpreadGatewayAcrossSeq::postorder(IR::MAU::Table *t) {
+const P4::IR::Node *SpreadGatewayAcrossSeq::postorder(P4::IR::MAU::Table *t) {
     char suffix[14];
     int counter = 0;
 #if 1
@@ -21,12 +21,12 @@ const IR::Node *SpreadGatewayAcrossSeq::postorder(IR::MAU::Table *t) {
     if (!t->conditional_gateway_only()) return t;
     assert(t->actions.empty());
     assert(t->attached.empty());
-    auto rv = new IR::Vector<IR::MAU::Table>();
+    auto rv = new P4::IR::Vector<P4::IR::MAU::Table>();
     for (auto it = t->next.rbegin(); it != t->next.rend(); it++) {
-        auto seq = dynamic_cast<const IR::MAU::TableSeq *>(it->second);
+        auto seq = dynamic_cast<const P4::IR::MAU::TableSeq *>(it->second);
         if (!seq) return t;
         bool splitting = true;
-        IR::MAU::Table *newtable = nullptr;
+        P4::IR::MAU::Table *newtable = nullptr;
         for (auto &table : seq->tables) {
             if (splitting) {
                 snprintf(suffix, sizeof(suffix), ".%d", ++counter);
@@ -34,7 +34,7 @@ const IR::Node *SpreadGatewayAcrossSeq::postorder(IR::MAU::Table *t) {
                 newtable->next.clear();
                 rv->push_back(newtable); }
             newtable->next[it->first] =
-                new IR::MAU::TableSeq(newtable->next[it->first], table);
+                new P4::IR::MAU::TableSeq(newtable->next[it->first], table);
             if (uses.tables_modify(table) & uses.table_reads(t))
                 splitting = false; } }
     if (rv->size() <= 1)
@@ -45,7 +45,7 @@ const IR::Node *SpreadGatewayAcrossSeq::postorder(IR::MAU::Table *t) {
     return rv;
 }
 
-static void erase_unused_next(IR::MAU::Table *tbl) {
+static void erase_unused_next(P4::IR::MAU::Table *tbl) {
     BUG_CHECK(tbl->match_table == nullptr, "Can only run erase_unused_next on pure gateways");
     std::set<cstring> results;
     for (auto &row : tbl->gateway_rows)
@@ -63,7 +63,7 @@ std::ostream &operator<<(std::ostream &out, const std::pair<const IR::Expression
     return out;
 }
 
-const IR::MAU::Table *SplitComplexGateways::preorder(IR::MAU::Table *tbl) {
+const P4::IR::MAU::Table *SplitComplexGateways::preorder(P4::IR::MAU::Table *tbl) {
     if (tbl->gateway_rows.empty()) return tbl;
     BUG_CHECK(tbl->gateway_rows.back().first == nullptr, "Gateway not canonicalized?");
     if (tbl->match_table)
@@ -84,7 +84,7 @@ const IR::MAU::Table *SplitComplexGateways::preorder(IR::MAU::Table *tbl) {
             rest->gateway_rows.erase(rest->gateway_rows.begin(), rest->gateway_rows.begin() + i);
             tbl->gateway_rows.erase(tbl->gateway_rows.begin() + i, tbl->gateway_rows.end());
             tbl->gateway_rows.emplace_back(nullptr, "$gwcont"_cs);
-            tbl->next.emplace("$gwcont"_cs, new IR::MAU::TableSeq(rest));
+            tbl->next.emplace("$gwcont"_cs, new P4::IR::MAU::TableSeq(rest));
             erase_unused_next(rest);
             erase_unused_next(tbl);
             return tbl; } }

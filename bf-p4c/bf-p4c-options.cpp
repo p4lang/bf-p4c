@@ -679,19 +679,19 @@ cstring BFNContext::getOutputDirectory(const cstring &suffix, int pipe_id) {
     return dir;
 }
 
-void BFNContext::discoverPipes(const IR::P4Program *program, const IR::ToplevelBlock* toplevel) {
+void BFNContext::discoverPipes(const P4::IR::P4Program *program, const P4::IR::ToplevelBlock* toplevel) {
     auto main = toplevel->getMain();
     auto pipe_id = 0;
     for (auto pkg : main->constantValue) {
         if (!pkg.second) continue;
-        if (!pkg.second->is<IR::PackageBlock>()) continue;
+        if (!pkg.second->is<P4::IR::PackageBlock>()) continue;
         auto getPipeName = [program, pipe_id]() -> cstring {
             auto mainDecls = program->getDeclsByName("main"_cs)->toVector();
             if (mainDecls.size() == 0) return nullptr;  // no main
             auto decl = mainDecls.at(0);
-            auto expr = decl->to<IR::Declaration_Instance>()->arguments->at(pipe_id)->expression;
-            if (!expr->is<IR::PathExpression>()) return nullptr;
-            return expr->to<IR::PathExpression>()->path->name;
+            auto expr = decl->to<P4::IR::Declaration_Instance>()->arguments->at(pipe_id)->expression;
+            if (!expr->is<P4::IR::PathExpression>()) return nullptr;
+            return expr->to<P4::IR::PathExpression>()->path->name;
         };
         auto pipeName = getPipeName();
         if (pipeName) {
@@ -718,7 +718,7 @@ bool BFNContext::isRecognizedDiagnostic(cstring diagnostic) {
 }
 
 std::optional<P4::IOptionPragmaParser::CommandLineOptions>
-BFNOptionPragmaParser::tryToParse(const IR::Annotation* annotation) {
+BFNOptionPragmaParser::tryToParse(const P4::IR::Annotation* annotation) {
     auto pragmaName = annotation->name.name;
     if (pragmaName == "command_line")
         return parseCompilerOption(annotation);
@@ -736,7 +736,7 @@ BFNOptionPragmaParser::tryToParse(const IR::Annotation* annotation) {
 }
 
 std::optional<P4::IOptionPragmaParser::CommandLineOptions>
-BFNOptionPragmaParser::parseCompilerOption(const IR::Annotation* annotation) {
+BFNOptionPragmaParser::parseCompilerOption(const P4::IR::Annotation* annotation) {
     // See `supported_cmd_line_pragmas` in glass/p4c_tofino/target/tofino/compile.py:205
     static const std::map<cstring, bool> cmdLinePragmas = {
         { "--no-dead-code-elimination"_cs,  false },
@@ -775,11 +775,11 @@ BFNOptionPragmaParser::parseCompilerOption(const IR::Annotation* annotation) {
     for (auto* arg : *args) {
         // Try to convert the parsed expression to a valid option string
         cstring optionString = ""_cs;
-        if (auto* argString = arg->to<IR::StringLiteral>()) {
+        if (auto* argString = arg->to<P4::IR::StringLiteral>()) {
             optionString = argString->value;
         } else {
             // The expression is not a IR::StringLiteral, but it can still be a valid integer
-            if (auto* argConstant = arg->to<IR::Constant>()) {
+            if (auto* argConstant = arg->to<P4::IR::Constant>()) {
                 optionString = std::to_string(argConstant->asInt());
             } else {
                 // The expression is neither a IR::StringLiteral or IR::Constant and so is invalid

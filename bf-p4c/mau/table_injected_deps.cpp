@@ -7,11 +7,11 @@
 #include "table_injected_deps.h"
 #include "bf-p4c/common/field_defuse.h"
 
-bool InjectControlDependencies::preorder(const IR::MAU::TableSeq *seq) {
+bool InjectControlDependencies::preorder(const P4::IR::MAU::TableSeq *seq) {
     const Context *ctxt = getContext();
-    if (ctxt && dynamic_cast<const IR::MAU::Table *>(ctxt->node)) {
-        const IR::MAU::Table* parent;
-        parent = dynamic_cast<const IR::MAU::Table *>(ctxt->node);
+    if (ctxt && dynamic_cast<const P4::IR::MAU::Table *>(ctxt->node)) {
+        const P4::IR::MAU::Table* parent;
+        parent = dynamic_cast<const P4::IR::MAU::Table *>(ctxt->node);
         auto seq_size = seq->size();
         auto seq_front = seq->front();
         auto seq_back = seq->back();
@@ -121,14 +121,14 @@ bool InjectControlDependencies::preorder(const IR::MAU::TableSeq *seq) {
  * This pass now works on the new IR rules for Tables and TableSeqs.  Tests verifying this pass
  * are contained in the table_dependency gtest under PredicationEdges Tests
  */
-void PredicationBasedControlEdges::postorder(const IR::MAU::Table *tbl) {
+void PredicationBasedControlEdges::postorder(const P4::IR::MAU::Table *tbl) {
     name_to_table[tbl->externalName()] = tbl;
     auto dom = ctrl_paths.find_dominator(tbl);
     if (dom == tbl)
         return;
     auto paths = ctrl_paths.table_pathways.at(tbl);
 
-    std::set<const IR::MAU::Table *> ignore_tables;
+    std::set<const P4::IR::MAU::Table *> ignore_tables;
     bool first_seq = true;
     /**
      * In the previous example, the table t4, due to next table propagation, required table
@@ -149,8 +149,8 @@ void PredicationBasedControlEdges::postorder(const IR::MAU::Table *tbl) {
      * in all applications, and thus is safe not to add a dependency.
      */
     for (auto path : paths) {
-        auto seq = path[1]->to<IR::MAU::TableSeq>();
-        std::set<const IR::MAU::Table *> local_set;
+        auto seq = path[1]->to<P4::IR::MAU::TableSeq>();
+        std::set<const P4::IR::MAU::Table *> local_set;
         for (auto seq_table : seq->tables) {
             if (seq_table == tbl) break;
             local_set.insert(seq_table);
@@ -159,7 +159,7 @@ void PredicationBasedControlEdges::postorder(const IR::MAU::Table *tbl) {
             ignore_tables.insert(local_set.begin(), local_set.end());
             first_seq = false;
         } else {
-            std::set<const IR::MAU::Table *> intersection;
+            std::set<const P4::IR::MAU::Table *> intersection;
             std::set_intersection(ignore_tables.begin(), ignore_tables.end(),
                                   local_set.begin(), local_set.end(),
                                   std::inserter(intersection, intersection.begin()));
@@ -171,11 +171,11 @@ void PredicationBasedControlEdges::postorder(const IR::MAU::Table *tbl) {
     // between these tables and the current table, as long as its not in the ignore_tables set
     for (auto path : paths) {
         auto it = path.begin();
-        const IR::MAU::Table *local_check = (*it)->to<IR::MAU::Table>();
+        const P4::IR::MAU::Table *local_check = (*it)->to<P4::IR::MAU::Table>();
         BUG_CHECK(local_check == tbl, "Table Pathways not correct");
         while (true) {
             it++;
-            auto higher_seq = (*it)->to<IR::MAU::TableSeq>();
+            auto higher_seq = (*it)->to<P4::IR::MAU::TableSeq>();
             BUG_CHECK(it != path.end() && higher_seq != nullptr, "Table Pathways not correct");
             for (auto seq_table : higher_seq->tables) {
                 if (local_check == seq_table) break;
@@ -184,7 +184,7 @@ void PredicationBasedControlEdges::postorder(const IR::MAU::Table *tbl) {
             }
 
             it++;
-            auto higher_tbl = (*it)->to<IR::MAU::Table>();
+            auto higher_tbl = (*it)->to<P4::IR::MAU::Table>();
             BUG_CHECK(it != path.end() && higher_tbl != nullptr, "Table Pathways not correct");
             if (higher_tbl == dom) break;
             local_check = higher_tbl;
@@ -261,8 +261,8 @@ void InjectMetadataControlDependencies::end_apply() {
             LOG5("  Injecting ANTI dep between " << first_table << " and " << second_table
                  << " due to metadata initializaation");
             for (auto inject_point : inject_points) {
-                auto inj1 = inject_point.first->to<IR::MAU::Table>();
-                auto inj2 = inject_point.second->to<IR::MAU::Table>();
+                auto inj1 = inject_point.first->to<P4::IR::MAU::Table>();
+                auto inj2 = inject_point.second->to<P4::IR::MAU::Table>();
                 LOG3("  Metadata inject points " << inj1->name << " " << inj2->name
                      << " from tables " << first_table << " " << second_table);
                 BUG_CHECK(fg.can_reach(inj1, inj2), "Metadata initialization analysis incorrect.  "
@@ -292,22 +292,22 @@ void InjectMetadataControlDependencies::end_apply() {
  *   - to T' from the next-table leaves of every predecessor of T' in S.
  *   - from each next-table leaf of T' to every successor of T' in S.
  */
-void InjectActionExitAntiDependencies::postorder(const IR::MAU::Table* table) {
+void InjectActionExitAntiDependencies::postorder(const P4::IR::MAU::Table* table) {
     if (tables_placed) return;
     if (!table->has_exit_action()) return;
 
-    std::set<const IR::MAU::Table*> processed;
+    std::set<const P4::IR::MAU::Table*> processed;
 
     // Walk up to the top level of the pipe along each control-flow path to the table.
     for (auto path : ctrl_paths.table_pathways.at(table)) {
-        const IR::MAU::Table* curTable = nullptr;
+        const P4::IR::MAU::Table* curTable = nullptr;
         for (auto parent : path) {
-            if (auto t = parent->to<IR::MAU::Table>()) {
+            if (auto t = parent->to<P4::IR::MAU::Table>()) {
                 curTable = t;
                 continue;
             }
 
-            auto tableSeq = parent->to<IR::MAU::TableSeq>();
+            auto tableSeq = parent->to<P4::IR::MAU::TableSeq>();
             if (!tableSeq) continue;
 
             if (processed.count(curTable)) continue;
@@ -344,7 +344,7 @@ void InjectActionExitAntiDependencies::postorder(const IR::MAU::Table* table) {
     }
 }
 
-bool InjectControlExitDependencies::preorder(const IR::MAU::Table* table) {
+bool InjectControlExitDependencies::preorder(const P4::IR::MAU::Table* table) {
     if (tables_placed) return false;
     tables_placed |= table->is_placed();
     if (!table->run_before_exit) return false;
@@ -352,14 +352,14 @@ bool InjectControlExitDependencies::preorder(const IR::MAU::Table* table) {
     return true;
 }
 
-void InjectControlExitDependencies::postorder(const IR::MAU::Table* table) {
+void InjectControlExitDependencies::postorder(const P4::IR::MAU::Table* table) {
     if (tables_placed) return;
     if (!is_first_run_before_exit_table_in_gress(table)) return;
     inject_dependencies_from_gress_root_tables_to_first_rbe_table(table);
 }
 
 void InjectControlExitDependencies::collect_run_before_exit_table(
-        const IR::MAU::Table* rbe_table) {
+        const P4::IR::MAU::Table* rbe_table) {
     auto it = run_before_exit_tables.find(rbe_table->gress);
     LOG3("  Adding "
          << rbe_table->gress
@@ -370,11 +370,11 @@ void InjectControlExitDependencies::collect_run_before_exit_table(
         it->second.push_back(rbe_table);
     else
         run_before_exit_tables.emplace(rbe_table->gress,
-                                       std::vector<const IR::MAU::Table *>{ rbe_table });
+                                       std::vector<const P4::IR::MAU::Table *>{ rbe_table });
 }
 
 bool InjectControlExitDependencies::is_first_run_before_exit_table_in_gress(
-        const IR::MAU::Table* rbe_table) {
+        const P4::IR::MAU::Table* rbe_table) {
     auto first = run_before_exit_tables[rbe_table->gress].begin();
     if (run_before_exit_tables[rbe_table->gress].empty())
         return false;
@@ -383,7 +383,7 @@ bool InjectControlExitDependencies::is_first_run_before_exit_table_in_gress(
 }
 
 void InjectControlExitDependencies::inject_dependencies_from_gress_root_tables_to_first_rbe_table(
-        const IR::MAU::Table* first_rbe_table) {
+        const P4::IR::MAU::Table* first_rbe_table) {
     LOG3("  Injecting CONTROL_EXIT dependencies from all "
          << first_rbe_table->gress
          << " root tables to first run before exit table "
@@ -395,10 +395,10 @@ void InjectControlExitDependencies::inject_dependencies_from_gress_root_tables_t
     }
 }
 
-const IR::MAU::TableSeq* InjectControlExitDependencies::get_gress_root_table_seq(
-        const IR::MAU::Table* table) {
+const P4::IR::MAU::TableSeq* InjectControlExitDependencies::get_gress_root_table_seq(
+        const P4::IR::MAU::Table* table) {
     auto paths = ctrl_paths.table_pathways.at(table);
-    auto root_table_seq = paths[0][1]->to<IR::MAU::TableSeq>();
+    auto root_table_seq = paths[0][1]->to<P4::IR::MAU::TableSeq>();
     return root_table_seq;
 }
 
@@ -413,8 +413,8 @@ void InjectControlExitDependencies::link_run_before_exit_tables() {
 }
 
 void InjectControlExitDependencies::inject_control_exit_dependency(
-        const IR::MAU::Table* source,
-        const IR::MAU::Table* destination) {
+        const P4::IR::MAU::Table* source,
+        const P4::IR::MAU::Table* destination) {
     auto annotation = "exit"_cs;
     auto edge_pair = dg.add_edge(source, destination, DependencyGraph::CONTROL_EXIT);
     if (!edge_pair.first) return;
@@ -425,7 +425,7 @@ void InjectControlExitDependencies::inject_control_exit_dependency(
     dg.ctrl_annotations[*edge_pair.first] = annotation;
 }
 
-const IR::MAU::Table* InjectDarkAntiDependencies::getTable(UniqueId uid) {
+const P4::IR::MAU::Table* InjectDarkAntiDependencies::getTable(UniqueId uid) {
     if (id_to_table.count(uid))
         return id_to_table.at(uid);
 
@@ -448,7 +448,7 @@ const IR::MAU::Table* InjectDarkAntiDependencies::getTable(UniqueId uid) {
     return id_to_table.at(*(same_name_tbls.begin()));
 }
 
-bool InjectDarkAntiDependencies::preorder(const IR::MAU::Table *tbl) {
+bool InjectDarkAntiDependencies::preorder(const P4::IR::MAU::Table *tbl) {
     placed |= tbl->is_placed();
     if (placed)
         return false;
@@ -578,16 +578,16 @@ void InjectDepForAltPhvAlloc::end_apply() {
                 const PHV::AllocSlice& toSlice   = siBeforeSj ? sj : si;
 
                 LOG6("From Slice : " << fromSlice << " --> To Slice : " << toSlice);
-                std::map<int, const IR::MAU::Table*> id_from_tables;
-                std::map<int, const IR::MAU::Table*> id_to_tables;
+                std::map<int, const P4::IR::MAU::Table*> id_from_tables;
+                std::map<int, const P4::IR::MAU::Table*> id_to_tables;
                 for (const auto& from_locpair : defuse.getAllDefsAndUses(fromSlice.field())) {
-                    const auto from_table = from_locpair.first->to<IR::MAU::Table>();
+                    const auto from_table = from_locpair.first->to<P4::IR::MAU::Table>();
                     if (!from_table) continue;
                     id_from_tables[from_table->id] = from_table;
                     LOG6("Table Read / Write (From Slice): " << from_table->name);
                 }
                 for (const auto& to_locpair : defuse.getAllDefsAndUses(toSlice.field())) {
-                    const auto to_table = to_locpair.first->to<IR::MAU::Table>();
+                    const auto to_table = to_locpair.first->to<P4::IR::MAU::Table>();
                     if (!to_table) continue;
                     id_to_tables[to_table->id] = to_table;
                     LOG6("Table Read / Write (To Slice): " << to_table->name);

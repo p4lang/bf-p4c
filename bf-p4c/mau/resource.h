@@ -11,6 +11,8 @@
 #include "lib/safe_vector.h"
 #include "bf-p4c/mau/tofino/input_xbar.h"
 
+using namespace P4;
+
 struct TableResourceAlloc {
     // TODO: Currently we only have a std::map for the UniqueId objects for Memories.  This would
     // make sense to eventually move to IXBar::Use, and even potentially
@@ -31,7 +33,7 @@ struct TableResourceAlloc {
     safe_vector<Tofino::IXBar::HashDistUse>     hash_dists;
 
     TableResourceAlloc *clone() const { return new TableResourceAlloc(*this); }
-    TableResourceAlloc *rename(const IR::MAU::Table *tbl, int stage_table = -1,
+    TableResourceAlloc *rename(const P4::IR::MAU::Table *tbl, int stage_table = -1,
                                int logical_table = -1);
 
     void clear_ixbar() {
@@ -53,8 +55,8 @@ struct TableResourceAlloc {
         meter_format.clear();
         meter_xbar.reset();
     }
-    void toJSON(JSONGenerator &json) const { json << "null"; }
-    static TableResourceAlloc *fromJSON(JSONLoader &) { return nullptr; }
+    void toJSON(P4::JSONGenerator &json) const { json << "null"; }
+    static TableResourceAlloc *fromJSON(P4::JSONLoader &) { return nullptr; }
 
     void merge_instr(const TableResourceAlloc *);
     bool has_tind() const;

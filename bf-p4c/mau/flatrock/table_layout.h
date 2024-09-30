@@ -8,16 +8,16 @@
 namespace Flatrock {
 
 class LayoutChoices : public ::LayoutChoices {
-    void setup_exact_match(const IR::MAU::Table *tbl, const IR::MAU::Table::Layout &layout_proto,
+    void setup_exact_match(const P4::IR::MAU::Table *tbl, const P4::IR::MAU::Table::Layout &layout_proto,
             ActionData::FormatType_t format_type, int action_data_bytes_in_table,
             int immediate_bits, int index) override;
-    void setup_layout_option_no_match(const IR::MAU::Table *tbl,
-            const IR::MAU::Table::Layout &layout, ActionData::FormatType_t format_type) override;
-    void setup_ternary_layout(const IR::MAU::Table *tbl,
-            const IR::MAU::Table::Layout &layout_proto, ActionData::FormatType_t format_type,
+    void setup_layout_option_no_match(const P4::IR::MAU::Table *tbl,
+            const P4::IR::MAU::Table::Layout &layout, ActionData::FormatType_t format_type) override;
+    void setup_ternary_layout(const P4::IR::MAU::Table *tbl,
+            const P4::IR::MAU::Table::Layout &layout_proto, ActionData::FormatType_t format_type,
             int action_data_bytes_in_table, int immediate_bits, int index) override;
-    void add_layout_option(const IR::MAU::Table *tbl, const IR::MAU::Table::Layout &layout,
-            const IR::MAU::Table::Way &way, ActionData::FormatType_t format_type,
+    void add_layout_option(const P4::IR::MAU::Table *tbl, const P4::IR::MAU::Table::Layout &layout,
+            const P4::IR::MAU::Table::Way &way, ActionData::FormatType_t format_type,
             const int entries, const int single_entry_bits,
             const int overhead_bits, const int index);
  public:

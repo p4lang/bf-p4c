@@ -8,7 +8,7 @@
 /// Helper class to handle the @hash_mask() annotation.
 class HashMaskAnnotations {
  public:
-    HashMaskAnnotations(const IR::MAU::Table *tbl, const PhvInfo &phv) {
+    HashMaskAnnotations(const P4::IR::MAU::Table *tbl, const PhvInfo &phv) {
         key_hash_bits_masked = 0;
         for (auto &table_key : tbl->match_key) {
             for (auto &a : table_key->annotations->annotations) {
@@ -24,7 +24,7 @@ class HashMaskAnnotations {
                         key_hash_bits_masked += (bits.size() - masked);
                     }
 
-                    const IR::Member *m = table_key->expr->to<IR::Member>();
+                    const P4::IR::Member *m = table_key->expr->to<P4::IR::Member>();
                     if (m != nullptr)
                         key_hash_masks[m->toString()] = hash_mask;
                     break;
@@ -43,13 +43,13 @@ class HashMaskAnnotations {
     int hash_bits_masked() { return key_hash_bits_masked; }
 
  private:
-    bitvec getBitvec(const IR::Annotation* annotation) {
+    bitvec getBitvec(const P4::IR::Annotation* annotation) {
         bitvec rv;
         if (annotation->expr.size() != 1) {
             ::error("%1% should contain a constant", annotation);
             return rv;
         }
-        auto constant = annotation->expr[0]->to<IR::Constant>();
+        auto constant = annotation->expr[0]->to<P4::IR::Constant>();
         if (constant == nullptr) {
             ::error("%1% should contain a constant", annotation);
             return rv;

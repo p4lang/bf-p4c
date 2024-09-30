@@ -1,7 +1,7 @@
 #include "bf-p4c/mau/table_mutex.h"
 #include "bf-p4c/lib/error_type.h"
 
-bool IgnoreTableDeps::ignore_deps(const IR::MAU::Table *t1, const IR::MAU::Table *t2) const {
+bool IgnoreTableDeps::ignore_deps(const P4::IR::MAU::Table *t1, const P4::IR::MAU::Table *t2) const {
     auto t1_pos = ignore_dep_map.find(t1);
     if (t1_pos != ignore_dep_map.end()) {
         if (t1_pos->second.count(t2))
@@ -16,11 +16,11 @@ bool IgnoreTableDeps::ignore_deps(const IR::MAU::Table *t1, const IR::MAU::Table
     return false;
 }
 
-bool IgnoreTableDeps::preorder(const IR::MAU::Table *tbl) {
+bool IgnoreTableDeps::preorder(const P4::IR::MAU::Table *tbl) {
     internal_name_to_table[tbl->name] = tbl;
     external_name_to_table[tbl->externalName()] = tbl;
 
-    std::vector<IR::ID> annotation;
+    std::vector<P4::IR::ID> annotation;
     tbl->getAnnotation("ignore_table_dependency"_cs, annotation);
     for (auto name : annotation) {
         // Due to P4_14 global name space, a dot is added to the initial table name
@@ -32,9 +32,9 @@ bool IgnoreTableDeps::preorder(const IR::MAU::Table *tbl) {
 
 void IgnoreTableDeps::end_apply() {
     for (auto entry : table_to_pragmas) {
-        const IR::MAU::Table *tbl = entry.first;
+        const P4::IR::MAU::Table *tbl = entry.first;
         for (auto pragma_val : entry.second) {
-            const IR::MAU::Table *ign_tbl = nullptr;
+            const P4::IR::MAU::Table *ign_tbl = nullptr;
             if (internal_name_to_table.count(pragma_val)) {
                 ign_tbl = internal_name_to_table.at(pragma_val);
             } else if (external_name_to_table.count(pragma_val)) {
@@ -67,8 +67,8 @@ safe_vector<IgnoreTableDeps::TablePair> IgnoreTableDeps::pairwise_deps_to_ignore
     return rv;
 }
 
-bool TablesMutuallyExclusive::miss_mutex_action_chain(const IR::MAU::Table *tbl,
-         const IR::MAU::Action *default_act, cstring &name) {
+bool TablesMutuallyExclusive::miss_mutex_action_chain(const P4::IR::MAU::Table *tbl,
+         const P4::IR::MAU::Action *default_act, cstring &name) {
     ordered_set<cstring> non_def_act_chains;
     for (auto &n : tbl->next) {
         if (default_act->name.originalName == n.first) {
@@ -93,7 +93,7 @@ bool TablesMutuallyExclusive::miss_mutex_action_chain(const IR::MAU::Table *tbl,
  *     - A table is not mutually exclusive with any of its successors
  * The reverse of the non-mutex graph is the mutual exclusion
  */
-void TablesMutuallyExclusive::postorder(const IR::MAU::Table *tbl) {
+void TablesMutuallyExclusive::postorder(const P4::IR::MAU::Table *tbl) {
     // Compute the table_succ entry for this table.
     bitvec succ;
     for (auto& n : tbl->next) {
@@ -117,7 +117,7 @@ void TablesMutuallyExclusive::postorder(const IR::MAU::Table *tbl) {
     non_mutex[table_ids.at(tbl)] |= succ;
 }
 
-void TablesMutuallyExclusive::postorder(const IR::MAU::TableSeq *seq) {
+void TablesMutuallyExclusive::postorder(const P4::IR::MAU::TableSeq *seq) {
     /* Update non_mutex to account for join points in the control flow. For example,
      *
      *   switch (t1.apply().action_run) {
@@ -151,17 +151,17 @@ void TablesMutuallyExclusive::postorder(const IR::MAU::TableSeq *seq) {
     }
 }
 
-bool TablesMutuallyExclusive::operator()(const IR::MAU::Table *a, const IR::MAU::Table *b) const {
+bool TablesMutuallyExclusive::operator()(const P4::IR::MAU::Table *a, const P4::IR::MAU::Table *b) const {
     BUG_CHECK(table_ids.count(a), "No table info for %1%", a->externalName());
     BUG_CHECK(table_ids.count(b), "No table info for %1%", b->externalName());
     return !non_mutex(table_ids.at(a), table_ids.at(b));
 }
 
-std::vector<const IR::MAU::Action*>
-SharedIndirectAttachedAnalysis::get_indirect_actions(const IR::MAU::Table *a,
-                                                     const IR::MAU::AttachedMemory *am) {
-    std::vector<const IR::MAU::Action*> attached_actions;
-    if (am->is<IR::MAU::ActionData>() || am->is<IR::MAU::Selector>()) {
+std::vector<const P4::IR::MAU::Action*>
+SharedIndirectAttachedAnalysis::get_indirect_actions(const P4::IR::MAU::Table *a,
+                                                     const P4::IR::MAU::AttachedMemory *am) {
+    std::vector<const P4::IR::MAU::Action*> attached_actions;
+    if (am->is<P4::IR::MAU::ActionData>() || am->is<P4::IR::MAU::Selector>()) {
         safe_vector<ActionData::Format::Use> action_format_vec;
         if (auto res = a->resources) {
             action_format_vec.push_back(res->action_format);
@@ -175,8 +175,8 @@ SharedIndirectAttachedAnalysis::get_indirect_actions(const IR::MAU::Table *a,
                  }
             }
         }
-    } else if (am->is<IR::MAU::Counter>() || am->is<IR::MAU::Meter>() ||
-               am->is<IR::MAU::StatefulAlu>()) {
+    } else if (am->is<P4::IR::MAU::Counter>() || am->is<P4::IR::MAU::Meter>() ||
+               am->is<P4::IR::MAU::StatefulAlu>()) {
         for (auto act : Values(a->actions)) {
             if (act->stateful_call(am->name)) {
                 attached_actions.push_back(act);
@@ -186,9 +186,9 @@ SharedIndirectAttachedAnalysis::get_indirect_actions(const IR::MAU::Table *a,
     return attached_actions;
 }
 
-bool SharedIndirectAttachedAnalysis::check_if_can_share(const IR::MAU::Table *a,
-                                                        const IR::MAU::Table *b,
-                                                        const IR::MAU::AttachedMemory *am) {
+bool SharedIndirectAttachedAnalysis::check_if_can_share(const P4::IR::MAU::Table *a,
+                                                        const P4::IR::MAU::Table *b,
+                                                        const P4::IR::MAU::AttachedMemory *am) {
     if (mutex(a, b)) {
         return true;
     } else if (ignore.ignore_deps(a, b)) {
@@ -205,10 +205,10 @@ bool SharedIndirectAttachedAnalysis::check_if_can_share(const IR::MAU::Table *a,
     return true;
 }
 
-bool SharedIndirectAttachedAnalysis::preorder(const IR::MAU::AttachedMemory *am) {
+bool SharedIndirectAttachedAnalysis::preorder(const P4::IR::MAU::AttachedMemory *am) {
     visitAgain();
     if (am->direct) return false;
-    auto *tbl = findContext<IR::MAU::Table>();
+    auto *tbl = findContext<P4::IR::MAU::Table>();
     for (auto am_tbl : backend_users[am]) {
         if (tbl == am_tbl)
             continue;
@@ -216,7 +216,7 @@ bool SharedIndirectAttachedAnalysis::preorder(const IR::MAU::AttachedMemory *am)
             table_sharing_attached[tbl].insert(am_tbl);
             continue;
         // Stateful Register can be shared across actions
-        } else if (!am->to<IR::MAU::StatefulAlu>()) {
+        } else if (!am->to<P4::IR::MAU::StatefulAlu>()) {
            ::error("%1% and %2% cannot share %3% because use of the %3% is not "
                     "mutually exclusive", tbl, am_tbl, am);
         }
@@ -226,8 +226,8 @@ bool SharedIndirectAttachedAnalysis::preorder(const IR::MAU::AttachedMemory *am)
 }
 
 // for gtest
-bool SharedIndirectAttachedAnalysis::if_table_share_attach(const IR::MAU::Table *a,
-                                                           const IR::MAU::Table *b) const {
+bool SharedIndirectAttachedAnalysis::if_table_share_attach(const P4::IR::MAU::Table *a,
+                                                           const P4::IR::MAU::Table *b) const {
     if (table_sharing_attached.count(a)) {
         if (table_sharing_attached.at(a).count(b)) return true;
     }
@@ -238,7 +238,7 @@ bool SharedIndirectAttachedAnalysis::if_table_share_attach(const IR::MAU::Table 
 }
 
 bool SharedIndirectAttachedAnalysis
-        ::mutex_through_ignore(const IR::MAU::Table *a, const IR::MAU::Table *b) const {
+        ::mutex_through_ignore(const P4::IR::MAU::Table *a, const P4::IR::MAU::Table *b) const {
     BUG_CHECK(table_ids.count(a), "No table info for %1%", a->externalName());
     BUG_CHECK(table_ids.count(b), "No table info for %1%", b->externalName());
     return _mutex_through_ignore(table_ids.at(a), table_ids.at(b));

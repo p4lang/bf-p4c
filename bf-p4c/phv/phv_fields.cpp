@@ -109,7 +109,7 @@ PHV::Field* PhvInfo::add(
 
 void PhvInfo::add_struct(
         cstring name,
-        const IR::Type_StructLike *type,
+        const P4::IR::Type_StructLike *type,
         gress_t gress,
         bool meta,
         bool bridged,
@@ -125,9 +125,9 @@ void PhvInfo::add_struct(
     for (auto f : type->fields) {
         int size = f->type->width_bits();
         cstring f_name = name + '.' + f->name;
-        if (f->type->is<IR::Type_StructLike>()) {
-            auto* struct_type = f->type->to<IR::Type_StructLike>();
-            bool meta = !struct_type->is<IR::Type_Header>();
+        if (f->type->is<P4::IR::Type_StructLike>()) {
+            auto* struct_type = f->type->to<P4::IR::Type_StructLike>();
+            bool meta = !struct_type->is<P4::IR::Type_Header>();
             // Add fields inside nested structs and headers.
             add_struct(f_name, struct_type, gress, meta, bridged, offset);
         }
@@ -141,7 +141,7 @@ void PhvInfo::add_struct(
         bool isOverlayable = f->getAnnotations()->getSingle("overlayable"_cs) != nullptr;
         // "flexible" annotation indicates flexible fields
         bool isFlexible = f->getAnnotations()->getSingle("flexible"_cs) != nullptr;
-        bool isFixedSizeHeader = type->is<IR::BFN::Type_FixedSizeHeader>();
+        bool isFixedSizeHeader = type->is<P4::IR::BFN::Type_FixedSizeHeader>();
         std::optional<Util::SourceInfo> srcInfo = std::nullopt;
         if (f->srcInfo.isValid())
             srcInfo = f->srcInfo;
@@ -155,7 +155,7 @@ void PhvInfo::add_struct(
     }
 }
 
-void PhvInfo::add_hdr(cstring name, const IR::Type_StructLike *type, gress_t gress, bool meta) {
+void PhvInfo::add_hdr(cstring name, const P4::IR::Type_StructLike *type, gress_t gress, bool meta) {
     if (!type) {
         LOG3("PhvInfo no type for " << name);
         return; }
@@ -176,8 +176,8 @@ void PhvInfo::add_hdr(cstring name, const IR::Type_StructLike *type, gress_t gre
     }
 }
 
-void PhvInfo::addTempVar(const IR::TempVar *tv, gress_t gress) {
-    BUG_CHECK(tv->type->is<IR::Type::Bits>() || tv->type->is<IR::Type::Boolean>(),
+void PhvInfo::addTempVar(const P4::IR::TempVar *tv, gress_t gress) {
+    BUG_CHECK(tv->type->is<P4::IR::Type::Bits>() || tv->type->is<P4::IR::Type::Boolean>(),
               "Can't create temp of type %s", tv->type);
     if (gress == GHOST) gress = INGRESS;  // treat ghost as ingress
     if (all_fields.count(tv->name)) {
@@ -190,7 +190,7 @@ void PhvInfo::addTempVar(const IR::TempVar *tv, gress_t gress) {
     }
 }
 
-const IR::TempVar* PhvInfo::getTempVar(const PHV::Field* f) const {
+const P4::IR::TempVar* PhvInfo::getTempVar(const PHV::Field* f) const {
     if (fields_to_tempvars_i.count(f))
         return fields_to_tempvars_i.at(f);
     return nullptr;
@@ -279,8 +279,8 @@ const PhvInfo::StructInfo* PhvInfo::hdr(const cstring& name_) const {
     return nullptr;
 }
 
-void PhvInfo::addPadding(const IR::Padding *pad, gress_t gress) {
-    BUG_CHECK(pad->type->is<IR::Type::Bits>(),
+void PhvInfo::addPadding(const P4::IR::Padding *pad, gress_t gress) {
+    BUG_CHECK(pad->type->is<P4::IR::Type::Bits>(),
               "Can't create padding of type %s", pad->type);
     if (all_fields.count(pad->name) == 0) {
         dummyPaddingNames.insert(pad->name);
@@ -311,22 +311,22 @@ const PhvInfo::StructInfo PhvInfo::struct_info(cstring name_) const {
 //***********************************************************************************
 //
 
-const PHV::Field *PhvInfo::field(const IR::Expression *e, le_bitrange *bits) const {
+const PHV::Field *PhvInfo::field(const P4::IR::Expression *e, le_bitrange *bits) const {
     if (!e) return nullptr;
-    BUG_CHECK(!e->is<IR::BFN::ContainerRef>(),
-        "Looking for PHV::Fields but found an IR::BFN::ContainerRef: %1%", e);
-    if (auto *fr = e->to<IR::Member>())
+    BUG_CHECK(!e->is<P4::IR::BFN::ContainerRef>(),
+        "Looking for PHV::Fields but found an P4::IR::BFN::ContainerRef: %1%", e);
+    if (auto *fr = e->to<P4::IR::Member>())
         return field(fr, bits);
-    if (auto *cast = e->to<IR::BFN::ReinterpretCast>())
+    if (auto *cast = e->to<P4::IR::BFN::ReinterpretCast>())
         return field(cast->expr, bits);
     // HACK. midend changes zero extend cast into 0 ++ expr. When the
     // expression is used in a 'add' operation, the compiler does not perform
     // any transformation to eliminate the '++' operator.
-    if (auto *concat = e->to<IR::Concat>()) {
-        if (auto k = concat->left->to<IR::Constant>())
+    if (auto *concat = e->to<P4::IR::Concat>()) {
+        if (auto k = concat->left->to<P4::IR::Constant>())
             if (k->value == 0)
                 return field(concat->right, bits); }
-    if (auto *sl = e->to<IR::Slice>()) {
+    if (auto *sl = e->to<P4::IR::Slice>()) {
         auto *rv = field(sl->e0, bits);
         if (rv && bits) {
             le_bitrange sliceRange = FromTo(sl->getL(), sl->getH());
@@ -337,7 +337,7 @@ const PHV::Field *PhvInfo::field(const IR::Expression *e, le_bitrange *bits) con
             auto intersection = bits->intersectWith(sliceRange);
             *bits = le_bitrange(StartLen(intersection.lo, intersection.size())); }
         return rv; }
-    if (auto *tv = e->to<IR::TempVar>()) {
+    if (auto *tv = e->to<P4::IR::TempVar>()) {
         if (auto *rv = getref(all_fields, tv->name)) {
             if (bits) {
                 bits->lo = 0;
@@ -347,7 +347,7 @@ const PHV::Field *PhvInfo::field(const IR::Expression *e, le_bitrange *bits) con
             // This can happen after a placement failure when we're trying to generate
             // minimal context.json to aid deubgging.  So we don't want to crash out
             /*BUG("TempVar %s not in PhvInfo", tv->name);*/ } }
-    if (auto *pad = e->to<IR::Padding>()) {
+    if (auto *pad = e->to<P4::IR::Padding>()) {
         if (auto *rv = getref(all_fields, pad->name)) {
             if (bits) {
                 bits->lo = 0;
@@ -355,19 +355,19 @@ const PHV::Field *PhvInfo::field(const IR::Expression *e, le_bitrange *bits) con
             return rv;
         } else {
             BUG("Padding %s not in PhvInfo", pad->name); } }
-    if (auto *neg = e->to<IR::Neg>())
+    if (auto *neg = e->to<P4::IR::Neg>())
         return field(neg->expr, bits);
     return 0;
 }
 
-const PHV::Field *PhvInfo::field(const IR::Member *fr, le_bitrange *bits) const {
+const PHV::Field *PhvInfo::field(const P4::IR::Member *fr, le_bitrange *bits) const {
     if (bits) {
         bits->lo = 0;
         bits->hi = fr->type->width_bits() - 1; }
 
     // No need to look up enums, which are really constants.  This sidesteps
     // the warning message for "can't find field" as well.
-    if (fr->type->is<IR::Type_Enum>())
+    if (fr->type->is<P4::IR::Type_Enum>())
         return nullptr;
 
     return field(fr->toString());
@@ -655,22 +655,22 @@ bitvec PhvInfo::bits_allocated(
     return ret_bitvec;
 }
 
-std::optional<cstring> PhvInfo::get_alias_name(const IR::Expression* expr) const {
-    if (auto* alias = expr->to<IR::BFN::AliasMember>()) {
+std::optional<cstring> PhvInfo::get_alias_name(const P4::IR::Expression* expr) const {
+    if (auto* alias = expr->to<P4::IR::BFN::AliasMember>()) {
         const PHV::Field* aliasSourceField = field(alias->source);
         BUG_CHECK(aliasSourceField, "Alias source field %s not found", alias->source);
         return aliasSourceField->name;
-    } else if (auto* alias = expr->to<IR::BFN::AliasSlice>()) {
+    } else if (auto* alias = expr->to<P4::IR::BFN::AliasSlice>()) {
         const PHV::Field* aliasSourceField = field(alias->source);
         BUG_CHECK(aliasSourceField, "Alias source field %s not found", alias->source);
         return aliasSourceField->name;
-    } else if (auto sl = expr->to<IR::Slice>()) {
+    } else if (auto sl = expr->to<P4::IR::Slice>()) {
         get_alias_name(sl->e0);
     }
     return std::nullopt;
 }
 
-std::set<int> PhvInfo::minStages(const IR::MAU::Table *table) {
+std::set<int> PhvInfo::minStages(const P4::IR::MAU::Table *table) {
     if (LOGGING(6)) {
         std::stringstream ss;
         ss << " Reading stage(s) for table " << table->name << " = ";
@@ -682,14 +682,14 @@ std::set<int> PhvInfo::minStages(const IR::MAU::Table *table) {
     return ::get(table_to_min_stages, TableSummary::getTableName(table));
 }
 
-std::set<int> PhvInfo::physicalStages(const IR::MAU::Table *table) {
+std::set<int> PhvInfo::physicalStages(const P4::IR::MAU::Table *table) {
     std::set<int> rv;
     if (table_to_physical_stages.count(TableSummary::getTableIName(table)))
         rv = ::get(table_to_physical_stages, TableSummary::getTableIName(table));
     return rv;
 }
 
-void PhvInfo::addMinStageEntry(const IR::MAU::Table *table, int stage, bool remove_prev_stages) {
+void PhvInfo::addMinStageEntry(const P4::IR::MAU::Table *table, int stage, bool remove_prev_stages) {
     auto tableName = TableSummary::getTableName(table);
     if (remove_prev_stages)
         table_to_min_stages[tableName].clear();
@@ -702,7 +702,7 @@ void PhvInfo::addMinStageEntry(const IR::MAU::Table *table, int stage, bool remo
     }
 }
 
-void PhvInfo::setPhysicalStages(const IR::MAU::Table *table, const std::set<int>& stages) {
+void PhvInfo::setPhysicalStages(const P4::IR::MAU::Table *table, const std::set<int>& stages) {
     auto tableName = TableSummary::getTableIName(table);
     table_to_physical_stages[tableName] = stages;
     if (table->gateway_name && table->gateway_name != tableName) {
@@ -710,7 +710,7 @@ void PhvInfo::setPhysicalStages(const IR::MAU::Table *table, const std::set<int>
     }
 }
 
-bool PhvInfo::hasMinStageEntry(const IR::MAU::Table *table) {
+bool PhvInfo::hasMinStageEntry(const P4::IR::MAU::Table *table) {
     return table_to_min_stages.count(TableSummary::getTableName(table));
 }
 
@@ -725,7 +725,7 @@ cstring PhvInfo::reportMinStages() {
     return ss.str();
 }
 
-bool PhvInfo::darkLivenessOkay(const IR::MAU::Table* gateway, const IR::MAU::Table* t) const {
+bool PhvInfo::darkLivenessOkay(const P4::IR::MAU::Table* gateway, const P4::IR::MAU::Table* t) const {
     BUG_CHECK(gateway->conditional_gateway_only(), "Trying to merge non gateway table %1% with "
               "table %2%", gateway->name, t->name);
     auto t_stages = minStages(t);
@@ -751,7 +751,7 @@ PHV::Field* PhvInfo::create_dummy_padding(size_t sz, gress_t gress, bool overlay
     return field(name);
 }
 
-std::vector<PHV::AllocSlice> PhvInfo::get_alloc(const IR::Expression* f,
+std::vector<PHV::AllocSlice> PhvInfo::get_alloc(const P4::IR::Expression* f,
                                                 const PHV::AllocContext* ctxt,
                                                 const PHV::FieldUse* use) const {
     CHECK_NULL(f);
@@ -1126,8 +1126,8 @@ void PHV::Field::setStartBitsToLowerBitsOfBottomByte() {
 }
 
 
-PHV::AbstractField *PHV::AbstractField::create(const PhvInfo &info, const IR::Expression *e) {
-    if (auto *c = e->to<IR::Constant>())
+PHV::AbstractField *PHV::AbstractField::create(const PhvInfo &info, const P4::IR::Expression *e) {
+    if (auto *c = e->to<P4::IR::Constant>())
         return new PHV::Constant(c);
     le_bitrange bits = { };
     if (auto *field = info.field(e, &bits))
@@ -1272,7 +1272,7 @@ void PHV::Field::set_no_split_at(le_bitrange range) {
 
 class ClearPhvInfo : public Inspector {
     PhvInfo& phv;
-    bool preorder(const IR::BFN::Pipe*) override {
+    bool preorder(const P4::IR::BFN::Pipe*) override {
         phv.clear();
         return false;
     }
@@ -1309,7 +1309,7 @@ class CollectPhvFields : public Inspector {
     /// Provided at construction when the visitor is intended to be invoked on
     /// a subtree, rather than the entire IR.  If not present, the gress is
     /// acquired from VisitingThread(this), which looks up the gress from the
-    /// enclosing IR::BFN::Pipe.  This never changes after construction.
+    /// enclosing P4::IR::BFN::Pipe.  This never changes after construction.
     std::optional<gress_t> gress;
 
     /// Tracks the header/metadata instances that have been added, to avoid
@@ -1324,7 +1324,7 @@ class CollectPhvFields : public Inspector {
         return rv == GHOST ? INGRESS : rv;
     }
 
-    Visitor::profile_t init_apply(const IR::Node* root) override {
+    Visitor::profile_t init_apply(const P4::IR::Node* root) override {
         auto rv = Inspector::init_apply(root);
 
         // Only clear if this is a new pass, i.e. gress == std::nullopt.
@@ -1338,18 +1338,18 @@ class CollectPhvFields : public Inspector {
     }
 
     /// Collect field information for alias sources.
-    bool preorder(const IR::BFN::AliasMember* alias) override {
+    bool preorder(const P4::IR::BFN::AliasMember* alias) override {
         visit(alias->source);
         return true;
     }
 
     /// Collect field information for alias sources.
-    bool preorder(const IR::BFN::AliasSlice* alias) override {
+    bool preorder(const P4::IR::BFN::AliasSlice* alias) override {
         visit(alias->source);
         return true;
     }
 
-    bool preorder(const IR::Header* h) override {
+    bool preorder(const P4::IR::Header* h) override {
         // Skip headers that have already been visited.
         if (seen.find(h->name) != seen.end()) return false;
         seen.insert(h->name);
@@ -1374,7 +1374,7 @@ class CollectPhvFields : public Inspector {
         return false;
     }
 
-    bool preorder(const IR::HeaderStack* h) override {
+    bool preorder(const P4::IR::HeaderStack* h) override {
         // Skip headers that have already been visited.
         if (seen.find(h->name) != seen.end()) return false;
         seen.insert(h->name);
@@ -1394,7 +1394,7 @@ class CollectPhvFields : public Inspector {
         LOG3("Adding headerStack  " << h->name.name << " to all_structs");
     }
 
-    bool preorder(const IR::Metadata* h) override {
+    bool preorder(const P4::IR::Metadata* h) override {
         // Skip headers that have already been visited.
         if (seen.find(h->name) != seen.end()) return false;
         seen.insert(h->name);
@@ -1404,10 +1404,10 @@ class CollectPhvFields : public Inspector {
         return false;
     }
 
-    bool preorder(const IR::TempVar* tv) override {
+    bool preorder(const P4::IR::TempVar* tv) override {
         phv.addTempVar(tv, getGress());
 
-        if (findContext<IR::BFN::MatchLVal>()) {
+        if (findContext<P4::IR::BFN::MatchLVal>()) {
             PHV::Field* f = phv.field(tv);
             BUG_CHECK(f, "No PhvInfo entry for a field we just added?");
             f->set_avoid_alloc(true);
@@ -1423,7 +1423,7 @@ class CollectPhvFields : public Inspector {
         return false;
     }
 
-    bool preorder(const IR::Padding* pad) override {
+    bool preorder(const P4::IR::Padding* pad) override {
         LOG3("Set constraints on padding " << pad);
         phv.addPadding(pad, getGress());
         PHV::Field* f = phv.field(pad);
@@ -1435,7 +1435,7 @@ class CollectPhvFields : public Inspector {
         return false;
     }
 
-    void postorder(const IR::BFN::LoweredParser*) override {
+    void postorder(const P4::IR::BFN::LoweredParser*) override {
         BUG("Running CollectPhvInfo after the parser IR has been lowered; "
             "this will produce invalid results.");
     }
@@ -1466,12 +1466,12 @@ struct AllocatePOVBits : public Inspector {
     explicit AllocatePOVBits(PhvInfo& phv) : phv(phv) { }
 
  private:
-    profile_t init_apply(const IR::Node* root) override {
+    profile_t init_apply(const P4::IR::Node* root) override {
         LOG3("BEGIN AllocatePOVBits");
         return Inspector::init_apply(root);
     }
 
-    bool preorder(const IR::BFN::Pipe* pipe) override {
+    bool preorder(const P4::IR::BFN::Pipe* pipe) override {
         BUG_CHECK(pipe->headerStackInfo != nullptr,
                   "Running AllocatePOVBits without running "
                   "CollectHeaderStackInfo first?");
@@ -1488,11 +1488,11 @@ struct ComputeFieldAlignments : public Inspector {
     explicit ComputeFieldAlignments(PhvInfo& phv) : phv(phv) { }
 
  private:
-    bool preorder(const IR::BFN::Extract* extract) override {
+    bool preorder(const P4::IR::BFN::Extract* extract) override {
         // Only extracts from the input buffer introduce alignment constraints.
-        auto* bufferSource = extract->source->to<IR::BFN::InputBufferRVal>();
+        auto* bufferSource = extract->source->to<P4::IR::BFN::InputBufferRVal>();
         if (!bufferSource) return false;
-        auto lval = extract->dest->to<IR::BFN::FieldLVal>();
+        auto lval = extract->dest->to<P4::IR::BFN::FieldLVal>();
         if (!lval) return false;
 
         auto* fieldInfo = phv.field(lval->field);
@@ -1508,7 +1508,7 @@ struct ComputeFieldAlignments : public Inspector {
         const auto alignment = FieldAlignment(extractedBits);
         LOG3("A. Updating alignment of " << fieldInfo->name << " to " << alignment);
         LOG3("Extract: " << extract << ", parser state: " <<
-                findContext<IR::BFN::ParserState>()->name);
+                findContext<P4::IR::BFN::ParserState>()->name);
         fieldInfo->updateAlignment(PHV::AlignmentReason::PARSER, alignment,
                                    lval->field->getSourceInfo());
 
@@ -1546,11 +1546,11 @@ struct ComputeFieldAlignments : public Inspector {
         return false;
     }
 
-    bool preorder(const IR::BFN::Deparser* deparser) override {
+    bool preorder(const P4::IR::BFN::Deparser* deparser) override {
         unsigned currentBit = 0;
 
         for (auto* emitPrimitive : deparser->emits) {
-            if (auto* checksum = emitPrimitive->to<IR::BFN::EmitChecksum>()) {
+            if (auto* checksum = emitPrimitive->to<P4::IR::BFN::EmitChecksum>()) {
                 for (auto source : checksum->sources) {
                     auto f = phv.field(source->field->field);
                     if (f && f->metadata && f->size % 8) {
@@ -1562,7 +1562,7 @@ struct ComputeFieldAlignments : public Inspector {
                     }
                 }
             }
-            auto* emit = emitPrimitive->to<IR::BFN::EmitField>();
+            auto* emit = emitPrimitive->to<P4::IR::BFN::EmitField>();
             if (!emit) continue;
 
             auto* fieldInfo = phv.field(emit->source->field);
@@ -1590,7 +1590,7 @@ struct ComputeFieldAlignments : public Inspector {
         return false;
     }
 
-    bool preorder(const IR::MAU::Instruction* instr) {
+    bool preorder(const P4::IR::MAU::Instruction* instr) {
         Log::TempIndent indent;
         LOG5("Preorder Instruction: " << *instr << "  name: " << instr->name << indent);
         PHV::Field *dst_f;
@@ -1604,9 +1604,9 @@ struct ComputeFieldAlignments : public Inspector {
                     dst_f = phv.field(op_f);
                 } else {
                     // Check if source operand is slice of AttachedOutput node
-                    if (auto slc = op_f->to<IR::Slice>()) {
-                        if (slc->e0->to<IR::MAU::AttachedOutput>()) {
-                            int rng = slc->e0->to<IR::Expression>()->type->width_bits();
+                    if (auto slc = op_f->to<P4::IR::Slice>()) {
+                        if (slc->e0->to<P4::IR::MAU::AttachedOutput>()) {
+                            int rng = slc->e0->to<P4::IR::Expression>()->type->width_bits();
                             LOG5("Slice: " << slc->e0 << "[" << slc->getH() << ":" << slc->getL()
                                  << "]" << " width: " << rng);
                             size_t lo_bit = slc->getL();
@@ -1656,7 +1656,7 @@ struct ComputeFieldAlignments : public Inspector {
 class AddIntrinsicConstraints : public Inspector {
     PhvInfo& phv;
 
-    bool preorder(const IR::BFN::Pipe *pipe) override {
+    bool preorder(const P4::IR::BFN::Pipe *pipe) override {
         // make hw_constrained_fields visible to this Inspector
         visit(pipe->thread[INGRESS].hw_constrained_fields);
         visit(pipe->thread[EGRESS].hw_constrained_fields);
@@ -1677,9 +1677,9 @@ class AddIntrinsicConstraints : public Inspector {
         }
     }
 
-    bool preorder(const IR::BFN::HardwareConstrainedField *hw_constrained_field) override {
-        auto set_invalidate_from_arch = [&](const IR::Expression* expr) {
-            BUG_CHECK(expr->is<IR::Member>() || expr->is<IR::Slice>(),
+    bool preorder(const P4::IR::BFN::HardwareConstrainedField *hw_constrained_field) override {
+        auto set_invalidate_from_arch = [&](const P4::IR::Expression* expr) {
+            BUG_CHECK(expr->is<P4::IR::Member>() || expr->is<P4::IR::Slice>(),
                 "invalidate from arch field %1% cannot be found", expr);
             auto f = phv.field(expr);
             if (!f) return;
@@ -1689,13 +1689,13 @@ class AddIntrinsicConstraints : public Inspector {
         };
 
         if (!(hw_constrained_field->constraint_type.getbit(
-            IR::BFN::HardwareConstrainedField::INVALIDATE_FROM_ARCH))) return false;
+            P4::IR::BFN::HardwareConstrainedField::INVALIDATE_FROM_ARCH))) return false;
 
         set_invalidate_from_arch(hw_constrained_field->expr);
 
-        if (auto alias_member = hw_constrained_field->expr->to<IR::BFN::AliasMember>()) {
+        if (auto alias_member = hw_constrained_field->expr->to<P4::IR::BFN::AliasMember>()) {
             set_invalidate_from_arch(alias_member->source);
-        } else if (auto alias_slice = hw_constrained_field->expr->to<IR::BFN::AliasSlice>()) {
+        } else if (auto alias_slice = hw_constrained_field->expr->to<P4::IR::BFN::AliasSlice>()) {
             set_invalidate_from_arch(alias_slice->source);
         }
         return false;
@@ -1723,12 +1723,12 @@ class AddIntrinsicConstraints : public Inspector {
 class MarkPaddingAsDeparsed : public Inspector {
     PhvInfo& phv;
 
-    bool preorder(const IR::HeaderRef* hr) {
+    bool preorder(const P4::IR::HeaderRef* hr) {
         LOG5("Mark padding in HeaderRef " << hr);
 
-        if (auto hdrref = hr->to<IR::HeaderStackItemRef>()) {
+        if (auto hdrref = hr->to<P4::IR::HeaderStackItemRef>()) {
             // Tofino doesn't support for indexing with a virable for header stack.
-            auto idx = (hdrref->index())->to<IR::Constant>();
+            auto idx = (hdrref->index())->to<P4::IR::Constant>();
             // Is the index a constant?
             if (idx == nullptr) {
                BUG("For Tofino, Index of the header stack \"%s\" has to be a const value and "
@@ -1737,7 +1737,7 @@ class MarkPaddingAsDeparsed : public Inspector {
             }
 
             // If the constant has non-zero width, It might be propagated from some variable.
-            auto tb = (idx->type)->to<IR::Type_Bits>();
+            auto tb = (idx->type)->to<P4::IR::Type_Bits>();
             if ((tb != nullptr) && (tb->size != 0)) {
                BUG("For Tofino, Index of the header stack \"%s\" has to be a const value and "
                    "can't be a variable. (Please Note: Don't use a const value with width.)",
@@ -1791,7 +1791,7 @@ class MarkPaddingAsDeparsed : public Inspector {
 class CollectPardeConstraints : public Inspector {
     PhvInfo& phv;
 
-    void handle_parser_write(const IR::BFN::ParserPrimitive *prim) {
+    void handle_parser_write(const P4::IR::BFN::ParserPrimitive *prim) {
         auto lval = prim->getWriteDest();
         if (!lval)
             return;
@@ -1802,7 +1802,7 @@ class CollectPardeConstraints : public Inspector {
 
         // TODO: this constraint can be refined, if the multi-write
         // happens before other writes, it can still be packed.
-        if (prim->getWriteMode() == IR::BFN::ParserWriteMode::CLEAR_ON_WRITE) {
+        if (prim->getWriteMode() == P4::IR::BFN::ParserWriteMode::CLEAR_ON_WRITE) {
             // Keep POVs as simply solitary - compiler can handle it
             if (f->pov) {
                 f->set_solitary(PHV::SolitaryReason::PRAGMA_SOLITARY);
@@ -1821,13 +1821,13 @@ class CollectPardeConstraints : public Inspector {
         }
     }
 
-    bool preorder(const IR::BFN::Extract* extract) override {
+    bool preorder(const P4::IR::BFN::Extract* extract) override {
         LOG4("\t CollectPardeConstraints: Extract " << *extract);
         handle_parser_write(extract);
         return false;
     }
 
-    bool preorder(const IR::BFN::ParserChecksumWritePrimitive* checksum) override {
+    bool preorder(const P4::IR::BFN::ParserChecksumWritePrimitive* checksum) override {
         LOG4("\t CollectPardeConstraints: Checksum " << *checksum);
         handle_parser_write(checksum);
         return false;
@@ -1836,9 +1836,9 @@ class CollectPardeConstraints : public Inspector {
     // If two fields in deparser are predicated by different POV bits,
     // we cannot pack them in the same container (deparser can only deparse whole
     // container, not byte in container).
-    bool preorder(const IR::BFN::Deparser* deparser) override {
+    bool preorder(const P4::IR::BFN::Deparser* deparser) override {
         for (auto it = deparser->emits.begin(); it != deparser->emits.end(); it++) {
-            auto efi = (*it)->to<IR::BFN::EmitField>();
+            auto efi = (*it)->to<P4::IR::BFN::EmitField>();
             if (!efi) continue;
 
             auto fi = phv.field(efi->source->field);
@@ -1849,7 +1849,7 @@ class CollectPardeConstraints : public Inspector {
             BUG_CHECK(fi && pi, "Deparser Emit with a non-PHV or non-POV source: %1%", efi);
 
             for (auto jt = deparser->emits.begin(); jt != deparser->emits.end(); jt++) {
-                auto efj = (*jt)->to<IR::BFN::EmitField>();
+                auto efj = (*jt)->to<P4::IR::BFN::EmitField>();
                 if (!efj) continue;
 
                 auto fj = phv.field(efj->source->field);
@@ -1867,7 +1867,7 @@ class CollectPardeConstraints : public Inspector {
         return true;
     }
 
-    void postorder(const IR::BFN::EmitChecksum* checksum) override {
+    void postorder(const P4::IR::BFN::EmitChecksum* checksum) override {
         for (const auto* flval : checksum->sources) {
             PHV::Field* f = phv.field(flval->field->field);
             BUG_CHECK(f != nullptr, "Field not created in PhvInfo");
@@ -1883,7 +1883,7 @@ class CollectPardeConstraints : public Inspector {
         }
     }
 
-    void postorder(const IR::BFN::EmitField* emit) override {
+    void postorder(const P4::IR::BFN::EmitField* emit) override {
         auto* src_field = phv.field(emit->source->field);
         BUG_CHECK(src_field, "Deparser Emit with a non-PHV source: %1%",
                   cstring::to_cstring(emit));
@@ -1916,15 +1916,15 @@ class CollectPardeConstraints : public Inspector {
     }
 
     // make hw_constrained_fields visible to this Inspector
-    bool preorder(const IR::BFN::Pipe* pipe) override {
+    bool preorder(const P4::IR::BFN::Pipe* pipe) override {
         visit(pipe->thread[INGRESS].hw_constrained_fields);
         visit(pipe->thread[EGRESS].hw_constrained_fields);
         return true;
     }
 
-    bool preorder(const IR::BFN::HardwareConstrainedField *hw_constrained_field) override {
-        auto set_deparsed_bottom_bits = [&](const IR::Expression* expr) {
-            BUG_CHECK(expr->is<IR::Member>() || expr->is<IR::Slice>(),
+    bool preorder(const P4::IR::BFN::HardwareConstrainedField *hw_constrained_field) override {
+        auto set_deparsed_bottom_bits = [&](const P4::IR::Expression* expr) {
+            BUG_CHECK(expr->is<P4::IR::Member>() || expr->is<P4::IR::Slice>(),
                 "deparsed bottom bits field %1% cannot be found", expr);
             auto f = phv.field(expr);
             if (!f) return;
@@ -1937,18 +1937,18 @@ class CollectPardeConstraints : public Inspector {
         };
 
         if (!(hw_constrained_field->constraint_type.getbit(
-            IR::BFN::HardwareConstrainedField::DEPARSED_BOTTOM_BITS))) return false;
+            P4::IR::BFN::HardwareConstrainedField::DEPARSED_BOTTOM_BITS))) return false;
 
         set_deparsed_bottom_bits(hw_constrained_field->expr);
-        if (auto alias_member = hw_constrained_field->expr->to<IR::BFN::AliasMember>()) {
+        if (auto alias_member = hw_constrained_field->expr->to<P4::IR::BFN::AliasMember>()) {
             set_deparsed_bottom_bits(alias_member->source);
-        } else if (auto alias_slice = hw_constrained_field->expr->to<IR::BFN::AliasSlice>()) {
+        } else if (auto alias_slice = hw_constrained_field->expr->to<P4::IR::BFN::AliasSlice>()) {
             set_deparsed_bottom_bits(alias_slice->source);
         }
         return false;
     }
 
-    void postorder(const IR::BFN::DeparserParameter* param) override {
+    void postorder(const P4::IR::BFN::DeparserParameter* param) override {
         if (!param->source) return;
 
         // extract deparser constraints from Deparser & Digest IR nodes ref: bf-p4c/ir/parde.def
@@ -1973,13 +1973,13 @@ class CollectPardeConstraints : public Inspector {
                   cstring::to_cstring(f));
     }
 
-    void postorder(const IR::BFN::Digest* digest) override {
+    void postorder(const P4::IR::BFN::Digest* digest) override {
         // learning, mirror, resubmit
         // have differing constraints -- bottom-bits, bridge-metadata mirror packing
         // learning, mirror field list in bottom bits of container, e.g.,
         // 301:ingress::$learning<3:0..2>
         // 590:egress::$mirror<3:0..2> specifies 1 of 8 field lists
-        // currently, IR::BFN::Digest node has a string field to distinguish them by name
+        // currently, P4::IR::BFN::Digest node has a string field to distinguish them by name
         if (digest->name != "learning" && digest->name != "mirror"
             && digest->name != "resubmit" && digest->name != "pktgen")
             return;
@@ -2203,14 +2203,14 @@ class MarkFieldAsBridged : public Inspector {
     explicit MarkFieldAsBridged(PhvInfo& phv) : phv_i(phv) { }
 };
 
-bool CollectExtractedTogetherFields::preorder(const IR::BFN::ParserState* state) {
+bool CollectExtractedTogetherFields::preorder(const P4::IR::BFN::ParserState* state) {
     /* map a byte in ibuf to the corresponding set of metadata fields sourced from the byte. */
     ordered_map<int /* ibuf byte offset */, ordered_set<const PHV::Field*>> ibuf_to_fields[3];
 
     for (auto& statement : state->statements) {
-        if (!statement->is<IR::BFN::Extract>())
+        if (!statement->is<P4::IR::BFN::Extract>())
             continue;
-        auto extract = statement->to<IR::BFN::Extract>();
+        auto extract = statement->to<P4::IR::BFN::Extract>();
         BUG_CHECK(extract->dest, "Extract %1% does not have a destination",
                 cstring::to_cstring(extract));
         BUG_CHECK(extract->dest->field, "Extract %1% does not have a destination field",
@@ -2218,9 +2218,9 @@ bool CollectExtractedTogetherFields::preorder(const IR::BFN::ParserState* state)
         const PHV::Field* destField = phv_i.field(extract->dest->field);
         BUG_CHECK(destField, "Could not find destination field for extract %1%",
                 cstring::to_cstring(extract));
-        if (auto rval = extract->source->to<IR::BFN::PacketRVal>()) {
+        if (auto rval = extract->source->to<P4::IR::BFN::PacketRVal>()) {
             auto offset = rval->range.lo / 8;
-            if (auto mem = extract->dest->to<IR::BFN::FieldLVal>()) {
+            if (auto mem = extract->dest->to<P4::IR::BFN::FieldLVal>()) {
                 auto destField = phv_i.field(mem->field);
                 CHECK_NULL(destField);
                 if (destField->metadata) {
@@ -2263,19 +2263,19 @@ bool CollectExtractedTogetherFields::preorder(const IR::BFN::ParserState* state)
 class ConstrainSatAddResultTempVars : public Inspector {
     PhvInfo& phv_i;
 
-    bool needsConstraining(const IR::MAU::Instruction *ins) const {
+    bool needsConstraining(const P4::IR::MAU::Instruction *ins) const {
         // If we allow slicing of int<X> and casting the result back to int
         // then subs and ssubs must be tested and possibly included here.
         return ins->name == "saddu" || ins->name == "sadds";
     }
 
  public:
-    bool preorder(const IR::MAU::Instruction *ins) override {
+    bool preorder(const P4::IR::MAU::Instruction *ins) override {
         if (!needsConstraining(ins)) return false;
 
         auto expr = ins->operands.begin();
-        if ((*expr)->is<IR::TempVar>()) {
-            PHV::Field *f = phv_i.field((*expr)->to<IR::TempVar>());
+        if ((*expr)->is<P4::IR::TempVar>()) {
+            PHV::Field *f = phv_i.field((*expr)->to<P4::IR::TempVar>());
             CHECK_NULL(f);
             f->set_exact_containers(true);
             f->set_solitary(PHV::SolitaryReason::ARCH);
@@ -2552,7 +2552,7 @@ void dump(const PhvInfo *phv) { std::cout << *phv; }
 void dump(const PHV::Field &f) { std::cout << f << std::endl; }
 void dump(const PHV::Field *f) { std::cout << *f << std::endl; }
 
-const IR::Node* PhvInfo::DumpPhvFields::apply_visitor(const IR::Node *n, const char *) {
+const P4::IR::Node* PhvInfo::DumpPhvFields::apply_visitor(const P4::IR::Node *n, const char *) {
     LOG1("");
     LOG1("--- PHV FIELDS -------------------------------------------");
     LOG1("");

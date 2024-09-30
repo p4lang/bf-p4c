@@ -7,11 +7,14 @@
 #include "lib/exceptions.h"
 #include "lib/ordered_set.h"
 
+namespace P4 {
 class bitvec;
 class cstring;
 class JSONGenerator;
 class JSONLoader;
+}  // namespace P4
 
+using namespace P4;
 using namespace P4::literals;
 
 namespace PHV {
@@ -229,8 +232,8 @@ class Container {
     }
 
     /// JSON serialization/deserialization.
-    void toJSON(JSONGenerator& json) const;
-    static Container fromJSON(JSONLoader& json);
+    void toJSON(P4::JSONGenerator& json) const;
+    static Container fromJSON(P4::JSONLoader& json);
 
     /// @return a string representation of this container.
     cstring toString() const;
@@ -330,7 +333,7 @@ std::ostream& operator<<(std::ostream& out, const PHV::FieldUse u);
 std::ostream& operator<<(std::ostream& out, const StageAndAccess& s);
 std::ostream& operator<<(std::ostream& out, const LiveRange& s);
 
-JSONGenerator& operator<<(JSONGenerator& out, const PHV::Container c);
+P4::JSONGenerator& operator<<(P4::JSONGenerator& out, const PHV::Container c);
 }  // namespace PHV
 
 #endif /* BF_P4C_PHV_PHV_H_ */

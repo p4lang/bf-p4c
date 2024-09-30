@@ -5,12 +5,12 @@
 #include "bf-p4c/mau/table_dependency_graph.h"
 
 // FindUninitializedAndOverlayedReads
-bool FindUninitializedAndOverlayedReads::preorder(const IR::BFN::DeparserParameter* param) {
+bool FindUninitializedAndOverlayedReads::preorder(const P4::IR::BFN::DeparserParameter* param) {
     if (param->source) pov_protected_fields.insert(phv.field(param->source->field));
     return false;
 }
 
-bool FindUninitializedAndOverlayedReads::preorder(const IR::BFN::Digest* digest) {
+bool FindUninitializedAndOverlayedReads::preorder(const P4::IR::BFN::Digest* digest) {
     pov_protected_fields.insert(phv.field(digest->selector->field));
     return false;
 }
@@ -61,12 +61,12 @@ void FindUninitializedAndOverlayedReads::end_apply() {
     // For alt phv alloc compilation
     // - post phv allocation we have stage info as trivial alloc
     // is followed by a placement round.
-    auto get_min_stage = [&](const IR::BFN::Unit *u) {
+    auto get_min_stage = [&](const P4::IR::BFN::Unit *u) {
         int min_stage = Device::numStages();
-        if (auto *table = u->to<IR::MAU::Table>()) {
+        if (auto *table = u->to<P4::IR::MAU::Table>()) {
             min_stage = table->stage() > -1 ?
                 table->stage() : deps.min_stage(table);
-        } else if (u->is<IR::BFN::Parser>() || u->is<IR::BFN::ParserState>()) {
+        } else if (u->is<P4::IR::BFN::Parser>() || u->is<P4::IR::BFN::ParserState>()) {
             min_stage = -1;
         }
         return min_stage;

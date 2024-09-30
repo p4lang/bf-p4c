@@ -91,7 +91,7 @@ struct ActionDataBus : public ::ActionDataBus {
             ::ActionDataBus::Use::clear();
             rng_locs.clear(); }
         Use *clone() const override { return new Use(*this); }
-        bool emit_adb_asm(std::ostream &, const IR::MAU::Table *, bitvec source) const override;
+        bool emit_adb_asm(std::ostream &, const P4::IR::MAU::Table *, bitvec source) const override;
         bool empty() const override { return ::ActionDataBus::Use::empty() && rng_locs.empty(); }
         int rng_unit() const override;
 
@@ -184,14 +184,14 @@ struct ActionDataBus : public ::ActionDataBus {
     bool alloc_rng(Use &use, const ActionData::Format::Use *format, cstring name);
 
  public:
-    bool alloc_action_data_bus(const IR::MAU::Table *tbl, const ActionData::Format::Use *use,
+    bool alloc_action_data_bus(const P4::IR::MAU::Table *tbl, const ActionData::Format::Use *use,
                                TableResourceAlloc &alloc) override;
-    bool alloc_action_data_bus(const IR::MAU::Table *tbl, const MeterALU::Format::Use *use,
+    bool alloc_action_data_bus(const P4::IR::MAU::Table *tbl, const MeterALU::Format::Use *use,
                                TableResourceAlloc &alloc) override;
     void update(cstring name, const ::ActionDataBus::Use &alloc) override;
     void update(cstring name, const Use::ReservedSpace &rs) override;
     void update(cstring name, const Use::RandomNumberGenerator &rng);
-    void update(const IR::MAU::Table *tbl) override;
+    void update(const P4::IR::MAU::Table *tbl) override;
 };
 
 }  // end namespace Tofino

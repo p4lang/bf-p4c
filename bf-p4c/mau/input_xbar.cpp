@@ -31,21 +31,21 @@ unsigned IXBarRandom::nextRandomNumber(unsigned numBits) {
         return distribution1(mersenne_generator);
 }
 
-IXBar::HashDistDest_t IXBar::dest_location(const IR::Node *node, bool precolor) {
-    if (auto ba = node->to<IR::MAU::BackendAttached>()) {
-        if (ba->attached->is<IR::MAU::ActionData>())
+IXBar::HashDistDest_t IXBar::dest_location(const P4::IR::Node *node, bool precolor) {
+    if (auto ba = node->to<P4::IR::MAU::BackendAttached>()) {
+        if (ba->attached->is<P4::IR::MAU::ActionData>())
             return HD_ACTIONDATA_ADR;
-        if (ba->attached->is<IR::MAU::Counter>())
+        if (ba->attached->is<P4::IR::MAU::Counter>())
             return HD_STATS_ADR;
-        if (ba->attached->is<IR::MAU::StatefulAlu>())
+        if (ba->attached->is<P4::IR::MAU::StatefulAlu>())
             return HD_METER_ADR;
-        if (ba->attached->is<IR::MAU::Meter>()) {
+        if (ba->attached->is<P4::IR::MAU::Meter>()) {
             return precolor ? HD_STATS_ADR : HD_METER_ADR;
         }
     }
-    if (node->is<IR::MAU::Meter>())
+    if (node->is<P4::IR::MAU::Meter>())
         return HD_PRECOLOR;
-    if (node->is<IR::MAU::Selector>())
+    if (node->is<P4::IR::MAU::Selector>())
         return HD_HASHMOD;
 
     BUG("Invalid call of HashDist dest location");
@@ -453,7 +453,7 @@ static int need_align_flags[4][4] = {
 
 /* Add the pre-allocated bytes to the Use structure */
 void IXBar::add_use(ContByteConversion &map_alloc, const PHV::Field *field,
-                    const PhvInfo &phv, const IR::MAU::Table *ctxt,
+                    const PhvInfo &phv, const P4::IR::MAU::Table *ctxt,
                     std::optional<cstring> aliasSourceName, const le_bitrange *bits,
                     int flags, byte_type_t byte_type, unsigned extra_align, int range_index,
                     int ixbar_group_num) {
@@ -608,43 +608,43 @@ void IXBar::create_alloc(ContByteConversion &map_alloc, IXBar::Use &alloc) {
 // BEWARE: The preorder implementations for ListExpression and StructExpression
 //         MUST be kept in sync. For future extensions, getListExprComponents()
 //         may come in handy.
-bool IXBar::FieldManagement::preorder(const IR::ListExpression *) {
+bool IXBar::FieldManagement::preorder(const P4::IR::ListExpression *) {
     if (!ki.hash_dist)
         BUG("A field list is somehow contained within the reads in table %s", tbl->name);
     return true;
 }
 
 // See the preorder implementation for ListExpression.
-bool IXBar::FieldManagement::preorder(const IR::StructExpression *) {
+bool IXBar::FieldManagement::preorder(const P4::IR::StructExpression *) {
     if (!ki.hash_dist)
         BUG("A field list is somehow contained within the reads in table %s", tbl->name);
     return true;
 }
 
-bool IXBar::FieldManagement::preorder(const IR::Mask *) {
+bool IXBar::FieldManagement::preorder(const P4::IR::Mask *) {
     BUG("Masks should have been converted to Slices before input xbar allocation");
     return true;
 }
 
-bool IXBar::FieldManagement::preorder(const IR::MAU::TableKey *read) {
+bool IXBar::FieldManagement::preorder(const P4::IR::MAU::TableKey *read) {
     if (ki.is_atcam) {
         if (ki.partition != read->partition_index)
             return false; }
     return true;
 }
 
-bool IXBar::FieldManagement::preorder(const IR::Constant *c) {
+bool IXBar::FieldManagement::preorder(const P4::IR::Constant *c) {
     field_list_order.push_back(c);
     return true;
 }
 
-bool IXBar::FieldManagement::preorder(const IR::MAU::ActionArg *aa) {
+bool IXBar::FieldManagement::preorder(const P4::IR::MAU::ActionArg *aa) {
     error(ErrorType::ERR_INVALID, "Can't use action argument %1% in a hash in the same action;"
           " try splitting the action", aa);
     return false;
 }
 
-static std::string db_slices(const IR::MAU::Table *tbl, const PHV::Field *field, le_bitrange bits) {
+static std::string db_slices(const P4::IR::MAU::Table *tbl, const PHV::Field *field, le_bitrange bits) {
     std::stringstream rv;
     bool first = true;
     PHV::FieldUse READ(PHV::FieldUse::READ);
@@ -658,7 +658,7 @@ static std::string db_slices(const IR::MAU::Table *tbl, const PHV::Field *field,
     return rv.str();
 }
 
-bool IXBar::FieldManagement::preorder(const IR::Expression *e) {
+bool IXBar::FieldManagement::preorder(const P4::IR::Expression *e) {
     LOG3("IXBar::FieldManagement preorder expression : " << e);
     le_bitrange bits = { };
     auto *finfo = phv.field(e, &bits);
@@ -675,7 +675,7 @@ bool IXBar::FieldManagement::preorder(const IR::Expression *e) {
 
     byte_type_t byte_type = NO_BYTE_TYPE;
     int ixbar_group_num = -1;
-    if (auto *read = findContext<IR::MAU::TableKey>()) {
+    if (auto *read = findContext<P4::IR::MAU::TableKey>()) {
         if (ki.is_atcam) {
             if (read->partition_index)
                 byte_type = PARTITION_INDEX;
@@ -712,7 +712,7 @@ bool IXBar::FieldManagement::preorder(const IR::Expression *e) {
     return false;
 }
 
-void IXBar::FieldManagement::postorder(const IR::BFN::SignExtend *c) {
+void IXBar::FieldManagement::postorder(const P4::IR::BFN::SignExtend *c) {
     BUG_CHECK(!field_list_order.empty(), "SignExtend on nonexistant field");
     BUG_CHECK(field_list_order.back() == c->expr, "SignExtend mismatch");
     int size = c->expr->type->width_bits();
@@ -764,17 +764,17 @@ void dump(const IXBar &ixbar) {
     std::cout << ixbar;
 }
 
-void IXBar::update(const IR::MAU::Table *tbl, const TableResourceAlloc *rsrc) {
-    const IR::MAU::Selector *as = nullptr;
-    const IR::MAU::Meter *mtr = nullptr;
-    const IR::MAU::StatefulAlu *salu = nullptr;
+void IXBar::update(const P4::IR::MAU::Table *tbl, const TableResourceAlloc *rsrc) {
+    const P4::IR::MAU::Selector *as = nullptr;
+    const P4::IR::MAU::Meter *mtr = nullptr;
+    const P4::IR::MAU::StatefulAlu *salu = nullptr;
 
     for (auto ba : tbl->attached) {
-        if (auto as_p = ba->attached->to<IR::MAU::Selector>())
+        if (auto as_p = ba->attached->to<P4::IR::MAU::Selector>())
             as = as_p;
-        if (auto mtr_p = ba->attached->to<IR::MAU::Meter>())
+        if (auto mtr_p = ba->attached->to<P4::IR::MAU::Meter>())
             mtr = mtr_p;
-        if (auto salu_p = ba->attached->to<IR::MAU::StatefulAlu>())
+        if (auto salu_p = ba->attached->to<P4::IR::MAU::StatefulAlu>())
             salu = salu_p;
     }
 
@@ -812,7 +812,7 @@ void IXBar::update(const IR::MAU::Table *tbl, const TableResourceAlloc *rsrc) {
         update(name, *rsrc->match_ixbar);
 }
 
-void IXBar::update(const IR::MAU::Table *tbl) {
+void IXBar::update(const P4::IR::MAU::Table *tbl) {
     if (tbl->is_placed())
         update(tbl, tbl->resources);
 }

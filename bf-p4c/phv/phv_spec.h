@@ -8,11 +8,17 @@
 #include "lib/bitvec.h"
 #include "lib/json.h"
 
+namespace P4 {
 class cstring;
+}
 
+namespace P4 {
 namespace IR {
 class Annotation;
-}
+}  // end namespace IR
+}  // end namespace P4
+
+using namespace P4;
 
 class PhvSpec {
  public:
@@ -288,7 +294,7 @@ class PhvSpec {
                                                              ArchBlockType_t interface) const;
 
     /// apply global pragmas to cached info about available PHV containers
-    void applyGlobalPragmas(const std::vector<const IR::Annotation*>& global_pragmas) const;
+    void applyGlobalPragmas(const std::vector<const P4::IR::Annotation*>& global_pragmas) const;
 };
 
 

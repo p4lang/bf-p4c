@@ -151,8 +151,8 @@ static bool direct_crc_string_conversion(bfn_hash_algorithm_ *hash_alg,
  *     reverse
  *     name
  */
-const IR::Expression *IR::MAU::HashFunction::convertHashAlgorithmBFN(Util::SourceInfo srcInfo,
-                                                                     IR::ID algorithm) {
+const P4::IR::Expression *P4::IR::MAU::HashFunction::convertHashAlgorithmBFN(Util::SourceInfo srcInfo,
+                                                                     P4::IR::ID algorithm) {
     bool msb = false;
     bool endianness_set = false;
     bool extend = false;
@@ -189,22 +189,22 @@ const IR::Expression *IR::MAU::HashFunction::convertHashAlgorithmBFN(Util::Sourc
 
     if (alg_name == "xor16" || alg_name == "csum16" || alg_name == "csum16_udp") {
         if (alg_name == "csum16_udp")
-            return new IR::Member(new IR::TypeNameExpression("HashAlgorithm"), IR::ID("csum16"));
-        return new IR::Member(new IR::TypeNameExpression("HashAlgorithm"), algorithm);
+            return new P4::IR::Member(new P4::IR::TypeNameExpression("HashAlgorithm"), P4::IR::ID("csum16"));
+        return new P4::IR::Member(new P4::IR::TypeNameExpression("HashAlgorithm"), algorithm);
     }
 
     return convertHashAlgorithmInner(srcInfo, algorithm, msb, extend, extension_set, alg_name);
 }
 
-const IR::Expression *IR::MAU::HashFunction::convertHashAlgorithmExtern(Util::SourceInfo srcInfo,
-                                                                        IR::ID algorithm) {
+const P4::IR::Expression *P4::IR::MAU::HashFunction::convertHashAlgorithmExtern(Util::SourceInfo srcInfo,
+                                                                        P4::IR::ID algorithm) {
     std::string alg_name = algorithm.name + "";
     std::transform(alg_name.begin(), alg_name.end(), alg_name.begin(), ::tolower);
     return convertHashAlgorithmInner(srcInfo, algorithm, false, false, false, alg_name);
 }
 
-const IR::Expression *IR::MAU::HashFunction::convertHashAlgorithmInner(
-    Util::SourceInfo srcInfo, IR::ID algorithm, bool msb, bool extend, bool extension_set,
+const P4::IR::Expression *P4::IR::MAU::HashFunction::convertHashAlgorithmInner(
+    Util::SourceInfo srcInfo, P4::IR::ID algorithm, bool msb, bool extend, bool extension_set,
     const std::string &alg_name) {
     cstring mc_name = "unknown"_cs;
     enum {
@@ -248,8 +248,8 @@ const IR::Expression *IR::MAU::HashFunction::convertHashAlgorithmInner(
         return nullptr;
     }
 
-    auto args = new IR::Vector<IR::Argument>({
-        new IR::Argument(new IR::BoolLiteral(msb)),
+    auto args = new P4::IR::Vector<P4::IR::Argument>({
+        new P4::IR::Argument(new P4::IR::BoolLiteral(msb)),
     });
 
     switch (detected_algorithm) {
@@ -259,27 +259,27 @@ const IR::Expression *IR::MAU::HashFunction::convertHashAlgorithmInner(
                 extend = true;
             }
             big_int poly = hash_alg.poly, init = hash_alg.init, final_xor = hash_alg.final_xor;
-            auto typeT = IR::Type::Bits::get(hash_alg.hash_bit_width);
-            args->push_back(new IR::Argument(new IR::BoolLiteral(extend)));
-            args->push_back(new IR::Argument(new IR::Constant(typeT, poly)));
-            args->push_back(new IR::Argument(new IR::Constant(typeT, init)));
-            args->push_back(new IR::Argument(new IR::Constant(typeT, final_xor)));
-            args->push_back(new IR::Argument(new IR::BoolLiteral(hash_alg.reverse)));
+            auto typeT = P4::IR::Type::Bits::get(hash_alg.hash_bit_width);
+            args->push_back(new P4::IR::Argument(new P4::IR::BoolLiteral(extend)));
+            args->push_back(new P4::IR::Argument(new P4::IR::Constant(typeT, poly)));
+            args->push_back(new P4::IR::Argument(new P4::IR::Constant(typeT, init)));
+            args->push_back(new P4::IR::Argument(new P4::IR::Constant(typeT, final_xor)));
+            args->push_back(new P4::IR::Argument(new P4::IR::BoolLiteral(hash_alg.reverse)));
             mc_name = "crc_poly"_cs;
         } break;
         case XOR: {
-            auto typeT(IR::Type::Bits::get(8));
-            args->push_back(new IR::Argument(new IR::BoolLiteral(extend)));
+            auto typeT(P4::IR::Type::Bits::get(8));
+            args->push_back(new P4::IR::Argument(new P4::IR::BoolLiteral(extend)));
             args->push_back(
-                new IR::Argument(new IR::Constant(typeT, static_cast<big_int>(xor_alg.width))));
+                new P4::IR::Argument(new P4::IR::Constant(typeT, static_cast<big_int>(xor_alg.width))));
             mc_name = "xor_hash"_cs;
         } break;
         case OTHER:
-            args->push_back(new IR::Argument(new IR::BoolLiteral(extend)));
+            args->push_back(new P4::IR::Argument(new P4::IR::BoolLiteral(extend)));
             break;
     }
 
-    return new IR::MethodCallExpression(srcInfo, new IR::PathExpression(mc_name), args);
+    return new P4::IR::MethodCallExpression(srcInfo, new P4::IR::PathExpression(mc_name), args);
 }
 
 /**
@@ -288,61 +288,61 @@ const IR::Expression *IR::MAU::HashFunction::convertHashAlgorithmInner(
  * conversion, the hash function setup can be identical, and just need to handle one type of
  * expression.
  */
-const IR::MethodCallExpression *IR::MAU::HashFunction::hash_to_mce(const IR::Expression *e) {
+const P4::IR::MethodCallExpression *P4::IR::MAU::HashFunction::hash_to_mce(const P4::IR::Expression *e) {
     auto srcInfo = e->srcInfo;
-    const IR::Expression *conv_e = nullptr;
+    const P4::IR::Expression *conv_e = nullptr;
 
     cstring error_alg_name;
-    if (auto s = e->to<IR::StringLiteral>()) {
-        conv_e = convertHashAlgorithmBFN(srcInfo, IR::ID(srcInfo, s->value));
+    if (auto s = e->to<P4::IR::StringLiteral>()) {
+        conv_e = convertHashAlgorithmBFN(srcInfo, P4::IR::ID(srcInfo, s->value));
         error_alg_name = s->value;
-    } else if (auto m = e->to<IR::Member>()) {
+    } else if (auto m = e->to<P4::IR::Member>()) {
         conv_e = convertHashAlgorithmExtern(srcInfo, m->member);
         error_alg_name = m->member.name;
-    } else if (auto k = e->to<IR::Constant>()) {
+    } else if (auto k = e->to<P4::IR::Constant>()) {
         // Hash contructor calls will have the enum converted to an int const by
         // ConvertEnums in the midend.  Would be better if they didn't.
         // DANGER -- these values need to match up with the order of the hash tags
         // in the arch.p4 header file.
         switch (k->asInt()) {
         case 0:
-            conv_e = convertHashAlgorithmBFN(srcInfo, IR::ID("identity"));
+            conv_e = convertHashAlgorithmBFN(srcInfo, P4::IR::ID("identity"));
             error_alg_name = "identity"_cs;
             break;
         case 1:
-            conv_e = convertHashAlgorithmBFN(srcInfo, IR::ID("random"));
+            conv_e = convertHashAlgorithmBFN(srcInfo, P4::IR::ID("random"));
             error_alg_name = "random"_cs;
             break;
         case 2:
-            conv_e = convertHashAlgorithmBFN(srcInfo, IR::ID("xor8"));
+            conv_e = convertHashAlgorithmBFN(srcInfo, P4::IR::ID("xor8"));
             error_alg_name = "xor8"_cs;
             break;
         case 3:
-            conv_e = convertHashAlgorithmBFN(srcInfo, IR::ID("xor16"));
+            conv_e = convertHashAlgorithmBFN(srcInfo, P4::IR::ID("xor16"));
             error_alg_name = "xor16"_cs;
             break;
         case 4:
-            conv_e = convertHashAlgorithmBFN(srcInfo, IR::ID("xor32"));
+            conv_e = convertHashAlgorithmBFN(srcInfo, P4::IR::ID("xor32"));
             error_alg_name = "xor32"_cs;
             break;
         case 5:
-            conv_e = convertHashAlgorithmBFN(srcInfo, IR::ID("crc_8"));
+            conv_e = convertHashAlgorithmBFN(srcInfo, P4::IR::ID("crc_8"));
             error_alg_name = "crc_8"_cs;
             break;
         case 6:
-            conv_e = convertHashAlgorithmBFN(srcInfo, IR::ID("crc_16"));
+            conv_e = convertHashAlgorithmBFN(srcInfo, P4::IR::ID("crc_16"));
             error_alg_name = "crc_16"_cs;
             break;
         case 7:
-            conv_e = convertHashAlgorithmBFN(srcInfo, IR::ID("crc_32"));
+            conv_e = convertHashAlgorithmBFN(srcInfo, P4::IR::ID("crc_32"));
             error_alg_name = "crc_32"_cs;
             break;
         case 8:
-            conv_e = convertHashAlgorithmBFN(srcInfo, IR::ID("crc_64"));
+            conv_e = convertHashAlgorithmBFN(srcInfo, P4::IR::ID("crc_64"));
             error_alg_name = "crc_64"_cs;
             break;
         case 9:
-            conv_e = convertHashAlgorithmBFN(srcInfo, IR::ID("csum16"));
+            conv_e = convertHashAlgorithmBFN(srcInfo, P4::IR::ID("csum16"));
             error_alg_name = "csum16"_cs;
             break;
         default:
@@ -354,18 +354,18 @@ const IR::MethodCallExpression *IR::MAU::HashFunction::hash_to_mce(const IR::Exp
     // which can be saved on the matrix.
     // If other hash functions are converted to MethodCallExpressions, then this will have
     // to change
-    } else if (auto mc = e->to<IR::MethodCallExpression>()) {
+    } else if (auto mc = e->to<P4::IR::MethodCallExpression>()) {
         conv_e = mc;
-    } else if (auto tp = e->to<IR::MAU::TypedPrimitive>()) {
-        auto ops = new IR::Vector<IR::Argument>();
+    } else if (auto tp = e->to<P4::IR::MAU::TypedPrimitive>()) {
+        auto ops = new P4::IR::Vector<P4::IR::Argument>();
         for (auto op : tp->operands) {
-            ops->push_back(new IR::Argument(op));
+            ops->push_back(new P4::IR::Argument(op));
         }
-        conv_e = new IR::MethodCallExpression(srcInfo, new IR::PathExpression(tp->name), ops);
+        conv_e = new P4::IR::MethodCallExpression(srcInfo, new P4::IR::PathExpression(tp->name), ops);
     }
 
-    const IR::MethodCallExpression *mce = nullptr;
-    if (conv_e == nullptr || (mce = conv_e->to<IR::MethodCallExpression>()) == nullptr) {
+    const P4::IR::MethodCallExpression *mce = nullptr;
+    if (conv_e == nullptr || (mce = conv_e->to<P4::IR::MethodCallExpression>()) == nullptr) {
         ::error("%s: Cannot properly set up the hash function on the hash matrix : %s",
                 e->srcInfo, error_alg_name);
         return nullptr;
@@ -375,7 +375,7 @@ const IR::MethodCallExpression *IR::MAU::HashFunction::hash_to_mce(const IR::Exp
 }
 
 /**
- * Responsible for converting a frontend Expression to a IR::MAU::HashFunction structure.
+ * Responsible for converting a frontend Expression to a P4::IR::MAU::HashFunction structure.
  * This conversion using the global hash function conversion from the bf-utils function.
  *
  * The conversion is only done for hash functions set up through the galois matrix, and
@@ -383,7 +383,7 @@ const IR::MethodCallExpression *IR::MAU::HashFunction::hash_to_mce(const IR::Exp
  * Currently unhandled is the possibility or XORing multiple functions together, which
  * would be a recursive hash function.
  */
-bool IR::MAU::HashFunction::setup(const Expression *e) {
+bool P4::IR::MAU::HashFunction::setup(const Expression *e) {
     if (!e) return false;
 
     /* -- set empty state (replacement of original memset) */
@@ -391,11 +391,11 @@ bool IR::MAU::HashFunction::setup(const Expression *e) {
 
     srcInfo = e->srcInfo;
     size = 0;
-    const IR::MethodCallExpression *mce = hash_to_mce(e);
+    const P4::IR::MethodCallExpression *mce = hash_to_mce(e);
     if (mce == nullptr) return false;
 
     cstring alg_name;
-    if (auto meth = mce->method->to<IR::PathExpression>()) {
+    if (auto meth = mce->method->to<P4::IR::PathExpression>()) {
         alg_name = meth->path->name.name;
         // name = mce->getAnnotations()->getSingle("name"_cs);
     } else {
@@ -403,7 +403,7 @@ bool IR::MAU::HashFunction::setup(const Expression *e) {
     }
 
     // Supported Algorithms on the galois matrix
-    const IR::Vector<IR::Argument> *args = mce->arguments;
+    const P4::IR::Vector<P4::IR::Argument> *args = mce->arguments;
     if (alg_name == "identity_hash")
         type = IDENTITY;
     else if (alg_name == "random_hash")
@@ -423,19 +423,19 @@ bool IR::MAU::HashFunction::setup(const Expression *e) {
     for (size_t i = 0; i < args->size(); i++) {
         switch (i) {
         case 5:
-            if (auto k = args->at(5)->expression->to<IR::BoolLiteral>())
+            if (auto k = args->at(5)->expression->to<P4::IR::BoolLiteral>())
                 reverse = k->value;
             else
                 BUG("Hash function method call misconfigured");
             break;
         case 4:
-            if (auto k = args->at(4)->expression->to<IR::Constant>())
+            if (auto k = args->at(4)->expression->to<P4::IR::Constant>())
                 final_xor = static_cast<uint64_t>(k->value);
             else
                 BUG("Hash function method call misconfigured");
             break;
         case 3:
-            if (auto k = args->at(3)->expression->to<IR::Constant>())
+            if (auto k = args->at(3)->expression->to<P4::IR::Constant>())
                 init = static_cast<uint64_t>(k->value);
             else
                 BUG("Hash function method call misconfigured");
@@ -443,7 +443,7 @@ bool IR::MAU::HashFunction::setup(const Expression *e) {
         case 2: {
             switch (type) {
                 case CRC:
-                    if (auto k = args->at(2)->expression->to<IR::Constant>()) {
+                    if (auto k = args->at(2)->expression->to<P4::IR::Constant>()) {
                         size = k->type->width_bits();
                         poly = toKoopman(static_cast<uint64_t>(k->value), size);
                     } else {
@@ -451,7 +451,7 @@ bool IR::MAU::HashFunction::setup(const Expression *e) {
                     }
                     break;
                 case XOR:
-                    if (auto k = args->at(2)->expression->to<IR::Constant>()) {
+                    if (auto k = args->at(2)->expression->to<P4::IR::Constant>()) {
                         size = static_cast<int>(k->value);
                     } else {
                         return false;
@@ -463,13 +463,13 @@ bool IR::MAU::HashFunction::setup(const Expression *e) {
             }
         } break;
         case 1:
-            if (auto k = args->at(1)->expression->to<IR::BoolLiteral>())
+            if (auto k = args->at(1)->expression->to<P4::IR::BoolLiteral>())
                 extend = k->value;
             else
                 return false;
             break;
         case 0:
-            if (auto k = args->at(0)->expression->to<IR::BoolLiteral>())
+            if (auto k = args->at(0)->expression->to<P4::IR::BoolLiteral>())
                 msb = k->value;
             else
                 return false;
@@ -481,7 +481,7 @@ bool IR::MAU::HashFunction::setup(const Expression *e) {
 }
 
 /* convert polynomial in tna to koopman representation used by backend */
-uint64_t IR::MAU::HashFunction::toKoopman(uint64_t poly, uint32_t width) {
+uint64_t P4::IR::MAU::HashFunction::toKoopman(uint64_t poly, uint32_t width) {
     big_int koopman = poly;
     big_int upper_bit = 1;
     big_int mask = (upper_bit << width) - 1;
@@ -493,37 +493,37 @@ uint64_t IR::MAU::HashFunction::toKoopman(uint64_t poly, uint32_t width) {
 }
 
 /*
- * Convert CRCPolynomial extern to a IR::MAU::HashFunction structure.
+ * Convert CRCPolynomial extern to a P4::IR::MAU::HashFunction structure.
  *
  * Tna defines polynomial as 1w1 ++ PV with a leading 1 omitted.
  *
  * Compiler stores polynomial in koopman form, which is PV ++ 1w1 with
  * the trailing 1 omitted.
  */
-bool IR::MAU::HashFunction::convertPolynomialExtern(const IR::GlobalRef *ref) {
-    auto decl = ref->obj->to<IR::Declaration_Instance>();
+bool P4::IR::MAU::HashFunction::convertPolynomialExtern(const P4::IR::GlobalRef *ref) {
+    auto decl = ref->obj->to<P4::IR::Declaration_Instance>();
     auto it = decl->arguments->begin();
     size = (*it)->expression->type->width_bits();
-    poly = (*it)->expression->to<IR::Constant>()->asUint64();
+    poly = (*it)->expression->to<P4::IR::Constant>()->asUint64();
     LOG3("poly " << std::hex << poly << " size: " << size);
     // convert to koopman form.
     poly = toKoopman(poly, size);
     LOG3("poly " << poly);
     std::advance(it, 1);
-    reverse = (*it)->expression->to<IR::BoolLiteral>()->value;
+    reverse = (*it)->expression->to<P4::IR::BoolLiteral>()->value;
     std::advance(it, 1);
-    msb = (*it)->expression->to<IR::BoolLiteral>()->value;
+    msb = (*it)->expression->to<P4::IR::BoolLiteral>()->value;
     std::advance(it, 1);
-    extend = (*it)->expression->to<IR::BoolLiteral>()->value;
+    extend = (*it)->expression->to<P4::IR::BoolLiteral>()->value;
     std::advance(it, 1);
-    init = (*it)->expression->to<IR::Constant>()->asUint64();
+    init = (*it)->expression->to<P4::IR::Constant>()->asUint64();
     std::advance(it, 1);
-    final_xor = (*it)->expression->to<IR::Constant>()->asUint64();
-    type = IR::MAU::HashFunction::CRC;
+    final_xor = (*it)->expression->to<P4::IR::Constant>()->asUint64();
+    type = P4::IR::MAU::HashFunction::CRC;
     return true;
 }
 
-void IR::MAU::HashFunction::toJSON(JSONGenerator &json) const {
+void P4::IR::MAU::HashFunction::toJSON(JSONGenerator &json) const {
     json << json.indent << "\"type\": " << static_cast<int>(type) << ",\n"
          << json.indent << "\"size\": " << size << ",\n"
          << json.indent << "\"msb\": " << msb << ",\n"
@@ -534,7 +534,7 @@ void IR::MAU::HashFunction::toJSON(JSONGenerator &json) const {
          << json.indent << "\"extend\": " << extend;
 }
 
-void IR::MAU::HashFunction::build_algorithm_t(bfn_hash_algorithm_ *alg) const {
+void P4::IR::MAU::HashFunction::build_algorithm_t(bfn_hash_algorithm_ *alg) const {
     switch (type) {
         case RANDOM:
             alg->hash_alg = RANDOM_DYN; break;
@@ -558,7 +558,7 @@ void IR::MAU::HashFunction::build_algorithm_t(bfn_hash_algorithm_ *alg) const {
     alg->extend = extend;
 }
 
-IR::MAU::HashFunction *IR::MAU::HashFunction::fromJSON(JSONLoader &json) {
+P4::IR::MAU::HashFunction *P4::IR::MAU::HashFunction::fromJSON(JSONLoader &json) {
     if (!json.json) return nullptr;
     auto *rv = new HashFunction;
     int type = 0;

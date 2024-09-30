@@ -4,8 +4,8 @@
 #include "ir/ir.h"
 #include "lib/log.h"
 
-bool ValidateActions::preorder(const IR::MAU::Action *act) {
-    auto tbl = findContext<IR::MAU::Table>();
+bool ValidateActions::preorder(const P4::IR::MAU::Action *act) {
+    auto tbl = findContext<P4::IR::MAU::Table>();
     CHECK_NULL(tbl);
     Log::TempIndent indent;
     LOG3("ValidateActions for table: " << tbl->externalName()
@@ -28,7 +28,7 @@ bool ValidateActions::preorder(const IR::MAU::Action *act) {
     return false;
 }
 
-Visitor::profile_t ValidateActions::init_apply(const IR::Node *root) {
+Visitor::profile_t ValidateActions::init_apply(const P4::IR::Node *root) {
     profile_t rv = Inspector::init_apply(root);
     warning_found = false;
     return rv;

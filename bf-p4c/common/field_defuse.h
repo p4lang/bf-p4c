@@ -15,13 +15,13 @@
  */
 
 /** Represent the parser initialization that sets all fields to zero.
- *  This is actually a dummy subclass of IR::Expression to work with
+ *  This is actually a dummy subclass of P4::IR::Expression to work with
  *  the locpair setup. NEVER insert this class to IR, because it is not
  *  a IR node, because it is not registered in visiter classes.
  */
-class ImplicitParserInit : public IR::Expression {
+class ImplicitParserInit : public P4::IR::Expression {
  private:
-    IR::Expression* clone() const override {
+    P4::IR::Expression* clone() const override {
         auto* new_expr = new ImplicitParserInit(*this);
         return new_expr; }
 
@@ -37,9 +37,9 @@ class ImplicitParserInit : public IR::Expression {
 
 /** Represent a parser error write. TODO: move to actual IR.
  */
-class WriteParserError : public IR::Expression {
+class WriteParserError : public P4::IR::Expression {
  private:
-    IR::Expression *clone() const override {
+    P4::IR::Expression *clone() const override {
         auto *new_expr = new WriteParserError(*this);
         return new_expr;
     }
@@ -57,7 +57,7 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
     /** A given expression for a field might appear multiple places in the IR dag (eg, an
      * action used by mulitple tables), so we use a pair<Unit,Expr> to denote a particular
      * use or definition in the code */
-    typedef std::pair<const IR::BFN::Unit *, const IR::Expression*>  locpair;
+    typedef std::pair<const P4::IR::BFN::Unit *, const P4::IR::Expression*>  locpair;
     typedef ordered_set<locpair> LocPairSet;
 
     enum VisitMode {
@@ -115,34 +115,34 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
     class ClearBeforeEgress;
     class CollectAliasDestinations;
 
-    profile_t init_apply(const IR::Node *root) override;
-    void end_apply(const IR::Node *root) override;
+    profile_t init_apply(const P4::IR::Node *root) override;
+    void end_apply(const P4::IR::Node *root) override;
     void end_apply() override;
     void collect_uninitalized();
     void check_conflicts(const info &read, int when);
-    void read(const PHV::Field *, std::optional<le_bitrange>, const IR::BFN::Unit *,
-              const IR::Expression *, bool);
-    void read(const IR::HeaderRef *, const IR::BFN::Unit *, const IR::Expression *, bool);
-    void write(const PHV::Field *, std::optional<le_bitrange>, const IR::BFN::Unit *,
-               const IR::Expression *, bool);
-    void write(const IR::HeaderRef *, const IR::BFN::Unit *, const IR::Expression *, bool);
+    void read(const PHV::Field *, std::optional<le_bitrange>, const P4::IR::BFN::Unit *,
+              const P4::IR::Expression *, bool);
+    void read(const P4::IR::HeaderRef *, const P4::IR::BFN::Unit *, const P4::IR::Expression *, bool);
+    void write(const PHV::Field *, std::optional<le_bitrange>, const P4::IR::BFN::Unit *,
+               const P4::IR::Expression *, bool);
+    void write(const P4::IR::HeaderRef *, const P4::IR::BFN::Unit *, const P4::IR::Expression *, bool);
     info &field(const PHV::Field *);
     info &field(int id) { return field(phv.field(id)); }
     void access_field(const PHV::Field *);
-    bool preorder(const IR::BFN::Pipe *p) override;
-    bool preorder(const IR::BFN::Parser *p) override;
-    void postorder(const IR::BFN::Parser *p) override;
-    bool preorder(const IR::BFN::ParserState *ps) override;
-    void postorder(const IR::BFN::ParserState *ps) override;
-    bool preorder(const IR::BFN::LoweredParser *p) override;
-    bool preorder(const IR::MAU::Table *t) override;
-    void postorder(const IR::MAU::Table *t) override;
-    bool preorder(const IR::MAU::Primitive* prim) override;
-    bool preorder(const IR::MAU::Action *p) override;
-    bool preorder(const IR::MAU::StatefulAlu* prim) override;
-    bool preorder(const IR::Expression *e) override;
-    bool preorder(const IR::BFN::AbstractDeparser *d) override;
-    void postorder(const IR::BFN::AbstractDeparser *d) override;
+    bool preorder(const P4::IR::BFN::Pipe *p) override;
+    bool preorder(const P4::IR::BFN::Parser *p) override;
+    void postorder(const P4::IR::BFN::Parser *p) override;
+    bool preorder(const P4::IR::BFN::ParserState *ps) override;
+    void postorder(const P4::IR::BFN::ParserState *ps) override;
+    bool preorder(const P4::IR::BFN::LoweredParser *p) override;
+    bool preorder(const P4::IR::MAU::Table *t) override;
+    void postorder(const P4::IR::MAU::Table *t) override;
+    bool preorder(const P4::IR::MAU::Primitive* prim) override;
+    bool preorder(const P4::IR::MAU::Action *p) override;
+    bool preorder(const P4::IR::MAU::StatefulAlu* prim) override;
+    bool preorder(const P4::IR::Expression *e) override;
+    bool preorder(const P4::IR::BFN::AbstractDeparser *d) override;
+    void postorder(const P4::IR::BFN::AbstractDeparser *d) override;
     FieldDefUse *clone() const override { return new FieldDefUse(*this); }
     void flow_merge(Visitor &) override;
     void flow_copy(::ControlFlowVisitor &) override;
@@ -172,10 +172,10 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
 
     const LocPairSet &getDefs(locpair use) const {
         return defs.count(use) ? defs.at(use) : emptyset; }
-    const LocPairSet &getDefs(const IR::BFN::Unit *u, const IR::Expression *e) const {
+    const LocPairSet &getDefs(const P4::IR::BFN::Unit *u, const P4::IR::Expression *e) const {
         return getDefs(locpair(u, e)); }
-    const LocPairSet &getDefs(const Visitor *v, const IR::Expression *e) const {
-        return getDefs(locpair(v->findOrigCtxt<IR::BFN::Unit>(), e)); }
+    const LocPairSet &getDefs(const Visitor *v, const P4::IR::Expression *e) const {
+        return getDefs(locpair(v->findOrigCtxt<P4::IR::BFN::Unit>(), e)); }
 
     /** Get all defs and uses of the PHV::Field with ID @p fid. */
     const LocPairSet getAllDefsAndUses(int fid) const {
@@ -204,10 +204,10 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
 
     const LocPairSet &getUses(locpair def) const {
         return uses.count(def) ? uses.at(def) : emptyset; }
-    const LocPairSet &getUses(const IR::BFN::Unit *u, const IR::Expression *e) const {
+    const LocPairSet &getUses(const P4::IR::BFN::Unit *u, const P4::IR::Expression *e) const {
         return getUses(locpair(u, e)); }
-    const LocPairSet &getUses(const Visitor *v, const IR::Expression *e) const {
-        return getUses(locpair(v->findOrigCtxt<IR::BFN::Unit>(), e)); }
+    const LocPairSet &getUses(const Visitor *v, const P4::IR::Expression *e) const {
+        return getUses(locpair(v->findOrigCtxt<P4::IR::BFN::Unit>(), e)); }
     /** Get all uses of the PHV::Field with ID @p fid. */
     const LocPairSet &getAllUses(int fid) const {
         return located_uses.count(fid) ? located_uses.at(fid) : emptyset; }
@@ -217,11 +217,11 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
     const LocPairSet &getOutputDeps(locpair def) const {
         return output_deps.count(def) ? output_deps.at(def) : emptyset;
     }
-    const LocPairSet &getOutputDeps(const IR::BFN::Unit *u, const IR::Expression *e) const {
+    const LocPairSet &getOutputDeps(const P4::IR::BFN::Unit *u, const P4::IR::Expression *e) const {
         return getOutputDeps(locpair(u, e));
     }
-    const LocPairSet &getOutputDeps(const Visitor *v, const IR::Expression *e) const {
-        return getOutputDeps(locpair(v->findOrigCtxt<IR::BFN::Unit>(), e));
+    const LocPairSet &getOutputDeps(const Visitor *v, const P4::IR::Expression *e) const {
+        return getOutputDeps(locpair(v->findOrigCtxt<P4::IR::BFN::Unit>(), e));
     }
 
     const ordered_set<const PHV::Field*> &getUninitializedFields() const {
@@ -252,8 +252,8 @@ class FieldDefUse : public BFN::ControlFlowVisitor, public Inspector, TofinoWrit
 
     /// @returns true if the field @p f is used in the parser.
     bool isUsedInParser(const PHV::Field* f) const;
-    bool hasUseAt(const PHV::Field* f, const IR::BFN::Unit* u) const;
-    bool hasDefAt(const PHV::Field* f, const IR::BFN::Unit* u) const;
+    bool hasUseAt(const PHV::Field* f, const P4::IR::BFN::Unit* u) const;
+    bool hasDefAt(const PHV::Field* f, const P4::IR::BFN::Unit* u) const;
     bool hasDefInParser(const PHV::Field* f, std::optional<le_bitrange> bits) const;
     bool hasDefInParser(const PHV::FieldSlice& fs) const {
         return hasDefInParser(fs.field(), fs.range());

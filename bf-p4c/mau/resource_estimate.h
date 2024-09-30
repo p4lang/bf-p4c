@@ -59,7 +59,7 @@ struct StageUseEstimate {
         meter_alus += a.meter_alus;
         stats_alus += a.stats_alus;
         return *this; }
-    StageUseEstimate(const IR::MAU::Table *, int &, attached_entries_t &, LayoutChoices *lc,
+    StageUseEstimate(const P4::IR::MAU::Table *, int &, attached_entries_t &, LayoutChoices *lc,
                      bool prev_placed, bool gateway_attached, bool disable_split, PhvInfo &phv);
 
     StageUseEstimate operator+(const StageUseEstimate &a) const {
@@ -87,14 +87,14 @@ struct StageUseEstimate {
         meter_alus = 0; stats_alus = 0; local_tinds = 0; }
     cstring ran_out() const;
 
-    void options_to_ways(const IR::MAU::Table *tbl, int entries);
-    void options_to_rams(const IR::MAU::Table *tbl, const attached_entries_t &att_entries);
-    void select_best_option(const IR::MAU::Table *tbl);
-    void options_to_ternary_entries(const IR::MAU::Table *tbl, int entries);
+    void options_to_ways(const P4::IR::MAU::Table *tbl, int entries);
+    void options_to_rams(const P4::IR::MAU::Table *tbl, const attached_entries_t &att_entries);
+    void select_best_option(const P4::IR::MAU::Table *tbl);
+    void options_to_ternary_entries(const P4::IR::MAU::Table *tbl, int entries);
     void select_best_option_ternary();
-    void options_to_atcam_entries(const IR::MAU::Table *tbl, int entries);
-    void options_to_dleft_entries(const IR::MAU::Table *tbl, const attached_entries_t &att_entries);
-    void calculate_attached_rams(const IR::MAU::Table *tbl, const attached_entries_t &att_entries,
+    void options_to_atcam_entries(const P4::IR::MAU::Table *tbl, int entries);
+    void options_to_dleft_entries(const P4::IR::MAU::Table *tbl, const attached_entries_t &att_entries);
+    void calculate_attached_rams(const P4::IR::MAU::Table *tbl, const attached_entries_t &att_entries,
                                  LayoutOption *lo);
     void fill_estimate_from_option(int &entries);
     void remove_invalid_option() {
@@ -117,32 +117,32 @@ struct StageUseEstimate {
         return &meter_format;
     }
 
-    void determine_initial_layout_option(const IR::MAU::Table *tbl, int &entries,
+    void determine_initial_layout_option(const P4::IR::MAU::Table *tbl, int &entries,
                                          attached_entries_t &);
-    bool adjust_choices(const IR::MAU::Table *tbl, int &entries, attached_entries_t &);
+    bool adjust_choices(const P4::IR::MAU::Table *tbl, int &entries, attached_entries_t &);
 
-    bool calculate_for_leftover_srams(const IR::MAU::Table *tbl, int &srams_left,
+    bool calculate_for_leftover_srams(const P4::IR::MAU::Table *tbl, int &srams_left,
                                       int &entries, attached_entries_t &);
-    void calculate_for_leftover_tcams(const IR::MAU::Table *tbl, int srams_left, int tcams_left,
+    void calculate_for_leftover_tcams(const P4::IR::MAU::Table *tbl, int srams_left, int tcams_left,
                                       int &entries, attached_entries_t &);
-    void calculate_for_leftover_atcams(const IR::MAU::Table *tbl, int srams_left,
+    void calculate_for_leftover_atcams(const P4::IR::MAU::Table *tbl, int srams_left,
                                        int &entries, attached_entries_t &);
-    void shrink_preferred_srams_lo(const IR::MAU::Table *tbl, int &entries,
+    void shrink_preferred_srams_lo(const P4::IR::MAU::Table *tbl, int &entries,
                                    attached_entries_t &attached_entries);
-    void shrink_preferred_tcams_lo(const IR::MAU::Table *tbl, int &entries,
+    void shrink_preferred_tcams_lo(const P4::IR::MAU::Table *tbl, int &entries,
                                    attached_entries_t &attached_entries);
-    void shrink_preferred_atcams_lo(const IR::MAU::Table *tbl, int &entries,
+    void shrink_preferred_atcams_lo(const P4::IR::MAU::Table *tbl, int &entries,
                                     attached_entries_t &attached_entries);
-    void known_srams_needed(const IR::MAU::Table *tbl, const attached_entries_t &,
+    void known_srams_needed(const P4::IR::MAU::Table *tbl, const attached_entries_t &,
                             LayoutOption *lo);
-    void unknown_srams_needed(const IR::MAU::Table *tbl, LayoutOption *lo, int srams_left);
-    void unknown_tcams_needed(const IR::MAU::Table *tbl, LayoutOption *lo, int tcams_left,
+    void unknown_srams_needed(const P4::IR::MAU::Table *tbl, LayoutOption *lo, int srams_left);
+    void unknown_tcams_needed(const P4::IR::MAU::Table *tbl, LayoutOption *lo, int tcams_left,
                               int srams_left);
-    void unknown_atcams_needed(const IR::MAU::Table *tbl, LayoutOption *lo, int srams_left);
-    bool can_be_identity_hash(const IR::MAU::Table *tbl, LayoutOption *lo, int &calculated_depth);
-    void calculate_way_sizes(const IR::MAU::Table *tbl, LayoutOption *lo, int &calculated_depth);
-    void calculate_partition_sizes(const IR::MAU::Table *tbl, LayoutOption *lo, int ram_depth);
-    bool ways_provided(const IR::MAU::Table *tbl, LayoutOption *lo, int &calculated_depth);
+    void unknown_atcams_needed(const P4::IR::MAU::Table *tbl, LayoutOption *lo, int srams_left);
+    bool can_be_identity_hash(const P4::IR::MAU::Table *tbl, LayoutOption *lo, int &calculated_depth);
+    void calculate_way_sizes(const P4::IR::MAU::Table *tbl, LayoutOption *lo, int &calculated_depth);
+    void calculate_partition_sizes(const P4::IR::MAU::Table *tbl, LayoutOption *lo, int ram_depth);
+    bool ways_provided(const P4::IR::MAU::Table *tbl, LayoutOption *lo, int &calculated_depth);
     void srams_left_best_option(int srams_left);
     void max_entries_best_option();
     void tcams_left_best_option();
@@ -156,28 +156,28 @@ struct StageUseEstimate {
                                                       need_maprams(nm) {}
     };
     void calculate_per_row_vector(safe_vector<RAM_counter> &per_word_and_width,
-                                  const IR::MAU::Table *tbl, LayoutOption *lo);
+                                  const P4::IR::MAU::Table *tbl, LayoutOption *lo);
 
     int stages_required() const;
 };
 
 
-int CounterPerWord(const IR::MAU::Counter *ctr);
-int CounterWidth(const IR::MAU::Counter *ctr);
-int RegisterPerWord(const IR::MAU::StatefulAlu *reg);
-int ActionDataPerWord(const IR::MAU::Table::Layout *layout, int *width);
-int ActionDataHuffmanVPNBits(const IR::MAU::Table::Layout *layout);
-int ActionDataVPNStartPosition(const IR::MAU::Table::Layout *layout);
-int ActionDataVPNIncrement(const IR::MAU::Table::Layout *layout);
-int LocalTernaryIndirectPerWord(const IR::MAU::Table::Layout *layout, const IR::MAU::Table *tbl);
-int TernaryIndirectPerWord(const IR::MAU::Table::Layout *layout, const IR::MAU::Table *tbl);
-int IdleTimePerWord(const IR::MAU::IdleTime *idletime);
-int SelectorRAMLinesPerEntry(const IR::MAU::Selector *sel);
-int SelectorModBits(const IR::MAU::Selector *sel);
-int SelectorShiftBits(const IR::MAU::Selector *sel);
-int SelectorHashModBits(const IR::MAU::Selector *sel);
-int SelectorLengthShiftBits(const IR::MAU::Selector *sel);
-int SelectorLengthBits(const IR::MAU::Selector *sel);
+int CounterPerWord(const P4::IR::MAU::Counter *ctr);
+int CounterWidth(const P4::IR::MAU::Counter *ctr);
+int RegisterPerWord(const P4::IR::MAU::StatefulAlu *reg);
+int ActionDataPerWord(const P4::IR::MAU::Table::Layout *layout, int *width);
+int ActionDataHuffmanVPNBits(const P4::IR::MAU::Table::Layout *layout);
+int ActionDataVPNStartPosition(const P4::IR::MAU::Table::Layout *layout);
+int ActionDataVPNIncrement(const P4::IR::MAU::Table::Layout *layout);
+int LocalTernaryIndirectPerWord(const P4::IR::MAU::Table::Layout *layout, const P4::IR::MAU::Table *tbl);
+int TernaryIndirectPerWord(const P4::IR::MAU::Table::Layout *layout, const P4::IR::MAU::Table *tbl);
+int IdleTimePerWord(const P4::IR::MAU::IdleTime *idletime);
+int SelectorRAMLinesPerEntry(const P4::IR::MAU::Selector *sel);
+int SelectorModBits(const P4::IR::MAU::Selector *sel);
+int SelectorShiftBits(const P4::IR::MAU::Selector *sel);
+int SelectorHashModBits(const P4::IR::MAU::Selector *sel);
+int SelectorLengthShiftBits(const P4::IR::MAU::Selector *sel);
+int SelectorLengthBits(const P4::IR::MAU::Selector *sel);
 
 class RangeEntries : public MauInspector {
     static constexpr int MULTIRANGE_DISTRIBUTION_LIMIT = 8;
@@ -189,11 +189,11 @@ class RangeEntries : public MauInspector {
     int total_TCAM_lines = 0;
     int max_entry_TCAM_lines = 1;
 
-    bool preorder(const IR::MAU::TableSeq *) override { return false; }
-    bool preorder(const IR::MAU::Action *) override { return false; }
-    bool preorder(const IR::MAU::BackendAttached *) override { return false; }
-    bool preorder(const IR::MAU::TableKey *) override;
-    void postorder(const IR::MAU::Table *) override;
+    bool preorder(const P4::IR::MAU::TableSeq *) override { return false; }
+    bool preorder(const P4::IR::MAU::Action *) override { return false; }
+    bool preorder(const P4::IR::MAU::BackendAttached *) override { return false; }
+    bool preorder(const P4::IR::MAU::TableKey *) override;
+    void postorder(const P4::IR::MAU::Table *) override;
 
  public:
     int TCAM_lines() { return total_TCAM_lines; }

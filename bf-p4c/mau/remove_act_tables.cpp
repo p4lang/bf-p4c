@@ -1,17 +1,17 @@
 #include "remove_act_tables.h"
 
-bool AnalyzeActionTables::preorder(IR::P4Control* control) {
+bool AnalyzeActionTables::preorder(P4::IR::P4Control* control) {
     return false;
 }
 
-bool AnalyzeActionTables::preorder(const IR::MAU::Table* t) {
+bool AnalyzeActionTables::preorder(const P4::IR::MAU::Table* t) {
     return false;
 }
 
-bool AnalyzeActionTables::preorder(IR::P4Action* action) {
+bool AnalyzeActionTables::preorder(P4::IR::P4Action* action) {
     return false;
 }
 
-const IR::Node *DoRemoveActionTables::postorder(const IR::MAU::Table* t) {
+const P4::IR::Node *DoRemoveActionTables::postorder(const P4::IR::MAU::Table* t) {
     return t;
 }

@@ -4,7 +4,7 @@
 #include "mau_visitor.h"
 
 class RemoveEmptyControls : public MauTransform {
-    const IR::MAU::Table *postorder(IR::MAU::Table *tbl) override {
+    const P4::IR::MAU::Table *postorder(P4::IR::MAU::Table *tbl) override {
         if (tbl->next.count("$default"_cs)) {
             auto def = tbl->next.at("$default"_cs);
             if (def->tables.empty())

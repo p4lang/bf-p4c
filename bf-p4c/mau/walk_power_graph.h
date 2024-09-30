@@ -28,8 +28,8 @@ namespace MauPower {
 class WalkPowerGraph : public MauInspector {
  public:
     using PowerLogging = Logging::Power_Schema_Logger;
-    bool preorder(const IR::MAU::Table *t) override;
-    void end_apply(const IR::Node *root) override;
+    bool preorder(const P4::IR::MAU::Table *t) override;
+    void end_apply(const P4::IR::Node *root) override;
     WalkPowerGraph(const NextTable *next_table_properties, BuildPowerGraph *graphs,
                    const bool &exceeds_stages,
                    const std::map<UniqueId, PowerMemoryAccess> &table_memory_access,
@@ -133,7 +133,7 @@ class WalkPowerGraph : public MauInspector {
      * This function is only intended to be called for Tofino2 and beyond and when
      * the stage it is in is not match dependent.
      */
-    bool is_mpr_powered_on(gress_t g, int stage, const IR::MAU::Table *t) const;
+    bool is_mpr_powered_on(gress_t g, int stage, const P4::IR::MAU::Table *t) const;
 
     /**
      * Scale power based on input traffic limit
@@ -143,7 +143,7 @@ class WalkPowerGraph : public MauInspector {
     /**
      * JSON logging functions, for producing power.json.
      */
-    void create_mau_power_json(const IR::Node *root);
+    void create_mau_power_json(const P4::IR::Node *root);
     void produce_json_tables();
     void produce_json_total_power(int pipe_id);
     void produce_json_total_latency(int pipe_id);
@@ -152,7 +152,7 @@ class WalkPowerGraph : public MauInspector {
     /**
      * Text-based logging functions.
      */
-    void create_mau_power_log(const IR::Node *root) const;
+    void create_mau_power_log(const P4::IR::Node *root) const;
     void print_features(std::ofstream &out) const;
     void print_latency(std::ofstream &out) const;
     void print_mpr_settings(std::ofstream &out) const;

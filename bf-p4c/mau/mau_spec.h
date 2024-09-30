@@ -4,6 +4,7 @@
 #include "ir/ir.h"
 
 // device-specific parameters for MAU/PPU.
+using namespace P4;
 
 class IMemSpec {
  public:
@@ -109,7 +110,7 @@ class MauSpec {
 
     // Called at the end of table rewriting in TablePlacement::TransformTables to do
     // any target-specific fixups needed
-    virtual IR::Node *postTransformTables(IR::MAU::Table *const table) const;
+    virtual P4::IR::Node *postTransformTables(P4::IR::MAU::Table *const table) const;
 
     // The next 4 lines: correct data for Tof.1 + Tof.2 + Tof.3; must override elsewhere for Tof.5
     virtual int tcam_rows() const;
@@ -255,7 +256,7 @@ class FlatrockMauSpec : public MauSpec {
     int tcam_rows() const override;
     int tcam_columns() const override;
 
-    IR::Node *postTransformTables(IR::MAU::Table *) const override;
+    P4::IR::Node *postTransformTables(P4::IR::MAU::Table *) const override;
     //  preceding line`s decl.: implemented in "flatrock/mau_spec.cpp"
 };
 #endif

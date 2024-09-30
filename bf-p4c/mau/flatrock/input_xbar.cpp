@@ -411,7 +411,7 @@ bool IXBar::xcmp_find_alloc(safe_vector<IXBar::Use::Byte> &alloc_use,
  * forms it allows */
 class IXBar::SetupCmpMap : public Inspector {
     const PhvInfo               &phv;
-    const IR::MAU::Table        *tbl;
+    const P4::IR::MAU::Table        *tbl;
     cmp_map_t                   &cmp_map;
     const PHV::Field            *field = nullptr;
     le_bitrange                 bits;
@@ -431,46 +431,46 @@ class IXBar::SetupCmpMap : public Inspector {
         });
     }
 
-    bool preorder(const IR::Constant *k) {
+    bool preorder(const P4::IR::Constant *k) {
         if (k->value < 0)
             value = ~static_cast<uint64_t>(-k->value - 1);   // 2s complement
         else
             value = static_cast<uint64_t>(k->value);
         return false; }
 
-    bool preorder(const IR::BoolLiteral *k) {
+    bool preorder(const P4::IR::BoolLiteral *k) {
         value = k->value ? 1 : 0;
         return false; }
 
-    bool preorder(const IR::Expression *e) {
+    bool preorder(const P4::IR::Expression *e) {
         if (!(field = phv.field(e, &bits))) return true;
-        if (!findContext<IR::Operation::Relation>()) {
+        if (!findContext<P4::IR::Operation::Relation>()) {
             // bare boolean test
             BUG_CHECK(bits.size() == 1, "not a boolean test?");
             value = mask = 1;
             add_relation(); }
         return false; }
 
-    bool preorder(const IR::Operation::Relation *) {
+    bool preorder(const P4::IR::Operation::Relation *) {
         field = nullptr;
         value = 0;
         mask = ~UINT64_C(0);
         return true; }
 
-    void postorder(const IR::BAnd *) {
+    void postorder(const P4::IR::BAnd *) {
         mask = value;
         value = 0; }
 
-    void postorder(const IR::BOr *) {
+    void postorder(const P4::IR::BOr *) {
         mask = value ^ ~UINT64_C(0);
         value = 0; }
 
-    void postorder(const IR::Operation::Relation *) {
+    void postorder(const P4::IR::Operation::Relation *) {
         BUG_CHECK(field, "should have been rejected in CollectGatewayFields");
         add_relation(); }
 
  public:
-    SetupCmpMap(const PhvInfo &phv, const IR::MAU::Table *tbl, cmp_map_t &cm)
+    SetupCmpMap(const PhvInfo &phv, const P4::IR::MAU::Table *tbl, cmp_map_t &cm)
     : phv(phv), tbl(tbl), cmp_map(cm) {
         for (auto &gw : tbl->gateway_rows)
             if (gw.first)
@@ -492,7 +492,7 @@ void IXBar::replicate_alloc_bytes(const cmp_map_t &cmp_map, safe_vector<Use::Byt
                 i += matches - 1; } } }
 }
 
-bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &alloc,
+bool IXBar::allocGateway(const P4::IR::MAU::Table *tbl, const PhvInfo &phv, Use &alloc,
                          const LayoutOption *lo) {
     if (lo && lo->layout.no_match_rams()) {
         // tables with no memories require a gateway, so we need to allocate a dummy if
@@ -590,7 +590,7 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
     return true;
 }
 
-void IXBar::setupMatchAlloc(const IR::MAU::Table *tbl, const PhvInfo &phv,
+void IXBar::setupMatchAlloc(const P4::IR::MAU::Table *tbl, const PhvInfo &phv,
                                    ContByteConversion &map_alloc, Use &alloc) {
     std::map<cstring, bitvec> fields_needed;
     KeyInfo ki;
@@ -599,7 +599,7 @@ void IXBar::setupMatchAlloc(const IR::MAU::Table *tbl, const PhvInfo &phv,
 
     // For overlapping keys of different types where one type is "range", the
     // range key takes precedence to correctly set up dirtcam bits
-    std::map<std::pair<cstring, le_bitrange>, const IR::MAU::TableKey*> validKeys;
+    std::map<std::pair<cstring, le_bitrange>, const P4::IR::MAU::TableKey*> validKeys;
     for (auto ixbar_read : tbl->match_key) {
         if (!ixbar_read->for_match())
             continue;
@@ -616,7 +616,7 @@ void IXBar::setupMatchAlloc(const IR::MAU::Table *tbl, const PhvInfo &phv,
     if (validKeys.empty()) return;
 
     for (auto vkey : validKeys) {
-        safe_vector<const IR::Expression *> field_list_order;
+        safe_vector<const P4::IR::Expression *> field_list_order;
         FieldManagement(&map_alloc, field_list_order, vkey.second, &fields_needed,
                         phv, ki, tbl); }
 
@@ -625,12 +625,12 @@ void IXBar::setupMatchAlloc(const IR::MAU::Table *tbl, const PhvInfo &phv,
 }
 
 class IXBar::GetActionUse : public Inspector {
-    const IR::MAU::Table *tbl;
+    const P4::IR::MAU::Table *tbl;
     const PhvInfo &phv;
     ContByteConversion &map_alloc;
     std::map<cstring, bitvec> &fields_needed;
     std::map<le_bitrange, unsigned> slice_flags;
-    bool preorder(const IR::MAU::Instruction *inst) {
+    bool preorder(const P4::IR::MAU::Instruction *inst) {
         bool inPhvWrite = (inst->name == "or" || inst->name == "andc");
         slice_flags.clear();
         if (inPhvWrite || inst->name == "set") {
@@ -663,7 +663,7 @@ class IXBar::GetActionUse : public Inspector {
                 continue;
             visit(inst->operands[i]); }
         return false; }
-    bool preorder(const IR::Expression *e) {
+    bool preorder(const P4::IR::Expression *e) {
         le_bitrange bits = { };
         auto *finfo = phv.field(e, &bits);
         BUG_CHECK(finfo, "operand not a phv ref: %s", e);
@@ -677,18 +677,18 @@ class IXBar::GetActionUse : public Inspector {
                 auto sl = slice.shiftedByBits(bits.lo);
                 add_use(map_alloc, finfo, phv, tbl, phv.get_alias_name(e), &sl, flags); } }
         return false; }
-    bool preorder(const IR::Constant *) { return false; }
-    bool preorder(const IR::MAU::ActionArg *) { return false; }
-    bool preorder(const IR::Annotation *) { return false; }
+    bool preorder(const P4::IR::Constant *) { return false; }
+    bool preorder(const P4::IR::MAU::ActionArg *) { return false; }
+    bool preorder(const P4::IR::Annotation *) { return false; }
 
  public:
-    GetActionUse(const IR::MAU::Table *tbl, const PhvInfo &phv, ContByteConversion &map_alloc,
+    GetActionUse(const P4::IR::MAU::Table *tbl, const PhvInfo &phv, ContByteConversion &map_alloc,
                  std::map<cstring, bitvec> &fields_needed)
     : tbl(tbl), phv(phv), map_alloc(map_alloc), fields_needed(fields_needed) {}
 };
 
 // Action sources are needed in the xcmp ixbar so they can be sourced by ALUs
-void IXBar::setupActionAlloc(const IR::MAU::Table *tbl, const PhvInfo &phv,
+void IXBar::setupActionAlloc(const P4::IR::MAU::Table *tbl, const PhvInfo &phv,
                                     ContByteConversion &map_alloc, Use &alloc) {
     std::map<cstring, bitvec> fields_needed;
     GetActionUse gau(tbl, phv, map_alloc, fields_needed);
@@ -727,13 +727,13 @@ bool IXBar::exact_find_units(Use &alloc, const LayoutOption *lo) {
     return false;
 }
 
-bool IXBar::allocProxyHash(const IR::MAU::Table *, const PhvInfo &, Use &,
+bool IXBar::allocProxyHash(const P4::IR::MAU::Table *, const PhvInfo &, Use &,
                            const LayoutOption *, const ActionData::Format::Use *) {
     BUG("flatrock proxy hash todo");
     return false;
 }
 
-bool IXBar::allocExact(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &alloc,
+bool IXBar::allocExact(const P4::IR::MAU::Table *tbl, const PhvInfo &phv, Use &alloc,
                        const LayoutOption *lo, const ActionData::Format::Use *af) {
     LOG1("IXBar::allocExact(" << tbl->name << ")");
     ContByteConversion map_alloc;
@@ -789,7 +789,7 @@ bool IXBar::allocAllHashWays(Use &alloc, const LayoutOption *lo) {
     return true;
 }
 
-bool IXBar::allocTernary(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &alloc,
+bool IXBar::allocTernary(const P4::IR::MAU::Table *tbl, const PhvInfo &phv, Use &alloc,
                          const LayoutOption *lo, const ActionData::Format::Use *af) {
     LOG1("IXBar::allocTernary(" << tbl->name << ")");
     ContByteConversion map_alloc;
@@ -805,7 +805,7 @@ bool IXBar::allocTernary(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
     return true;
 }
 
-bool IXBar::allocActions(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &alloc) {
+bool IXBar::allocActions(const P4::IR::MAU::Table *tbl, const PhvInfo &phv, Use &alloc) {
     IndentCtl::TempIndent indent;
     LOG1("IXBar::allocActions(" << tbl->name << ")" << indent);
     ContByteConversion map_alloc;
@@ -821,7 +821,7 @@ bool IXBar::allocActions(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
     return true;
 }
 
-bool IXBar::allocSelector(const IR::MAU::Selector *sel, const IR::MAU::Table *tbl,
+bool IXBar::allocSelector(const P4::IR::MAU::Selector *sel, const P4::IR::MAU::Table *tbl,
                           const PhvInfo &phv, Use &alloc, cstring name) {
     IndentCtl::TempIndent indent;
     LOG1("IXBar::allocSelector(" << tbl->name << ")" << indent);
@@ -830,7 +830,7 @@ bool IXBar::allocSelector(const IR::MAU::Selector *sel, const IR::MAU::Table *tb
     return false;
 }
 
-bool IXBar::allocStateful(const IR::MAU::StatefulAlu *salu, const IR::MAU::Table *tbl,
+bool IXBar::allocStateful(const P4::IR::MAU::StatefulAlu *salu, const P4::IR::MAU::Table *tbl,
                           const PhvInfo &phv, Use &alloc) {
     IndentCtl::TempIndent indent;
     LOG1("IXBar::allocStateful(" << tbl->name << ")" << indent);
@@ -839,7 +839,7 @@ bool IXBar::allocStateful(const IR::MAU::StatefulAlu *salu, const IR::MAU::Table
     return false;
 }
 
-bool IXBar::allocMeter(const IR::MAU::Meter *meter, const IR::MAU::Table *tbl,
+bool IXBar::allocMeter(const P4::IR::MAU::Meter *meter, const P4::IR::MAU::Table *tbl,
                        const PhvInfo &phv, Use &alloc) {
     IndentCtl::TempIndent indent;
     LOG1("IXBar::allocMeter(" << tbl->name << ")" << indent);
@@ -848,7 +848,7 @@ bool IXBar::allocMeter(const IR::MAU::Meter *meter, const IR::MAU::Table *tbl,
     return false;
 }
 
-bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResourceAlloc &alloc,
+bool IXBar::allocTable(const P4::IR::MAU::Table *tbl, const PhvInfo &phv, TableResourceAlloc &alloc,
                        const LayoutOption *lo, const ActionData::Format::Use *af,
                        const attached_entries_t &attached_entries) {
     if (!tbl) return true;
@@ -885,16 +885,16 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResou
     for (auto back_at : tbl->attached) {
          auto at_mem = back_at->attached;
          if (attached_entries.at(at_mem).entries <= 0) continue;
-         if (auto as = at_mem->to<IR::MAU::Selector>()) {
+         if (auto as = at_mem->to<P4::IR::MAU::Selector>()) {
              if (!allocSelector(as, tbl, phv, getUse(alloc.selector_ixbar), tbl->name)) {
                  alloc.clear_ixbar();
                  return false; }
-         } else if (auto mtr = at_mem->to<IR::MAU::Meter>()) {
+         } else if (auto mtr = at_mem->to<P4::IR::MAU::Meter>()) {
              if (!allocMeter(mtr, tbl, phv, getUse(alloc.meter_ixbar))) {
                  alloc.clear_ixbar();
                  return false;
              }
-         } else if (auto salu = at_mem->to<IR::MAU::StatefulAlu>()) {
+         } else if (auto salu = at_mem->to<P4::IR::MAU::StatefulAlu>()) {
              if (!allocStateful(salu, tbl, phv, getUse(alloc.salu_ixbar))) {
                  alloc.clear_ixbar();
                  return false; } } }
@@ -908,7 +908,7 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResou
 
 /* Allocate the gateway (if any) first, as if the match table requires a gateway and there
  * isn't one attached, we'll need to allocate a dummy (always match) gateway */
-bool IXBar::allocTable(const IR::MAU::Table *tbl, const IR::MAU::Table *gw, const PhvInfo &phv,
+bool IXBar::allocTable(const P4::IR::MAU::Table *tbl, const P4::IR::MAU::Table *gw, const PhvInfo &phv,
                        TableResourceAlloc &alloc, const LayoutOption *lo,
                        const ActionData::Format::Use *af,
                        const attached_entries_t &attached_entries) {

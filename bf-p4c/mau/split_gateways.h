@@ -16,8 +16,8 @@ class SpreadGatewayAcrossSeq : public MauTransform, public Backtrack {
             do_splitting = true;
             return true; }
         return false; }
-    Visitor::profile_t init_apply(const IR::Node *) override;
-    const IR::Node *postorder(IR::MAU::Table *) override;
+    Visitor::profile_t init_apply(const P4::IR::Node *) override;
+    const P4::IR::Node *postorder(P4::IR::MAU::Table *) override;
 
  public:
     explicit SpreadGatewayAcrossSeq(const PhvInfo& p) : uses(p) { }
@@ -25,7 +25,7 @@ class SpreadGatewayAcrossSeq : public MauTransform, public Backtrack {
 
 class SplitComplexGateways : public Transform {
     const PhvInfo       &phv;
-    const IR::MAU::Table  *preorder(IR::MAU::Table *tbl) override;
+    const P4::IR::MAU::Table  *preorder(P4::IR::MAU::Table *tbl) override;
  public:
     explicit SplitComplexGateways(const PhvInfo &phv) : phv(phv) {}
 };

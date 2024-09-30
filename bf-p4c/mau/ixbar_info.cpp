@@ -5,14 +5,14 @@
 
 namespace BFN {
 
-Visitor::profile_t CollectIXBarInfo::init_apply(const IR::Node* node) {
+Visitor::profile_t CollectIXBarInfo::init_apply(const P4::IR::Node* node) {
     auto rv = Inspector::init_apply(node);
     _stage.clear();
     _byteToTables.clear();
     return rv;
 }
 
-void CollectIXBarInfo::postorder(const IR::MAU::Table *tbl) {
+void CollectIXBarInfo::postorder(const P4::IR::MAU::Table *tbl) {
     if (!tbl->resources->match_ixbar ||
         tbl->resources->match_ixbar->type != IXBar::Use::TERNARY_MATCH)
         return;
@@ -46,7 +46,7 @@ std::string CollectIXBarInfo::print_ixbar_byte() const {
         for (auto& use : stage.second) {
             BUG_CHECK(_byteToTables.count(use),
                       "No table found for input crossbar use.");
-            const IR::MAU::Table* ctxt = _byteToTables.at(use);
+            const P4::IR::MAU::Table* ctxt = _byteToTables.at(use);
             for (auto& fi : use.field_bytes) {
                 auto *field = phv.field(fi.field);
                 std::stringstream alloc;
@@ -72,10 +72,10 @@ std::string CollectIXBarInfo::print_ixbar_byte() const {
     return out.str();
 }
 
-void CollectIXBarInfo::end_apply(const IR::Node *root) {
+void CollectIXBarInfo::end_apply(const P4::IR::Node *root) {
     sort_ixbar_byte();
     if (Log::verbose()) {
-        const IR::BFN::Pipe *pipe = root->to<IR::BFN::Pipe>();
+        const P4::IR::BFN::Pipe *pipe = root->to<P4::IR::BFN::Pipe>();
         Logging::FileLog ixbarLog(pipe->canon_id(), "ixbar.log"_cs);
         LOG2(print_ixbar_byte());
     }

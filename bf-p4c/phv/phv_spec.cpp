@@ -863,7 +863,7 @@ unsigned FlatrockPhvSpec::physicalAddress(unsigned id, ArchBlockType_t) const {
 
 #endif /* HAVE_FLATROCK */
 
-void PhvSpec::applyGlobalPragmas(const std::vector<const IR::Annotation*>& global_pragmas) const {
+void PhvSpec::applyGlobalPragmas(const std::vector<const P4::IR::Annotation*>& global_pragmas) const {
     // clear all the cached values
     physical_containers_i.clear();
     mau_groups_i.clear();

@@ -25,7 +25,7 @@ struct TableFormat : ::TableFormat {
     void fill_out_use(int group, const safe_vector<ByteInfo> &alloced);
  public:
     TableFormat(const LayoutOption &l, const IXBar::Use *mi, const IXBar::Use *phi,
-                const IR::MAU::Table *t, const bitvec im, bool gl, FindPayloadCandidates &fpc,
+                const P4::IR::MAU::Table *t, const bitvec im, bool gl, FindPayloadCandidates &fpc,
                 const PhvInfo &phv)
         : ::TableFormat(l, mi, phi, t, im, gl, fpc, phv) {}
 };

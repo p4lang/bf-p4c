@@ -95,7 +95,7 @@
 class HeaderPushPop : public MauTransform {
     const BFN::HeaderStackInfo* stacks = nullptr;
 
-    IR::BFN::Pipe* preorder(IR::BFN::Pipe* pipe) override {
+    P4::IR::BFN::Pipe* preorder(P4::IR::BFN::Pipe* pipe) override {
         BUG_CHECK(pipe->headerStackInfo != nullptr,
                   "Running HeaderPushPop without running "
                   "CollectHeaderStackInfo first?");
@@ -103,48 +103,48 @@ class HeaderPushPop : public MauTransform {
         return pipe;
     }
 
-    void copy_hdr(IR::Vector<IR::MAU::Primitive> *rv, const IR::Type_StructLike *hdr,
-                  const IR::HeaderRef *to, const IR::HeaderRef *from) {
+    void copy_hdr(P4::IR::Vector<P4::IR::MAU::Primitive> *rv, const P4::IR::Type_StructLike *hdr,
+                  const P4::IR::HeaderRef *to, const P4::IR::HeaderRef *from) {
         for (auto field : hdr->fields) {
-            auto dst = new IR::Member(field->type, to, field->name);
-            auto src = new IR::Member(field->type, from, field->name);
-            rv->push_back(new IR::MAU::Primitive("modify_field"_cs, dst, src)); } }
-    IR::Node *do_push(const IR::HeaderRef *stack, int count) {
+            auto dst = new P4::IR::Member(field->type, to, field->name);
+            auto src = new P4::IR::Member(field->type, from, field->name);
+            rv->push_back(new P4::IR::MAU::Primitive("modify_field"_cs, dst, src)); } }
+    P4::IR::Node *do_push(const P4::IR::HeaderRef *stack, int count) {
         auto &info = stacks->at(stack->toString());
-        auto *rv = new IR::Vector<IR::MAU::Primitive>;
+        auto *rv = new P4::IR::Vector<P4::IR::MAU::Primitive>;
         for (int i = info.size-1; i >= count; --i)
             copy_hdr(rv, stack->baseRef()->type,
-                     new IR::HeaderStackItemRef(stack, new IR::Constant(i)),
-                     new IR::HeaderStackItemRef(stack, new IR::Constant(i - count)));
-        auto *valid = new IR::Member(IR::Type::Bits::get(info.size + info.maxpop + info.maxpush),
+                     new P4::IR::HeaderStackItemRef(stack, new P4::IR::Constant(i)),
+                     new P4::IR::HeaderStackItemRef(stack, new P4::IR::Constant(i - count)));
+        auto *valid = new P4::IR::Member(P4::IR::Type::Bits::get(info.size + info.maxpop + info.maxpush),
                                      stack, "$stkvalid");
-        rv->push_back(new IR::MAU::Primitive("modify_field"_cs,
+        rv->push_back(new P4::IR::MAU::Primitive("modify_field"_cs,
             MakeSlice(valid, info.maxpop, info.maxpop + info.size - 1),
             MakeSlice(valid, info.maxpop + count, info.maxpop + info.size + count - 1)));
         return rv; }
-    IR::Node *do_pop(const IR::HeaderRef *stack, int count) {
+    P4::IR::Node *do_pop(const P4::IR::HeaderRef *stack, int count) {
         auto &info = stacks->at(stack->toString());
-        auto *rv = new IR::Vector<IR::MAU::Primitive>;
+        auto *rv = new P4::IR::Vector<P4::IR::MAU::Primitive>;
         for (int i = count; i < info.size; ++i)
             copy_hdr(rv, stack->baseRef()->type,
-                     new IR::HeaderStackItemRef(stack, new IR::Constant(i - count)),
-                     new IR::HeaderStackItemRef(stack, new IR::Constant(i)));
-        auto *valid = new IR::Member(IR::Type::Bits::get(info.size + info.maxpop + info.maxpush),
+                     new P4::IR::HeaderStackItemRef(stack, new P4::IR::Constant(i - count)),
+                     new P4::IR::HeaderStackItemRef(stack, new P4::IR::Constant(i)));
+        auto *valid = new P4::IR::Member(P4::IR::Type::Bits::get(info.size + info.maxpop + info.maxpush),
                                      stack, "$stkvalid");
-        rv->push_back(new IR::MAU::Primitive("modify_field"_cs,
+        rv->push_back(new P4::IR::MAU::Primitive("modify_field"_cs,
             MakeSlice(valid, info.maxpop, info.maxpop + info.size - 1),
             MakeSlice(valid, info.maxpop - count, info.maxpop + info.size - count - 1)));
         return rv; }
 
-    IR::Node *preorder(IR::MAU::Primitive *prim) override {
+    P4::IR::Node *preorder(P4::IR::MAU::Primitive *prim) override {
         BUG_CHECK(stacks != nullptr, "No HeaderStackInfo; was HeaderPushPop "
                                      "applied to a non-Pipe node?");
         if (prim->name == "push_front")
-            return do_push(prim->operands[0]->to<IR::HeaderRef>(),
-                           prim->operands[1]->to<IR::Constant>()->asInt());
+            return do_push(prim->operands[0]->to<P4::IR::HeaderRef>(),
+                           prim->operands[1]->to<P4::IR::Constant>()->asInt());
         else if (prim->name == "pop_front")
-            return do_pop(prim->operands[0]->to<IR::HeaderRef>(),
-                          prim->operands[1]->to<IR::Constant>()->asInt());
+            return do_pop(prim->operands[0]->to<P4::IR::HeaderRef>(),
+                          prim->operands[1]->to<P4::IR::Constant>()->asInt());
         return prim; }
 };
 

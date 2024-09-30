@@ -8,8 +8,8 @@ namespace Flatrock {
    together in order to pass many of the test cases.  This needs to have some standardization
    within the assembly so that all tables that do not require match can possibly work
    */
-void LayoutChoices::setup_layout_option_no_match(const IR::MAU::Table *tbl,
-        const IR::MAU::Table::Layout &layout_proto, ActionData::FormatType_t format_type) {
+void LayoutChoices::setup_layout_option_no_match(const P4::IR::MAU::Table *tbl,
+        const P4::IR::MAU::Table::Layout &layout_proto, ActionData::FormatType_t format_type) {
     BUG_CHECK(format_type.valid(),
               "invalid format type in LayoutChoices::setup_layout_option_no_match");
     LOG2("Determining no match table layouts " << tbl->name << ":" << format_type);
@@ -17,7 +17,7 @@ void LayoutChoices::setup_layout_option_no_match(const IR::MAU::Table *tbl,
     tbl->attached.apply(ghdr);
     for (auto v : Values(tbl->actions))
         v->apply(ghdr);
-    IR::MAU::Table::Layout layout = layout_proto;
+    P4::IR::MAU::Table::Layout layout = layout_proto;
 #if 0
     if (ghdr.is_hash_dist_needed() || ghdr.is_rng_needed()) {
         layout.hash_action = true;
@@ -55,8 +55,8 @@ void LayoutChoices::setup_layout_option_no_match(const IR::MAU::Table *tbl,
  * Responsible for the calculation of the potential layouts to try, and later adapt
  * if necessary in the try_place_table algorithm.
  */
-void LayoutChoices::setup_exact_match(const IR::MAU::Table *tbl,
-        const IR::MAU::Table::Layout &layout_proto, ActionData::FormatType_t format_type,
+void LayoutChoices::setup_exact_match(const P4::IR::MAU::Table *tbl,
+        const P4::IR::MAU::Table::Layout &layout_proto, ActionData::FormatType_t format_type,
         int action_data_bytes_in_table, int immediate_bits, int index) {
     Log::TempIndent indent;
     LOG3("Setting up layouts for exact match table " << tbl->name
@@ -74,8 +74,8 @@ void LayoutChoices::setup_exact_match(const IR::MAU::Table *tbl,
     // Determine single entry bits first and then the no. of entries possible within a word
     // For n entries add layouts 1..n?
 
-    IR::MAU::Table::Layout layout_for_pack = layout_proto;
-    IR::MAU::Table::Way way;
+    P4::IR::MAU::Table::Layout layout_for_pack = layout_proto;
+    P4::IR::MAU::Table::Way way;
 
     way.width = 1;  // Wide matches not possible for lambs?
     layout_for_pack.action_data_bytes_in_table = action_data_bytes_in_table;
@@ -164,10 +164,10 @@ void LayoutChoices::setup_exact_match(const IR::MAU::Table *tbl,
     }
 }
 
-void LayoutChoices::setup_ternary_layout(const IR::MAU::Table *tbl,
-        const IR::MAU::Table::Layout &layout_proto, ActionData::FormatType_t format_type,
+void LayoutChoices::setup_ternary_layout(const P4::IR::MAU::Table *tbl,
+        const P4::IR::MAU::Table::Layout &layout_proto, ActionData::FormatType_t format_type,
         int action_data_bytes_in_table, int immediate_bits, int index) {
-    IR::MAU::Table::Layout layout = layout_proto;
+    P4::IR::MAU::Table::Layout layout = layout_proto;
     layout.action_data_bytes_in_table = action_data_bytes_in_table;
     layout.immediate_bits = immediate_bits;
     layout.overhead_bits += immediate_bits;
@@ -181,8 +181,8 @@ void LayoutChoices::setup_ternary_layout(const IR::MAU::Table *tbl,
     }
 }
 
-void LayoutChoices::add_layout_option(const IR::MAU::Table *tbl,
-        const IR::MAU::Table::Layout &layout, const IR::MAU::Table::Way &way,
+void LayoutChoices::add_layout_option(const P4::IR::MAU::Table *tbl,
+        const P4::IR::MAU::Table::Layout &layout, const P4::IR::MAU::Table::Way &way,
         ActionData::FormatType_t format_type, const int entries,
         const int single_entry_bits, const int overhead_bits, const int index) {
     auto lo_key = std::make_pair(tbl->name, format_type);

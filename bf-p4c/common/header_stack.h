@@ -8,7 +8,7 @@
 class PhvInfo;
 
 /** Walk over the IR and collect metadata about the usage of header stacks in
- * the program. The results are stored in `IR::BFN::Pipe::headerStackInfo`.
+ * the program. The results are stored in `P4::IR::BFN::Pipe::headerStackInfo`.
  *
  * @warning Cannot run after InstructionSelection, which replaces push and
  *          pop operations with `set` instructions.
@@ -17,10 +17,10 @@ struct CollectHeaderStackInfo : public Modifier {
     CollectHeaderStackInfo();
 
  private:
-    Visitor::profile_t init_apply(const IR::Node* root) override;
-    void postorder(IR::HeaderStack* stack) override;
-    void postorder(IR::MAU::Primitive* primitive) override;
-    void postorder(IR::BFN::Pipe* pipe) override;
+    Visitor::profile_t init_apply(const P4::IR::Node* root) override;
+    void postorder(P4::IR::HeaderStack* stack) override;
+    void postorder(P4::IR::MAU::Primitive* primitive) override;
+    void postorder(P4::IR::BFN::Pipe* pipe) override;
 
     BFN::HeaderStackInfo* stacks;
 };
@@ -38,13 +38,13 @@ class ElimUnusedHeaderStackInfo : public PassManager {
 
         explicit Find(ElimUnusedHeaderStackInfo& self) : self(self) { }
 
-        Visitor::profile_t init_apply(const IR::Node* root) override {
+        Visitor::profile_t init_apply(const P4::IR::Node* root) override {
             self.unused.clear();
             used.clear();
             return Inspector::init_apply(root);
         }
 
-        bool preorder(const IR::BFN::Pipe* pipe) override {
+        bool preorder(const P4::IR::BFN::Pipe* pipe) override {
             BUG_CHECK(pipe->headerStackInfo != nullptr,
                       "Running ElimUnusedHeaderStackInfo without running "
                       "CollectHeaderStackInfo first?");
@@ -52,7 +52,7 @@ class ElimUnusedHeaderStackInfo : public PassManager {
             return true;
         }
 
-        void postorder(const IR::HeaderStack* stack) override;
+        void postorder(const P4::IR::HeaderStack* stack) override;
         void end_apply() override;
     };
 
@@ -61,7 +61,7 @@ class ElimUnusedHeaderStackInfo : public PassManager {
         ElimUnusedHeaderStackInfo& self;
         explicit Elim(ElimUnusedHeaderStackInfo& self) : self(self) { }
 
-        void postorder(IR::BFN::Pipe* pipe) override;
+        void postorder(P4::IR::BFN::Pipe* pipe) override;
     };
 
  public:
@@ -131,7 +131,7 @@ struct HeaderStackInfo {
  * it looks for "push_front" instructions.
  */
 class RemovePushInitialization : public Transform {
-    IR::Node* preorder(IR::MAU::Action* act) override;
+    P4::IR::Node* preorder(P4::IR::MAU::Action* act) override;
 
  public:
     RemovePushInitialization() { }
@@ -146,11 +146,11 @@ class ValidToStkvalid : public Transform {
     struct BFN::HeaderStackInfo* stack_info_ = nullptr;
 
     // Populate stack_info_.
-    IR::Node* preorder(IR::BFN::Pipe* pipe) override;
+    P4::IR::Node* preorder(P4::IR::BFN::Pipe* pipe) override;
 
     // Replace uses of stk[x].$valid with stk.$stkvalid[y:y], where the latter
     // corresponds to the validity bit in $stkvalid of element x of stk.
-    IR::Node* postorder(IR::Member* member) override;
+    P4::IR::Node* postorder(P4::IR::Member* member) override;
 
     // Replace extractions to slices of $stkvalid with equivalent extractions
     // to the entire field.  Eg. extract(stk.$stkvalid, 0x4) instead of
@@ -162,7 +162,7 @@ class ValidToStkvalid : public Transform {
     // information.  However, as parser extracts aren't exposed to the control
     // plane, this should be fine.
     // JIRA-DOC: See BRIG-584.
-    IR::Node* postorder(IR::BFN::Extract* extract) override;
+    P4::IR::Node* postorder(P4::IR::BFN::Extract* extract) override;
 
  public:
     explicit ValidToStkvalid(PhvInfo&) { }

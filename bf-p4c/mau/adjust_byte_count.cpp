@@ -9,8 +9,8 @@ AdjustByteCountSetup::AdjustByteCountSetup() {
     });
 }
 
-int AdjustByteCountSetup::Update::get_bytecount(IR::MAU::AttachedMemory* /*unused*/) {
-    auto *orig_am = getOriginal()->to<IR::MAU::AttachedMemory>();
+int AdjustByteCountSetup::Update::get_bytecount(P4::IR::MAU::AttachedMemory* /*unused*/) {
+    auto *orig_am = getOriginal()->to<P4::IR::MAU::AttachedMemory>();
     if (!orig_am) return 0;
     if (self.adjust_byte_counts.count(orig_am) > 0) {
         return -1 * self.adjust_byte_counts[orig_am];
@@ -18,8 +18,8 @@ int AdjustByteCountSetup::Update::get_bytecount(IR::MAU::AttachedMemory* /*unuse
     return 0;
 }
 
-const IR::MAU::Counter *
-AdjustByteCountSetup::Update::preorder(IR::MAU::Counter *counter) {
+const P4::IR::MAU::Counter *
+AdjustByteCountSetup::Update::preorder(P4::IR::MAU::Counter *counter) {
     LOG1("Counter : " << counter);
     auto bytecount_adjust = get_bytecount(counter);
     if (bytecount_adjust != 0) {
@@ -37,8 +37,8 @@ AdjustByteCountSetup::Update::preorder(IR::MAU::Counter *counter) {
     return counter;
 }
 
-const IR::MAU::Meter *
-AdjustByteCountSetup::Update::preorder(IR::MAU::Meter *meter) {
+const P4::IR::MAU::Meter *
+AdjustByteCountSetup::Update::preorder(P4::IR::MAU::Meter *meter) {
     LOG1("Meter : " << meter);
     auto bytecount_adjust = get_bytecount(meter);
     if (bytecount_adjust != 0) {
@@ -56,10 +56,10 @@ AdjustByteCountSetup::Update::preorder(IR::MAU::Meter *meter) {
     return meter;
 }
 
-bool AdjustByteCountSetup::Scan::preorder(const IR::MAU::Primitive *prim) {
+bool AdjustByteCountSetup::Scan::preorder(const P4::IR::MAU::Primitive *prim) {
     LOG1("Primitive : " << prim);
 
-    const IR::MAU::AttachedMemory *obj = nullptr;
+    const P4::IR::MAU::AttachedMemory *obj = nullptr;
     auto dot = prim->name.find('.');
     cstring method = dot ? cstring(dot + 1) : prim->name;
     while (dot && dot > prim->name && std::isdigit(dot[-1])) --dot;
@@ -69,11 +69,11 @@ bool AdjustByteCountSetup::Scan::preorder(const IR::MAU::Primitive *prim) {
         || (((objType == "DirectMeter") || (objType == "Meter")) && (method == "execute"))) {
         if (prim->operands.size() == 0) return true;
 
-        auto gref = prim->operands.at(0)->to<IR::GlobalRef>();
+        auto gref = prim->operands.at(0)->to<P4::IR::GlobalRef>();
         if (!gref) return true;
 
         int idx = -1;
-        if (auto tprim = prim->to<IR::MAU::TypedPrimitive>()) {
+        if (auto tprim = prim->to<P4::IR::MAU::TypedPrimitive>()) {
             for (auto o : tprim->op_names) {
                 if (o.second == "adjust_byte_count")
                     idx = o.first;
@@ -82,7 +82,7 @@ bool AdjustByteCountSetup::Scan::preorder(const IR::MAU::Primitive *prim) {
 
         if (idx < 0) return false;
 
-        auto adjust_byte_count_op = prim->operands.at(idx)->to<IR::Constant>();
+        auto adjust_byte_count_op = prim->operands.at(idx)->to<P4::IR::Constant>();
         if (!adjust_byte_count_op) {
             ::error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
                 "Adjust byte count operand on primitive %1% "
@@ -91,7 +91,7 @@ bool AdjustByteCountSetup::Scan::preorder(const IR::MAU::Primitive *prim) {
         }
         auto adjust_byte_count = adjust_byte_count_op->asInt64();
 
-        obj = gref->obj->to<IR::MAU::AttachedMemory>();
+        obj = gref->obj->to<P4::IR::MAU::AttachedMemory>();
         if (self.adjust_byte_counts.count(obj) > 0) {
             auto exp_count = self.adjust_byte_counts[obj];
             if (adjust_byte_count != exp_count) {

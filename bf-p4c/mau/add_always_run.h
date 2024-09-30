@@ -53,8 +53,8 @@ class AddAlwaysRun : public PassManager {
     /// before t2, equal to 0 if t1 is the same as t2, and greater than 0 otherwise. Think of this
     /// as returning something like "t1 - t2". Tables that are nullptr are considered to come after
     /// all other tables.
-    int compare(const IR::MAU::Table* t1, const IR::MAU::Table* t2) const;
-    int compare(const IR::MAU::Table* t1, std::optional<UniqueId> t2) const;
+    int compare(const P4::IR::MAU::Table* t1, const P4::IR::MAU::Table* t2) const;
+    int compare(const P4::IR::MAU::Table* t1, std::optional<UniqueId> t2) const;
 
     /// Prepares for insertion by doing some precomputation to populate globalOrderings and
     /// subsequentTables.
@@ -62,15 +62,15 @@ class AddAlwaysRun : public PassManager {
         AddAlwaysRun& self;
 
         /// The subsequent table for the current program point being visited.
-        const IR::MAU::Table* subsequentTable = nullptr;
+        const P4::IR::MAU::Table* subsequentTable = nullptr;
 
         /// Maps each table to its earliest subsequent table.
-        std::map<const IR::MAU::Table*, const IR::MAU::Table*> minSubsequentTables;
+        std::map<const P4::IR::MAU::Table*, const P4::IR::MAU::Table*> minSubsequentTables;
 
-        profile_t init_apply(const IR::Node* root) override;
-        bool preorder(const IR::MAU::TableSeq*) override;
-        bool preorder(const IR::MAU::Table*) override;
-        void end_apply(const IR::Node* root) override;
+        profile_t init_apply(const P4::IR::Node* root) override;
+        bool preorder(const P4::IR::MAU::TableSeq*) override;
+        bool preorder(const P4::IR::MAU::Table*) override;
+        void end_apply(const P4::IR::Node* root) override;
 
      public:
         explicit PrepareToAdd(AddAlwaysRun& self) : self(self) {}
@@ -85,13 +85,13 @@ class AddAlwaysRun : public PassManager {
         /// are popped off the front of this list as they are added to the IR.
         //
         // Invariant: this is empty at the start and end of each visit to each gress.
-        std::list<const IR::MAU::Table*> tablesToAdd;
+        std::list<const P4::IR::MAU::Table*> tablesToAdd;
 
         /// A lower bound for the subsequent table for the current program point being visited.
         std::optional<UniqueId> subsequentTable;
 
-        const IR::BFN::Pipe* preorder(IR::BFN::Pipe*) override;
-        const IR::Node* preorder(IR::MAU::TableSeq*) override;
+        const P4::IR::BFN::Pipe* preorder(P4::IR::BFN::Pipe*) override;
+        const P4::IR::Node* preorder(P4::IR::MAU::TableSeq*) override;
 
         AddTables* clone() const override;
         AddTables& flow_clone() override;

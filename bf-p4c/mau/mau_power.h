@@ -62,11 +62,11 @@ class MauFeatures {
   std::map<UniqueId, int> selector_group_size_;
 
   // Maps stage number to vector of logical tables found in the stage
-  dyn_vector<std::vector<const IR::MAU::Table*>> stage_to_tables_[kNumberGress];
+  dyn_vector<std::vector<const P4::IR::MAU::Table*>> stage_to_tables_[kNumberGress];
   // Maps UniqueId to stage number it's in.
   std::map<UniqueId, int> table_to_stage_;
   // Maps UniqueId back to the table
-  std::map<UniqueId, const IR::MAU::Table*> uid_to_table_;
+  std::map<UniqueId, const P4::IR::MAU::Table*> uid_to_table_;
 
  private:
   // Maps stage number to its dependency type to previous stage.

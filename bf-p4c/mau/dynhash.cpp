@@ -10,7 +10,7 @@
  * Guarantees that each dynamic hash function is the same across all calls of this dynamic
  * hash function.  This way the JSON node will be consistent
  */
-bool VerifyUniqueDynamicHash::preorder(const IR::MAU::HashGenExpression *hge) {
+bool VerifyUniqueDynamicHash::preorder(const P4::IR::MAU::HashGenExpression *hge) {
     if (!hge->dynamic)
         return false;
     auto key = hge->id.name;
@@ -31,7 +31,7 @@ bool VerifyUniqueDynamicHash::preorder(const IR::MAU::HashGenExpression *hge) {
 /**
  * Gather all tables that have allocated this particular dynamic hash object
  */
-bool GatherDynamicHashAlloc::preorder(const IR::MAU::Table *tbl) {
+bool GatherDynamicHashAlloc::preorder(const P4::IR::MAU::Table *tbl) {
     if (!tbl->is_placed())
         return true;
     for (auto &hd_use : tbl->resources->hash_dists) {
@@ -54,27 +54,27 @@ unsigned fieldListHandle = 0x0;
 unsigned dynHashHandle = 0x0;
 unsigned algoHandle = 0x0;
 
-bool GenerateDynamicHashJson::preorder(const IR::MAU::Table *tbl) {
+bool GenerateDynamicHashJson::preorder(const P4::IR::MAU::Table *tbl) {
     all_placed &= tbl->is_placed();
     if (tbl->conditional_gateway_only()) return true;
     if (tbl->is_always_run_action()) return true;
     if (auto res = tbl->resources) {
         Util::JsonObject *_dynHashCalc = new Util::JsonObject();
-        if (auto match_table = tbl->match_table->to<IR::P4Table>()) {
+        if (auto match_table = tbl->match_table->to<P4::IR::P4Table>()) {
             cstring fieldListCalcName = ""_cs;
             cstring fieldListName = ""_cs;
-            IR::NameList algorithms;
+            P4::IR::NameList algorithms;
             int hash_bit_width = -1;
             LOG5("Annotations : " << match_table->annotations);
             for (auto annot : match_table->annotations->annotations) {
                 if (annot->name == "action_selector_hash_field_calc_name")
-                    fieldListCalcName = annot->expr[0]->to<IR::StringLiteral>()->value;
+                    fieldListCalcName = annot->expr[0]->to<P4::IR::StringLiteral>()->value;
                 else if (annot->name == "action_selector_hash_field_list_name")
-                    fieldListName = annot->expr[0]->to<IR::StringLiteral>()->value;
+                    fieldListName = annot->expr[0]->to<P4::IR::StringLiteral>()->value;
                 else if (annot->name == "action_selector_hash_field_calc_output_width")
-                    hash_bit_width = annot->expr[0]->to<IR::Constant>()->asInt();
+                    hash_bit_width = annot->expr[0]->to<P4::IR::Constant>()->asInt();
                 else if (annot->name == "algorithm")
-                    algorithms.names.push_back(annot->expr[0]->to<IR::StringLiteral>()->value);
+                    algorithms.names.push_back(annot->expr[0]->to<P4::IR::StringLiteral>()->value);
             }
             // If none of the above values are populated dont proceed.
             LOG5("fieldListCalcName: " << fieldListCalcName << " fieldListName: "
@@ -184,16 +184,16 @@ void GenerateDynamicHashJson::end_apply() {
  * single dynamic hash object, there needs to be at least one dynamic hash node per stage
  * per hash function of each of these allocations.  The XBar and the Hash is on this granularity
  *
- * Because in the current structure, within a single stage a IR::MAU::HashDist object can
+ * Because in the current structure, within a single stage a P4::IR::MAU::HashDist object can
  * itself have multiple allocations, this breaks down each allocation on a per hash function
  * allocation.  Also, one IR object does not coordinate with one IXBar::HashDistIRUse object
  */
 /*
-void GenerateDynamicHashJson::gen_hash_dist_json(const IR::MAU::Table *tbl) {
+void GenerateDynamicHashJson::gen_hash_dist_json(const P4::IR::MAU::Table *tbl) {
     return;
     auto &hash_dists = tbl->resources->hash_dists;
     HashDistToAlloc ir_to_alloc;
-    // Gather up all IXBar::HashDistIRUse per IR::MAU::HashDist allocation
+    // Gather up all IXBar::HashDistIRUse per P4::IR::MAU::HashDist allocation
     for (auto &hash_dist_use : hash_dists) {
         for (auto &ir_alloc : hash_dist_use.ir_allocations) {
             BUG_CHECK(ir_alloc.original_hd != nullptr, "Cannot coordinate HashDist "
@@ -204,7 +204,7 @@ void GenerateDynamicHashJson::gen_hash_dist_json(const IR::MAU::Table *tbl) {
 
     for (auto entry : ir_to_alloc) {
         auto orig_hd = entry.first;
-        auto field_list = orig_hd->field_list->to<IR::HashListExpression>();
+        auto field_list = orig_hd->field_list->to<P4::IR::HashListExpression>();
         if (field_list == nullptr) continue;
         if (field_list->fieldListCalcName.isNullOrEmpty()) continue;
         auto field_list_names = field_list->fieldListNames;
@@ -231,7 +231,7 @@ void GenerateDynamicHashJson::gen_hash_dist_json(const IR::MAU::Table *tbl) {
         // Algorithms are a global node to the hash calculation
         gen_algo_json(_dynHashCalc, field_list->algorithms);
         bool first_run = true;
-        safe_vector<const IR::Expression *> field_list_order;
+        safe_vector<const P4::IR::Expression *> field_list_order;
         // Field list is not on a per hash function/stage basis, but a global node
         for (auto func_to_alloc : hash_func_to_alloc) {
             for (auto &alloc : func_to_alloc.second) {
@@ -290,7 +290,7 @@ void GenerateDynamicHashJson::gen_hash_dist_json(const IR::MAU::Table *tbl) {
 */
 
 void GenerateDynamicHashJson::gen_single_algo_json(Util::JsonArray *_algos,
-        const IR::MAU::HashFunction *algorithm, cstring alg_name, bool &is_default) {
+        const P4::IR::MAU::HashFunction *algorithm, cstring alg_name, bool &is_default) {
     Util::JsonObject *_algo = new Util::JsonObject();
     _algo->emplace("name"_cs, alg_name);  // p4 algo name
     _algo->emplace("type"_cs, algorithm->algo_type());
@@ -320,7 +320,7 @@ void GenerateDynamicHashJson::gen_single_algo_json(Util::JsonArray *_algos,
 }
 
 void GenerateDynamicHashJson::gen_algo_json(Util::JsonObject *_dhc,
-        const IR::MAU::HashGenExpression *hge) {
+        const P4::IR::MAU::HashGenExpression *hge) {
     _dhc->emplace("any_hash_algorithm_allowed"_cs, hge->any_alg_allowed);
     Util::JsonArray *_algos = new Util::JsonArray();
     bool is_default = true;
@@ -328,8 +328,8 @@ void GenerateDynamicHashJson::gen_algo_json(Util::JsonObject *_dhc,
         for (auto a : hge->alg_names->names) {
             // Call Dyn Hash Library and generate a hash function object for
             // given algorithm
-            auto algoExpr = IR::MAU::HashFunction::convertHashAlgorithmBFN(hge->srcInfo, a.name);
-            auto algorithm = new IR::MAU::HashFunction();
+            auto algoExpr = P4::IR::MAU::HashFunction::convertHashAlgorithmBFN(hge->srcInfo, a.name);
+            auto algorithm = new P4::IR::MAU::HashFunction();
             if (algorithm->setup(algoExpr)) {
                 gen_single_algo_json(_algos, algorithm, a.name, is_default);
             }
@@ -342,9 +342,9 @@ void GenerateDynamicHashJson::gen_algo_json(Util::JsonObject *_dhc,
 
 
 void GenerateDynamicHashJson::gen_field_list_json(Util::JsonObject *_field_list,
-        const IR::MAU::HashGenExpression *hge, std::map<cstring, cstring> &fieldNames) {
+        const P4::IR::MAU::HashGenExpression *hge, std::map<cstring, cstring> &fieldNames) {
     Util::JsonArray *_fields = new Util::JsonArray();
-    auto fle = hge->expr->to<IR::MAU::FieldListExpression>();
+    auto fle = hge->expr->to<P4::IR::MAU::FieldListExpression>();
 
     cstring field_list_name = fle->id.name;
     _field_list->emplace("name"_cs, field_list_name);
@@ -467,7 +467,7 @@ void GenerateDynamicHashJson::gen_hash_json(Util::JsonArray *_hash_cfgs, int sta
 
 void GenerateDynamicHashJson::gen_ixbar_json(const IXBar::Use *ixbar_use_,
         Util::JsonObject *_dhc, int stage, const cstring field_list_name,
-        const IR::NameList *algorithms, int hash_width) {
+        const P4::IR::NameList *algorithms, int hash_width) {
     auto *ixbar_use = dynamic_cast<const Tofino::IXBar::Use *>(ixbar_use_);
     Util::JsonArray *_field_lists = new Util::JsonArray();
     Util::JsonObject *_field_list = new Util::JsonObject();
@@ -539,7 +539,7 @@ void GenerateDynamicHashJson::gen_ixbar_json(const IXBar::Use *ixbar_use_,
     int hash_bit_width = -1;
     if (ixbar_use->meter_alu_hash.allocated) {
         auto &mah = ixbar_use->meter_alu_hash;
-        const IR::MAU::HashFunction *hashAlgo = &mah.algorithm;
+        const P4::IR::MAU::HashFunction *hashAlgo = &mah.algorithm;
         hashGroup = mah.group;
         hash_bit_width = hash_width <= 0 ? hashAlgo->size : hash_width;
         num_hash_bits = mah.bit_mask.is_contiguous() && (mah.bit_mask.min().index() == 0) ?
@@ -563,8 +563,8 @@ void GenerateDynamicHashJson::gen_ixbar_json(const IXBar::Use *ixbar_use_,
             auto srcInfo = ixbar_use->meter_alu_hash.allocated
                                ? &ixbar_use->meter_alu_hash.algorithm.srcInfo
                                : new Util::SourceInfo();
-            auto algoExpr = IR::MAU::HashFunction::convertHashAlgorithmBFN(*srcInfo, a.name);
-            auto algorithm = new IR::MAU::HashFunction();
+            auto algoExpr = P4::IR::MAU::HashFunction::convertHashAlgorithmBFN(*srcInfo, a.name);
+            auto algorithm = new P4::IR::MAU::HashFunction();
             if (algorithm->setup(algoExpr)) {
                 Util::JsonObject *_algo = new Util::JsonObject();
                 _algo->emplace("name"_cs, a);  // p4 algo name

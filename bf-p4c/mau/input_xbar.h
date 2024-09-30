@@ -341,9 +341,9 @@ struct IXBar : public IHasDbPrint {
         virtual safe_vector<TotalInfo> bits_per_search_bus() const;
         virtual unsigned compute_hash_tables();
         virtual bool emit_gateway_asm(const MauAsmOutput &, std::ostream &, indent_t,
-                                      const IR::MAU::Table *) const = 0;
+                                      const P4::IR::MAU::Table *) const = 0;
         virtual void emit_ixbar_asm(const PhvInfo &phv, std::ostream& out, indent_t indent,
-                                    const TableMatch *fmt, const IR::MAU::Table *) const = 0;
+                                    const TableMatch *fmt, const P4::IR::MAU::Table *) const = 0;
         virtual void emit_salu_bytemasks(std::ostream &out, indent_t indent) const = 0;
         virtual void emit_ixbar_hash_table(int hash_table, safe_vector<Slice> &match_data,
                 safe_vector<Slice> &ghost, const TableMatch *fmt,
@@ -351,7 +351,7 @@ struct IXBar : public IHasDbPrint {
         virtual bitvec galois_matrix_bits() const = 0;
         virtual int gateway_group() const;
         virtual int groups() const;  // how many different groups in this use
-        virtual const std::map<int, const IR::Expression *> &hash_computed_expressions() const = 0;
+        virtual const std::map<int, const P4::IR::Expression *> &hash_computed_expressions() const = 0;
         virtual int hash_groups() const = 0;
         virtual TotalBytes match_hash(safe_vector<int> *hash_groups = nullptr) const;
         virtual bitvec meter_bit_mask() const = 0;
@@ -373,7 +373,7 @@ struct IXBar : public IHasDbPrint {
         }
     };
 
-    static HashDistDest_t dest_location(const IR::Node *node, bool precolor = false);
+    static HashDistDest_t dest_location(const P4::IR::Node *node, bool precolor = false);
     static std::string hash_dist_name(HashDistDest_t dest);
 
     cstring failure_reason;
@@ -388,7 +388,7 @@ struct IXBar : public IHasDbPrint {
     };
 
  protected:
-    ordered_map<const IR::MAU::AttachedMemory *, const IXBar::Use &> allocated_attached;
+    ordered_map<const P4::IR::MAU::AttachedMemory *, const IXBar::Use &> allocated_attached;
 
     /** The purpose of ContByteConversion is to capture that multiple stretch of fields can
      *  be contained within the same container byte.  In the add_use function, each FieldInfo
@@ -398,7 +398,7 @@ struct IXBar : public IHasDbPrint {
      * to allocate for an input xbar.  */
     typedef std::map<Use::Byte, safe_vector<FieldInfo>> ContByteConversion;
     static void add_use(ContByteConversion &map_alloc, const PHV::Field *field,
-                        const PhvInfo &phv, const IR::MAU::Table *ctxt,
+                        const PhvInfo &phv, const P4::IR::MAU::Table *ctxt,
                         std::optional<cstring> aliasSourceName,
                         const le_bitrange *bits = nullptr, int flags = 0,
                         byte_type_t byte_type = NO_BYTE_TYPE,
@@ -421,39 +421,39 @@ struct IXBar : public IHasDbPrint {
        match tables, selectors, and hash distribution */
     class FieldManagement : public Inspector {
         ContByteConversion *map_alloc;
-        safe_vector<const IR::Expression *> &field_list_order;
+        safe_vector<const P4::IR::Expression *> &field_list_order;
         std::map<cstring, bitvec> *fields_needed;
         const PhvInfo &phv;
         KeyInfo &ki;
-        const IR::MAU::Table* tbl;
+        const P4::IR::MAU::Table* tbl;
 
-        bool preorder(const IR::ListExpression *) override;
-        bool preorder(const IR::StructExpression *) override;
-        bool preorder(const IR::Mask *) override;
-        bool preorder(const IR::MAU::TableKey *read) override;
-        bool preorder(const IR::Constant *c) override;
-        bool preorder(const IR::MAU::ActionArg *aa) override;
-        bool preorder(const IR::Expression *e) override;
-        void postorder(const IR::BFN::SignExtend *c) override;
+        bool preorder(const P4::IR::ListExpression *) override;
+        bool preorder(const P4::IR::StructExpression *) override;
+        bool preorder(const P4::IR::Mask *) override;
+        bool preorder(const P4::IR::MAU::TableKey *read) override;
+        bool preorder(const P4::IR::Constant *c) override;
+        bool preorder(const P4::IR::MAU::ActionArg *aa) override;
+        bool preorder(const P4::IR::Expression *e) override;
+        void postorder(const P4::IR::BFN::SignExtend *c) override;
         void end_apply() override;
 
      public:
         FieldManagement(ContByteConversion *map_alloc,
-                        safe_vector<const IR::Expression *> &field_list_order,
-                        const IR::Expression *field, std::map<cstring, bitvec> *fields_needed,
-                        const PhvInfo &phv, KeyInfo &ki, const IR::MAU::Table* t)
+                        safe_vector<const P4::IR::Expression *> &field_list_order,
+                        const P4::IR::Expression *field, std::map<cstring, bitvec> *fields_needed,
+                        const PhvInfo &phv, KeyInfo &ki, const P4::IR::MAU::Table* t)
         : map_alloc(map_alloc), field_list_order(field_list_order),
           fields_needed(fields_needed), phv(phv), ki(ki), tbl(t) { field->apply(*this); }
     };
 
  public:
-    virtual bool allocTable(const IR::MAU::Table *tbl, const IR::MAU::Table *gw, const PhvInfo &,
+    virtual bool allocTable(const P4::IR::MAU::Table *tbl, const P4::IR::MAU::Table *gw, const PhvInfo &,
                             TableResourceAlloc &, const LayoutOption *,
                             const ActionData::Format::Use *, const attached_entries_t &) = 0;
     virtual void update(cstring name, const Use &alloc) = 0;
-    virtual void update(const IR::MAU::Table *tbl, const TableResourceAlloc *rsrc);
+    virtual void update(const P4::IR::MAU::Table *tbl, const TableResourceAlloc *rsrc);
     // virtual void update(cstring name, const TableResourceAlloc *alloc) = 0;
-    virtual void update(const IR::MAU::Table *tbl);
+    virtual void update(const P4::IR::MAU::Table *tbl);
     virtual void add_collisions() = 0;
     virtual void verify_hash_matrix() const = 0;
     virtual void dbprint(std::ostream &) const = 0;

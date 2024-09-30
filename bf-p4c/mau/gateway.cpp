@@ -73,14 +73,14 @@ const Device::GatewaySpec &FlatrockDevice::getGatewaySpec() const {
 
 class CanonGatewayExpr::NeedNegate : public Inspector {
     bool        rv = false;
-    bool preorder(const IR::Expression *) override { return !rv; }
-    bool preorder(const IR::Neq *neq) override {
+    bool preorder(const P4::IR::Expression *) override { return !rv; }
+    bool preorder(const P4::IR::Neq *neq) override {
         if (neq->left->type->width_bits() == 1) {
             /* 1-bit != can be done directly; no need to negate it into == */
             return true; }
         rv = true; return false; }
  public:
-    explicit NeedNegate(const IR::Expression *e) { e->apply(*this); }
+    explicit NeedNegate(const P4::IR::Expression *e) { e->apply(*this); }
     explicit NeedNegate(safe_vector<GWRow_t> &rows) {
         for (auto &row : rows) {
             if (row.first) row.first->apply(*this);
@@ -90,14 +90,14 @@ class CanonGatewayExpr::NeedNegate : public Inspector {
 
 // FIXME -- should make this work for signed types, but big_ints don't work well
 // with 2s complement
-static big_int SliceReduce(IR::Operation::Relation *rel, big_int val) {
+static big_int SliceReduce(P4::IR::Operation::Relation *rel, big_int val) {
     if (val <= 0) return val;
     int slice = ffs(val);
     if (slice > 0) {
         val >>= slice;
         LOG4("Slicing " << slice << " bits off the bottom of " << rel);
         rel->left = MakeSlice(rel->left, slice, rel->left->type->width_bits() - 1);
-        rel->right = new IR::Constant(val);
+        rel->right = new P4::IR::Constant(val);
         LOG4("Now have " << rel); }
     return val;
 }
@@ -105,19 +105,19 @@ static big_int SliceReduce(IR::Operation::Relation *rel, big_int val) {
 /// Try to figure out where an expression should be sliced to better byte align things
 /// by slicing on a byte boundary.  @returns the bit-within-byte of the lowest bit of the
 /// expression (0..7)
-static int byte_align(const IR::Expression *e) {
-    if (auto *sl = e->to<IR::Slice>())
+static int byte_align(const P4::IR::Expression *e) {
+    if (auto *sl = e->to<P4::IR::Slice>())
         return (sl->getL() + byte_align(sl->e0)) & 7;
-    if (auto *b = e->to<IR::Operation::Binary>())
+    if (auto *b = e->to<P4::IR::Operation::Binary>())
         return byte_align(b->left);
-    if (auto *m = e->to<IR::Member>())
+    if (auto *m = e->to<P4::IR::Member>())
         return m->offset_bits() & 7;
-    if (auto *u = e->to<IR::Operation::Unary>())
+    if (auto *u = e->to<P4::IR::Operation::Unary>())
         return byte_align(u->expr);
     return 0;
 }
 
-IR::Node *CanonGatewayExpr::preorder(IR::MAU::Table *tbl) {
+P4::IR::Node *CanonGatewayExpr::preorder(P4::IR::MAU::Table *tbl) {
     auto &rows = tbl->gateway_rows;
     if (rows.empty() || !rows[0].first)
         return tbl;
@@ -133,46 +133,46 @@ IR::Node *CanonGatewayExpr::preorder(IR::MAU::Table *tbl) {
     return tbl;
 }
 
-const IR::Expression *CanonGatewayExpr::postorder(IR::Operation::Relation *e) {
+const P4::IR::Expression *CanonGatewayExpr::postorder(P4::IR::Operation::Relation *e) {
     LOG5(_debugIndent << "IR::Rel " << e);
     // only called for Equ and Neq
     if (e->left->equiv(*e->right))  // if the two sides are the same expression, fold it
-        return new IR::BoolLiteral(e->is<IR::Equ>() ? true : false);
+        return new P4::IR::BoolLiteral(e->is<P4::IR::Equ>() ? true : false);
     // If comparing with a constant, normalize the condition.
     // However, if both terms are constant, do not swap them, otherwise the IR tree
     // will continuously change, resulting in an infinite loop for GatewayOpt::PassRepeat
     // FIXME -- should have been constant folded?
-    if (e->left->is<IR::Literal>() && !e->right->is<IR::Literal>()) {
+    if (e->left->is<P4::IR::Literal>() && !e->right->is<P4::IR::Literal>()) {
         std::swap(e->left, e->right); }
-    if (e->right->is<IR::Operation::Relation>()) {
+    if (e->right->is<P4::IR::Operation::Relation>()) {
         std::swap(e->left, e->right); }
-    if (e->left->is<IR::Operation::Relation>()) {
+    if (e->left->is<P4::IR::Operation::Relation>()) {
         // comparing the result of a comparison with a boolean value
-        bool add_not = e->is<IR::Neq>();
-        if (auto k = e->right->to<IR::Constant>()) {
+        bool add_not = e->is<P4::IR::Neq>();
+        if (auto k = e->right->to<P4::IR::Constant>()) {
             add_not ^= (k->value == 0);
-        } else if (auto k = e->right->to<IR::BoolLiteral>()) {
+        } else if (auto k = e->right->to<P4::IR::BoolLiteral>()) {
             add_not ^= (k->value == 0);
         } else {
             // This will currently cause 'Gateway expression too complex', but we
             // might eventually be able to handle it by splitting the expression.
             // we could also potentially transform to (a && !b) || (!a && b) instead of a^b
             // which might fit in one gateway without requiring added stages
-            IR::Expression *rv = new IR::BXor(e->srcInfo, e->left, e->right);
+            P4::IR::Expression *rv = new P4::IR::BXor(e->srcInfo, e->left, e->right);
             if (!add_not)
-                rv = new IR::LNot(e);
+                rv = new P4::IR::LNot(e);
             return rv; }
         if (add_not)
-            return postorder(new IR::LNot(e->left));
+            return postorder(new P4::IR::LNot(e->left));
         return e->left; }
-    Pattern::Match<IR::Expression>      e1, e2;
-    Pattern::Match<IR::Constant>        k1, k2;
+    Pattern::Match<P4::IR::Expression>      e1, e2;
+    Pattern::Match<P4::IR::Constant>        k1, k2;
     int width = e->left->type->width_bits();
     if (((e1 & k1) == k2).match(e) || ((e1 & k1) != k2).match(e)) {
-        BUG_CHECK(!e1->is<IR::Constant>(), "constant folding failed");
+        BUG_CHECK(!e1->is<P4::IR::Constant>(), "constant folding failed");
         // always true or always false
         if ((abs(k1->value) & abs(k2->value)) != abs(k2->value)) {
-            auto rv = new IR::BoolLiteral(e->srcInfo, e->is<IR::Equ>() ? false : true);
+            auto rv = new P4::IR::BoolLiteral(e->srcInfo, e->is<P4::IR::Equ>() ? false : true);
             warning("Masked comparison is always %s", rv);
             return rv; }
         // masked comparison
@@ -180,23 +180,23 @@ const IR::Expression *CanonGatewayExpr::postorder(IR::Operation::Relation *e) {
         if (shift > 0) {
             if (unsigned(ffs(abs(k2->value))) >= unsigned(shift)) {
                 // subtle point -- unsigned casts above to be true when ffs returns -1
-                e->left = new IR::BAnd(MakeSlice(e1, shift, width - 1),
+                e->left = new P4::IR::BAnd(MakeSlice(e1, shift, width - 1),
                                        MakeSlice(k1, shift, width - 1));
-                e->right = new IR::Constant(e->left->type, k2->value >> shift);
+                e->right = new P4::IR::Constant(e->left->type, k2->value >> shift);
                 width -= shift;
             } else {
-                auto rv = new IR::BoolLiteral(e->srcInfo, e->is<IR::Equ>() ? false : true);
+                auto rv = new P4::IR::BoolLiteral(e->srcInfo, e->is<P4::IR::Equ>() ? false : true);
                 warning("Masked comparison is always %s", rv);
                 return rv; } }
     } else if (((e1 & k1) == (e2 & k2)).match(e) || ((e1 & k1) != (e2 & k2)).match(e)) {
-        BUG_CHECK(!e1->is<IR::Constant>(), "constant folding failed");
-        BUG_CHECK(!e2->is<IR::Constant>(), "constant folding failed");
+        BUG_CHECK(!e1->is<P4::IR::Constant>(), "constant folding failed");
+        BUG_CHECK(!e2->is<P4::IR::Constant>(), "constant folding failed");
         BUG_CHECK(width == e1->type->width_bits(), "Type mismatch in CanonGatewayExpr");
         auto shift = ffs(k1->value | k2->value);
         if (shift > 0) {
-            e->left = new IR::BAnd(MakeSlice(e1, shift, width - 1),
+            e->left = new P4::IR::BAnd(MakeSlice(e1, shift, width - 1),
                                    MakeSlice(k1, shift, width - 1));
-            e->right = new IR::BAnd(MakeSlice(e2, shift, width - 1),
+            e->right = new P4::IR::BAnd(MakeSlice(e2, shift, width - 1),
                                     MakeSlice(k2, shift, width - 1));
             width -= shift; } }
     if (width > 32) {
@@ -209,15 +209,15 @@ const IR::Expression *CanonGatewayExpr::postorder(IR::Operation::Relation *e) {
         clone->right = MakeSlice(clone->right, 0, slice_at-1);
         LOG5(_debugIndent << "  Split wide to: " << clone <<
              (e->is<IR::Equ>() ? " && " : " || ") << e);
-        if (e->is<IR::Equ>())
-            return new IR::LAnd(postorder(e), postorder(clone));
+        if (e->is<P4::IR::Equ>())
+            return new P4::IR::LAnd(postorder(e), postorder(clone));
         else
-            return new IR::LOr(postorder(e), postorder(clone)); }
+            return new P4::IR::LOr(postorder(e), postorder(clone)); }
     return e;
 }
 
-static big_int maxValueOfType(const IR::Type *type_) {
-    auto *type = type_->to<IR::Type::Bits>();
+static big_int maxValueOfType(const P4::IR::Type *type_) {
+    auto *type = type_->to<P4::IR::Type::Bits>();
     BUG_CHECK(type, "%s is not an integral type", type_);
     big_int rv = 1U;
     rv <<= type->size - type->isSigned;
@@ -225,145 +225,145 @@ static big_int maxValueOfType(const IR::Type *type_) {
 }
 
 
-const IR::Expression *CanonGatewayExpr::postorder(IR::Leq *e) {
+const P4::IR::Expression *CanonGatewayExpr::postorder(P4::IR::Leq *e) {
     LOG5(_debugIndent << "IR::Leq " << e);
     if (e->left->equiv(*e->right))  // if the two sides are the same expression, fold it
-        return new IR::BoolLiteral(true);
-    if (e->left->is<IR::Constant>())
-        return postorder(new IR::Geq(e->right, e->left));
-    if (auto k = e->right->to<IR::Constant>()) {
+        return new P4::IR::BoolLiteral(true);
+    if (e->left->is<P4::IR::Constant>())
+        return postorder(new P4::IR::Geq(e->right, e->left));
+    if (auto k = e->right->to<P4::IR::Constant>()) {
         if (k->value == maxValueOfType(k->type))
-            return new IR::BoolLiteral(true);
-        return postorder(new IR::Lss(e->left, new IR::Constant(k->type, k->value + 1))); }
+            return new P4::IR::BoolLiteral(true);
+        return postorder(new P4::IR::Lss(e->left, new P4::IR::Constant(k->type, k->value + 1))); }
     return e;
 }
 
-const IR::Expression *CanonGatewayExpr::postorder(IR::Lss *e) {
+const P4::IR::Expression *CanonGatewayExpr::postorder(P4::IR::Lss *e) {
     LOG5(_debugIndent << "IR::Lss " << e);
     if (e->left->equiv(*e->right))  // if the two sides are the same expression, fold it
-        return new IR::BoolLiteral(false);
-    if (auto k = e->left->to<IR::Constant>()) {
-        BUG_CHECK(!e->right->is<IR::Constant>(), "constant folding failed");
+        return new P4::IR::BoolLiteral(false);
+    if (auto k = e->left->to<P4::IR::Constant>()) {
+        BUG_CHECK(!e->right->is<P4::IR::Constant>(), "constant folding failed");
         if (k->value == maxValueOfType(k->type))
-            return new IR::BoolLiteral(false);
-        return postorder(new IR::Geq(e->right, new IR::Constant(k->type, k->value + 1))); }
-    if (auto k = e->right->to<IR::Constant>()) {
+            return new P4::IR::BoolLiteral(false);
+        return postorder(new P4::IR::Geq(e->right, new P4::IR::Constant(k->type, k->value + 1))); }
+    if (auto k = e->right->to<P4::IR::Constant>()) {
         if (k->value == 0) {
             if (isSigned(e->left->type)) {
                 int signbit = e->left->type->width_bits() - 1;
-                return new IR::Equ(MakeSlice(e->left, signbit, signbit), new IR::Constant(1));
+                return new P4::IR::Equ(MakeSlice(e->left, signbit, signbit), new P4::IR::Constant(1));
             } else {
-                return new IR::BoolLiteral(false); } }
+                return new P4::IR::BoolLiteral(false); } }
         if (!isSigned(e->left->type) && SliceReduce(e, k->value) == 1)
-            return postorder(new IR::Equ(e->left, new IR::Constant(0))); }
+            return postorder(new P4::IR::Equ(e->left, new P4::IR::Constant(0))); }
     return e;
 }
 
-const IR::Expression *CanonGatewayExpr::postorder(IR::Geq *e) {
+const P4::IR::Expression *CanonGatewayExpr::postorder(P4::IR::Geq *e) {
     LOG5(_debugIndent << "IR::Geq " << e);
     if (e->left->equiv(*e->right))  // if the two sides are the same expression, fold it
-        return new IR::BoolLiteral(true);
-    if (auto k = e->left->to<IR::Constant>()) {
-        BUG_CHECK(!e->right->is<IR::Constant>(), "constant folding failed");
+        return new P4::IR::BoolLiteral(true);
+    if (auto k = e->left->to<P4::IR::Constant>()) {
+        BUG_CHECK(!e->right->is<P4::IR::Constant>(), "constant folding failed");
         if (k->value == maxValueOfType(k->type))
-            return new IR::BoolLiteral(true);
-        return postorder(new IR::Lss(e->right, new IR::Constant(k->type, k->value + 1))); }
-    if (auto k = e->right->to<IR::Constant>()) {
+            return new P4::IR::BoolLiteral(true);
+        return postorder(new P4::IR::Lss(e->right, new P4::IR::Constant(k->type, k->value + 1))); }
+    if (auto k = e->right->to<P4::IR::Constant>()) {
         if (k->value == 0) {
             if (isSigned(e->left->type)) {
                 int signbit = e->left->type->width_bits() - 1;
-                return new IR::Equ(MakeSlice(e->left, signbit, signbit), new IR::Constant(0));
+                return new P4::IR::Equ(MakeSlice(e->left, signbit, signbit), new P4::IR::Constant(0));
             } else {
-                return new IR::BoolLiteral(true); } }
+                return new P4::IR::BoolLiteral(true); } }
         if (!isSigned(e->left->type) && SliceReduce(e, k->value) == 1)
-            return postorder(new IR::Neq(e->left, new IR::Constant(0))); }
+            return postorder(new P4::IR::Neq(e->left, new P4::IR::Constant(0))); }
     return e;
 }
 
-const IR::Expression *CanonGatewayExpr::postorder(IR::Grt *e) {
+const P4::IR::Expression *CanonGatewayExpr::postorder(P4::IR::Grt *e) {
     LOG5(_debugIndent << "IR::Grt " << e);
     if (e->left->equiv(*e->right))  // if the two sides are the same expression, fold it
-        return new IR::BoolLiteral(false);
-    if (e->left->is<IR::Constant>())
-        return postorder(new IR::Lss(e->right, e->left));
-    if (auto k = e->right->to<IR::Constant>()) {
+        return new P4::IR::BoolLiteral(false);
+    if (e->left->is<P4::IR::Constant>())
+        return postorder(new P4::IR::Lss(e->right, e->left));
+    if (auto k = e->right->to<P4::IR::Constant>()) {
         if (k->value == maxValueOfType(k->type))
-            return new IR::BoolLiteral(false);
-        return postorder(new IR::Geq(e->left, new IR::Constant(k->type, k->value + 1))); }
+            return new P4::IR::BoolLiteral(false);
+        return postorder(new P4::IR::Geq(e->left, new P4::IR::Constant(k->type, k->value + 1))); }
     return e;
 }
 
 /// Simplify as fast as possible to avoid expansion when going between deMorgan
 /// and distribution
-const IR::Expression *CanonGatewayExpr::preorder(IR::LAnd *e) {
+const P4::IR::Expression *CanonGatewayExpr::preorder(P4::IR::LAnd *e) {
     if (e->left->equiv(*e->right))
         return e->left;
-    if (auto k = e->left->to<IR::Constant>())
+    if (auto k = e->left->to<P4::IR::Constant>())
         return k->value ? e->right : k;
-    if (auto k = e->left->to<IR::BoolLiteral>())
+    if (auto k = e->left->to<P4::IR::BoolLiteral>())
         return k->value ? e->right : k;
-    if (auto k = e->right->to<IR::Constant>())
+    if (auto k = e->right->to<P4::IR::Constant>())
         return k->value ? e->left : k;
-    if (auto k = e->right->to<IR::BoolLiteral>())
+    if (auto k = e->right->to<P4::IR::BoolLiteral>())
         return k->value ? e->left : k;
     return e;
 }
 
-const IR::Expression *CanonGatewayExpr::preorder(IR::LOr *e) {
+const P4::IR::Expression *CanonGatewayExpr::preorder(P4::IR::LOr *e) {
     if (e->left->equiv(*e->right))
         return e->left;
-    if (auto k = e->left->to<IR::Constant>())
+    if (auto k = e->left->to<P4::IR::Constant>())
         return k->value ? k : e->right;
-    if (auto k = e->left->to<IR::BoolLiteral>())
+    if (auto k = e->left->to<P4::IR::BoolLiteral>())
         return k->value ? k : e->right;
-    if (auto k = e->right->to<IR::Constant>())
+    if (auto k = e->right->to<P4::IR::Constant>())
         return k->value ? k : e->left;
-    if (auto k = e->right->to<IR::BoolLiteral>())
+    if (auto k = e->right->to<P4::IR::BoolLiteral>())
         return k->value ? k : e->left;
     return e;
 }
 
-const IR::Expression *CanonGatewayExpr::preorder(IR::LNot *e) {
-    if (auto a = e->expr->to<IR::LNot>()) {
+const P4::IR::Expression *CanonGatewayExpr::preorder(P4::IR::LNot *e) {
+    if (auto a = e->expr->to<P4::IR::LNot>()) {
         LOG5(_debugIndent << "r IR::LNot " << e);
         return a->expr;
     }
     return e;
 }
 
-const IR::Expression *CanonGatewayExpr::postorder(IR::LAnd *e) {
+const P4::IR::Expression *CanonGatewayExpr::postorder(P4::IR::LAnd *e) {
     LOG5(_debugIndent++ << "IR::LAnd " << e);
-    const IR::Expression *rv = e;
+    const P4::IR::Expression *rv = e;
     if (e->left->equiv(*e->right))
         return e->left;
-    if (auto k = e->left->to<IR::Constant>())
+    if (auto k = e->left->to<P4::IR::Constant>())
         return k->value ? e->right : k;
-    if (auto k = e->left->to<IR::BoolLiteral>())
+    if (auto k = e->left->to<P4::IR::BoolLiteral>())
         return k->value ? e->right : k;
-    if (auto k = e->right->to<IR::Constant>())
+    if (auto k = e->right->to<P4::IR::Constant>())
         return k->value ? e->left : k;
-    if (auto k = e->right->to<IR::BoolLiteral>())
+    if (auto k = e->right->to<P4::IR::BoolLiteral>())
         return k->value ? e->left : k;
-    while (auto r = e->right->to<IR::LAnd>()) {
-        e->left = postorder(new IR::LAnd(e->left, r->left));
+    while (auto r = e->right->to<P4::IR::LAnd>()) {
+        e->left = postorder(new P4::IR::LAnd(e->left, r->left));
         e->right = r->right; }
-    if (auto l = e->left->to<IR::LOr>()) {
-        if (auto r = e->right->to<IR::LOr>()) {
-            auto c1 = new IR::LAnd(l->left, r->left);
-            auto c2 = new IR::LAnd(l->left, r->right);
-            auto c3 = new IR::LAnd(l->right, r->left);
-            auto c4 = new IR::LAnd(l->right, r->right);
-            rv = new IR::LOr(new IR::LOr(new IR::LOr(c1, c2), c3), c4);
+    if (auto l = e->left->to<P4::IR::LOr>()) {
+        if (auto r = e->right->to<P4::IR::LOr>()) {
+            auto c1 = new P4::IR::LAnd(l->left, r->left);
+            auto c2 = new P4::IR::LAnd(l->left, r->right);
+            auto c3 = new P4::IR::LAnd(l->right, r->left);
+            auto c4 = new P4::IR::LAnd(l->right, r->right);
+            rv = new P4::IR::LOr(new P4::IR::LOr(new P4::IR::LOr(c1, c2), c3), c4);
             LOG5(_debugIndent << "? IR::LAnd " << rv);
         } else {
-            auto c1 = new IR::LAnd(l->left, e->right);
-            auto c2 = new IR::LAnd(l->right, e->right);
-            rv = new IR::LOr(c1, c2); }
+            auto c1 = new P4::IR::LAnd(l->left, e->right);
+            auto c2 = new P4::IR::LAnd(l->right, e->right);
+            rv = new P4::IR::LOr(c1, c2); }
         LOG5(_debugIndent << "/ IR::LAnd " << rv);
-    } else if (auto r = e->right->to<IR::LOr>()) {
-        auto c1 = new IR::LAnd(e->left, r->left);
-        auto c2 = new IR::LAnd(e->left, r->right);
-        rv = new IR::LOr(c1, c2);
+    } else if (auto r = e->right->to<P4::IR::LOr>()) {
+        auto c1 = new P4::IR::LAnd(e->left, r->left);
+        auto c2 = new P4::IR::LAnd(e->left, r->right);
+        rv = new P4::IR::LOr(c1, c2);
         LOG5(_debugIndent << "* IR::LAnd " << rv);
     }
     if (rv != e)
@@ -372,73 +372,73 @@ const IR::Expression *CanonGatewayExpr::postorder(IR::LAnd *e) {
     return rv;
 }
 
-const IR::Expression *CanonGatewayExpr::postorder(IR::LOr *e) {
+const P4::IR::Expression *CanonGatewayExpr::postorder(P4::IR::LOr *e) {
     LOG5(_debugIndent++ << "IR::LOr " << e);
     if (e->left->equiv(*e->right))
         return e->left;
-    if (auto k = e->left->to<IR::Constant>())
+    if (auto k = e->left->to<P4::IR::Constant>())
         return k->value ? k : e->right;
-    if (auto k = e->left->to<IR::BoolLiteral>())
+    if (auto k = e->left->to<P4::IR::BoolLiteral>())
         return k->value ? k : e->right;
-    if (auto k = e->right->to<IR::Constant>())
+    if (auto k = e->right->to<P4::IR::Constant>())
         return k->value ? k : e->left;
-    if (auto k = e->right->to<IR::BoolLiteral>())
+    if (auto k = e->right->to<P4::IR::BoolLiteral>())
         return k->value ? k : e->left;
-    while (auto r = e->right->to<IR::LOr>()) {
-        e->left = postorder(new IR::LOr(e->left, r->left));
+    while (auto r = e->right->to<P4::IR::LOr>()) {
+        e->left = postorder(new P4::IR::LOr(e->left, r->left));
         e->right = r->right; }
     LOG5(--_debugIndent << "-IR::LOr " << e);
     return e;
 }
 
-const IR::Expression *CanonGatewayExpr::postorder(IR::LNot *e) {
+const P4::IR::Expression *CanonGatewayExpr::postorder(P4::IR::LNot *e) {
     LOG5(++_debugIndent << "IR::LNot " << e);
-    const IR::Expression *rv = e;
-    if (auto a = e->expr->to<IR::LNot>()) {
+    const P4::IR::Expression *rv = e;
+    if (auto a = e->expr->to<P4::IR::LNot>()) {
         LOG5(--_debugIndent << "r IR::LNot " << e);
         return a->expr; }
-    if (auto k = e->expr->to<IR::Constant>()) {
-        return new IR::Constant(k->value == 0);
-    } else if (auto k = e->expr->to<IR::BoolLiteral>()) {
-        return new IR::BoolLiteral(!k->value); }
-    if (auto a = e->expr->to<IR::LAnd>()) {
-        rv = new IR::LOr(new IR::LNot(a->left), new IR::LNot(a->right));
-    } else if (auto a = e->expr->to<IR::LOr>()) {
-        rv = new IR::LAnd(new IR::LNot(a->left), new IR::LNot(a->right));
-    } else if (auto a = e->expr->to<IR::Equ>()) {
-        rv = new IR::Neq(a->left, a->right);
-    } else if (auto a = e->expr->to<IR::Neq>()) {
-        rv = new IR::Equ(a->left, a->right);
-    } else if (auto a = e->expr->to<IR::Leq>()) {
-        rv = new IR::Grt(a->left, a->right);
-    } else if (auto a = e->expr->to<IR::Lss>()) {
-        rv = new IR::Geq(a->left, a->right);
-    } else if (auto a = e->expr->to<IR::Geq>()) {
-        rv = new IR::Lss(a->left, a->right);
-    } else if (auto a = e->expr->to<IR::Grt>()) {
-        rv = new IR::Grt(a->left, a->right); }
+    if (auto k = e->expr->to<P4::IR::Constant>()) {
+        return new P4::IR::Constant(k->value == 0);
+    } else if (auto k = e->expr->to<P4::IR::BoolLiteral>()) {
+        return new P4::IR::BoolLiteral(!k->value); }
+    if (auto a = e->expr->to<P4::IR::LAnd>()) {
+        rv = new P4::IR::LOr(new P4::IR::LNot(a->left), new P4::IR::LNot(a->right));
+    } else if (auto a = e->expr->to<P4::IR::LOr>()) {
+        rv = new P4::IR::LAnd(new P4::IR::LNot(a->left), new P4::IR::LNot(a->right));
+    } else if (auto a = e->expr->to<P4::IR::Equ>()) {
+        rv = new P4::IR::Neq(a->left, a->right);
+    } else if (auto a = e->expr->to<P4::IR::Neq>()) {
+        rv = new P4::IR::Equ(a->left, a->right);
+    } else if (auto a = e->expr->to<P4::IR::Leq>()) {
+        rv = new P4::IR::Grt(a->left, a->right);
+    } else if (auto a = e->expr->to<P4::IR::Lss>()) {
+        rv = new P4::IR::Geq(a->left, a->right);
+    } else if (auto a = e->expr->to<P4::IR::Geq>()) {
+        rv = new P4::IR::Lss(a->left, a->right);
+    } else if (auto a = e->expr->to<P4::IR::Grt>()) {
+        rv = new P4::IR::Grt(a->left, a->right); }
     if (rv != e)
         visit(rv);
     LOG5(--_debugIndent << "-IR::LNot " << rv);
     return rv;
 }
 
-const IR::Expression *CanonGatewayExpr::postorder(IR::BAnd *e) {
-    if (e->left->is<IR::Constant>()) {
-        BUG_CHECK(!e->right->is<IR::Constant>(), "constant folding failed");
+const P4::IR::Expression *CanonGatewayExpr::postorder(P4::IR::BAnd *e) {
+    if (e->left->is<P4::IR::Constant>()) {
+        BUG_CHECK(!e->right->is<P4::IR::Constant>(), "constant folding failed");
         auto *t = e->left;
         e->left = e->right;
         e->right = t; }
-    if (auto k = e->right->to<IR::Constant>()) {
+    if (auto k = e->right->to<P4::IR::Constant>()) {
         int maxbit = floor_log2(k->value);
         if (maxbit >= 0 && e->left->type->width_bits() > maxbit + 1) {
             e->left = MakeSlice(e->left, 0, maxbit);
             e->type = e->left->type; } }
     return e;
 }
-const IR::Expression *CanonGatewayExpr::postorder(IR::BOr *e) {
-    if (e->left->is<IR::Constant>()) {
-        BUG_CHECK(!e->right->is<IR::Constant>(), "constant folding failed");
+const P4::IR::Expression *CanonGatewayExpr::postorder(P4::IR::BOr *e) {
+    if (e->left->is<P4::IR::Constant>()) {
+        BUG_CHECK(!e->right->is<P4::IR::Constant>(), "constant folding failed");
         auto *t = e->left;
         e->left = e->right;
         e->right = t; }
@@ -450,54 +450,54 @@ const IR::Expression *CanonGatewayExpr::postorder(IR::BOr *e) {
  * constant propagation. In that case, the container validity bit
  * is automatically assumed to be set due to an earlier assignment.
  */
-const IR::Expression *CanonGatewayExpr::postorder(IR::MAU::TypedPrimitive *p) {
+const P4::IR::Expression *CanonGatewayExpr::postorder(P4::IR::MAU::TypedPrimitive *p) {
     if (p->name != "is_validated")
         error("%scondition too complex", p->srcInfo);
     auto e = p->operands.at(0);
-    if (e->is<IR::Constant>())
-        return new IR::BoolLiteral(true);
+    if (e->is<P4::IR::Constant>())
+        return new P4::IR::BoolLiteral(true);
     return p;
 }
 
 /* return true if two boolean expressions are contradictory (cannot both be true) */
-static bool contradictory(const IR::Expression *a_, const IR::Expression *b_) {
-    auto a = a_->to<IR::Operation::Relation>();
-    auto b = b_->to<IR::Operation::Relation>();
+static bool contradictory(const P4::IR::Expression *a_, const P4::IR::Expression *b_) {
+    auto a = a_->to<P4::IR::Operation::Relation>();
+    auto b = b_->to<P4::IR::Operation::Relation>();
     if (!a || !b) return false;
     // FIXME -- should we check for a->left is a slice of b->left or vice versa?
     if (!a->left->equiv(*b->left)) return false;
     if (a->right->equiv(*b->right)) {
         /* a and be are both 'x relop y' for two different relops */
-        if (a->is<IR::Equ>() && (b->is<IR::Neq>() || b->is<IR::Lss>())) return true;
-        if (b->is<IR::Equ>() && (a->is<IR::Neq>() || a->is<IR::Lss>())) return true;
+        if (a->is<P4::IR::Equ>() && (b->is<P4::IR::Neq>() || b->is<P4::IR::Lss>())) return true;
+        if (b->is<P4::IR::Equ>() && (a->is<P4::IR::Neq>() || a->is<P4::IR::Lss>())) return true;
         return false; }
-    auto ak = a->right->to<IR::Constant>();
-    auto bk = b->right->to<IR::Constant>();
+    auto ak = a->right->to<P4::IR::Constant>();
+    auto bk = b->right->to<P4::IR::Constant>();
     if (!ak || !bk) return false;
     BUG_CHECK(ak->value != bk->value, "equal constants %1% and %2% are not equivalent?", ak, bk);
     if (ak->value < bk->value) {
-        if ((a->is<IR::Equ>() || a->is<IR::Lss>()) && (b->is<IR::Equ>() || b->is<IR::Geq>()))
+        if ((a->is<P4::IR::Equ>() || a->is<P4::IR::Lss>()) && (b->is<P4::IR::Equ>() || b->is<P4::IR::Geq>()))
             return true;
     } else {
-        if ((a->is<IR::Equ>() || a->is<IR::Geq>()) && (b->is<IR::Equ>() || b->is<IR::Lss>()))
+        if ((a->is<P4::IR::Equ>() || a->is<P4::IR::Geq>()) && (b->is<P4::IR::Equ>() || b->is<P4::IR::Lss>()))
             return true; }
     return false;
 }
 
 /* simplify a canonical row by removing duplicate conjuncts and making the entire row
  * false if it contains contradictory conjuncts */
-static const IR::Expression *simplifyRow(const IR::Expression *e) {
-    std::vector<const IR::Expression *> terms;
+static const P4::IR::Expression *simplifyRow(const P4::IR::Expression *e) {
+    std::vector<const P4::IR::Expression *> terms;
     bool delta = false;
     auto *rest = e;
-    auto *conj = rest->to<IR::LAnd>();
+    auto *conj = rest->to<P4::IR::LAnd>();
     while (auto *t = conj ? conj->right : rest) {
         bool remove = false;
         for (auto p : terms) {
             if (t->equiv(*p))
                 remove = true;
             else if (contradictory(t, p))
-                return new IR::BoolLiteral(e->srcInfo, false); }
+                return new P4::IR::BoolLiteral(e->srcInfo, false); }
         if (remove) {
             delta = true;
         } else {
@@ -505,20 +505,20 @@ static const IR::Expression *simplifyRow(const IR::Expression *e) {
         rest = nullptr;
         if (conj) {
             rest = conj->left;
-            conj = rest->to<IR::LAnd>(); } }
+            conj = rest->to<P4::IR::LAnd>(); } }
     if (delta) {
         e = terms.back();
         terms.pop_back();
         while (!terms.empty()) {
-            e = new IR::LAnd(e, terms.back());
+            e = new P4::IR::LAnd(e, terms.back());
             terms.pop_back(); } }
     return e;
 }
 
 /* break apart the terms of a conjunction into a set of conjuncts */
-static std::set<const IR::Expression *> rowConjuncts(const IR::Expression *e) {
-    std::set<const IR::Expression *> rv;
-    while (auto *conj = e->to<IR::LAnd>()) {
+static std::set<const P4::IR::Expression *> rowConjuncts(const P4::IR::Expression *e) {
+    std::set<const P4::IR::Expression *> rv;
+    while (auto *conj = e->to<P4::IR::LAnd>()) {
         rv.insert(conj->right);
         e = conj->left; }
     rv.insert(e);
@@ -528,7 +528,7 @@ static std::set<const IR::Expression *> rowConjuncts(const IR::Expression *e) {
 /* remove a conjunct from a set of conjuncts if present.  FIXME This would be much more
  * efficient if the IR generator supported autogen hash and/or operator< for IR nodes
  * to allow efficient set tracking */
-static void removeConjunct(std::set<const IR::Expression *> &s, const IR::Expression *e) {
+static void removeConjunct(std::set<const P4::IR::Expression *> &s, const P4::IR::Expression *e) {
     for (auto it = s.begin(); it != s.end();) {
         if (e->equiv(**it))
             it = s.erase(it);
@@ -540,8 +540,8 @@ static void removeConjunct(std::set<const IR::Expression *> &s, const IR::Expres
  * does it can be safely reomved as it will never match (the previous row will also
  * match, and at a higher priority, dominating it).   We need a copy of the 'prev'
  * set here so we can modify to see if all elements are present */
-static bool rowDominates(std::set<const IR::Expression *> prev, const IR::Expression *e) {
-    while (auto *conj = e->to<IR::LAnd>()) {
+static bool rowDominates(std::set<const P4::IR::Expression *> prev, const P4::IR::Expression *e) {
+    while (auto *conj = e->to<P4::IR::LAnd>()) {
         removeConjunct(prev, conj->right);
         if (prev.empty()) return true;
         e = conj->left; }
@@ -549,7 +549,7 @@ static bool rowDominates(std::set<const IR::Expression *> prev, const IR::Expres
     return prev.empty();
 }
 
-void CanonGatewayExpr::removeUnusedRows(IR::MAU::Table *tbl, bool isCanon) {
+void CanonGatewayExpr::removeUnusedRows(P4::IR::MAU::Table *tbl, bool isCanon) {
     auto &rows = tbl->gateway_rows;
     // Remove rows that can never match because it is
     // - after a row that always matches,
@@ -558,7 +558,7 @@ void CanonGatewayExpr::removeUnusedRows(IR::MAU::Table *tbl, bool isCanon) {
     // While doing that, track the next tags that we remove and keep.
     bool erase_rest = false;
     std::set<cstring>   removed, present;  // next tags in the table from the gateway
-    std::vector<std::set<const IR::Expression *>> prevRowTerms;
+    std::vector<std::set<const P4::IR::Expression *>> prevRowTerms;
     for (auto row = rows.begin(); row != rows.end();) {
         if (erase_rest) {
             removed.insert(row->second);
@@ -570,14 +570,14 @@ void CanonGatewayExpr::removeUnusedRows(IR::MAU::Table *tbl, bool isCanon) {
             ++row;
             continue; }
         row->first = simplifyRow(row->first);
-        if (auto k = row->first->to<IR::Constant>()) {
+        if (auto k = row->first->to<P4::IR::Constant>()) {
             if (k->value == 0) {
                 removed.insert(row->second);
                 row = rows.erase(row);
             } else {
                 row->first = nullptr; }
             continue; }
-        if (auto k = row->first->to<IR::BoolLiteral>()) {
+        if (auto k = row->first->to<P4::IR::BoolLiteral>()) {
             if (k->value == 0) {
                 removed.insert(row->second);
                 row = rows.erase(row);
@@ -606,10 +606,10 @@ void CanonGatewayExpr::removeUnusedRows(IR::MAU::Table *tbl, bool isCanon) {
 }
 
 /* return the number of conjunct terms in a gateway row expression */
-static int conjuncts(const IR::Expression *e) {
+static int conjuncts(const P4::IR::Expression *e) {
     if (e == nullptr) return 0;
     int rv = 1;
-    while (auto cj = e->to<IR::LAnd>()) {
+    while (auto cj = e->to<P4::IR::LAnd>()) {
         rv += conjuncts(cj->right);  // should always be 1 if canonicalized
         e = cj->left; }
     return rv;
@@ -633,7 +633,7 @@ void CanonGatewayExpr::splitGatewayRows(safe_vector<GWRow_t> &rows) {
     /* split logical-OR operations across rows */
     for (auto it = rows.begin(); it != rows.end(); ++it) {
         LOG3("    " << it->first << " -> " << it->second);
-        while (auto *e = dynamic_cast<const IR::LOr *>(it->first)) {
+        while (auto *e = dynamic_cast<const P4::IR::LOr *>(it->first)) {
             auto act = it->second;
             it->first = e->left;
             it = rows.emplace(++it, e->right, act);
@@ -660,22 +660,22 @@ void CanonGatewayExpr::removeNotEquals(safe_vector<GWRow_t> &rows) {
         } else {
             for (auto &n : need_negate) {
                 if (n.second != it->second)
-                    it->first = new IR::LAnd(it->first, new IR::LNot(n.first)); }
+                    it->first = new P4::IR::LAnd(it->first, new P4::IR::LNot(n.first)); }
             ++it; } }
     while (!need_negate.empty()) {
         auto &back = rows.back();
         for (auto &n : need_negate) {
             if (n.second == back.second) continue;
             if (back.first)
-                back.first = new IR::LAnd(back.first, new IR::LNot(n.first));
+                back.first = new P4::IR::LAnd(back.first, new P4::IR::LNot(n.first));
             else
-                back.first = new IR::LNot(n.first); }
+                back.first = new P4::IR::LNot(n.first); }
         if (back.first)
             rows.emplace_back(nullptr, need_negate.back().second);
         need_negate.pop_front(); }
 }
 
-const IR::Node *CanonGatewayExpr::postorder(IR::MAU::Table *tbl) {
+const P4::IR::Node *CanonGatewayExpr::postorder(P4::IR::MAU::Table *tbl) {
     auto &rows = tbl->gateway_rows;
     if (rows.empty() || !rows[0].first)
         return tbl;
@@ -716,7 +716,7 @@ const IR::Node *CanonGatewayExpr::postorder(IR::MAU::Table *tbl) {
             visit(row.first); }
 }
 
-bool CollectGatewayFields::preorder(const IR::MAU::Table *tbl) {
+bool CollectGatewayFields::preorder(const P4::IR::MAU::Table *tbl) {
     unsigned row = 0;
     BUG_CHECK(info.empty() && !this->tbl , "reusing CollectGatewayFields");
     if (tbl->uses_gateway())
@@ -729,7 +729,7 @@ bool CollectGatewayFields::preorder(const IR::MAU::Table *tbl) {
     return false;
 }
 
-bool CollectMatchFieldsAsGateway::preorder(const IR::MAU::Table *tbl) {
+bool CollectMatchFieldsAsGateway::preorder(const P4::IR::MAU::Table *tbl) {
     LOG5("CollectMatchFieldsAsGateway for table " << tbl->name);
     if (tbl->uses_gateway() || !tbl->entries_list ||
         tbl->entries_list->entries.size() > Device::gatewaySpec().ExactShifts + 0U ||
@@ -752,7 +752,7 @@ bool CollectMatchFieldsAsGateway::preorder(const IR::MAU::Table *tbl) {
 }
 
 // TOFINO1-ONLY
-bool CollectGatewayFields::preorder(const IR::MAU::TypedPrimitive *prim) {
+bool CollectGatewayFields::preorder(const P4::IR::MAU::TypedPrimitive *prim) {
     if (prim->name != "is_validated")
         error("%scondition too complex", prim->srcInfo);
     le_bitrange bits;
@@ -763,17 +763,17 @@ bool CollectGatewayFields::preorder(const IR::MAU::TypedPrimitive *prim) {
     info.valid_bit = true;
     return false;
 }
-bool CollectGatewayFields::preorder(const IR::Expression *e) {
+bool CollectGatewayFields::preorder(const P4::IR::Expression *e) {
     std::optional<cstring> aliasSourceName = phv.get_alias_name(e);
     le_bitrange bits;
     auto finfo = phv.field(e, &bits);
     if (!finfo) return true;
     info_t &info = this->info[{finfo, bits}];
     const Context *ctxt = nullptr;
-    if (findContext<IR::RangeMatch>()) {
+    if (findContext<P4::IR::RangeMatch>()) {
         info.need_range = need_range = true;
-    } else if (auto *rel = findContext<IR::Operation::Relation>(ctxt)) {
-        if (!rel->is<IR::Equ>() && !rel->is<IR::Neq>()) {
+    } else if (auto *rel = findContext<P4::IR::Operation::Relation>(ctxt)) {
+        if (!rel->is<P4::IR::Equ>() && !rel->is<P4::IR::Neq>()) {
             info.need_range = need_range = true;
         } else if (ctxt->child_index > 0) {
             if (xor_match)
@@ -790,8 +790,8 @@ bool CollectGatewayFields::preorder(const IR::Expression *e) {
     return false;
 }
 
-void CollectGatewayFields::postorder(const IR::Literal *) {
-    if (xor_match.field() && getParent<IR::Operation::Relation>())
+void CollectGatewayFields::postorder(const P4::IR::Literal *) {
+    if (xor_match.field() && getParent<P4::IR::Operation::Relation>())
         info[xor_match].const_eq = true;
 }
 
@@ -968,13 +968,13 @@ bool CollectGatewayFields::compute_offsets() {
 }
 
 
-/** SetupRanges: convert IR::Operation::Relation expressions into IR::RangeMatch operations
+/** SetupRanges: convert P4::IR::Operation::Relation expressions into P4::IR::RangeMatch operations
  * for encoding in a gateway DirtCAM.  A Relation just a </<=/>/>=/==/!= comparison.  TCAMs
  * cannot match for >/< type things, so they must be converted to RangeMatch expression.
  * ==/!= can be matched directly in the lower part of the gateway, or can be converted to
  * RangeMatches for use in the upper part when we are using DirtCAMs.
  *
- * An IR::RangeMatch expression more or less directly represents a DirtCAM lookup of up to
+ * An P4::IR::RangeMatch expression more or less directly represents a DirtCAM lookup of up to
  * 4 bits.  As an expression, it has two operands; the left operand is of type bit<k> or
  * int<k> while the right operand must a constant of type bit<2**k>.  The left operand is
  * used as an index to select a single bit from the right operand constant, which will be
@@ -989,21 +989,21 @@ bool CollectGatewayFields::compute_offsets() {
 class GatewayRangeMatch::SetupRanges : public Transform {
     const PhvInfo               &phv;
     const CollectGatewayFields  &fields;
-    IR::MAU::Action *preorder(IR::MAU::Action *af) override { prune(); return af; }
-    IR::P4Table *preorder(IR::P4Table *t) override { prune(); return t; }
-    IR::Attached *preorder(IR::Attached *a) override { prune(); return a; }
-    IR::MAU::TableSeq *preorder(IR::MAU::TableSeq *s) override { prune(); return s; }
+    P4::IR::MAU::Action *preorder(P4::IR::MAU::Action *af) override { prune(); return af; }
+    P4::IR::P4Table *preorder(P4::IR::P4Table *t) override { prune(); return t; }
+    P4::IR::Attached *preorder(P4::IR::Attached *a) override { prune(); return a; }
+    P4::IR::MAU::TableSeq *preorder(P4::IR::MAU::TableSeq *s) override { prune(); return s; }
 
-    const IR::Expression *postorder(IR::Operation::Relation *rel) override {
+    const P4::IR::Expression *postorder(P4::IR::Operation::Relation *rel) override {
         le_bitrange bits;
         auto f = phv.field(rel->left, &bits);
         bool sign = isSigned(rel->left->type);
-        if (!f || !rel->right->is<IR::Constant>() || !fields.info.count({f, bits})) return rel;
+        if (!f || !rel->right->is<P4::IR::Constant>() || !fields.info.count({f, bits})) return rel;
         LOG3("SetupRange for " << rel);
-        bool forceRange = !(rel->is<IR::Equ>() || rel->is<IR::Neq>());
-        bool reverse = (rel->is<IR::Geq>() || rel->is<IR::Neq>());
+        bool forceRange = !(rel->is<P4::IR::Equ>() || rel->is<P4::IR::Neq>());
+        bool reverse = (rel->is<P4::IR::Geq>() || rel->is<P4::IR::Neq>());
         auto info = fields.info.at({f, bits});
-        int64_t val = rel->right->to<IR::Constant>()->asInt64();
+        int64_t val = rel->right->to<P4::IR::Constant>()->asInt64();
         BUG_CHECK(!forceRange || sign || (val & 1), "Non-canonicalized range value");
         int base = 0;
         int orig_lo = bits.lo;
@@ -1029,7 +1029,7 @@ class GatewayRangeMatch::SetupRanges : public Transform {
             base &= ~3; }
         bits.lo -= orig_lo;
         bits.hi -= orig_lo;
-        const IR::Expression *rv = nullptr, *himatch = nullptr;
+        const P4::IR::Expression *rv = nullptr, *himatch = nullptr;
         LOG5("  bits = " << bits);
         for (int lo = ((bits.hi - bits.lo) & ~3) + bits.lo; lo >= bits.lo; lo -= 4) {
             int hi = std::min(lo + 3, bits.hi);
@@ -1038,8 +1038,8 @@ class GatewayRangeMatch::SetupRanges : public Transform {
             unsigned data = 1U << ((val >> (lo - bits.lo)) & ((1U << size) - 1));
             // data is now a 1-hot bitvector for the value we're comparing against (suitable
             // for use as the right operand of a RangeMatch
-            const IR::Expression *eq, *c;
-            eq = new IR::RangeMatch(MakeSlice(rel->left, std::max(0, lo), hi), data);
+            const P4::IR::Expression *eq, *c;
+            eq = new P4::IR::RangeMatch(MakeSlice(rel->left, std::max(0, lo), hi), data);
             if (forceRange) {
                 // doing a less-than or greater-equal comparison, so convert 'data` to have
                 // one bits in all the bits that correspind to values less than the value
@@ -1063,17 +1063,17 @@ class GatewayRangeMatch::SetupRanges : public Transform {
                         data &= ~(1U << (1U << (size - 1)));
                     } else {
                         data = (data << 1) & mask; } } }
-            c = new IR::RangeMatch(MakeSlice(rel->left, std::max(0, lo), hi), data);
+            c = new P4::IR::RangeMatch(MakeSlice(rel->left, std::max(0, lo), hi), data);
             if (forceRange)
-                c = himatch ? new IR::LAnd(himatch, c) : c;
+                c = himatch ? new P4::IR::LAnd(himatch, c) : c;
             if (rv) {
                 if (forceRange || reverse)
-                    rv = new IR::LOr(rv, c);
+                    rv = new P4::IR::LOr(rv, c);
                 else
-                    rv = new IR::LAnd(rv, c);
+                    rv = new P4::IR::LAnd(rv, c);
             } else {
                 rv = c; }
-            himatch = himatch ? new IR::LAnd(himatch, eq) : eq;
+            himatch = himatch ? new P4::IR::LAnd(himatch, eq) : eq;
             sign = false; }
         LOG3("SetupRange result: " << rv);
         return rv;
@@ -1084,7 +1084,7 @@ class GatewayRangeMatch::SetupRanges : public Transform {
     : phv(phv), fields(fields) {}
 };
 
-void GatewayRangeMatch::postorder(IR::MAU::Table *tbl) {
+void GatewayRangeMatch::postorder(P4::IR::MAU::Table *tbl) {
     CollectGatewayFields collect(phv);
     tbl->apply(collect);
     if (!collect.need_range) return;
@@ -1094,7 +1094,7 @@ void GatewayRangeMatch::postorder(IR::MAU::Table *tbl) {
         if (gw.first) gw.first = gw.first->apply(setup);
 }
 
-bool CheckGatewayExpr::preorder(const IR::MAU::Table *tbl) {
+bool CheckGatewayExpr::preorder(const P4::IR::MAU::Table *tbl) {
     CollectGatewayFields collect(phv);
     tbl->apply(collect);
     if (!collect.compute_offsets()) {
@@ -1106,16 +1106,16 @@ bool CheckGatewayExpr::preorder(const IR::MAU::Table *tbl) {
     return true;
 }
 
-bool CheckGatewayExpr::preorder(const IR::Expression *e) {
-    if (e->is<IR::MAU::TypedPrimitive>())
+bool CheckGatewayExpr::preorder(const P4::IR::Expression *e) {
+    if (e->is<P4::IR::MAU::TypedPrimitive>())
         return false;
     if (!phv.field(e))
         error("%s: condition expression too complex", e->srcInfo);
     return false;
 }
 
-bool CheckGatewayExpr::needConstOperand(const IR::Operation::Binary *e) {
-    if (!e->right->is<IR::Constant>()) {
+bool CheckGatewayExpr::needConstOperand(const P4::IR::Operation::Binary *e) {
+    if (!e->right->is<P4::IR::Constant>()) {
         error("condition too complex, one operand of %s must be constant", e);
         return false; }
     return true;
@@ -1139,7 +1139,7 @@ BuildGatewayMatch::BuildGatewayMatch(const PhvInfo &phv, CollectGatewayFields &f
     }
 }
 
-Visitor::profile_t BuildGatewayMatch::init_apply(const IR::Node *root) {
+Visitor::profile_t BuildGatewayMatch::init_apply(const P4::IR::Node *root) {
     LOG3("BuildGatewayMatch for " << root);
     match.setwidth(0);  // clear out old value
     if (fields.need_range || !fields.bits) {
@@ -1154,7 +1154,7 @@ Visitor::profile_t BuildGatewayMatch::init_apply(const IR::Node *root) {
     return Inspector::init_apply(root);
 }
 
-bool BuildGatewayMatch::preorder(const IR::Expression *e) {
+bool BuildGatewayMatch::preorder(const P4::IR::Expression *e) {
     le_bitrange bits;
     auto field = phv.field(e, &bits);
     if (!field)
@@ -1162,11 +1162,11 @@ bool BuildGatewayMatch::preorder(const IR::Expression *e) {
     if (!match_field) {
         match_field = { field, bits };
         LOG4("  match_field = " << field->name << ' ' << bits);
-        if (bits.size() == 1 && !findContext<IR::Operation::Relation>()) {
+        if (bits.size() == 1 && !findContext<P4::IR::Operation::Relation>()) {
             auto &match_info = fields.info.at(match_field);
             LOG4("  match_info = " << match_info);
             for (auto &off : match_info.offsets) {
-                if (getParent<IR::LNot>())
+                if (getParent<P4::IR::LNot>())
                     match.word1 &= ~(UINT64_C(1) << off.first >> shift);
                 else
                     match.word0 &= ~(UINT64_C(1) << off.first >> shift); }
@@ -1217,16 +1217,16 @@ bool BuildGatewayMatch::preorder(const IR::Expression *e) {
             LOG6("    match now " << match);
             donemask |= elmask;
             if (++it == end) break; }
-        const IR::Expression *tmp;
+        const P4::IR::Expression *tmp;
         BUG_CHECK(orig_mask == donemask, "failed to match all bits of %s",
-                  (tmp = findContext<IR::Operation::Relation>()) ? tmp : e);
+                  (tmp = findContext<P4::IR::Operation::Relation>()) ? tmp : e);
         BUG_CHECK((mask ^ upper_bit_mask) << shift == 0, "Didn't cover all bytes");
         match_field = {}; }
     return false;
 }
 
 //  TOFINO1-ONLY
-bool BuildGatewayMatch::preorder(const IR::MAU::TypedPrimitive *prim) {
+bool BuildGatewayMatch::preorder(const P4::IR::MAU::TypedPrimitive *prim) {
     if (Device::currentDevice() != Device::TOFINO)
         return false;
     if (prim->name != "is_validated")
@@ -1239,7 +1239,7 @@ bool BuildGatewayMatch::preorder(const IR::MAU::TypedPrimitive *prim) {
     match_field = {field, bits};
     auto &match_info = fields.info.at(match_field);
     for (auto &off : match_info.offsets) {
-        if (getParent<IR::LNot>())
+        if (getParent<P4::IR::LNot>())
             match.word1 &= ~(UINT64_C(1) << off.first >> shift);
         else
             match.word0 &= ~(UINT64_C(1) << off.first >> shift);
@@ -1278,10 +1278,10 @@ bool BuildGatewayMatch::check_per_byte_match(const std::pair<int, le_bitrange> &
 void BuildGatewayMatch::constant(big_int c) {
     auto ctxt = getContext();
     auto &gws = Device::gatewaySpec();
-    if (ctxt->node->is<IR::BAnd>()) {
+    if (ctxt->node->is<P4::IR::BAnd>()) {
         andmask = c;
         LOG4("  andmask = 0x" << std::hex << andmask << std::dec);
-    } else if (ctxt->node->is<IR::BOr>()) {
+    } else if (ctxt->node->is<P4::IR::BOr>()) {
         ormask = c;
         LOG4("  ormask = 0x" << std::hex << ormask << std::dec);
     } else if (match_field) {
@@ -1319,16 +1319,16 @@ void BuildGatewayMatch::constant(big_int c) {
         BUG("Invalid context for constant in BuildGatewayMatch"); }
 }
 
-bool BuildGatewayMatch::preorder(const IR::Equ *) {
+bool BuildGatewayMatch::preorder(const P4::IR::Equ *) {
     match_field = {};
     andmask = -1;
     ormask = cmplmask = 0;
     return true;
 }
 
-bool BuildGatewayMatch::preorder(const IR::Neq *neq) {
+bool BuildGatewayMatch::preorder(const P4::IR::Neq *neq) {
     if (neq->left->type->width_bits() != 1)
-        return preorder(static_cast<const IR::Operation_Relation *>(neq));
+        return preorder(static_cast<const P4::IR::Operation_Relation *>(neq));
     /* we can only handle 1-bit neq here */
     match_field = {};
     andmask = cmplmask = -1;
@@ -1336,7 +1336,7 @@ bool BuildGatewayMatch::preorder(const IR::Neq *neq) {
     return true;
 }
 
-bool BuildGatewayMatch::preorder(const IR::RangeMatch *rm) {
+bool BuildGatewayMatch::preorder(const P4::IR::RangeMatch *rm) {
     le_bitrange bits;
     auto field = phv.field(rm->expr, &bits);
     BUG_CHECK(field, "invalid RangeMatch in BuildGatewayMatch");

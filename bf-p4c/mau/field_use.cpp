@@ -1,7 +1,7 @@
 #include "ir/ir.h"
 #include "field_use.h"
 
-bool FieldUse::preorder(const IR::MAU::Table *t) {
+bool FieldUse::preorder(const P4::IR::MAU::Table *t) {
     table_use[t->name];
     return true;
 }
@@ -13,7 +13,7 @@ void FieldUse::access_field(cstring name) {
         field_names.push_back(name);
     } else {
         idx = field_index[name]; }
-    if (auto table = findContext<IR::MAU::Table>()) {
+    if (auto table = findContext<P4::IR::MAU::Table>()) {
         if (isWrite())
             table_use[table->name].writes[idx] = 1;
         else
@@ -22,7 +22,7 @@ void FieldUse::access_field(cstring name) {
         assert(0); }
 }
 
-bool FieldUse::preorder(const IR::Member *f) {
+bool FieldUse::preorder(const P4::IR::Member *f) {
     auto* field = phv.field(f);
     if (!field) {
         access_field(f->toString());
@@ -38,17 +38,17 @@ bool FieldUse::preorder(const IR::Member *f) {
     return false;
 }
 
-bool FieldUse::preorder(const IR::HeaderStackItemRef *f) {
+bool FieldUse::preorder(const P4::IR::HeaderStackItemRef *f) {
     access_field(f->toString());
     return false;
 }
 
-bool FieldUse::preorder(const IR::TempVar *f) {
+bool FieldUse::preorder(const P4::IR::TempVar *f) {
     access_field(f->toString());
     return false;
 }
 
-bitvec FieldUse::tables_modify(const IR::MAU::Table *t) const {
+bitvec FieldUse::tables_modify(const P4::IR::MAU::Table *t) const {
     bitvec rv;
     rv |= table_use.at(t->name).writes;
     for (auto &n : t->next)
@@ -57,7 +57,7 @@ bitvec FieldUse::tables_modify(const IR::MAU::Table *t) const {
     return rv;
 }
 
-bitvec FieldUse::tables_access(const IR::MAU::Table *t) const {
+bitvec FieldUse::tables_access(const P4::IR::MAU::Table *t) const {
     bitvec rv;
     rv |= table_use.at(t->name).reads;
     rv |= table_use.at(t->name).writes;
@@ -68,14 +68,14 @@ bitvec FieldUse::tables_access(const IR::MAU::Table *t) const {
 }
 
 
-bitvec FieldUse::tables_modify(const IR::MAU::TableSeq *g) const {
+bitvec FieldUse::tables_modify(const P4::IR::MAU::TableSeq *g) const {
     bitvec rv;
     for (auto t : g->tables)
         rv |= tables_modify(t);
     return rv;
 }
 
-bitvec FieldUse::tables_access(const IR::MAU::TableSeq *g) const {
+bitvec FieldUse::tables_access(const P4::IR::MAU::TableSeq *g) const {
     bitvec rv;
     for (auto t : g->tables)
         rv |= tables_access(t);

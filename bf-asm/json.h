@@ -15,7 +15,7 @@
 #include "ordered_map.h"
 #include "rvalue_reference_wrapper.h"
 
-// using namespace P4;
+using namespace P4;
 
 namespace json {
 

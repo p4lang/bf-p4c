@@ -5,8 +5,8 @@
 #include "lib/safe_vector.h"
 
 
-bool AssignActionHandle::ActionProfileImposedConstraints::preorder(const IR::MAU::ActionData *ad) {
-    auto tbl = findContext<IR::MAU::Table>();
+bool AssignActionHandle::ActionProfileImposedConstraints::preorder(const P4::IR::MAU::ActionData *ad) {
+    auto tbl = findContext<P4::IR::MAU::Table>();
 
     std::set<cstring> actions;
     for (auto act : Values(tbl->actions)) {
@@ -45,7 +45,7 @@ bool AssignActionHandle::ActionProfileImposedConstraints::preorder(const IR::MAU
     return false;
 }
 
-Visitor::profile_t AssignActionHandle::DetermineHandle::init_apply(const IR::Node *root) {
+Visitor::profile_t AssignActionHandle::DetermineHandle::init_apply(const P4::IR::Node *root) {
     profile_t rv = MauInspector::init_apply(root);
     handle_position = 0;
     profile_assignments.clear();
@@ -56,11 +56,11 @@ Visitor::profile_t AssignActionHandle::DetermineHandle::init_apply(const IR::Nod
 /**
  * Assign the action handle
  */
-bool AssignActionHandle::DetermineHandle::preorder(const IR::MAU::Action *act) {
-    auto tbl = findContext<IR::MAU::Table>();
-    const IR::MAU::ActionData *ad = nullptr;
+bool AssignActionHandle::DetermineHandle::preorder(const P4::IR::MAU::Action *act) {
+    auto tbl = findContext<P4::IR::MAU::Table>();
+    const P4::IR::MAU::ActionData *ad = nullptr;
     for (auto ba : tbl->attached) {
-        ad = ba->attached->to<IR::MAU::ActionData>();
+        ad = ba->attached->to<P4::IR::MAU::ActionData>();
         if (ad != nullptr)
             break;
     }
@@ -84,13 +84,13 @@ bool AssignActionHandle::DetermineHandle::preorder(const IR::MAU::Action *act) {
 /**
  * Modify the action with the action handle
  */
-bool AssignActionHandle::AssignHandle::preorder(IR::MAU::Action *act) {
-    auto orig_act = getOriginal()->to<IR::MAU::Action>();
+bool AssignActionHandle::AssignHandle::preorder(P4::IR::MAU::Action *act) {
+    auto orig_act = getOriginal()->to<P4::IR::MAU::Action>();
     act->handle = self.handle_assignments.at(orig_act);
     return false;
 }
 
-Visitor::profile_t AssignActionHandle::ValidateSelectors::init_apply(const IR::Node *root) {
+Visitor::profile_t AssignActionHandle::ValidateSelectors::init_apply(const P4::IR::Node *root) {
     profile_t rv = PassManager::init_apply(root);
     selector_keys.clear();
     initial_table.clear();
@@ -98,14 +98,14 @@ Visitor::profile_t AssignActionHandle::ValidateSelectors::init_apply(const IR::N
     return rv;
 }
 
-bool AssignActionHandle::ValidateSelectors::ValidateKey::preorder(const IR::MAU::Selector *sel) {
-    if (findContext<IR::MAU::StatefulAlu>())
+bool AssignActionHandle::ValidateSelectors::ValidateKey::preorder(const P4::IR::MAU::Selector *sel) {
+    if (findContext<P4::IR::MAU::StatefulAlu>())
         return false;
-    auto tbl = findContext<IR::MAU::Table>();
+    auto tbl = findContext<P4::IR::MAU::Table>();
     if (!tbl) return false;
     BUG_CHECK(tbl != nullptr, "No associated table found for Selector - %1%", sel);
 
-    safe_vector<const IR::Expression *> sel_key_vec;
+    safe_vector<const P4::IR::Expression *> sel_key_vec;
     for (auto ixbar_read : tbl->match_key) {
         if (!ixbar_read->for_selection())
             continue;
@@ -133,7 +133,7 @@ bool AssignActionHandle::ValidateSelectors::ValidateKey::preorder(const IR::MAU:
                 StageUseEstimate::SINGLE_RAMLINE_POOL_SIZE);
     }
     auto &ixbSpec = Device::ixbarSpec();
-    le_bitrange hash_bits = { 0, (sel->mode == IR::MAU::SelectorMode::RESILIENT
+    le_bitrange hash_bits = { 0, (sel->mode == P4::IR::MAU::SelectorMode::RESILIENT
                                   ? ixbSpec.resilientModeHashBits()
                                   : ixbSpec.fairModeHashBits()) - 1 };
 
@@ -162,8 +162,8 @@ bool AssignActionHandle::ValidateSelectors::ValidateKey::preorder(const IR::MAU:
 
 
 bool AssignActionHandle::ValidateSelectors::
-        SetSymmetricSelectorKeys::preorder(IR::MAU::Table *tbl) {
-    auto orig_tbl = getOriginal()->to<IR::MAU::Table>();
+        SetSymmetricSelectorKeys::preorder(P4::IR::MAU::Table *tbl) {
+    auto orig_tbl = getOriginal()->to<P4::IR::MAU::Table>();
     auto sel_itr = self.table_to_selector.find(orig_tbl);
     if (sel_itr == self.table_to_selector.end())
         return true;
@@ -172,7 +172,7 @@ bool AssignActionHandle::ValidateSelectors::
     return true;
 }
 
-Visitor::profile_t AssignActionHandle::GuaranteeUniqueHandle::init_apply(const IR::Node *root) {
+Visitor::profile_t AssignActionHandle::GuaranteeUniqueHandle::init_apply(const P4::IR::Node *root) {
     auto rv = MauInspector::init_apply(root);
     unique_handle.clear();
     action_profiles.clear();
@@ -184,12 +184,12 @@ Visitor::profile_t AssignActionHandle::GuaranteeUniqueHandle::init_apply(const I
  * JIRA-DOC: as indicated by P4C-1154.
  * 
  */
-bool AssignActionHandle::GuaranteeUniqueHandle::preorder(const IR::MAU::Action *act) {
+bool AssignActionHandle::GuaranteeUniqueHandle::preorder(const P4::IR::MAU::Action *act) {
     visitOnce();
-    auto tbl = findContext<IR::MAU::Table>();
-    const IR::MAU::ActionData *ad = nullptr;
+    auto tbl = findContext<P4::IR::MAU::Table>();
+    const P4::IR::MAU::ActionData *ad = nullptr;
     for (auto ba : tbl->attached) {
-        ad = ba->attached->to<IR::MAU::ActionData>();
+        ad = ba->attached->to<P4::IR::MAU::ActionData>();
         if (ad != nullptr)
             break;
     }

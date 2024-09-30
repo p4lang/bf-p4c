@@ -8,7 +8,7 @@
  * are needed to allow table placement to place the tables properly.  We may be able to
  * eliminate them after table placement, which this pass attempts to do */
 class RemoveNoopGateway : public MauTransform {
-    const IR::MAU::TableSeq *preorder(IR::MAU::TableSeq *seq) override {
+    const P4::IR::MAU::TableSeq *preorder(P4::IR::MAU::TableSeq *seq) override {
         if (seq->size() < 1) return seq;
         auto *last = seq->back();
         if (!last->conditional_gateway_only() || last->gateway_rows.size() != 1

@@ -17,7 +17,7 @@ class canon_name {
  public:
     explicit canon_name(StringRef n) : name(n) {}
     explicit canon_name(cstring n) : name(n) {}
-    explicit canon_name(IR::ID n) : name(n.name) {}
+    explicit canon_name(P4::IR::ID n) : name(n.name) {}
 
     operator cstring() const { return cstring::to_cstring(*this); }
 };
@@ -43,14 +43,14 @@ class Slice {
         if (!field || lo > hi) invalidate(); }
     Slice(const PHV::AbstractField *f, le_bitrange r) : Slice(f, r.lo, r.hi) {}
     Slice(const PHV::AbstractField *f, int bit) : Slice(f, bit, bit) {}
-    Slice(const PhvInfo &phv, const IR::Expression *e) {
+    Slice(const PhvInfo &phv, const P4::IR::Expression *e) {
         le_bitrange     bits;
         if (!(field = phv.field(e, &bits))) {
             invalidate();
         } else {
             lo = bits.lo;
             hi = bits.hi; } }
-    Slice(const PhvInfo &phv, const IR::Expression *e, int l, int h) {
+    Slice(const PhvInfo &phv, const P4::IR::Expression *e, int l, int h) {
         le_bitrange     bits;
         if (!(field = phv.field(e, &bits))) {
             invalidate();
@@ -59,8 +59,8 @@ class Slice {
             hi = bits.lo + h;
             if (hi > bits.hi) hi = bits.hi;
             if (lo > hi) invalidate(); } }
-    Slice(const PhvInfo &phv, const IR::Expression *e, le_bitrange r) : Slice(phv, e, r.lo, r.hi) {}
-    Slice(const PhvInfo &phv, const IR::Expression *e, int bit) : Slice(phv, e, bit, bit) {}
+    Slice(const PhvInfo &phv, const P4::IR::Expression *e, le_bitrange r) : Slice(phv, e, r.lo, r.hi) {}
+    Slice(const PhvInfo &phv, const P4::IR::Expression *e, int bit) : Slice(phv, e, bit, bit) {}
     Slice(const PhvInfo &phv, cstring n)
     : field(phv.field(n)), lo(0), hi(field->size-1) {}
     Slice(const PhvInfo &phv, cstring n, int bit)
@@ -183,16 +183,16 @@ template<class VEC>
 emit_vector_formatter<VEC> emit_vector(const VEC &v, const char *sep = ", ") {
     return emit_vector_formatter<VEC>{v, sep}; }
 
-bool has_user_annotation(const IR::IAnnotated* node);
+bool has_user_annotation(const P4::IR::IAnnotated* node);
 
 /// Formats BFA for a user annotation to be ultimately included in context.json.
 void emit_user_annotation_context_json(std::ostream &out,
                                        indent_t indent,
-                                       const IR::IAnnotated* node,
+                                       const P4::IR::IAnnotated* node,
                                        bool emit_dash = false);
 
 void emit_user_annotation_context_json(indent_t indent,
-                                       const IR::IAnnotated* node,
+                                       const P4::IR::IAnnotated* node,
                                        std::stringstream &context_json_entries);
 
 template<class T> inline auto operator<<(std::ostream &out, const T &obj) ->

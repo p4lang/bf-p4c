@@ -2,17 +2,19 @@
 #include "bf-p4c/ir/bitrange.h"
 #include "bf-p4c/phv/phv_fields.h"
 
+using namespace P4;
+
 CollectHeaderStackInfo::CollectHeaderStackInfo() {
     stacks = new BFN::HeaderStackInfo; }
 
-Visitor::profile_t CollectHeaderStackInfo::init_apply(const IR::Node* root) {
+Visitor::profile_t CollectHeaderStackInfo::init_apply(const P4::IR::Node* root) {
     auto rv = Modifier::init_apply(root);
     stacks->info.clear();
     LOG3("Begin CollectHeaderStackInfo");
     return rv;
 }
 
-void CollectHeaderStackInfo::postorder(IR::HeaderStack* hs) {
+void CollectHeaderStackInfo::postorder(P4::IR::HeaderStack* hs) {
     if (stacks->info.count(hs->name))
         return;
 
@@ -32,7 +34,7 @@ void CollectHeaderStackInfo::postorder(IR::HeaderStack* hs) {
         i.inThread[INGRESS] = false;
 }
 
-void CollectHeaderStackInfo::postorder(IR::MAU::Primitive* prim) {
+void CollectHeaderStackInfo::postorder(P4::IR::MAU::Primitive* prim) {
     if (prim->name == "push_front" || prim->name == "pop_front") {
         LOG3("CollectHeaderStackInfo: visiting " << prim);
         BUG_CHECK(prim->operands.size() == 2, "wrong number of operands to %s", prim);
@@ -43,7 +45,7 @@ void CollectHeaderStackInfo::postorder(IR::MAU::Primitive* prim) {
             return; }
         int &max = (prim->name == "push_front") ? stacks->at(hsname).maxpush
                                                 : stacks->at(hsname).maxpop;
-        if (auto count = prim->operands[1]->to<IR::Constant>()) {
+        if (auto count = prim->operands[1]->to<P4::IR::Constant>()) {
             auto countval = count->asInt();
             if (countval <= 0) {
                 error("%s: %s amount must be > 0", count->srcInfo, prim->name);
@@ -59,18 +61,18 @@ void CollectHeaderStackInfo::postorder(IR::MAU::Primitive* prim) {
         LOG3("CollectHeaderStackInfo: ...maxpop: " << stacks->at(hsname).maxpop);
       // Get maxpush and maxpop after push and pop is converted in to modify/set
     } else if (prim->name == "modify_field" || prim->name == "set") {
-        auto operand0 = prim->operands[0]->to<IR::Slice>();
-        auto operand1 = prim->operands[1]->to<IR::Slice>();
+        auto operand0 = prim->operands[0]->to<P4::IR::Slice>();
+        auto operand1 = prim->operands[1]->to<P4::IR::Slice>();
         if (!operand0 || !operand1) return;
-        auto op0 = operand0->e0->to<IR::Member>();
-        auto op1 = operand1->e0->to<IR::Member>();
+        auto op0 = operand0->e0->to<P4::IR::Member>();
+        auto op1 = operand1->e0->to<P4::IR::Member>();
         if (!op0 || !op1) return;
-        if (op0->member == "$stkvalid" && op0->expr->type->is<IR::Type_Stack>() &&
-            op1->member == "$stkvalid" && op1->expr->type->is<IR::Type_Stack>()) {
+        if (op0->member == "$stkvalid" && op0->expr->type->is<P4::IR::Type_Stack>() &&
+            op1->member == "$stkvalid" && op1->expr->type->is<P4::IR::Type_Stack>()) {
             auto &s = stacks->at(op0->expr->toString());
             // Because of the way stkvalid is formatted, the lower limit of the
             // first the operand will always be equal to maxpop
-            if (auto e2 = operand0->e2->to<IR::Constant>()) {
+            if (auto e2 = operand0->e2->to<P4::IR::Constant>()) {
                 int total_size = op0->type->width_bits();
                 s.maxpop = e2->asInt();
                 s.maxpush = total_size - s.maxpop - s.size;
@@ -83,9 +85,9 @@ void CollectHeaderStackInfo::postorder(IR::MAU::Primitive* prim) {
     }
 }
 
-void CollectHeaderStackInfo::postorder(IR::BFN::Pipe* pipe) {
+void CollectHeaderStackInfo::postorder(P4::IR::BFN::Pipe* pipe) {
     // Store the information we've collected in
-    // `IR::BFN::Pipe::headerStackInfo` so other passes can access it.
+    // `P4::IR::BFN::Pipe::headerStackInfo` so other passes can access it.
     pipe->headerStackInfo = stacks;
     if (LOGGING(3)) {
         LOG3("CollectHeaderStackInfo: Collected");
@@ -94,7 +96,7 @@ void CollectHeaderStackInfo::postorder(IR::BFN::Pipe* pipe) {
                  " (" << kv.second.maxpush << " / " << kv.second.maxpop <<")"); } }
 }
 
-void ElimUnusedHeaderStackInfo::Find::postorder(const IR::HeaderStack* hs) {
+void ElimUnusedHeaderStackInfo::Find::postorder(const P4::IR::HeaderStack* hs) {
     used.insert(hs->name);
 }
 
@@ -107,13 +109,13 @@ void ElimUnusedHeaderStackInfo::Find::end_apply() {
             LOG5("ElimUnusedHeaderStackInfo: Found used stack " << hs.name); } }
 }
 
-void ElimUnusedHeaderStackInfo::Elim::postorder(IR::BFN::Pipe* pipe) {
+void ElimUnusedHeaderStackInfo::Elim::postorder(P4::IR::BFN::Pipe* pipe) {
     for (auto& hs : self.unused) {
         LOG5("ElimUnusedHeaderStackInfo: Removing stack " << hs);
         pipe->headerStackInfo->info.erase(hs); }
 }
 
-IR::Node* RemovePushInitialization::preorder(IR::MAU::Action* act) {
+P4::IR::Node* RemovePushInitialization::preorder(P4::IR::MAU::Action* act) {
     // Maps the header to a bitmap of the indicies pushed so far.
     ordered_map<cstring, bitvec> pushed;
 
@@ -121,8 +123,8 @@ IR::Node* RemovePushInitialization::preorder(IR::MAU::Action* act) {
     // then cleared when an initialization is found.
     ordered_map<cstring, bitvec> pushed_inits;
 
-    ordered_map<cstring, const IR::MAU::Primitive*> push_prims;
-    IR::Vector<IR::MAU::Primitive> to_keep;
+    ordered_map<cstring, const P4::IR::MAU::Primitive*> push_prims;
+    P4::IR::Vector<P4::IR::MAU::Primitive> to_keep;
 
     for (auto* prim : act->action) {
         to_keep.push_back(prim);
@@ -131,7 +133,7 @@ IR::Node* RemovePushInitialization::preorder(IR::MAU::Action* act) {
             // to pushed.  Otherwise, shift the bitvec to account for
             // the newly pushed elements.
             cstring dst = prim->operands[0]->toString();
-            int pushAmount = prim->operands[1]->to<IR::Constant>()->asInt();
+            int pushAmount = prim->operands[1]->to<P4::IR::Constant>()->asInt();
             LOG5("Found " << dst << " with " << pushAmount <<
                  " pushed elements that need to be initialized: " << prim);
             if (pushed.find(dst) == pushed.end()) {
@@ -146,11 +148,11 @@ IR::Node* RemovePushInitialization::preorder(IR::MAU::Action* act) {
         } else if (prim->name == "modify_field") {
             // If this sets the validity of a header stack element, check that
             // it's a newly-added element, and mark it for removal.
-            if (auto* dst = prim->operands[0]->to<IR::Member>()) {
+            if (auto* dst = prim->operands[0]->to<P4::IR::Member>()) {
                 if (dst->member.toString() != "$valid") continue;
-                if (auto* ref = dst->expr->to<IR::HeaderStackItemRef>()) {
-                    if (auto* idxNode = ref->index()->to<IR::Constant>()) {
-                        if (auto* src = prim->operands[1]->to<IR::Constant>()) {
+                if (auto* ref = dst->expr->to<P4::IR::HeaderStackItemRef>()) {
+                    if (auto* idxNode = ref->index()->to<P4::IR::Constant>()) {
+                        if (auto* src = prim->operands[1]->to<P4::IR::Constant>()) {
                             if (src->asInt() != 1) continue;
                             auto stkName = ref->base()->toString();
                             if (pushed.find(stkName) == pushed.end())
@@ -180,7 +182,7 @@ IR::Node* RemovePushInitialization::preorder(IR::MAU::Action* act) {
     return act;
 }
 
-IR::Node* ValidToStkvalid::preorder(IR::BFN::Pipe* pipe) {
+P4::IR::Node* ValidToStkvalid::preorder(P4::IR::BFN::Pipe* pipe) {
     LOG5("ENTERING ValidToStkvalid");
     stack_info_ = pipe->headerStackInfo;
     BUG_CHECK(stack_info_, "No header stack info.  Running ValidToStkvalid "
@@ -188,9 +190,9 @@ IR::Node* ValidToStkvalid::preorder(IR::BFN::Pipe* pipe) {
     return pipe;
 }
 
-IR::Node* ValidToStkvalid::postorder(IR::Member* member) {
+P4::IR::Node* ValidToStkvalid::postorder(P4::IR::Member* member) {
     LOG5("\tmember: " << member);
-    auto* ref = member->expr->to<IR::HeaderStackItemRef>();
+    auto* ref = member->expr->to<P4::IR::HeaderStackItemRef>();
     // Skip everything but header stack validity fields (hdr[x].$valid).
     if (!ref || member->member.toString() != "$valid")
         return member;
@@ -200,7 +202,7 @@ IR::Node* ValidToStkvalid::postorder(IR::Member* member) {
         return member;
     auto info = stack_info_->at(stk->name.toString());
 
-    auto* idxNode = ref->index()->to<IR::Constant>();
+    auto* idxNode = ref->index()->to<P4::IR::Constant>();
     BUG_CHECK(idxNode, "Found a header stack with a non-constant reference in "
               "the back end: %1%", cstring::to_cstring(member));
     int idx = idxNode->asInt();
@@ -212,28 +214,28 @@ IR::Node* ValidToStkvalid::postorder(IR::Member* member) {
     BUG_CHECK(stkvalidIdx >= 0 && stkvalidIdx < info.size + info.maxpop + info.maxpush,
               "stkvalidIdx %d out of range for %s", stkvalidIdx, ref->base());
 
-    auto* stkvalid = new IR::Member(member->srcInfo,
-                                    IR::Type::Bits::get(info.size + info.maxpop + info.maxpush),
+    auto* stkvalid = new P4::IR::Member(member->srcInfo,
+                                    P4::IR::Type::Bits::get(info.size + info.maxpop + info.maxpush),
                                     ref->base(),
                                     "$stkvalid");
-    auto* slice = new IR::Slice(stkvalid, stkvalidIdx, stkvalidIdx);
-    auto* alias = new IR::BFN::AliasSlice(slice, member);
+    auto* slice = new P4::IR::Slice(stkvalid, stkvalidIdx, stkvalidIdx);
+    auto* alias = new P4::IR::BFN::AliasSlice(slice, member);
 
     LOG5("Replacing " << member << " with " << alias);
     return alias;
 }
 
-IR::Node* ValidToStkvalid::postorder(IR::BFN::Extract* extract) {
+P4::IR::Node* ValidToStkvalid::postorder(P4::IR::BFN::Extract* extract) {
     LOG5("\textract: " << extract);
     // Check whether the destination is an extraction to a $stkvalid slice.  If
     // so, get the bit being written to.
-    auto* fieldLVal = extract->dest->to<IR::BFN::FieldLVal>();
+    auto* fieldLVal = extract->dest->to<P4::IR::BFN::FieldLVal>();
     if (!fieldLVal) return extract;
-    auto* slice = fieldLVal->field->to<IR::Slice>();
+    auto* slice = fieldLVal->field->to<P4::IR::Slice>();
     if (!slice) return extract;
-    auto* member = slice->e0->to<IR::Member>();
+    auto* member = slice->e0->to<P4::IR::Member>();
     if (!member || member->member.toString() != "$stkvalid") return extract;
-    auto* src = extract->source->to<IR::BFN::ConstantRVal>();
+    auto* src = extract->source->to<P4::IR::BFN::ConstantRVal>();
     if (!src || src->constant->asInt() != 1) return extract;
     int dst = slice->getL();
 
@@ -243,7 +245,7 @@ IR::Node* ValidToStkvalid::postorder(IR::BFN::Extract* extract) {
     // TODO: This discards aliasing information, because it replaces the
     // stkvalid slice (which is aliased to $valid) with the entirety of
     // $stkvalid, which is not.
-    extract->dest = new IR::BFN::FieldLVal(member);
-    extract->source = new IR::BFN::ConstantRVal(1 << dst);
+    extract->dest = new P4::IR::BFN::FieldLVal(member);
+    extract->source = new P4::IR::BFN::ConstantRVal(1 << dst);
     return extract;
 }

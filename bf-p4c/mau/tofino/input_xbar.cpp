@@ -25,7 +25,7 @@ constexpr le_bitrange Tofino::IXBar::SELECT_BIT_RANGE;
 // mess up template instantiations of operator<<
 std::ostream &operator<<(std::ostream &out,
     const ordered_map<const PHV::Field *,
-                      std::map<le_bitrange, const IR::Expression *>> &phv_sources) {
+                      std::map<le_bitrange, const P4::IR::Expression *>> &phv_sources) {
     const char *sep = "phv_sources: ";
     for (auto &el : phv_sources) {
         for (auto &sl : el.second) {
@@ -35,7 +35,7 @@ std::ostream &operator<<(std::ostream &out,
     return out;
 }
 std::ostream &operator<<(std::ostream &out,
-    const std::vector<const IR::MAU::IXBarExpression *> &hash_sources) {
+    const std::vector<const P4::IR::MAU::IXBarExpression *> &hash_sources) {
     const char *sep = "  hash_sources: ";
     for (auto &el : hash_sources) {
         out << sep << *el;
@@ -1521,7 +1521,7 @@ IXBar::hash_matrix_reqs IXBar::match_hash_reqs(const LayoutOption *lo,
     return hash_matrix_reqs(groups_required, bits_required, false);
 }
 
-Visitor::profile_t IXBar::FindSaluSources::init_apply(const IR::Node *root) {
+Visitor::profile_t IXBar::FindSaluSources::init_apply(const P4::IR::Node *root) {
     profile_t rv = MauInspector::init_apply(root);
     if (!tbl->for_dleft() || tbl->match_key.empty())
         return rv;
@@ -1536,21 +1536,21 @@ Visitor::profile_t IXBar::FindSaluSources::init_apply(const IR::Node *root) {
     return rv;
 }
 
-bool IXBar::FindSaluSources::preorder(const IR::MAU::StatefulAlu *) {
+bool IXBar::FindSaluSources::preorder(const P4::IR::MAU::StatefulAlu *) {
     return !dleft;
 }
 
-bool IXBar::FindSaluSources::preorder(const IR::MAU::SaluAction *a) {
+bool IXBar::FindSaluSources::preorder(const P4::IR::MAU::SaluAction *a) {
     visit(a->action, "action");  // just visit the action instructions
     return false;
 }
 
-bool IXBar::FindSaluSources::preorder(const IR::Expression *e) {
+bool IXBar::FindSaluSources::preorder(const P4::IR::Expression *e) {
     le_bitrange bits;
     KeyInfo ki;
     if (auto *finfo = phv.field(e, &bits)) {
         FieldManagement(&map_alloc, field_list_order, e, &fields_needed, phv, ki, tbl);
-        if (!findContext<IR::MAU::IXBarExpression>()) {
+        if (!findContext<P4::IR::MAU::IXBarExpression>()) {
             phv_sources[finfo][bits] = e;
             collapse_contained(phv_sources[finfo]);
         }
@@ -1559,12 +1559,12 @@ bool IXBar::FindSaluSources::preorder(const IR::Expression *e) {
     return true;
 }
 
-bool IXBar::FindSaluSources::preorder(const IR::MAU::HashDist *) {
+bool IXBar::FindSaluSources::preorder(const P4::IR::MAU::HashDist *) {
     // Handled in a different section
     return false;
 }
 
-bool IXBar::FindSaluSources::preorder(const IR::MAU::IXBarExpression *e) {
+bool IXBar::FindSaluSources::preorder(const P4::IR::MAU::IXBarExpression *e) {
     for (auto ex : hash_sources)
         if (ex->equiv(*e))
             return true;
@@ -1573,7 +1573,7 @@ bool IXBar::FindSaluSources::preorder(const IR::MAU::IXBarExpression *e) {
 }
 
 /* remove ranges from the map iff they are contained in some other range in the map */
-void IXBar::FindSaluSources::collapse_contained(std::map<le_bitrange, const IR::Expression *> &m) {
+void IXBar::FindSaluSources::collapse_contained(std::map<le_bitrange, const P4::IR::Expression *> &m) {
     for (auto it = m.begin(); it != m.end();) {
         bool remove = false;
         for (auto &el : Keys(m)) {
@@ -1588,7 +1588,7 @@ void IXBar::FindSaluSources::collapse_contained(std::map<le_bitrange, const IR::
             ++it; }
 }
 
-bool IXBar::allocMatch(bool ternary, const IR::MAU::Table *tbl,
+bool IXBar::allocMatch(bool ternary, const P4::IR::MAU::Table *tbl,
                        const PhvInfo &phv, Use &alloc,
                        safe_vector<IXBar::Use::Byte *> &alloced,
                        hash_matrix_reqs &hm_reqs) {
@@ -1600,7 +1600,7 @@ bool IXBar::allocMatch(bool ternary, const IR::MAU::Table *tbl,
 
     // For overlapping keys of different types where one type is "range", the
     // range key takes precedence to correctly set up dirtcam bits
-    std::map<std::pair<cstring, le_bitrange>, const IR::MAU::TableKey*> validKeys;
+    std::map<std::pair<cstring, le_bitrange>, const P4::IR::MAU::TableKey*> validKeys;
     for (auto ixbar_read : tbl->match_key) {
         if (!ixbar_read->for_match())
             continue;
@@ -1820,12 +1820,12 @@ void IXBar::getHashDistGroups(unsigned hash_table_input, int hash_group_opt[HASH
  * Really should be replaced by an extern function call
  * JIRA-DOC: P4C-1107
  */
-void IXBar::determine_proxy_hash_alg(const PhvInfo &phv, const IR::MAU::Table *tbl,
+void IXBar::determine_proxy_hash_alg(const PhvInfo &phv, const P4::IR::MAU::Table *tbl,
                                      Use &alloc, int group) {
     bool hash_function_found = false;
     auto annot = tbl->match_table->getAnnotations();
     if (auto s = annot->getSingle("proxy_hash_algorithm"_cs)) {
-        auto pragma_val = s->expr.at(0)->to<IR::StringLiteral>();
+        auto pragma_val = s->expr.at(0)->to<P4::IR::StringLiteral>();
         if (pragma_val == nullptr) {
             ::error(ErrorType::ERR_INVALID,
                     "proxy_hash_algorithm pragma on table %1% must be a string", tbl);
@@ -1837,10 +1837,10 @@ void IXBar::determine_proxy_hash_alg(const PhvInfo &phv, const IR::MAU::Table *t
         alloc.proxy_hash_key_use.algorithm = tbl->layout.proxy_hash_algorithm;
     }
     if (!hash_function_found) {
-        alloc.proxy_hash_key_use.algorithm = IR::MAU::HashFunction::random();
+        alloc.proxy_hash_key_use.algorithm = P4::IR::MAU::HashFunction::random();
     }
 
-    if (alloc.proxy_hash_key_use.algorithm.type == IR::MAU::HashFunction::IDENTITY)
+    if (alloc.proxy_hash_key_use.algorithm.type == P4::IR::MAU::HashFunction::IDENTITY)
         ::error(ErrorType::ERR_UNSUPPORTED,
                 "A proxy hash table with an identity algorithm is not supported, as specified "
                 "on table %1%.  Using a normal exact match table.", tbl);
@@ -1868,7 +1868,7 @@ void IXBar::determine_proxy_hash_alg(const PhvInfo &phv, const IR::MAU::Table *t
  *
  * This specifically coordinates with the proxy_hash_function JSON node in the compiler
  */
-bool IXBar::allocProxyHashKey(const IR::MAU::Table *tbl, const PhvInfo &phv,
+bool IXBar::allocProxyHashKey(const P4::IR::MAU::Table *tbl, const PhvInfo &phv,
         const LayoutOption *lo, Use &alloc, hash_matrix_reqs &hm_reqs) {
     if (tbl->match_key.empty()) return true;
     ContByteConversion map_alloc;
@@ -2005,7 +2005,7 @@ bool IXBar::allocProxyHashKey(const IR::MAU::Table *tbl, const PhvInfo &phv,
  * key (similar to any SRam based match table), and a second hash for the comparison of the
  * hash key.
  */
-bool IXBar::allocProxyHash(const IR::MAU::Table *tbl, const PhvInfo &phv, const LayoutOption *lo,
+bool IXBar::allocProxyHash(const P4::IR::MAU::Table *tbl, const PhvInfo &phv, const LayoutOption *lo,
         Use &alloc, Use &proxy_hash_alloc) {
     if (!lo) return false;
     safe_vector<IXBar::Use::Byte *> alloced;
@@ -2060,7 +2060,7 @@ bool IXBar::allocProxyHash(const IR::MAU::Table *tbl, const PhvInfo &phv, const 
 
 /* Allocate all hashes used within a hash group of a table. The number of hashes in the
    hash group are determined by the layout option */
-bool IXBar::allocAllHashWays(bool ternary, const IR::MAU::Table *tbl, Use &alloc,
+bool IXBar::allocAllHashWays(bool ternary, const P4::IR::MAU::Table *tbl, Use &alloc,
         const LayoutOption *layout_option, size_t start, size_t last,
         const hash_matrix_reqs &hm_reqs) {
     if (!layout_option) return false;
@@ -2161,7 +2161,7 @@ bool IXBar::allocAllHashWays(bool ternary, const IR::MAU::Table *tbl, Use &alloc
 
 /* Individual Hash way allocated, called from allocAllHashWays.  Sets up the select bit
    mask provided by the layout option */
-bool IXBar::allocHashWay(const IR::MAU::Table *tbl, const LayoutOption *layout_option,
+bool IXBar::allocHashWay(const P4::IR::MAU::Table *tbl, const LayoutOption *layout_option,
         size_t index, std::map<int, bitvec> &slice_to_select_bits, Use &alloc,
         unsigned local_hash_table_input, unsigned hf_hash_table_input, int hash_group) {
     int way_size = layout_option->way_sizes[index];
@@ -2258,7 +2258,7 @@ bool IXBar::allocHashWay(const IR::MAU::Table *tbl, const LayoutOption *layout_o
  *  for the partition, and once it is completed, only then will it append it to the rest
  *  of the match alloc.
  */
-bool IXBar::allocPartition(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &match_alloc,
+bool IXBar::allocPartition(const P4::IR::MAU::Table *tbl, const PhvInfo &phv, Use &match_alloc,
                            bool second_try) {
     if (tbl->match_key.empty()) return true;
     ContByteConversion map_alloc;
@@ -2365,7 +2365,7 @@ bool IXBar::allocPartition(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &m
     return true;
 }
 
-bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &alloc,
+bool IXBar::allocGateway(const P4::IR::MAU::Table *tbl, const PhvInfo &phv, Use &alloc,
                          const LayoutOption *lo, bool second_try) {
     alloc.gw_search_bus = false; alloc.gw_hash_group = false;
     alloc.gw_search_bus_bytes = 0;
@@ -2585,7 +2585,7 @@ void IXBar::write_hash_use(int max_group, int max_single_bit, unsigned hash_tabl
 /** Selector allocation algorithm.  Currently reserves an entire section of hash matrix,
  *  even if the selector is only on fair mode, rather than resilient
  */
-bool IXBar::allocSelector(const IR::MAU::Selector *as, const IR::MAU::Table *tbl,
+bool IXBar::allocSelector(const P4::IR::MAU::Selector *as, const P4::IR::MAU::Table *tbl,
                           const PhvInfo &phv, Use &alloc, cstring name) {
     auto pos = allocated_attached.find(as);
     if (pos != allocated_attached.end()) {
@@ -2629,7 +2629,7 @@ bool IXBar::allocSelector(const IR::MAU::Selector *as, const IR::MAU::Table *tbl
     mah.allocated = true;
     mah.group = hash_group;
     mah.algorithm = as->algorithm;
-    int mode_width_bits = as->mode == IR::MAU::SelectorMode::RESILIENT ?
+    int mode_width_bits = as->mode == P4::IR::MAU::SelectorMode::RESILIENT ?
                                       RESILIENT_MODE_HASH_BITS : FAIR_MODE_HASH_BITS;
     if (mah.algorithm.size_from_algorithm()) {
         if (mode_width_bits > mah.algorithm.size) {
@@ -2645,7 +2645,7 @@ bool IXBar::allocSelector(const IR::MAU::Selector *as, const IR::MAU::Table *tbl
 
     // Mark the positions of each of the fields on the identity hash, so that the
     // asm_output can easily locate the positions of all of the the associated fields
-    if (mah.algorithm.type == IR::MAU::HashFunction::IDENTITY) {
+    if (mah.algorithm.type == P4::IR::MAU::HashFunction::IDENTITY) {
         int bits_seen = 0;
         for (auto it = alloc.field_list_order.rbegin(); it != alloc.field_list_order.rend(); it++) {
             auto *expr = *it;
@@ -2733,7 +2733,7 @@ bool IXBar::can_allocate_on_search_bus(IXBar::Use &alloc, const PHV::Field *fiel
  *  Similar to stateful ALU allocation, except in the LPF/WRED case it is only one field,
  *  and thus one input xbar source
  */
-bool IXBar::allocMeter(const IR::MAU::Meter *mtr, const IR::MAU::Table *tbl, const PhvInfo &phv,
+bool IXBar::allocMeter(const P4::IR::MAU::Meter *mtr, const P4::IR::MAU::Table *tbl, const PhvInfo &phv,
                        Use &alloc, bool on_search_bus) {
     auto pos = allocated_attached.find(mtr);
     if (pos != allocated_attached.end()) {
@@ -2808,7 +2808,7 @@ bool IXBar::allocMeter(const IR::MAU::Meter *mtr, const IR::MAU::Table *tbl, con
         mah.allocated = true;
         mah.group = hash_group;
         mah.bit_mask.setrange(0, bits.size());
-        mah.algorithm = IR::MAU::HashFunction::identity();
+        mah.algorithm = P4::IR::MAU::HashFunction::identity();
         mah.computed_expressions[0] = mtr->input;
         int max_bit = max_bit_to_byte(mah.bit_mask);
         int max_group = max_index_group(max_bit);
@@ -2835,7 +2835,7 @@ bool IXBar::allocMeter(const IR::MAU::Meter *mtr, const IR::MAU::Table *tbl, con
  *  of the bytes in the allocation if the order is to be reversed.
  *
  */
-bool IXBar::setup_stateful_search_bus(const IR::MAU::StatefulAlu *salu, Use &alloc,
+bool IXBar::setup_stateful_search_bus(const P4::IR::MAU::StatefulAlu *salu, Use &alloc,
                                       const FindSaluSources &sources, unsigned &byte_mask) {
     int width = salu->source_width()/8U;
 
@@ -2931,7 +2931,7 @@ bool IXBar::setup_stateful_search_bus(const IR::MAU::StatefulAlu *salu, Use &all
  *  the positions of these individual sources within the hash matrix, as the Galois
  *  matrix has to set up an identity matrix for this
  */
-bool IXBar::setup_stateful_hash_bus(const PhvInfo &, const IR::MAU::StatefulAlu *salu,
+bool IXBar::setup_stateful_hash_bus(const PhvInfo &, const P4::IR::MAU::StatefulAlu *salu,
                                     Use &alloc, const FindSaluSources &sources) {
     auto &mah = alloc.meter_alu_hash;
     unsigned local_hash_table_input = alloc.compute_hash_tables();
@@ -2946,7 +2946,7 @@ bool IXBar::setup_stateful_hash_bus(const PhvInfo &, const IR::MAU::StatefulAlu 
     mah.allocated = true;
     mah.group = hash_group;
     if (sources.dleft) {
-        mah.algorithm = IR::MAU::HashFunction::random();
+        mah.algorithm = P4::IR::MAU::HashFunction::random();
         mah.bit_mask.setrange(1, get_meter_alu_hash_bits() - 1);
         // For dleft digest, we need a fixed 1 bit to ensure the digest is nonzero
         // as the valid bit is not contiguous with the digest in the sram field, so
@@ -2954,18 +2954,18 @@ bool IXBar::setup_stateful_hash_bus(const PhvInfo &, const IR::MAU::StatefulAlu 
         alloc.hash_seed[hash_group] = bitvec(1);
         alloc.salu_input_source.hash_bytemask = 0x7f;  // 7 bytes to cover all 52 bits
     } else {
-        mah.algorithm = IR::MAU::HashFunction::identity();
+        mah.algorithm = P4::IR::MAU::HashFunction::identity();
         bitvec phv_src_inuse;
         // Collate all slices from phv sources into a slice list and sort it
         // based on slice width
-        std::vector<const IR::Expression*> slices;
+        std::vector<const P4::IR::Expression*> slices;
         for (auto &field : Values(sources.phv_sources)) {
             for (auto &slice : Values(field)) {
                 slices.push_back(slice);
             }
         }
         std::sort(slices.begin(), slices.end(),
-                [](const IR::Expression* a, const IR::Expression*b) {
+                [](const P4::IR::Expression* a, const P4::IR::Expression*b) {
                 return a->type->width_bits() > b->type->width_bits(); });
 
         // Since the sorting is done by width, while looping the greater value
@@ -3094,7 +3094,7 @@ bool IXBar::setup_stateful_hash_bus(const PhvInfo &, const IR::MAU::StatefulAlu 
  *  for both.  In general, it might be easier just to influence PHV allocation in that
  *  case.
  */
-bool IXBar::allocStateful(const IR::MAU::StatefulAlu *salu, const IR::MAU::Table *tbl,
+bool IXBar::allocStateful(const P4::IR::MAU::StatefulAlu *salu, const P4::IR::MAU::Table *tbl,
                           const PhvInfo &phv, Use &alloc, bool on_search_bus) {
     auto pos = allocated_attached.find(salu);
     if (pos != allocated_attached.end()) {
@@ -3323,7 +3323,7 @@ bool IXBar::allocHashDistWideAddress(bitvec post_expand_bits, bitvec possible_sh
 
 /**
  * Each HashDistAllocPostExpand coordinates to a single HashDistIRUse.  Both represent a single
- * IR::MAU::HashDist object.   The HashDistIRUse object is a subset of the total
+ * P4::IR::MAU::HashDist object.   The HashDistIRUse object is a subset of the total
  * hash dist object, (i.e. multiple IR nodes that are 8 bit immediate sections).  The purpose
  * of this is to subset the IR section
  * @param alloc_req
@@ -3341,7 +3341,7 @@ bool IXBar::allocHashDistWideAddress(bitvec post_expand_bits, bitvec possible_sh
  */
 void IXBar::buildHashDistIRUse(HashDistAllocPostExpand &alloc_req, HashDistUse &hdu,
         IXBar::Use &all_reqs, const PhvInfo &phv, int hash_group, bitvec hash_bits_used,
-        bitvec total_post_expand_bits, const IR::MAU::Table* tbl, cstring name) {
+        bitvec total_post_expand_bits, const P4::IR::MAU::Table* tbl, cstring name) {
     hdu.ir_allocations.emplace_back();
     auto &rv = hdu.ir_allocations.back();
     Use *use = new Use();
@@ -3354,7 +3354,7 @@ void IXBar::buildHashDistIRUse(HashDistAllocPostExpand &alloc_req, HashDistUse &
     ki.hash_dist = true;
 
     for (auto input : alloc_req.func->inputs) {
-        safe_vector<const IR::Expression *> flo;
+        safe_vector<const P4::IR::Expression *> flo;
         FieldManagement(&map_alloc, flo, input, &fields_needed, phv, ki, tbl);
     }
 
@@ -3424,7 +3424,7 @@ void IXBar::buildHashDistIRUse(HashDistAllocPostExpand &alloc_req, HashDistUse &
         bits_of_my_hash_seen += overlap.size();
     }
     hdh.algorithm = alloc_req.func->algorithm;
-    if (hdh.algorithm.type == IR::MAU::HashFunction::IDENTITY) {
+    if (hdh.algorithm.type == P4::IR::MAU::HashFunction::IDENTITY) {
         hdh.hash_gen_expr = alloc_req.func->hash_gen_expr;
     } else {
         // Non-"identity" hashes can't be built from (just) the hash_gen_expr
@@ -3507,7 +3507,7 @@ void IXBar::lockInHashDistArrays(safe_vector<Use::Byte *> *alloced, int hash_gro
  * per 23 bit section masks out the irrelevant bits, and shifts the bits to the relevant
  * position, which is necessary for many of the address positions.
  *
- * Thus if two IR::MAU::HashDist object were to share the same unit, they would require the
+ * Thus if two P4::IR::MAU::HashDist object were to share the same unit, they would require the
  * same hash function input, the same expand, the same mask, and the same shift.  (A couple
  * exceptions to this:
  *     - Potentially anything headed to immediate, where data can be further masked
@@ -3533,7 +3533,7 @@ void IXBar::lockInHashDistArrays(safe_vector<Use::Byte *> *alloced, int hash_gro
  * allocation as well as the per IR allocation
  */
 bool IXBar::allocHashDist(safe_vector<HashDistAllocPostExpand> &alloc_reqs, HashDistUse &use,
-        const PhvInfo &phv, cstring name, const IR::MAU::Table* tbl, bool second_try) {
+        const PhvInfo &phv, cstring name, const P4::IR::MAU::Table* tbl, bool second_try) {
     IXBar::Use all_reqs;
     ContByteConversion               map_alloc;
     std::map<cstring, bitvec>        fields_needed;
@@ -3552,7 +3552,7 @@ bool IXBar::allocHashDist(safe_vector<HashDistAllocPostExpand> &alloc_reqs, Hash
     // might be sourced from multiple P4 level objects.
     for (auto alloc_req : alloc_reqs) {
         for (auto input : alloc_req.func->inputs) {
-            safe_vector<const IR::Expression *> flo;
+            safe_vector<const P4::IR::Expression *> flo;
             FieldManagement(&map_alloc, flo, input, &fields_needed, phv, ki, tbl);
         }
         bits_in_use.setrange(alloc_req.bits_in_use.lo, alloc_req.bits_in_use.size());
@@ -3707,9 +3707,9 @@ void IXBar::createChainedHashDist(const HashDistUse &hd_alloc, HashDistUse &chai
  * Using the bfn_hash_function, this algorithm determines the necessary final_xor positions
  * and writes them into the seed output.
  */
-bitvec IXBar::determine_final_xor(const IR::MAU::HashFunction *hf,
+bitvec IXBar::determine_final_xor(const P4::IR::MAU::HashFunction *hf,
         const PhvInfo& /*unused*/, std::map<int, le_bitrange> &bit_starts,
-        safe_vector<const IR::Expression *> field_list, int total_input_bits) {
+        safe_vector<const P4::IR::Expression *> field_list, int total_input_bits) {
     safe_vector<hash_matrix_output_t> hash_outputs;
     for (auto &entry : bit_starts) {
         hash_matrix_output_t hash_output;
@@ -3728,12 +3728,12 @@ bitvec IXBar::determine_final_xor(const IR::MAU::HashFunction *hf,
     for (auto it = field_list.rbegin(); it != field_list.rend(); it++) {
         auto &entry = *it;
         ixbar_input_t hash_input;
-        if (entry->is<IR::Constant>()) {
+        if (entry->is<P4::IR::Constant>()) {
             hash_input.type = ixbar_input_type::tCONST;
-            if (!entry->to<IR::Constant>()->fitsUint64())
+            if (!entry->to<P4::IR::Constant>()->fitsUint64())
                 ::error(ErrorType::ERR_OVERLIMIT, "The size of constant %1% is too large, "
                         "the maximum supported size is 64 bit", entry);
-            hash_input.u.constant = entry->to<IR::Constant>()->asUint64();
+            hash_input.u.constant = entry->to<P4::IR::Constant>()->asUint64();
         } else {
             hash_input.type = ixbar_input_type::tPHV;
             hash_input.u.valid = true;
@@ -3762,7 +3762,7 @@ IXBar::P4HashFunction IXBar::P4HashFunction::split(le_bitrange split) const {
     rv.algorithm = algorithm;
     rv.hash_bits = { split.lo + hash_bits.lo, hash_bits.lo + split.hi };
     int bits_seen = 0;
-    if (algorithm == IR::MAU::HashFunction::identity()) {
+    if (algorithm == P4::IR::MAU::HashFunction::identity()) {
         for (auto expr : inputs) {
             le_bitrange current_bits = { bits_seen, bits_seen + expr->type->width_bits() - 1 };
             auto boost_sl = toClosedRange<RangeUnit::Bit, Endian::Little>
@@ -3784,7 +3784,7 @@ IXBar::P4HashFunction IXBar::P4HashFunction::split(le_bitrange split) const {
 }
 */
 
-void IXBar::XBarHashDist::build_function(const IR::MAU::HashDist *hd, P4HashFunction **func,
+void IXBar::XBarHashDist::build_function(const P4::IR::MAU::HashDist *hd, P4HashFunction **func,
         le_bitrange *bits) {
     BuildP4HashFunction builder(phv);
     hd->expr->apply(builder);
@@ -3801,7 +3801,7 @@ void IXBar::XBarHashDist::build_function(const IR::MAU::HashDist *hd, P4HashFunc
  * object is going, determine the bits required, the max right shift that is needed,
  * and the P4 Hash Function that will be required for the galois matrix.
  */
-void IXBar::XBarHashDist::build_req(const IR::MAU::HashDist *hd, const IR::Node *rel_node,
+void IXBar::XBarHashDist::build_req(const P4::IR::MAU::HashDist *hd, const P4::IR::Node *rel_node,
         bool created_hd) {
     le_bitrange post_expand_bits = { 0, hd->type->width_bits() - 1 };
     HashDistDest_t dest;
@@ -3810,16 +3810,16 @@ void IXBar::XBarHashDist::build_req(const IR::MAU::HashDist *hd, const IR::Node 
     int shift = 0;
     int color_mapram_shift = -1;
     bool chained_addr = false;
-    if (rel_node->is<IR::MAU::Selector>()) {
+    if (rel_node->is<P4::IR::MAU::Selector>()) {
         dest = IXBar::HD_HASHMOD;
-    } else if (rel_node->is<IR::MAU::Meter>()) {
+    } else if (rel_node->is<P4::IR::MAU::Meter>()) {
         dest = IXBar::HD_PRECOLOR;
-    } else if (auto ba = rel_node->to<IR::MAU::BackendAttached>()) {
-        if (auto cntr = ba->attached->to<IR::MAU::Counter>()) {
+    } else if (auto ba = rel_node->to<P4::IR::MAU::BackendAttached>()) {
+        if (auto cntr = ba->attached->to<P4::IR::MAU::Counter>()) {
             dest = IXBar::HD_STATS_ADR;
             int per_word = CounterPerWord(cntr);
             shift = 3 - ceil_log2(per_word);
-        } else if (auto salu = ba->attached->to<IR::MAU::StatefulAlu>()) {
+        } else if (auto salu = ba->attached->to<P4::IR::MAU::StatefulAlu>()) {
             dest = IXBar::HD_METER_ADR;
             // Chained addresses don't need to shift as the input itself is an address
             if (salu->chain_vpn || attached_entries.at(salu).need_more) {
@@ -3838,7 +3838,7 @@ void IXBar::XBarHashDist::build_req(const IR::MAU::HashDist *hd, const IR::Node 
                 // table have both dleft and another hash_dist use?
                 post_expand_bits.hi = ceil_log2(lo->dleft_hash_sizes[0]) + 10 - 1;
             }
-        } else if (ba->attached->to<IR::MAU::Meter>()) {
+        } else if (ba->attached->to<P4::IR::MAU::Meter>()) {
             dest = IXBar::HD_METER_ADR;
             shift = 7;
             color_mapram_shift = 3;
@@ -3864,7 +3864,7 @@ void IXBar::XBarHashDist::build_req(const IR::MAU::HashDist *hd, const IR::Node 
  * For ActionData tables, these don't yet exist until after TablePlacement, so no Context node
  * exists for these.  They have to be generated separately.
  */
-void IXBar::XBarHashDist::build_action_data_req(const IR::MAU::HashDist *hd) {
+void IXBar::XBarHashDist::build_action_data_req(const P4::IR::MAU::HashDist *hd) {
     le_bitrange post_expand_bits = { 0, hd->type->width_bits() - 1 };
     HashDistDest_t dest = HD_ACTIONDATA_ADR;
     P4HashFunction *func = nullptr;
@@ -3924,7 +3924,7 @@ void IXBar::XBarHashDist::hash_action() {
     if (!lo || !lo->layout.hash_action)
         return;
 
-    IR::Vector<IR::Expression> components;
+    P4::IR::Vector<P4::IR::Expression> components;
 
     /**
      * When action data is more than 128 bits, the compiler must add extra
@@ -3967,14 +3967,14 @@ void IXBar::XBarHashDist::hash_action() {
             auto num_bits_for_vpn = offset_from_bit_zero - RAM_LINE_SELECT_BITS;
             auto vpn_start = bits.size() - num_bits_for_vpn;
             if (vpn_start - 1 >= 0) {
-                auto slice = new IR::Slice((*read)->expr, vpn_start - 1, 0);
+                auto slice = new P4::IR::Slice((*read)->expr, vpn_start - 1, 0);
                 components.insert(components.begin(), slice); }
             BUG_CHECK(huffman_vpn_bits != 0, "vpn shift cannot be zero");
             components.insert(components.begin(),
-                    new IR::Constant(IR::Type::Bits::get(huffman_vpn_bits),
+                    new P4::IR::Constant(P4::IR::Type::Bits::get(huffman_vpn_bits),
                         ActionDataVPNStartPosition(&lo->layout)));
             if (bits.size() - 1 >= vpn_start) {
-                auto slice = new IR::Slice((*read)->expr, bits.size() - 1, vpn_start);
+                auto slice = new P4::IR::Slice((*read)->expr, bits.size() - 1, vpn_start);
                 components.insert(components.begin(), slice); }
             add_vpn_gap = false;
             offset_from_bit_zero += huffman_vpn_bits;
@@ -3982,13 +3982,13 @@ void IXBar::XBarHashDist::hash_action() {
             components.insert(components.begin(), (*read)->expr);
         }
     }
-    IR::ListExpression *field_list = new IR::ListExpression(components);
+    P4::IR::ListExpression *field_list = new P4::IR::ListExpression(components);
 
-    auto hge = new IR::MAU::HashGenExpression(tbl->srcInfo,
-            IR::Type::Bits::get(offset_from_bit_zero),
-            field_list, IR::MAU::HashFunction::identity());
+    auto hge = new P4::IR::MAU::HashGenExpression(tbl->srcInfo,
+            P4::IR::Type::Bits::get(offset_from_bit_zero),
+            field_list, P4::IR::MAU::HashFunction::identity());
 
-    auto hd = new IR::MAU::HashDist(hge->srcInfo, hge->type, hge);
+    auto hd = new P4::IR::MAU::HashDist(hge->srcInfo, hge->type, hge);
     for (auto ba : tbl->attached) {
         if (!(ba->attached && ba->attached->direct))
             continue;
@@ -4001,14 +4001,14 @@ void IXBar::XBarHashDist::hash_action() {
     }
 }
 
-bool IXBar::XBarHashDist::preorder(const IR::MAU::HashDist *hd) {
-    if (auto sel = findContext<IR::MAU::Selector>()) {
+bool IXBar::XBarHashDist::preorder(const P4::IR::MAU::HashDist *hd) {
+    if (auto sel = findContext<P4::IR::MAU::Selector>()) {
         build_req(hd, sel);
-    } else if (auto mtr = findContext<IR::MAU::Meter>()) {
+    } else if (auto mtr = findContext<P4::IR::MAU::Meter>()) {
         build_req(hd, mtr);
-    } else if (auto ba = findContext<IR::MAU::BackendAttached>()) {
+    } else if (auto ba = findContext<P4::IR::MAU::BackendAttached>()) {
         if (attached_entries.at(ba->attached).entries > 0) build_req(hd, ba);
-    } else if (findContext<IR::MAU::Instruction>()) {
+    } else if (findContext<P4::IR::MAU::Instruction>()) {
         return false;
     }
     return false;
@@ -4016,7 +4016,7 @@ bool IXBar::XBarHashDist::preorder(const IR::MAU::HashDist *hd) {
 
 /**
  * The purpose of this class is to gather the requirements that have to go through
- * hash distribution.  The requirement is captured in either the IR::MAU::HashDist, or
+ * hash distribution.  The requirement is captured in either the P4::IR::MAU::HashDist, or
  * implicitly as the LayoutOption of the table is a hash action table.  From the IR,
  * we can gather the IXBar Bytes required, as well as the hash matrix requirements.
  *
@@ -4120,7 +4120,7 @@ bool IXBar::XBarHashDist::allocate_hash_dist() {
  *  If this doesn't work, due to hash matrix constraint, redo the allocation with input xbar
  *  locations that have no current hash matrix use
  */
-bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResourceAlloc &alloc,
+bool IXBar::allocTable(const P4::IR::MAU::Table *tbl, const PhvInfo &phv, TableResourceAlloc &alloc,
                        const LayoutOption *lo, const ActionData::Format::Use *af,
                        const attached_entries_t &attached_entries) {
     if (!tbl) return true;
@@ -4221,18 +4221,18 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResou
     for (auto back_at : tbl->attached) {
         auto at_mem = back_at->attached;
         if (attached_entries.at(at_mem).entries <= 0) continue;
-        if (auto as = at_mem->to<IR::MAU::Selector>()) {
+        if (auto as = at_mem->to<P4::IR::MAU::Selector>()) {
             if (!allocSelector(as, tbl, phv, getUse(alloc.selector_ixbar), tbl->name)) {
                 LOG5("failed to allocate selector");
                 alloc.clear_ixbar();
                 return false; }
-        } else if (auto mtr = at_mem->to<IR::MAU::Meter>()) {
+        } else if (auto mtr = at_mem->to<P4::IR::MAU::Meter>()) {
             if (!allocMeter(mtr, tbl, phv, getUse(alloc.meter_ixbar), true) &&
                 !allocMeter(mtr, tbl, phv, getUse(alloc.meter_ixbar), false)) {
                 LOG5("failed to allocate meter");
                 alloc.clear_ixbar();
                 return false; }
-        } else if (auto salu = at_mem->to<IR::MAU::StatefulAlu>()) {
+        } else if (auto salu = at_mem->to<P4::IR::MAU::StatefulAlu>()) {
             if (!allocStateful(salu, tbl, phv, getUse(alloc.salu_ixbar), true) &&
                 !allocStateful(salu, tbl, phv, getUse(alloc.salu_ixbar), false)) {
                 LOG5("failed to allocate stateful");
@@ -4262,7 +4262,7 @@ bool IXBar::allocTable(const IR::MAU::Table *tbl, const PhvInfo &phv, TableResou
  * this allows better sharing of search busses?  maybe.  perhaps doesn't matter
  * TODO -- investigate what effect this ordering actually has and see if there's
  * an opportunity for improvement */
-bool IXBar::allocTable(const IR::MAU::Table *tbl, const IR::MAU::Table *gw, const PhvInfo &phv,
+bool IXBar::allocTable(const P4::IR::MAU::Table *tbl, const P4::IR::MAU::Table *gw, const PhvInfo &phv,
                        TableResourceAlloc &alloc, const LayoutOption *lo,
                        const ActionData::Format::Use *af,
                        const attached_entries_t &attached_entries) {
@@ -4430,7 +4430,7 @@ void IXBar::update(cstring name, const HashDistUse &hash_dist_alloc) {
     hash_used_per_function[hash_dist_alloc.hash_group()] |= hash_dist_alloc.galois_matrix_bits();
 }
 
-void IXBar::update(const IR::MAU::Table *tbl, const TableResourceAlloc *rsrc) {
+void IXBar::update(const P4::IR::MAU::Table *tbl, const TableResourceAlloc *rsrc) {
     ::IXBar::update(tbl, rsrc);
     auto name = tbl->name;
     int index = 0;
@@ -4440,7 +4440,7 @@ void IXBar::update(const IR::MAU::Table *tbl, const TableResourceAlloc *rsrc) {
     tbl_hash_dists.emplace(tbl, &rsrc->hash_dists);
 }
 
-void IXBar::update(const IR::MAU::Table *tbl) {
+void IXBar::update(const P4::IR::MAU::Table *tbl) {
     if (tbl->for_dleft() && tbl->is_placed()) {
         auto orig_name = tbl->name.before(tbl->name.findlast('$'));
         if (dleft_updates.count(orig_name))

@@ -87,7 +87,7 @@ struct DependencyGraph {
         boost::vecS,
         boost::vecS,
         boost::bidirectionalS,  // Directed edges.
-        boost::property<boost::vertex_table_t, const IR::MAU::Table*>,  // Vertex labels
+        boost::property<boost::vertex_table_t, const P4::IR::MAU::Table*>,  // Vertex labels
         dependencies_t  // Edge labels.
     > Graph;
     ReductionOrInfo red_info;
@@ -129,14 +129,14 @@ struct DependencyGraph {
      *  as t2 does not affect any of the values that t1 is working on.  Instead it just affects
      *  the containers
      */
-    ordered_map<const IR::MAU::Table*,
-             ordered_set<const IR::MAU::Table*>> container_conflicts;
+    ordered_map<const P4::IR::MAU::Table*,
+             ordered_set<const P4::IR::MAU::Table*>> container_conflicts;
 
     /** Unavoid container conflicts due to parde constraints.
      *  This will be a subset of the above container_conflicts.
      */
-    ordered_map<const IR::MAU::Table*,
-             ordered_set<const IR::MAU::Table*>> unavoidable_container_conflicts;
+    ordered_map<const P4::IR::MAU::Table*,
+             ordered_set<const P4::IR::MAU::Table*>> unavoidable_container_conflicts;
 
     Graph g;  // Dependency graph.
 
@@ -148,7 +148,7 @@ struct DependencyGraph {
         if (!finalized) BUG("Dependency graph used before being fully constructed.");
     }
 
-    void check_stage_info_exist(const IR::MAU::Table* t) const {
+    void check_stage_info_exist(const P4::IR::MAU::Table* t) const {
         if (!stage_info.count(t)) {
             BUG("table not exists in Dependency graph: %1%", cstring::to_cstring(t));
         }
@@ -172,7 +172,7 @@ struct DependencyGraph {
 
     // For GTests Only
  public:
-    ordered_map<cstring, const IR::MAU::Table *> name_to_table;
+    ordered_map<cstring, const P4::IR::MAU::Table *> name_to_table;
 
     // NOTE: These maps are reverse named -- happens_after_map[t] is the set of tables that that are
     // before t, while happens_before_map[t] is the set of tables that are after t... This naming
@@ -186,48 +186,48 @@ struct DependencyGraph {
     // happens_phys_after/before_map, although this could change.
 
     // Work happens after map
-    ordered_map<const IR::MAU::Table*,
-                std::vector<const IR::MAU::Table*>> happens_after_work_map;
+    ordered_map<const P4::IR::MAU::Table*,
+                std::vector<const P4::IR::MAU::Table*>> happens_after_work_map;
 
     // Work happens before map
-    ordered_map<const IR::MAU::Table*,
-                std::vector<const IR::MAU::Table*>> happens_before_work_map;
+    ordered_map<const P4::IR::MAU::Table*,
+                std::vector<const P4::IR::MAU::Table*>> happens_before_work_map;
 
     // For a given table t, happens_phys_after_map[t] is the set of tables that must be placed in an
     // earlier stage than t---i.e. there is a data dependence between t and any table in the
     // set. This is the default result of the calc_topological_stage function.
-    ordered_map<const IR::MAU::Table*,
-                ordered_set<const IR::MAU::Table*>> happens_phys_after_map;
+    ordered_map<const P4::IR::MAU::Table*,
+                ordered_set<const P4::IR::MAU::Table*>> happens_phys_after_map;
 
     // Analagous to above, but for the tables that must be placed in a later stage than t
-    ordered_map<const IR::MAU::Table*,
-                ordered_set<const IR::MAU::Table*>> happens_phys_before_map;
+    ordered_map<const P4::IR::MAU::Table*,
+                ordered_set<const P4::IR::MAU::Table*>> happens_phys_before_map;
 
     // Same as happens_phys_before_map, with the additional inclusion of control dependences when
     // calculating the happens_before relationship.
-    ordered_map<const IR::MAU::Table*,
-                ordered_set<const IR::MAU::Table*>> happens_before_control_map;
+    ordered_map<const P4::IR::MAU::Table*,
+                ordered_set<const P4::IR::MAU::Table*>> happens_before_control_map;
 
     // Same as happens_phys_after_map, with the additional inclusion of control and anti dependences
     // when calculating the happens_after relationship, which corresponds to an ordering on logical
     // IDs.
-    ordered_map<const IR::MAU::Table*,
-                ordered_set<const IR::MAU::Table*>> happens_logi_after_map;
+    ordered_map<const P4::IR::MAU::Table*,
+                ordered_set<const P4::IR::MAU::Table*>> happens_logi_after_map;
 
     // Analagous to above, but for tables that must be placed into a later logical ID than t. New
     // name for happens_before_control_anti_map
-    ordered_map<const IR::MAU::Table*,
-                ordered_set<const IR::MAU::Table*>> happens_logi_before_map;
+    ordered_map<const P4::IR::MAU::Table*,
+                ordered_set<const P4::IR::MAU::Table*>> happens_logi_before_map;
 
-    ordered_map<const IR::MAU::Table*,
-                ordered_map<const IR::MAU::Table*, dependencies_t>> dep_type_map;
+    ordered_map<const P4::IR::MAU::Table*,
+                ordered_map<const P4::IR::MAU::Table*, dependencies_t>> dep_type_map;
 
-    ordered_map<const IR::MAU::Table*,
+    ordered_map<const P4::IR::MAU::Table*,
                 typename Graph::vertex_descriptor> labelToVertex;
 
     // Map from <t1, t2> to its dependency type
     // e.g.  <tbl1, tbl2> = MATCH means that tbl1 has a match dependency on tbl2
-    ordered_map<std::pair<const IR::MAU::Table*, const IR::MAU::Table*>,
+    ordered_map<std::pair<const P4::IR::MAU::Table*, const P4::IR::MAU::Table*>,
                 DependencyGraph::dependencies_t> dependency_map;
 
     ordered_map<
@@ -235,14 +235,14 @@ struct DependencyGraph {
         ordered_map<
             const PHV::Field*,
             std::pair<
-                ordered_set<const IR::MAU::Action*>,
-                ordered_set<const IR::MAU::Action*>
+                ordered_set<const P4::IR::MAU::Action*>,
+                ordered_set<const P4::IR::MAU::Action*>
             >
         >
     > data_annotations;
 
     ordered_map<typename Graph::edge_descriptor,
-                const std::vector<const IR::MAU::Action*>> data_annotations_exit;
+                const std::vector<const P4::IR::MAU::Action*>> data_annotations_exit;
     ordered_map<typename Graph::edge_descriptor,
                 const PHV::Container> data_annotations_conflicts;
     ordered_map<typename Graph::edge_descriptor,
@@ -252,18 +252,18 @@ struct DependencyGraph {
 
     // Note: these maps only make sense if there is a PHV allocation.
     // Map from table to PHV containers written.
-    std::map<const IR::MAU::Table*,
+    std::map<const P4::IR::MAU::Table*,
              std::map<const PHV::Container, bool>> containers_write_ = {};
     // Map from table to PHV containers read at the match input crossbar.
-    std::map<const IR::MAU::Table*,
+    std::map<const P4::IR::MAU::Table*,
              std::map<const PHV::Container, bool>> containers_read_xbar_ = {};
     // Map from table to PHV containers read at the PHV ALUs.
-    std::map<const IR::MAU::Table*,
+    std::map<const P4::IR::MAU::Table*,
              std::map<const PHV::Container, bool>> containers_read_alu_ = {};
     // Map to memoize results of calls to "find_mau_dependency"
     // This map uses the hardware terminology for MAU stage dependencies,
     // so dependencies_t is not used.
-    std::map<std::pair<const IR::MAU::Table*, const IR::MAU::Table*>,
+    std::map<std::pair<const P4::IR::MAU::Table*, const P4::IR::MAU::Table*>,
              DependencyGraph::mau_dependencies_t> table_dep_ = {};
 
     struct StageInfo {
@@ -277,11 +277,11 @@ struct DependencyGraph {
         dep_stages_dom_frontier;
     };
 
-    ordered_map<const IR::MAU::Table*, StageInfo> stage_info;
+    ordered_map<const P4::IR::MAU::Table*, StageInfo> stage_info;
 
-    using MinEdgeInfo = std::pair<const IR::MAU::Table *, dependencies_t>;
+    using MinEdgeInfo = std::pair<const P4::IR::MAU::Table *, dependencies_t>;
     bool display_min_edges = false;
-    assoc::hash_map<const IR::MAU::Table *, safe_vector<MinEdgeInfo>> min_stage_edges;
+    assoc::hash_map<const P4::IR::MAU::Table *, safe_vector<MinEdgeInfo>> min_stage_edges;
 
     /// The largest value of min_stage encountered when determining min_stage values for table,
     /// across all tables in the program. The minimum number of stages required by the program is
@@ -359,7 +359,7 @@ struct DependencyGraph {
     }
 
     // For a src -> dst edge check if back edge dst -> src exists
-    bool has_back_edge(const IR::MAU::Table *src, const IR::MAU::Table *dst) {
+    bool has_back_edge(const P4::IR::MAU::Table *src, const P4::IR::MAU::Table *dst) {
         bool backEdgePresent = false;
         DependencyGraph::Graph::edge_descriptor backEdge;
 
@@ -380,13 +380,13 @@ struct DependencyGraph {
 
     /* @returns the table pointer corresponding to a vertex in the dependency graph
      */
-    const IR::MAU::Table* get_vertex(typename Graph::vertex_descriptor v) const {
+    const P4::IR::MAU::Table* get_vertex(typename Graph::vertex_descriptor v) const {
         return boost::get(boost::vertex_table, g)[v];
     }
 
     /* If a vertex with this label already exists, return it.  Otherwise,
      * create a new vertex with this label. */
-    typename Graph::vertex_descriptor add_vertex(const IR::MAU::Table* label) {
+    typename Graph::vertex_descriptor add_vertex(const P4::IR::MAU::Table* label) {
         if (labelToVertex.count(label)) {
             return labelToVertex.at(label);
         } else {
@@ -400,11 +400,11 @@ struct DependencyGraph {
      * newly-created edge.  If false, then the edge descriptor points to the
      * edge from src to dst with edge_label that already existed.  */
     std::pair<typename Graph::edge_descriptor*, bool> add_edge(
-        const IR::MAU::Table* src,
-        const IR::MAU::Table* dst,
+        const P4::IR::MAU::Table* src,
+        const P4::IR::MAU::Table* dst,
         dependencies_t edge_label);
 
-    bool container_conflict(const IR::MAU::Table *t1, const IR::MAU::Table *t2) const {
+    bool container_conflict(const P4::IR::MAU::Table *t1, const P4::IR::MAU::Table *t2) const {
         if (container_conflicts.find(t1) == container_conflicts.end())
             return false;
         if (container_conflicts.at(t1).find(t2) == container_conflicts.at(t1).end())
@@ -412,7 +412,7 @@ struct DependencyGraph {
         return true;
     }
 
-    bool unavoidable_container_conflict(const IR::MAU::Table *t1, const IR::MAU::Table *t2) const {
+    bool unavoidable_container_conflict(const P4::IR::MAU::Table *t1, const P4::IR::MAU::Table *t2) const {
         if (unavoidable_container_conflicts.find(t1) == unavoidable_container_conflicts.end())
             return false;
         if (unavoidable_container_conflicts.at(t1).find(t2) ==
@@ -421,7 +421,7 @@ struct DependencyGraph {
         return true;
     }
 
-    bool happens_phys_before(const IR::MAU::Table* t1, const IR::MAU::Table* t2) const {
+    bool happens_phys_before(const P4::IR::MAU::Table* t1, const P4::IR::MAU::Table* t2) const {
         check_finalized();
         if (happens_phys_before_map.count(t1)) {
             return happens_phys_before_map.at(t1).count(t2);
@@ -429,7 +429,7 @@ struct DependencyGraph {
             return false; }
     }
 
-    bool happens_phys_after(const IR::MAU::Table* t1, const IR::MAU::Table* t2) const {
+    bool happens_phys_after(const P4::IR::MAU::Table* t1, const P4::IR::MAU::Table* t2) const {
         check_finalized();
         if (happens_phys_after_map.count(t1)) {
             return happens_phys_after_map.at(t1).count(t2);
@@ -439,8 +439,8 @@ struct DependencyGraph {
 
     // returns true if any table in s or control dependent on a table in s is
     // data dependent on t1
-    bool happens_phys_before_recursive(const IR::MAU::Table* t1,
-                                       const IR::MAU::TableSeq* s) const {
+    bool happens_phys_before_recursive(const P4::IR::MAU::Table* t1,
+                                       const P4::IR::MAU::TableSeq* s) const {
         check_finalized();
         if (happens_phys_before_map.count(t1))
             for (auto *t2 : s->tables)
@@ -449,8 +449,8 @@ struct DependencyGraph {
     }
 
     // returns true if t2 or any table control dependent on it is data dependent on t1
-    bool happens_phys_before_recursive(const IR::MAU::Table* t1,
-                                       const IR::MAU::Table* t2) const {
+    bool happens_phys_before_recursive(const P4::IR::MAU::Table* t1,
+                                       const P4::IR::MAU::Table* t2) const {
         check_finalized();
         if (happens_phys_before_map.count(t1)) {
             if (t2 != t1 && happens_phys_before_map.at(t1).count(t2)) return true;
@@ -460,7 +460,7 @@ struct DependencyGraph {
         return false;
     }
 
-    bool happens_before_control(const IR::MAU::Table* t1, const IR::MAU::Table* t2) const {
+    bool happens_before_control(const P4::IR::MAU::Table* t1, const P4::IR::MAU::Table* t2) const {
         check_finalized();
         if (happens_before_control_map.count(t1))
             return happens_before_control_map.at(t1).count(t2);
@@ -468,7 +468,7 @@ struct DependencyGraph {
             return false;
     }
 
-    bool happens_logi_before(const IR::MAU::Table* t1, const IR::MAU::Table* t2) const {
+    bool happens_logi_before(const P4::IR::MAU::Table* t1, const P4::IR::MAU::Table* t2) const {
         check_finalized();
         if (happens_logi_before_map.count(t1))
             return happens_logi_before_map.at(t1).count(t2);
@@ -476,7 +476,7 @@ struct DependencyGraph {
             return false;
     }
 
-    bool happens_logi_after(const IR::MAU::Table *t1, const IR::MAU::Table *t2) const {
+    bool happens_logi_after(const P4::IR::MAU::Table *t1, const P4::IR::MAU::Table *t2) const {
         check_finalized();
         if (happens_logi_after_map.count(t1))
             return happens_logi_after_map.at(t1).count(t2);
@@ -484,8 +484,8 @@ struct DependencyGraph {
             return false;
     }
 
-    std::optional<ordered_map<const PHV::Field*, std::pair<ordered_set<const IR::MAU::Action*>,
-                                                          ordered_set<const IR::MAU::Action*>>>>
+    std::optional<ordered_map<const PHV::Field*, std::pair<ordered_set<const P4::IR::MAU::Action*>,
+                                                          ordered_set<const P4::IR::MAU::Action*>>>>
     get_data_dependency_info(typename Graph::edge_descriptor edge) const {
         if (!data_annotations.count(edge)) {
             LOG4("Data dependency edge not found");
@@ -515,10 +515,10 @@ struct DependencyGraph {
                 that particular ActionSet will be empty.
     */
     std::optional<ordered_map<std::pair<const PHV::Field*, DependencyGraph::dependencies_t>,
-                             std::pair<ordered_set<const IR::MAU::Action*>,
-                                       ordered_set<const IR::MAU::Action*>>>>
-             get_data_dependency_info(const IR::MAU::Table* upstream,
-                                      const IR::MAU::Table* downstream) const;
+                             std::pair<ordered_set<const P4::IR::MAU::Action*>,
+                                       ordered_set<const P4::IR::MAU::Action*>>>>
+             get_data_dependency_info(const P4::IR::MAU::Table* upstream,
+                                      const P4::IR::MAU::Table* downstream) const;
 
     void print_dep_type_map(std::ostream &out) const;
     void print_container_access(std::ostream &out) const;
@@ -532,15 +532,15 @@ struct DependencyGraph {
       * This function cannot be called until PHV allocation has completed.  If it is,
       * the maps accessed will not have been populated.
       */
-    DependencyGraph::mau_dependencies_t find_mau_dependency(const IR::MAU::Table* from,
-                                                            const IR::MAU::Table* to);
+    DependencyGraph::mau_dependencies_t find_mau_dependency(const P4::IR::MAU::Table* from,
+                                                            const P4::IR::MAU::Table* to);
 
     /**
       * Returns the dependency type from t1 to t2.
       *
       */
-    DependencyGraph::dependencies_t get_dependency(const IR::MAU::Table* t1,
-                                                   const IR::MAU::Table* t2) const {
+    DependencyGraph::dependencies_t get_dependency(const P4::IR::MAU::Table* t1,
+                                                   const P4::IR::MAU::Table* t2) const {
         if (!finalized)
             BUG("Dependence graph used before being fully constructed.");
 
@@ -552,44 +552,44 @@ struct DependencyGraph {
         return DependencyGraph::CONCURRENT;
     }
 
-    int dependence_tail_size(const IR::MAU::Table* t) const {
+    int dependence_tail_size(const P4::IR::MAU::Table* t) const {
         check_finalized();
         check_stage_info_exist(t);
         return stage_info.at(t).dep_stages;
     }
 
-    int dependence_tail_size_control(const IR::MAU::Table* t) const {
+    int dependence_tail_size_control(const P4::IR::MAU::Table* t) const {
         check_finalized();
         check_stage_info_exist(t);
         return stage_info.at(t).dep_stages_control;
     }
 
-    int dependence_tail_size_control_anti(const IR::MAU::Table *t) const {
+    int dependence_tail_size_control_anti(const P4::IR::MAU::Table *t) const {
         check_finalized();
         check_stage_info_exist(t);
         return stage_info.at(t).dep_stages_control_anti;
     }
 
-    int dependence_tail_size_control_anti_split(const IR::MAU::Table *t) const {
+    int dependence_tail_size_control_anti_split(const P4::IR::MAU::Table *t) const {
         check_finalized();
         check_stage_info_exist(t);
         return stage_info.at(t).dep_stages_control_anti_split;
     }
 
-    int min_stage(const IR::MAU::Table* t) const {
+    int min_stage(const P4::IR::MAU::Table* t) const {
         check_finalized();
         check_stage_info_exist(t);
         return stage_info.at(t).min_stage;
     }
 
-    int max_stage(const IR::MAU::Table* t) const {
+    int max_stage(const P4::IR::MAU::Table* t) const {
         check_finalized();
         check_stage_info_exist(t);
         return stage_info.at(t).max_stage;
     }
 
-    const std::vector<const IR::MAU::Table*>&
-    happens_before_dependences(const IR::MAU::Table* t) const {
+    const std::vector<const P4::IR::MAU::Table*>&
+    happens_before_dependences(const P4::IR::MAU::Table* t) const {
         check_finalized();
         return happens_before_work_map.at(t);
     }
@@ -600,7 +600,7 @@ struct DependencyGraph {
     void to_json(Util::JsonObject* dgJson, const FlowGraph &fg, cstring passContext, bool placed);
     static dependencies_t get_control_edge_type(cstring annot);
 
-    TableGraphNode create_node(const int id, const IR::MAU::Table *tbl) const;
+    TableGraphNode create_node(const int id, const P4::IR::MAU::Table *tbl) const;
 };
 
 class TableGraphField {
@@ -798,7 +798,7 @@ class TableGraphNode {
     };
     std::vector<TableGraphNodeTable> nodeTables;
 
-    static cstring get_node_match_type(const IR::MAU::Table *tbl) {
+    static cstring get_node_match_type(const P4::IR::MAU::Table *tbl) {
         auto match_type = tbl->get_table_type_string();
         if (match_type == "exact_match")        return "exact"_cs;
         else if (match_type == "ternary_match") return "ternary"_cs;
@@ -810,14 +810,14 @@ class TableGraphNode {
         return "none"_cs;
     }
 
-    static cstring get_attached_table_type(const IR::MAU::AttachedMemory *att) {
-        if (att->to<IR::MAU::Counter>())                 return "statistics"_cs;
-        else if (att->to<IR::MAU::Meter>())              return "meter"_cs;
-        else if (att->to<IR::MAU::StatefulAlu>())        return "stateful"_cs;
-        else if (att->to<IR::MAU::Selector>())           return "selection"_cs;
-        else if (att->to<IR::MAU::ActionData>())         return "action"_cs;
-        else if (att->to<IR::MAU::TernaryIndirect>())    return "ternary_indirect"_cs;
-        else if (att->to<IR::MAU::IdleTime>())           return "idletime"_cs;
+    static cstring get_attached_table_type(const P4::IR::MAU::AttachedMemory *att) {
+        if (att->to<P4::IR::MAU::Counter>())                 return "statistics"_cs;
+        else if (att->to<P4::IR::MAU::Meter>())              return "meter"_cs;
+        else if (att->to<P4::IR::MAU::StatefulAlu>())        return "stateful"_cs;
+        else if (att->to<P4::IR::MAU::Selector>())           return "selection"_cs;
+        else if (att->to<P4::IR::MAU::ActionData>())         return "action"_cs;
+        else if (att->to<P4::IR::MAU::TernaryIndirect>())    return "ternary_indirect"_cs;
+        else if (att->to<P4::IR::MAU::IdleTime>())           return "idletime"_cs;
         return "none"_cs;
     }
 
@@ -859,7 +859,7 @@ class TableGraphNode {
 
 class NameToTableMapBuilder : public MauInspector {
     DependencyGraph &dg;
-    bool preorder(const IR::MAU::Table *tbl) override;
+    bool preorder(const P4::IR::MAU::Table *tbl) override;
 
  public:
     explicit NameToTableMapBuilder(DependencyGraph &d) : dg(d) {}
@@ -868,13 +868,13 @@ class NameToTableMapBuilder : public MauInspector {
 class FindDataDependencyGraph : public MauInspector, BFN::ControlFlowVisitor {
  public:
     using write_op_t = std::pair<PHV::FieldSlice, bitvec>;
-    using cont_write_t = ordered_map<const IR::MAU::Table*, ordered_set<write_op_t>>;
+    using cont_write_t = ordered_map<const P4::IR::MAU::Table*, ordered_set<write_op_t>>;
     typedef struct {
-        ordered_set<std::pair<const IR::MAU::Table*, const IR::MAU::Action*>> ixbar_read;
-        ordered_set<std::pair<const IR::MAU::Table*, const IR::MAU::Action*>> action_read;
-        ordered_set<std::pair<const IR::MAU::Table*, const IR::MAU::Action*>> write;
-        ordered_set<std::pair<const IR::MAU::Table*, const IR::MAU::Action*>> reduction_or_write;
-        ordered_set<std::pair<const IR::MAU::Table*, const IR::MAU::Action*>> reduction_or_read;
+        ordered_set<std::pair<const P4::IR::MAU::Table*, const P4::IR::MAU::Action*>> ixbar_read;
+        ordered_set<std::pair<const P4::IR::MAU::Table*, const P4::IR::MAU::Action*>> action_read;
+        ordered_set<std::pair<const P4::IR::MAU::Table*, const P4::IR::MAU::Action*>> write;
+        ordered_set<std::pair<const P4::IR::MAU::Table*, const P4::IR::MAU::Action*>> reduction_or_write;
+        ordered_set<std::pair<const P4::IR::MAU::Table*, const P4::IR::MAU::Action*>> reduction_or_read;
     } access_t;
 
  private:
@@ -887,12 +887,12 @@ class FindDataDependencyGraph : public MauInspector, BFN::ControlFlowVisitor {
     ordered_map<PHV::Container, cont_write_t>                cont_write;
 
 
-    bool preorder(const IR::MAU::TableSeq *) override;
-    bool preorder(const IR::MAU::Table *) override;
-    bool preorder(const IR::MAU::Action *) override;
-    bool preorder(const IR::MAU::TableKey *) override;
+    bool preorder(const P4::IR::MAU::TableSeq *) override;
+    bool preorder(const P4::IR::MAU::Table *) override;
+    bool preorder(const P4::IR::MAU::Action *) override;
+    bool preorder(const P4::IR::MAU::TableKey *) override;
 
-    Visitor::profile_t init_apply(const IR::Node* node) override {
+    Visitor::profile_t init_apply(const P4::IR::Node* node) override {
         auto rv = Inspector::init_apply(node);
         access.clear();
         cont_write.clear();
@@ -910,7 +910,7 @@ class FindDataDependencyGraph : public MauInspector, BFN::ControlFlowVisitor {
     void flow_merge(Visitor &v) override;
     void flow_copy(::ControlFlowVisitor &v) override;
     // Filter out the table sequence and revisit them again.
-    bool filter_join_point(const IR::Node *n) override { return !n->is<IR::BFN::ParserState>(); }
+    bool filter_join_point(const P4::IR::Node *n) override { return !n->is<P4::IR::BFN::ParserState>(); }
 
     // void all_bfs(boost::default_bfs_visitor* vis);
     FindDataDependencyGraph *clone() const override { return new FindDataDependencyGraph(*this); }
@@ -929,9 +929,9 @@ class FindDataDependencyGraph : public MauInspector, BFN::ControlFlowVisitor {
 
 class CalculateNextTableProp : public MauInspector {
     using NextTableLeaves =
-        ordered_map<const IR::MAU::Table *, ordered_set<const IR::MAU::Table *>>;
+        ordered_map<const P4::IR::MAU::Table *, ordered_set<const P4::IR::MAU::Table *>>;
     using ControlDominatingSet = NextTableLeaves;
-    ordered_map<cstring, const IR::MAU::Table *> name_to_table;
+    ordered_map<cstring, const P4::IR::MAU::Table *> name_to_table;
 
  public:
     /// Maps each table T to its set of next-table leaves, defined inductively. If T has no
@@ -944,8 +944,8 @@ class CalculateNextTableProp : public MauInspector {
     ControlDominatingSet control_dom_set;
 
  private:
-    void postorder(const IR::MAU::Table *) override;
-    Visitor::profile_t init_apply(const IR::Node *node) override {
+    void postorder(const P4::IR::MAU::Table *) override;
+    Visitor::profile_t init_apply(const P4::IR::Node *node) override {
         auto rv = MauInspector::init_apply(node);
         next_table_leaves.clear();
         control_dom_set.clear();
@@ -954,7 +954,7 @@ class CalculateNextTableProp : public MauInspector {
     }
 
  public:
-    const IR::MAU::Table *get_table(cstring name) const {
+    const P4::IR::MAU::Table *get_table(cstring name) const {
         if (name_to_table.count(name))
             return name_to_table.at(name);
         return nullptr;
@@ -964,30 +964,30 @@ class CalculateNextTableProp : public MauInspector {
 
 class ControlPathwaysToTable : public MauInspector {
  public:
-    using Path = safe_vector<const IR::Node *>;
-    using TablePathways = ordered_map<const IR::MAU::Table *, safe_vector<Path>>;
-    using InjectPoints = safe_vector<std::pair<const IR::Node *, const IR::Node *>>;
+    using Path = safe_vector<const P4::IR::Node *>;
+    using TablePathways = ordered_map<const P4::IR::MAU::Table *, safe_vector<Path>>;
+    using InjectPoints = safe_vector<std::pair<const P4::IR::Node *, const P4::IR::Node *>>;
 
     /// Maps each table T to a list of possible control paths from T out to the top-level of the
     /// pipe.
     TablePathways table_pathways;
 
  private:
-    Visitor::profile_t init_apply(const IR::Node *node) override {
+    Visitor::profile_t init_apply(const P4::IR::Node *node) override {
         auto rv = MauInspector::init_apply(node);
         table_pathways.clear();
         return rv;
     }
 
     bool equiv(const Path &a, const Path &b) const;
-    bool equiv_seqs(const IR::MAU::TableSeq *a, const IR::MAU::TableSeq *b) const;
-    bool preorder(const IR::MAU::Table *) override;
+    bool equiv_seqs(const P4::IR::MAU::TableSeq *a, const P4::IR::MAU::TableSeq *b) const;
+    bool preorder(const P4::IR::MAU::Table *) override;
     Path common_reverse_path(const Path &a, const Path &b, bool check_diff_if_seq = false) const;
 
  public:
     void print_paths(safe_vector<Path> &paths) const;
-    const IR::MAU::Table *find_dominator(const IR::MAU::Table *init) const;
-    InjectPoints get_inject_points(const IR::MAU::Table *a, const IR::MAU::Table *b,
+    const P4::IR::MAU::Table *find_dominator(const P4::IR::MAU::Table *init) const;
+    InjectPoints get_inject_points(const P4::IR::MAU::Table *a, const P4::IR::MAU::Table *b,
         bool tbls_only = true) const;
     ControlPathwaysToTable() { visitDagOnce = false; }
 };
@@ -1000,7 +1000,7 @@ class DepStagesThruDomFrontier : public MauInspector {
     FindDependencyGraph &self;
     const TableSummary *summary;
 
-    void postorder(const IR::MAU::Table *) override;
+    void postorder(const P4::IR::MAU::Table *) override;
 
  public:
     DepStagesThruDomFrontier(const CalculateNextTableProp &n, DependencyGraph &d,
@@ -1008,7 +1008,7 @@ class DepStagesThruDomFrontier : public MauInspector {
 };
 
 class PrintPipe : public MauInspector {
-    bool preorder(const IR::BFN::Pipe *p) override;
+    bool preorder(const P4::IR::BFN::Pipe *p) override;
 
  public:
     PrintPipe() { }
@@ -1016,7 +1016,7 @@ class PrintPipe : public MauInspector {
 
 class FindCtrlDependencyGraph : public MauInspector {
     DependencyGraph &dg;
-    bool preorder(const IR::MAU::Table *t);
+    bool preorder(const P4::IR::MAU::Table *t);
 
  public:
     explicit FindCtrlDependencyGraph(DependencyGraph &out) : dg(out) {}
@@ -1029,7 +1029,7 @@ class FindDependencyGraph : public Logging::PassManager {
     void finalize_dependence_graph(void);
     void calc_max_min_stage();
 
-    Visitor::profile_t init_apply(const IR::Node *node) override;
+    Visitor::profile_t init_apply(const P4::IR::Node *node) override;
     TablesMutuallyExclusive mutex;
     DependencyGraph &dg;
     const BFN_Options *options;
@@ -1041,7 +1041,7 @@ class FindDependencyGraph : public Logging::PassManager {
     cstring passContext;
     const TableSummary *summary;
 
-    void end_apply(const IR::Node *root) override;
+    void end_apply(const P4::IR::Node *root) override;
     void add_logical_deps_from_control_deps();
 
  public:
@@ -1059,8 +1059,8 @@ class PrintDependencyGraph : public Inspector {
     std::map<DependencyGraph::Graph::edge_descriptor, cstring> edge_names;
     std::map<bitvec, char> bitvec_to_char;
     std::map<char, bitvec> char_to_bitvec;
-    bool preorder(const IR::BFN::Pipe *t) override;
-    void end_apply(const IR::Node* root) override;
+    bool preorder(const P4::IR::BFN::Pipe *t) override;
+    void end_apply(const P4::IR::Node* root) override;
     char encode_dependencies(const DependencyGraph::Graph::vertex_descriptor &src_v,
                              const DependencyGraph::Graph::vertex_descriptor &dst_v);
     std::string print_dependencies(bitvec deps);
@@ -1071,9 +1071,9 @@ class PrintDependencyGraph : public Inspector {
 
     // DFS traversal of table dependency graph but starting from the
     // last min_stage tables toward min_stage 0.
-    void reverse_dfs(const IR::MAU::Table *tbl, std::stack<const IR::MAU::Table*>& chain,
-                     std::vector<std::vector<const IR::MAU::Table*>>& crit_chains,
-                     std::map<const IR::MAU::Table*, bool>& visited_tbls, int last_stage);
+    void reverse_dfs(const P4::IR::MAU::Table *tbl, std::stack<const P4::IR::MAU::Table*>& chain,
+                     std::vector<std::vector<const P4::IR::MAU::Table*>>& crit_chains,
+                     std::map<const P4::IR::MAU::Table*, bool>& visited_tbls, int last_stage);
 
     // Print critical table dependency chains that cross at least
     // 70% of the device stages (e.g. for Tofino: chains >= floor(12 * 0.7) = 8 stages

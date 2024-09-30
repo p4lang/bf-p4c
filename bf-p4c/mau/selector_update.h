@@ -14,22 +14,22 @@
 
 class AddSelectorSalu : public PassManager {
     // map associating selectors with the stateful alu that updates them
-    ordered_map<const IR::MAU::Selector *, const IR::MAU::StatefulAlu *> sel2salu;
+    ordered_map<const P4::IR::MAU::Selector *, const P4::IR::MAU::StatefulAlu *> sel2salu;
 
     class FindSelectorSalu : public MauInspector {
         AddSelectorSalu &self;
-        bool preorder(const IR::MAU::StatefulAlu *salu) {
+        bool preorder(const P4::IR::MAU::StatefulAlu *salu) {
             if (salu->selector) self.sel2salu[salu->selector] = salu;
             return false; }
-        bool preorder(const IR::Expression *) { return false; }  // prune all expressions
+        bool preorder(const P4::IR::Expression *) { return false; }  // prune all expressions
      public:
         explicit FindSelectorSalu(AddSelectorSalu &self) : self(self) {}
     };
 
     class AddSaluIfNeeded : public MauModifier {
         AddSelectorSalu &self;
-        bool preorder(IR::MAU::Table *);
-        bool preorder(IR::Expression *) { return false; }  // prune all expressions
+        bool preorder(P4::IR::MAU::Table *);
+        bool preorder(P4::IR::Expression *) { return false; }  // prune all expressions
      public:
         explicit AddSaluIfNeeded(AddSelectorSalu &self) : self(self) {}
     };

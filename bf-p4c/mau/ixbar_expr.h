@@ -34,59 +34,59 @@ class CanBeIXBarExpr : public Inspector {
     // If we ever clean up the frontend reference handling so we no longer need to resolve
     // names via the refmap, this can go away.  Or if we could do SimplifyRefernces before
     // trying to build StatefulAlu instructions.
-    std::function<bool(const IR::PathExpression *)> checkPath;
+    std::function<bool(const P4::IR::PathExpression *)> checkPath;
 
-    static const IR::Type_Extern *externType(const IR::Type *type) {
-        if (auto *spec = type->to<IR::Type_SpecializedCanonical>())
+    static const P4::IR::Type_Extern *externType(const P4::IR::Type *type) {
+        if (auto *spec = type->to<P4::IR::Type_SpecializedCanonical>())
             type = spec->baseType;
-        return type->to<IR::Type_Extern>(); }
+        return type->to<P4::IR::Type_Extern>(); }
 
-    profile_t init_apply(const IR::Node *n) {
-        auto *expr = n->to<IR::Expression>();
+    profile_t init_apply(const P4::IR::Node *n) {
+        auto *expr = n->to<P4::IR::Expression>();
         BUG_CHECK(expr, "CanBeIXBarExpr called on non-expression");
         rv = expr->type->width_bits() <= get_max_hash_bits();
         return Inspector::init_apply(n); }
-    bool preorder(const IR::Node *) { return false; }  // ignore non-expressions
-    bool preorder(const IR::PathExpression *pe) {
+    bool preorder(const P4::IR::Node *) { return false; }  // ignore non-expressions
+    bool preorder(const P4::IR::PathExpression *pe) {
         if (!checkPath(pe)) rv = false;
         return false; }
-    bool preorder(const IR::Constant *) { return false; }
-    bool preorder(const IR::Member *m) {
+    bool preorder(const P4::IR::Constant *) { return false; }
+    bool preorder(const P4::IR::Member *m) {
         auto *base = m->expr;
-        while ((m = base->to<IR::Member>())) base = m->expr;
-        if (auto *pe = base->to<IR::PathExpression>()) {
+        while ((m = base->to<P4::IR::Member>())) base = m->expr;
+        if (auto *pe = base->to<P4::IR::PathExpression>()) {
             if (!checkPath(pe)) rv = false;
-        } else if (base->is<IR::HeaderRef>() || base->is<IR::TempVar>()) {
+        } else if (base->is<P4::IR::HeaderRef>() || base->is<P4::IR::TempVar>()) {
             // ok
         } else {
             rv = false; }
         return false; }
-    bool preorder(const IR::TempVar *) { return false; }
-    bool preorder(const IR::Slice *) { return rv; }
-    bool preorder(const IR::Concat *) { return rv; }
-    bool preorder(const IR::Cast *) { return rv; }
-    bool preorder(const IR::BFN::SignExtend *) { return rv; }
-    bool preorder(const IR::BFN::ReinterpretCast *) { return rv; }
-    bool preorder(const IR::BXor *) { return rv; }
-    bool preorder(const IR::BAnd *e) {
-        if (!e->left->is<IR::Constant>() && !e->right->is<IR::Constant>()) rv = false;
+    bool preorder(const P4::IR::TempVar *) { return false; }
+    bool preorder(const P4::IR::Slice *) { return rv; }
+    bool preorder(const P4::IR::Concat *) { return rv; }
+    bool preorder(const P4::IR::Cast *) { return rv; }
+    bool preorder(const P4::IR::BFN::SignExtend *) { return rv; }
+    bool preorder(const P4::IR::BFN::ReinterpretCast *) { return rv; }
+    bool preorder(const P4::IR::BXor *) { return rv; }
+    bool preorder(const P4::IR::BAnd *e) {
+        if (!e->left->is<P4::IR::Constant>() && !e->right->is<P4::IR::Constant>()) rv = false;
         return rv; }
-    bool preorder(const IR::BOr *e) {
-        if (!e->left->is<IR::Constant>() && !e->right->is<IR::Constant>()) rv = false;
+    bool preorder(const P4::IR::BOr *e) {
+        if (!e->left->is<P4::IR::Constant>() && !e->right->is<P4::IR::Constant>()) rv = false;
         return rv; }
-    bool preorder(const IR::MethodCallExpression *mce) {
-        if (auto *method = mce->method->to<IR::Member>()) {
+    bool preorder(const P4::IR::MethodCallExpression *mce) {
+        if (auto *method = mce->method->to<P4::IR::Member>()) {
             if (auto *ext = externType(method->type)) {
                 if (ext->name == "Hash" && method->member == "get") {
                     return false; } } }
         return rv = false; }
     // any other expression cannot be an ixbar expression
-    bool preorder(const IR::Expression *) { return rv = false; }
+    bool preorder(const P4::IR::Expression *) { return rv = false; }
 
  public:
-    explicit CanBeIXBarExpr(const IR::Expression *e,
-                            std::function<bool(const IR::PathExpression *)> checkPath =
-        [](const IR::PathExpression *)->bool { BUG("Unexpected path expression"); })
+    explicit CanBeIXBarExpr(const P4::IR::Expression *e,
+                            std::function<bool(const P4::IR::PathExpression *)> checkPath =
+        [](const P4::IR::PathExpression *)->bool { BUG("Unexpected path expression"); })
     : checkPath(checkPath) { e->apply(*this); }
     operator bool() const { return rv; }
 };
@@ -107,14 +107,14 @@ class IXBarExprSeed : public Inspector {
     int         shift = 0;
     bitvec      rv;
 
-    bool preorder(const IR::Annotation *) { return false; }
-    bool preorder(const IR::Type *) { return false; }
-    bool preorder(const IR::Member *) { return false; }
-    bool preorder(const IR::Constant *k) {
-        if (getParent<IR::BAnd>()) return false;
+    bool preorder(const P4::IR::Annotation *) { return false; }
+    bool preorder(const P4::IR::Type *) { return false; }
+    bool preorder(const P4::IR::Member *) { return false; }
+    bool preorder(const P4::IR::Constant *k) {
+        if (getParent<P4::IR::BAnd>()) return false;
         rv ^= to_bitvec((k->value >> slice.lo) & ((big_int(1) << slice.size()) - 1)) << shift;
         return false; }
-    bool preorder(const IR::Concat *e) {
+    bool preorder(const P4::IR::Concat *e) {
         auto tmp = slice;
         int rwidth = e->right->type->width_bits();
         if (slice.lo < rwidth) {
@@ -129,11 +129,11 @@ class IXBarExprSeed : public Inspector {
             shift -= rwidth; }
         slice = tmp;
         return false; }
-    bool preorder(const IR::StructExpression *fl) {
+    bool preorder(const P4::IR::StructExpression *fl) {
         // delegate to the ListExpression case
-        IR::ListExpression listExpr(*getListExprComponents(*fl));
+        P4::IR::ListExpression listExpr(*getListExprComponents(*fl));
         return preorder(&listExpr); }
-    bool preorder(const IR::ListExpression *fl) {
+    bool preorder(const P4::IR::ListExpression *fl) {
         auto tmp = slice;
         auto old_shift = shift;
         for (auto *e : boost::adaptors::reverse(fl->components)) {
@@ -149,7 +149,7 @@ class IXBarExprSeed : public Inspector {
         slice = tmp;
         shift = old_shift;
         return false; }
-    bool preorder(const IR::Slice *sl) {
+    bool preorder(const P4::IR::Slice *sl) {
         auto tmp = slice;
         slice = slice.shiftedByBits(-sl->getL());
         int width = sl->getH() - sl->getL() + 1;
@@ -158,22 +158,22 @@ class IXBarExprSeed : public Inspector {
         visit(sl->e0, "e0");
         slice = tmp;
         return false; }
-    bool preorder(const IR::MethodCallExpression *mce) {
+    bool preorder(const P4::IR::MethodCallExpression *mce) {
         BUG("MethodCallExpression not supported in IXBarExprSeed: %s", mce);
         return false; }
 
  public:
-    IXBarExprSeed(const IR::Expression *e, le_bitrange sl) : slice(sl) { e->apply(*this); }
+    IXBarExprSeed(const P4::IR::Expression *e, le_bitrange sl) : slice(sl) { e->apply(*this); }
     operator bitvec() const { return rv >> slice.lo; }
 };
 
 struct P4HashFunction : public IHasDbPrint {
-    safe_vector<const IR::Expression *> inputs;
+    safe_vector<const P4::IR::Expression *> inputs;
     le_bitrange hash_bits;
-    IR::MAU::HashFunction algorithm;
+    P4::IR::MAU::HashFunction algorithm;
     cstring dyn_hash_name;
     LTBitMatrix symmetrically_hashed_inputs;
-    const IR::Expression *hash_gen_expr = nullptr;
+    const P4::IR::Expression *hash_gen_expr = nullptr;
     // FIXME -- we record the expression the hash is derived from so it can be copied to
     // the IXBar::Use::HashDistHash and then output it in the .bfa file.  Perhaps we should
     // compute the (raw) GFM bits here instead?
@@ -210,21 +210,21 @@ struct P4HashFunction : public IHasDbPrint {
  */
 bool verifySymmetricHashPairs(
     const PhvInfo &phv,
-    safe_vector<const IR::Expression *> &field_list,
-    const IR::Annotations *annotations,
+    safe_vector<const P4::IR::Expression *> &field_list,
+    const P4::IR::Annotations *annotations,
     gress_t gress,
-    const IR::MAU::HashFunction& hf,
+    const P4::IR::MAU::HashFunction& hf,
     LTBitMatrix *sym_pairs);
 
 /**
  * The purpose of this function is to convert an Expression into a P4HashFunction, which can
  * be used by the internal algorithms to compare, allocate, and generate JSON.  The hash function
- * is built entirely around the IR::MAU::HashGenExpression, where the HashGenExpression
+ * is built entirely around the P4::IR::MAU::HashGenExpression, where the HashGenExpression
  * indicate which fields are inputs and the algorithm, and the Slice on the outside can also
  * determine hash_bits
  *
  * FIXME: This pass is an extension of the IXBar::FieldManagement pass, and similar to the
- * IR::MAU::HashGenExpression, the goal would be obsolete the IXBar::FieldManagement pass,
+ * P4::IR::MAU::HashGenExpression, the goal would be obsolete the IXBar::FieldManagement pass,
  * which gathers up information about all xbar information for all types of inputs, and
  * gathers a list of functions to allocate
  */
@@ -232,7 +232,7 @@ class BuildP4HashFunction : public PassManager {
     P4HashFunction* _func = nullptr;
     const PhvInfo &phv;
 
-    Visitor::profile_t init_apply(const IR::Node *node) override {
+    Visitor::profile_t init_apply(const P4::IR::Node *node) override {
         auto rv = PassManager::init_apply(node);
         _func = nullptr;
         return rv;
@@ -240,7 +240,7 @@ class BuildP4HashFunction : public PassManager {
 
     class InsideHashGenExpr : public MauInspector {
         BuildP4HashFunction &self;
-        safe_vector<const IR::Expression *> fields;
+        safe_vector<const P4::IR::Expression *> fields;
         LTBitMatrix sym_fields;
 
         enum class State {
@@ -250,7 +250,7 @@ class BuildP4HashFunction : public PassManager {
             IXBAR_EXPR,
         } state = State::OUTSIDE;
 
-        Visitor::profile_t init_apply(const IR::Node *node) override {
+        Visitor::profile_t init_apply(const P4::IR::Node *node) override {
             auto rv = MauInspector::init_apply(node);
             fields.clear();
             sym_fields.clear();
@@ -258,18 +258,18 @@ class BuildP4HashFunction : public PassManager {
             return rv;
         }
 
-        bool preorder(const IR::MAU::HashGenExpression *) override;
-        bool preorder(const IR::MAU::FieldListExpression *) override;
-        bool preorder(const IR::Constant *) override;
-        bool preorder(const IR::Expression *) override;
-        bool preorder(const IR::MAU::ActionArg *) override;
-        bool preorder(const IR::Mask *) override;
-        bool preorder(const IR::Cast *) override;
-        bool preorder(const IR::Concat*) override;
-        bool preorder(const IR::StructExpression*) override;
-        bool preorder(const IR::ListExpression*) override;
-        void postorder(const IR::BFN::SignExtend *) override;
-        void postorder(const IR::MAU::HashGenExpression *) override;
+        bool preorder(const P4::IR::MAU::HashGenExpression *) override;
+        bool preorder(const P4::IR::MAU::FieldListExpression *) override;
+        bool preorder(const P4::IR::Constant *) override;
+        bool preorder(const P4::IR::Expression *) override;
+        bool preorder(const P4::IR::MAU::ActionArg *) override;
+        bool preorder(const P4::IR::Mask *) override;
+        bool preorder(const P4::IR::Cast *) override;
+        bool preorder(const P4::IR::Concat*) override;
+        bool preorder(const P4::IR::StructExpression*) override;
+        bool preorder(const P4::IR::ListExpression*) override;
+        void postorder(const P4::IR::BFN::SignExtend *) override;
+        void postorder(const P4::IR::MAU::HashGenExpression *) override;
 
      public:
         explicit InsideHashGenExpr(BuildP4HashFunction &s) : self(s) {}
@@ -278,8 +278,8 @@ class BuildP4HashFunction : public PassManager {
 
     class OutsideHashGenExpr : public MauInspector {
         BuildP4HashFunction &self;
-        bool preorder(const IR::MAU::HashGenExpression *) override;
-        void postorder(const IR::Slice *) override;
+        bool preorder(const P4::IR::MAU::HashGenExpression *) override;
+        void postorder(const P4::IR::Slice *) override;
 
      public:
         explicit OutsideHashGenExpr(BuildP4HashFunction &s) : self(s) {}
@@ -299,7 +299,7 @@ class BuildP4HashFunction : public PassManager {
 };
 
 class AdjustIXBarExpression : public MauModifier {
-    bool preorder(IR::MAU::IXBarExpression *e) override;
+    bool preorder(P4::IR::MAU::IXBarExpression *e) override;
 };
 
 #endif /* BF_P4C_MAU_IXBAR_EXPR_H_ */

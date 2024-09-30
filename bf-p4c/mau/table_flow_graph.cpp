@@ -12,9 +12,9 @@ std::ostream &operator<<(std::ostream &out, const FlowGraph &fg) {
     FlowGraph::Graph::edge_iterator edges, edges_end;
     for (boost::tie(edges, edges_end) = boost::edges(fg.g); edges != edges_end; ++edges) {
         auto src = boost::source(*edges, fg.g);
-        const IR::MAU::Table* source = fg.get_vertex(src);
+        const P4::IR::MAU::Table* source = fg.get_vertex(src);
         auto dst = boost::target(*edges, fg.g);
-        const IR::MAU::Table* target = fg.get_vertex(dst);
+        const P4::IR::MAU::Table* target = fg.get_vertex(dst);
         auto desc = fg.get_ctrl_dependency_info(*edges);
         out << "    " << (source ? source->name : "DEPARSER") <<
             (src == fg.v_source ? " (PARSER)" : "") << " -- " << desc << " --> " <<
@@ -23,7 +23,7 @@ std::ostream &operator<<(std::ostream &out, const FlowGraph &fg) {
     return out;
 }
 
-std::string FlowGraph::viz_node_name(const IR::MAU::Table* tbl) {
+std::string FlowGraph::viz_node_name(const P4::IR::MAU::Table* tbl) {
     std::string name = std::string(tbl ? tbl->name : "DEPARSER");
     std::replace(name.begin(), name.end(), '-', '_');
     std::replace(name.begin(), name.end(), '.', '_');
@@ -49,10 +49,10 @@ void FlowGraph::dump_viz(std::ostream &out, const FlowGraph::DumpTableDetails* d
     FlowGraph::Graph::edge_iterator edges, edges_end;
     for (boost::tie(edges, edges_end) = boost::edges(g); edges != edges_end; ++edges) {
         auto src = boost::source(*edges, g);
-        const IR::MAU::Table* source = get_vertex(src);
+        const P4::IR::MAU::Table* source = get_vertex(src);
 
         auto dst = boost::target(*edges, g);
-        const IR::MAU::Table* target = get_vertex(dst);
+        const P4::IR::MAU::Table* target = get_vertex(dst);
 
         std::string src_name = viz_node_name(source);
         std::string dst_name = viz_node_name(target);
@@ -63,12 +63,12 @@ void FlowGraph::dump_viz(std::ostream &out, const FlowGraph::DumpTableDetails* d
     out << "}" << std::endl;
 }
 
-const std::set<const IR::MAU::Table*>
-FlowGraph::get_dominators(const IR::MAU::Table* table) const {
+const std::set<const P4::IR::MAU::Table*>
+FlowGraph::get_dominators(const P4::IR::MAU::Table* table) const {
     if (!dominators) {
         // Compute dominator sets. Taken from the Wikipedia article on dominators.
-        using TableSet = std::set<const IR::MAU::Table*>;
-        using DominatorMap = std::map<const IR::MAU::Table*, TableSet>;
+        using TableSet = std::set<const P4::IR::MAU::Table*>;
+        using DominatorMap = std::map<const P4::IR::MAU::Table*, TableSet>;
         dominators = std::optional<DominatorMap>(DominatorMap());
         auto& dominators = *this->dominators;
 
@@ -108,7 +108,7 @@ FlowGraph::get_dominators(const IR::MAU::Table* table) const {
             BUG_CHECK(edges != edges_end, "Table flow graph has more than one source node");
             for (; edges != edges_end; ++edges) {
                 auto src = boost::source(*edges, g);
-                const IR::MAU::Table* parent = get_vertex(src);
+                const P4::IR::MAU::Table* parent = get_vertex(src);
                 TableSet parentDominators = dominators.at(parent);
                 TableSet intersection;
                 std::set_intersection(recomputed.begin(), recomputed.end(),
@@ -141,19 +141,19 @@ FlowGraph::get_dominators(const IR::MAU::Table* table) const {
     return dominators->at(table);
 }
 
-bool FlowGraph::is_always_reached(const IR::MAU::Table* table) const {
+bool FlowGraph::is_always_reached(const P4::IR::MAU::Table* table) const {
     // Check that the table dominates the graph's sink node.
     return get_dominators(nullptr).count(table);
 }
 
-Visitor::profile_t FindFlowGraph::init_apply(const IR::Node* node) {
+Visitor::profile_t FindFlowGraph::init_apply(const P4::IR::Node* node) {
     auto rv = Inspector::init_apply(node);
     fg.clear();
     fg.add_sink_vertex();
     return rv;
 }
 
-bool FindFlowGraph::preorder(const IR::MAU::TableSeq* table_seq) {
+bool FindFlowGraph::preorder(const P4::IR::MAU::TableSeq* table_seq) {
     if (table_seq->tables.size() < 2) {
         return Inspector::preorder(table_seq);
     }
@@ -163,7 +163,7 @@ bool FindFlowGraph::preorder(const IR::MAU::TableSeq* table_seq) {
     const auto* saved_next_table = next_table;
 
     bool first_iter = true;
-    const IR::MAU::Table* cur_table = nullptr;
+    const P4::IR::MAU::Table* cur_table = nullptr;
     for (const auto* next_table : table_seq->tables) {
         if (!first_iter) {
             // Visit cur_table with the new next_table.
@@ -182,7 +182,7 @@ bool FindFlowGraph::preorder(const IR::MAU::TableSeq* table_seq) {
     return false;
 }
 
-std::pair<bool, cstring> FindFlowGraph::next_incomplete(const IR::MAU::Table *t) {
+std::pair<bool, cstring> FindFlowGraph::next_incomplete(const P4::IR::MAU::Table *t) {
     // TODO: Handle $try_next_stage
     if (t->next.count("$hit"_cs) && t->next.count("$miss"_cs))
         return std::make_pair(false, ""_cs);
@@ -223,13 +223,13 @@ std::pair<bool, cstring> FindFlowGraph::next_incomplete(const IR::MAU::Table *t)
     return std::make_pair(false, ""_cs);
 }
 
-bool FindFlowGraph::preorder(const IR::MAU::Table *t) {
+bool FindFlowGraph::preorder(const P4::IR::MAU::Table *t) {
     // Add edges for next-table entries.
     for (auto& next_entry : t->next) {
         auto& action_name = next_entry.first;
         auto& next_table_seq = next_entry.second;
 
-        const IR::MAU::Table *dst;
+        const P4::IR::MAU::Table *dst;
         if (next_table_seq->tables.size() > 0) {
             dst = next_table_seq->tables[0];
         } else {
@@ -255,10 +255,10 @@ bool FindFlowGraph::preorder(const IR::MAU::Table *t) {
     return true;
 }
 
-bool FindFlowGraph::preorder(const IR::MAU::Action *act) {
+bool FindFlowGraph::preorder(const P4::IR::MAU::Action *act) {
     // Add deparser edges for exit actions (those that terminate MAU processing)
     if (act->exitAction) {
-        if (auto *t = findContext<IR::MAU::Table>()) {
+        if (auto *t = findContext<P4::IR::MAU::Table>()) {
             LOG3("Parent : " << t->name << " --> " << act->name << " --> DEPARSER");
             fg.add_edge(t, nullptr, act->name);
         }
@@ -294,14 +294,14 @@ void FindFlowGraph::end_apply() {
         fg.dump_viz(std::cout);
 }
 
-Visitor::profile_t FindFlowGraphs::init_apply(const IR::Node* root) {
+Visitor::profile_t FindFlowGraphs::init_apply(const P4::IR::Node* root) {
     // Clear the flow graphs every time the visitor is applied.
     auto result = Inspector::init_apply(root);
     flow_graphs.clear();
     return result;
 }
 
-bool FindFlowGraphs::preorder(const IR::MAU::TableSeq* thread) {
+bool FindFlowGraphs::preorder(const P4::IR::MAU::TableSeq* thread) {
     // Each top-level TableSeq should represent the whole MAU pipeline for a single gress. Build
     // the control-flow graph for that.
     if (!thread->empty()) {
@@ -313,7 +313,7 @@ bool FindFlowGraphs::preorder(const IR::MAU::TableSeq* thread) {
     return false;
 }
 
-bool FindFlowGraphs::preorder(const IR::BFN::Deparser* dep)  {
+bool FindFlowGraphs::preorder(const P4::IR::BFN::Deparser* dep)  {
     // We need to check if the given egress already exists in the sequence.
     // * yes - just continue
     // * no - we need to insert empty flow graph which will be later used in dominator tree code

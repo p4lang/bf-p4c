@@ -6,8 +6,8 @@
 
 class TableFindSeqDependencies : public MauModifier {
     FieldUse    uses;
-    profile_t init_apply(const IR::Node *root) override;
-    void postorder(IR::MAU::TableSeq *) override;
+    profile_t init_apply(const P4::IR::Node *root) override;
+    void postorder(P4::IR::MAU::TableSeq *) override;
 
  public:
     explicit TableFindSeqDependencies(const PhvInfo& p) : uses(p) { }

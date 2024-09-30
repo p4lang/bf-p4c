@@ -275,19 +275,19 @@
  * while it does not reduce long branch requirements, does reduce dummy table requirements in
  * order to merge.
  */
-bool JbayNextTable::LocalizeSeqs::BuildTableToSeqs::preorder(const IR::MAU::Table *tbl) {
-    auto seq = findContext<IR::MAU::TableSeq>();
+bool JbayNextTable::LocalizeSeqs::BuildTableToSeqs::preorder(const P4::IR::MAU::Table *tbl) {
+    auto seq = findContext<P4::IR::MAU::TableSeq>();
     self.table_to_seqs[tbl].insert(seq);
     return true;
 }
 
-bool JbayNextTable::LocalizeSeqs::BuildCanLocalizeMaps::preorder(const IR::MAU::Table *tbl) {
-    if (tbl->always_run == IR::MAU::AlwaysRun::ACTION) return true;
+bool JbayNextTable::LocalizeSeqs::BuildCanLocalizeMaps::preorder(const P4::IR::MAU::Table *tbl) {
+    if (tbl->always_run == P4::IR::MAU::AlwaysRun::ACTION) return true;
     bool first_run = true;
-    ordered_set<const IR::MAU::Table *> seen_after;
+    ordered_set<const P4::IR::MAU::Table *> seen_after;
     for (auto seq : self.table_to_seqs.at(tbl)) {
         bool before_table = true;
-        ordered_set<const IR::MAU::Table *> local_seen_after;
+        ordered_set<const P4::IR::MAU::Table *> local_seen_after;
         for (auto seq_tbl : seq->tables) {
             if (seq_tbl == tbl) {
                 before_table = false;
@@ -316,11 +316,11 @@ bool JbayNextTable::LocalizeSeqs::BuildCanLocalizeMaps::preorder(const IR::MAU::
 
 class JbayNextTable::FindNextTableUse : public MauTableInspector {
     JbayNextTable &self;
-    std::vector<const IR::MAU::Table *> tables;
+    std::vector<const P4::IR::MAU::Table *> tables;
 
-    int first_id(const IR::MAU::TableSeq *seq) {
+    int first_id(const P4::IR::MAU::TableSeq *seq) {
         for (auto *t : seq->tables) {
-            if (t->always_run != IR::MAU::AlwaysRun::ACTION)
+            if (t->always_run != P4::IR::MAU::AlwaysRun::ACTION)
                 return *t->global_id(); }
         return -1; }
     int stage_diff(std::pair<int, int> range) {
@@ -331,18 +331,18 @@ class JbayNextTable::FindNextTableUse : public MauTableInspector {
     bool overlaps(std::pair<int, int> r1, std::pair<int, int> r2) {
         return r1.second > r2.first && r2.second > r1.first; }
 
-    profile_t init_apply(const IR::Node *root) {
+    profile_t init_apply(const P4::IR::Node *root) {
         self.use_next_table.clear();
         tables.clear();
         return MauTableInspector::init_apply(root); }
-    void postorder(const IR::MAU::Table *t) override {
+    void postorder(const P4::IR::MAU::Table *t) override {
         // only care about tables that have control dependent successors (for now)
         // FIXME -- such tables could use next_table to trigger the next table from the
         // containing seq, if that was useful.  Probably almost never useful?
         if (!t->next.empty()) tables.push_back(t); }
-    void postorder(const IR::BFN::Pipe *) {
+    void postorder(const P4::IR::BFN::Pipe *) {
         std::stable_sort(tables.begin(), tables.end(),
-                         [this](const IR::MAU::Table *a, const IR::MAU::Table *b) {
+                         [this](const P4::IR::MAU::Table *a, const P4::IR::MAU::Table *b) {
             return self.control_dep.paths(a) > self.control_dep.paths(b); });
         for (auto *t : tables) {
             std::pair<int, int> range;
@@ -381,14 +381,14 @@ class JbayNextTable::FindNextTableUse : public MauTableInspector {
  * do so right now out of convenience. In the case of (2), we do need to run it multiple times,
  * since the NTP needs to be associated with different tables. */
 struct JbayNextTable::Prop::NTInfo {
-    const IR::MAU::Table* parent;  // Origin of this control flow
-    dyn_vector<dyn_vector<const IR::MAU::Table*>> stages;  // Tables in each stage
+    const P4::IR::MAU::Table* parent;  // Origin of this control flow
+    dyn_vector<dyn_vector<const P4::IR::MAU::Table*>> stages;  // Tables in each stage
     const int first_stage;
     int last_stage;
     const cstring seq_nm;  // Name of the table sequence
-    const IR::MAU::TableSeq* ts;
+    const P4::IR::MAU::TableSeq* ts;
 
-    NTInfo(const IR::MAU::Table* tbl, std::pair<cstring, const IR::MAU::TableSeq*> seq)
+    NTInfo(const P4::IR::MAU::Table* tbl, std::pair<cstring, const P4::IR::MAU::TableSeq*> seq)
             : parent(tbl), first_stage(tbl->stage()), seq_nm(seq.first), ts(seq.second) {
         LOG4("NTP for " << tbl->name << " and sequence " << seq.first << ":");
         last_stage = tbl->stage();
@@ -430,7 +430,7 @@ bool JbayNextTable::LBUse::operator&(const LBUse& r) const {
         return !(fst > r.lst || lst < r.fst);
 }
 
-void JbayNextTable::LBUse::extend(const IR::MAU::Table* t) {
+void JbayNextTable::LBUse::extend(const P4::IR::MAU::Table* t) {
     ssize_t st = t->stage();
     BUG_CHECK(ssize_t(st) < lst, "Table %s trying to long branch to earlier stage!", t->name);
     // If tables are in the same stage, we don't need to do anything
@@ -445,7 +445,7 @@ bool JbayNextTable::Tag::add_use(const LBUse& lbu) {
     return true;
 }
 
-JbayNextTable::profile_t JbayNextTable::Prop::init_apply(const IR::Node* root) {
+JbayNextTable::profile_t JbayNextTable::Prop::init_apply(const P4::IR::Node* root) {
     auto rv = MauInspector::init_apply(root);
     // Clear maps, since we have to rebuild them
     self.props.clear();
@@ -514,7 +514,7 @@ void JbayNextTable::Prop::cross_prop(const NTInfo &nti, std::map<int, bitvec> &e
             if (executed_paths[i].getbit(*rep->global_id())) continue;
             cstring branch = "$run_if_ran"_cs;
             int prev_st = 0;
-            const IR::MAU::Table *prev_t = nullptr;
+            const P4::IR::MAU::Table *prev_t = nullptr;
             for (int j = i - 1; j >= nti.first_stage; j--) {
                 for (auto pt : stages.at(j)) {
                     // JIRA-DOC: P4C-2325: Must be propagated to
@@ -581,8 +581,8 @@ void JbayNextTable::Prop::next_table_prop(const NTInfo &nti,
         break; }
 }
 
-bool JbayNextTable::Prop::preorder(const IR::MAU::Table* t) {
-    if (t->always_run == IR::MAU::AlwaysRun::ACTION)
+bool JbayNextTable::Prop::preorder(const P4::IR::MAU::Table* t) {
+    if (t->always_run == P4::IR::MAU::AlwaysRun::ACTION)
         return true;
     int st = t->stage();
     self.max_stage = st > self.max_stage ? st : self.max_stage;
@@ -590,7 +590,7 @@ bool JbayNextTable::Prop::preorder(const IR::MAU::Table* t) {
     self.mems[st]->update(t->resources->memuse);
     if (*t->global_id() > static_cast<int>(self.stage_id[st]))
         self.stage_id[st] = *t->global_id();
-    if (!findContext<IR::MAU::Table>())
+    if (!findContext<P4::IR::MAU::Table>())
         self.al_runs.insert(t->unique_id());
     // Add all of the table's table sequences
     LOG4("    Prop preorder Table " << t->externalName());
@@ -615,7 +615,7 @@ void JbayNextTable::Prop::end_apply() {
     LOG1("FINISHED NEXT TABLE PROPAGATION");
 }
 
-JbayNextTable::profile_t JbayNextTable::LBAlloc::init_apply(const IR::Node* root) {
+JbayNextTable::profile_t JbayNextTable::LBAlloc::init_apply(const P4::IR::Node* root) {
     auto rv = MauInspector::init_apply(root);  // Early exit
     // Clear old values
     self.stage_tags.clear();
@@ -662,7 +662,7 @@ int JbayNextTable::LBAlloc::alloc_lb(const LBUse& u) {
     return tag;
 }
 
-bool JbayNextTable::LBAlloc::preorder(const IR::BFN::Pipe*) {
+bool JbayNextTable::LBAlloc::preorder(const P4::IR::BFN::Pipe*) {
     return false;
 }
 
@@ -746,14 +746,14 @@ void JbayNextTable::LBAlloc::end_apply() {
     LOG3(log.str());
 }
 
-JbayNextTable::profile_t JbayNextTable::TagReduce::init_apply(const IR::Node* root) {
+JbayNextTable::profile_t JbayNextTable::TagReduce::init_apply(const P4::IR::Node* root) {
     auto rv = MauTransform::init_apply(root);
     stage_dts.clear();
     dumb_tbls.clear();
     return rv;
 }
 
-IR::Node* JbayNextTable::TagReduce::preorder(IR::BFN::Pipe* p) {
+P4::IR::Node* JbayNextTable::TagReduce::preorder(P4::IR::BFN::Pipe* p) {
     if (self.stage_tags.size() <= size_t(Device::numLongBranchTags())) {
         return p;
     }
@@ -773,12 +773,12 @@ IR::Node* JbayNextTable::TagReduce::preorder(IR::BFN::Pipe* p) {
     return p;
 }
 
-IR::Node* JbayNextTable::TagReduce::preorder(IR::MAU::TableSeq* ts) {
+P4::IR::Node* JbayNextTable::TagReduce::preorder(P4::IR::MAU::TableSeq* ts) {
     // Get the original pointer
-    auto key = dynamic_cast<const IR::MAU::TableSeq*>(getOriginal());
+    auto key = dynamic_cast<const P4::IR::MAU::TableSeq*>(getOriginal());
     // Add new tables
 
-    auto control_tbl = findContext<IR::MAU::Table>();
+    auto control_tbl = findContext<P4::IR::MAU::Table>();
     if (control_tbl == nullptr)
         return ts;
 
@@ -794,16 +794,16 @@ IR::Node* JbayNextTable::TagReduce::preorder(IR::MAU::TableSeq* ts) {
 
     // Put tables into LID sorted order
     std::sort(ts->tables.begin(), ts->tables.end(),
-              [](const IR::MAU::Table* t1, const IR::MAU::Table* t2)
+              [](const P4::IR::MAU::Table* t1, const P4::IR::MAU::Table* t2)
               { return *t1->global_id() < *t2->global_id(); });
     return ts;
 }
 
-IR::Node* JbayNextTable::TagReduce::preorder(IR::MAU::Table* t) {
-    if (t->always_run == IR::MAU::AlwaysRun::ACTION)
+P4::IR::Node* JbayNextTable::TagReduce::preorder(P4::IR::MAU::Table* t) {
+    if (t->always_run == P4::IR::MAU::AlwaysRun::ACTION)
         return t;
     if (self.al_runs.count(t->unique_id()))
-        t->always_run = IR::MAU::AlwaysRun::TABLE;
+        t->always_run = P4::IR::MAU::AlwaysRun::TABLE;
     return t;
 }
 
@@ -985,7 +985,7 @@ bool JbayNextTable::TagReduce::merge_tags() {
                                                     kv.first.dest->name + "-" + std::to_string(st);
                                     LOG3("    - " << tname << " in stage " << st
                                          << ", targeting dest " << kv.first.dest->name);
-                                    auto* dt = new IR::MAU::Table(tname, kv.first.thread());
+                                    auto* dt = new P4::IR::MAU::Table(tname, kv.first.thread());
                                     dt->set_global_id(self.stage_id[st]++);
                                     stage_dts[st].push_back(dt);
                                     a.push_back(dt);
@@ -1005,7 +1005,7 @@ void JbayNextTable::TagReduce::alloc_dt_mems() {
     // Allocate memories for dumb tables
     for (auto stage : stage_dts) {
         // Need to store resources until allocation has finished
-        std::map<IR::MAU::Table*, TableResourceAlloc*> tras;
+        std::map<P4::IR::MAU::Table*, TableResourceAlloc*> tras;
         auto& mem = self.mems[stage.first];
         if (!mem) mem.reset(Memories::create());
         for (auto* t : stage.second) {
@@ -1037,7 +1037,7 @@ JbayNextTable::JbayNextTable(bool disableNextTableUse) {
                 new TagReduce(*this) });
 }
 
-ordered_set<UniqueId> JbayNextTable::next_for(const IR::MAU::Table *tbl, cstring what) const {
+ordered_set<UniqueId> JbayNextTable::next_for(const P4::IR::MAU::Table *tbl, cstring what) const {
     if (what == "$miss" && tbl->next.count("$try_next_stage"_cs))
         what = "$try_next_stage"_cs;
 

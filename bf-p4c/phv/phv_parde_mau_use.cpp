@@ -12,7 +12,7 @@
 //
 //***********************************************************************************
 
-Visitor::profile_t Phv_Parde_Mau_Use::init_apply(const IR::Node *root) {
+Visitor::profile_t Phv_Parde_Mau_Use::init_apply(const P4::IR::Node *root) {
     auto rv = Inspector::init_apply(root);
     in_mau = false;
     in_dep = false;
@@ -28,7 +28,7 @@ Visitor::profile_t Phv_Parde_Mau_Use::init_apply(const IR::Node *root) {
     return rv;
 }
 
-bool Phv_Parde_Mau_Use::preorder(const IR::BFN::Parser *p) {
+bool Phv_Parde_Mau_Use::preorder(const P4::IR::BFN::Parser *p) {
     LOG5("PREORDER Parser ");
     in_mau = false;
     in_dep = false;
@@ -37,26 +37,26 @@ bool Phv_Parde_Mau_Use::preorder(const IR::BFN::Parser *p) {
     return true;
 }
 
-bool Phv_Parde_Mau_Use::preorder(const IR::BFN::Extract *e) {
+bool Phv_Parde_Mau_Use::preorder(const P4::IR::BFN::Extract *e) {
     LOG5("PREORDER Extract ");
-    auto lval = e->dest->to<IR::BFN::FieldLVal>();
+    auto lval = e->dest->to<P4::IR::BFN::FieldLVal>();
     if (!lval) return true;
     auto* f = phv.field(lval->field);
     BUG_CHECK(f, "Extract to non-PHV destination: %1%", e);
     extracted_i[thread][f->id] = true;
 
-    auto ibufRVal = e->source->to<IR::BFN::PacketRVal>();
+    auto ibufRVal = e->source->to<P4::IR::BFN::PacketRVal>();
     if (ibufRVal) {
         extracted_from_pkt_i[thread][f->id] = true;
         // std::cerr << "EFP: " << f->id << std::endl;
     }
-    auto crval = e->source->to<IR::BFN::ConstantRVal>();
+    auto crval = e->source->to<P4::IR::BFN::ConstantRVal>();
     if (crval)
         extracted_from_const_i[thread][f->id] = true;
     return true;
 }
 
-bool Phv_Parde_Mau_Use::preorder(const IR::BFN::ParserChecksumWritePrimitive *e) {
+bool Phv_Parde_Mau_Use::preorder(const P4::IR::BFN::ParserChecksumWritePrimitive *e) {
     LOG5("PREORDER Checksum " << e);
     auto lval = e->getWriteDest();
     if (!lval) return true;
@@ -68,7 +68,7 @@ bool Phv_Parde_Mau_Use::preorder(const IR::BFN::ParserChecksumWritePrimitive *e)
     return true;
 }
 
-bool Phv_Parde_Mau_Use::preorder(const IR::BFN::Deparser *d) {
+bool Phv_Parde_Mau_Use::preorder(const P4::IR::BFN::Deparser *d) {
     LOG5("PREORDER Deparser ");
     thread = d->gress;
     in_mau = false;
@@ -77,7 +77,7 @@ bool Phv_Parde_Mau_Use::preorder(const IR::BFN::Deparser *d) {
     return true;
 }
 
-bool Phv_Parde_Mau_Use::preorder(const IR::BFN::Digest* digest) {
+bool Phv_Parde_Mau_Use::preorder(const P4::IR::BFN::Digest* digest) {
     if (digest->name == "learning") {
         const PHV::Field* selector = phv.field(digest->selector->field);
         learning_reads_i.insert(selector);
@@ -93,7 +93,7 @@ bool Phv_Parde_Mau_Use::preorder(const IR::BFN::Digest* digest) {
     return true;
 }
 
-bool Phv_Parde_Mau_Use::preorder(const IR::MAU::TableSeq *) {
+bool Phv_Parde_Mau_Use::preorder(const P4::IR::MAU::TableSeq *) {
     LOG5("PREORDER TableSeq ");
     // FIXME -- treat GHOST thread as ingress for PHV allocation
     if ((thread = VisitingThread(this)) == GHOST)
@@ -104,9 +104,9 @@ bool Phv_Parde_Mau_Use::preorder(const IR::MAU::TableSeq *) {
     return true;
 }
 
-bool Phv_Parde_Mau_Use::preorder(const IR::MAU::TableKey * key) {
+bool Phv_Parde_Mau_Use::preorder(const P4::IR::MAU::TableKey * key) {
     LOG5("PREORDER TableKey: " << *key);
-    const auto* table = findContext<IR::MAU::Table>();
+    const auto* table = findContext<P4::IR::MAU::Table>();
     BUG_CHECK(table, "no table for key: %1%", key);
     le_bitrange bits;
     const PHV::Field* f = phv.field(key->expr, &bits);
@@ -116,9 +116,9 @@ bool Phv_Parde_Mau_Use::preorder(const IR::MAU::TableKey * key) {
     return true;
 }
 
-bool Phv_Parde_Mau_Use::preorder(const IR::Expression *e) {
+bool Phv_Parde_Mau_Use::preorder(const P4::IR::Expression *e) {
     LOG5("PREORDER Expression " << *e);
-    if (auto *hr = e->to<IR::HeaderRef>()) {
+    if (auto *hr = e->to<P4::IR::HeaderRef>()) {
         for (auto id : phv.struct_info(hr).field_ids()) {
             auto* field = phv.field(id);
             CHECK_NULL(field);
@@ -133,7 +133,7 @@ bool Phv_Parde_Mau_Use::preorder(const IR::Expression *e) {
         LOG5("is_used_mau: " << is_used_mau(info));
 
         // Used in ALU instruction.
-        if (findContext<IR::MAU::Instruction>() != nullptr) {
+        if (findContext<P4::IR::MAU::Instruction>() != nullptr) {
             LOG5("use " << info->name << " in ALU instruction");
             used_alu_i[info->id].insert(bits);
         }
@@ -146,7 +146,7 @@ bool Phv_Parde_Mau_Use::preorder(const IR::Expression *e) {
             written_i[info->id].insert(bits);
         }
         return false;
-    } else if (e->is<IR::Member>()) {  // prevent descent into IR::Member objects
+    } else if (e->is<P4::IR::Member>()) {  // prevent descent into P4::IR::Member objects
         LOG5("  ... member expr");
         return false;
     }
@@ -241,10 +241,10 @@ bool Phv_Parde_Mau_Use::is_allocation_required(const PHV::Field *f) const {
     return !f->is_ignore_alloc() && (is_referenced(f) || f->isGhostField());
 }
 
-ordered_set<std::pair<const IR::MAU::Table *, const IR::MAU::TableKey *>>
+ordered_set<std::pair<const P4::IR::MAU::Table *, const P4::IR::MAU::TableKey *>>
 Phv_Parde_Mau_Use::ixbar_read(const PHV::Field *f, le_bitrange range) const {
     if (!ixbar_read_i.count(f)) return {};
-    ordered_set<std::pair<const IR::MAU::Table *, const IR::MAU::TableKey *>> rv;
+    ordered_set<std::pair<const P4::IR::MAU::Table *, const P4::IR::MAU::TableKey *>> rv;
     for (const auto& kv : ixbar_read_i.at(f)) {
         if (kv.first.contains(range)) {
             rv.insert(kv.second.begin(), kv.second.end());
@@ -264,7 +264,7 @@ Phv_Parde_Mau_Use::ixbar_read(const PHV::Field *f, le_bitrange range) const {
 //
 //***********************************************************************************
 
-bool PhvUse::preorder(const IR::BFN::Deparser *d) {
+bool PhvUse::preorder(const P4::IR::BFN::Deparser *d) {
     LOG5("PREORDER Deparser PhvUse");
     thread = d->gress;
     in_dep = true;
@@ -280,7 +280,7 @@ bool PhvUse::preorder(const IR::BFN::Deparser *d) {
     return false;
 }
 
-bool PhvUse::preorder(const IR::BFN::DeparserParameter*) {
+bool PhvUse::preorder(const P4::IR::BFN::DeparserParameter*) {
     LOG5("PREORDER DeparserParameter PhvUse");
     // Treat fields which are used to set intrinsic deparser parameters as if
     // they're used in the MAU, because they can't go in TPHV or CLOT.
@@ -289,13 +289,13 @@ bool PhvUse::preorder(const IR::BFN::DeparserParameter*) {
     return true;
 }
 
-void PhvUse::postorder(const IR::BFN::DeparserParameter*) {
+void PhvUse::postorder(const P4::IR::BFN::DeparserParameter*) {
     LOG5("POSTORDER Deparser PhvUse");
     in_mau = false;
     LOG5("\t\t Turn off MAU for DeparserParameter");
 }
 
-bool PhvUse::preorder(const IR::BFN::Digest* digest) {
+bool PhvUse::preorder(const P4::IR::BFN::Digest* digest) {
     Phv_Parde_Mau_Use::preorder(digest);
     LOG5("PREORDER Digest PhvUse");
     // Treat fields which are used in digests as if they're used in the MAU,
@@ -305,7 +305,7 @@ bool PhvUse::preorder(const IR::BFN::Digest* digest) {
     return true;
 }
 
-void PhvUse::postorder(const IR::BFN::Digest*) {
+void PhvUse::postorder(const P4::IR::BFN::Digest*) {
     LOG5("POSTORDER Digest PhvUse");
     in_mau = false;
     LOG5("\t\t Turn off MAU for Digest");

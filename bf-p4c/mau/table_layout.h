@@ -13,8 +13,8 @@ namespace StageFlag {
 
 class LayoutOption {
  public:
-    IR::MAU::Table::Layout layout;
-    IR::MAU::Table::Way way;
+    P4::IR::MAU::Table::Layout layout;
+    P4::IR::MAU::Table::Way way;
     safe_vector<int> way_sizes;
     safe_vector<int> partition_sizes;
     safe_vector<int> dleft_hash_sizes;
@@ -27,9 +27,9 @@ class LayoutOption {
     bool previously_widened = false;
     bool identity = false;
     LayoutOption() {}
-    explicit LayoutOption(const IR::MAU::Table::Layout l, int i)
+    explicit LayoutOption(const P4::IR::MAU::Table::Layout l, int i)
         : layout(l), action_format_index(i) {}
-    LayoutOption(const IR::MAU::Table::Layout l, const IR::MAU::Table::Way w, int i)
+    LayoutOption(const P4::IR::MAU::Table::Layout l, const P4::IR::MAU::Table::Way w, int i)
         : layout(l), way(w), action_format_index(i) {}
     LayoutOption* clone() const;
     void clear_mems() {
@@ -68,59 +68,59 @@ class LayoutChoices {
     FindPayloadCandidates fpc;
 
  private:
-    virtual void setup_exact_match(const IR::MAU::Table *tbl,
-            const IR::MAU::Table::Layout &layout_proto, ActionData::FormatType_t format_type,
+    virtual void setup_exact_match(const P4::IR::MAU::Table *tbl,
+            const P4::IR::MAU::Table::Layout &layout_proto, ActionData::FormatType_t format_type,
             int action_data_bytes_in_table, int immediate_bits, int index);
-    virtual void setup_layout_option_no_match(const IR::MAU::Table *tbl,
-            const IR::MAU::Table::Layout &layout, ActionData::FormatType_t format_type);
-    virtual void setup_ternary_layout(const IR::MAU::Table *tbl,
-            const IR::MAU::Table::Layout &layout_proto, ActionData::FormatType_t format_type,
+    virtual void setup_layout_option_no_match(const P4::IR::MAU::Table *tbl,
+            const P4::IR::MAU::Table::Layout &layout, ActionData::FormatType_t format_type);
+    virtual void setup_ternary_layout(const P4::IR::MAU::Table *tbl,
+            const P4::IR::MAU::Table::Layout &layout_proto, ActionData::FormatType_t format_type,
             int action_data_bytes_in_table, int immediate_bits, int index);
-    void compute_action_formats(const IR::MAU::Table *t, ActionData::FormatType_t type);
-    void compute_layout_options(const IR::MAU::Table *t, ActionData::FormatType_t type);
+    void compute_action_formats(const P4::IR::MAU::Table *t, ActionData::FormatType_t type);
+    void compute_layout_options(const P4::IR::MAU::Table *t, ActionData::FormatType_t type);
 
-    void add_hash_action_option(const IR::MAU::Table *tbl, const IR::MAU::Table::Layout &layout,
+    void add_hash_action_option(const P4::IR::MAU::Table *tbl, const P4::IR::MAU::Table::Layout &layout,
             ActionData::FormatType_t format_type, bool &hash_action_only);
-    static void setup_indirect_ptrs(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl,
+    static void setup_indirect_ptrs(P4::IR::MAU::Table::Layout &layout, const P4::IR::MAU::Table *tbl,
             ActionData::FormatType_t format_type);
-    void setup_layout_options(const IR::MAU::Table *tbl,
-            const IR::MAU::Table::Layout &layout_proto, ActionData::FormatType_t format_type);
-    void setup_ternary_layout_options(const IR::MAU::Table *tbl,
-            const IR::MAU::Table::Layout &layout_proto, ActionData::FormatType_t format_type);
-    bool need_meter(const IR::MAU::Table *t, ActionData::FormatType_t format_type) const;
+    void setup_layout_options(const P4::IR::MAU::Table *tbl,
+            const P4::IR::MAU::Table::Layout &layout_proto, ActionData::FormatType_t format_type);
+    void setup_ternary_layout_options(const P4::IR::MAU::Table *tbl,
+            const P4::IR::MAU::Table::Layout &layout_proto, ActionData::FormatType_t format_type);
+    bool need_meter(const P4::IR::MAU::Table *t, ActionData::FormatType_t format_type) const;
 
  protected:
     using key_t = std::pair<cstring, ActionData::FormatType_t>;
     template<class T> using cache_t = std::map<key_t, safe_vector<T>>;
     cache_t<LayoutOption>               cache_layout_options;
     cache_t<ActionData::Format::Use>    cache_action_formats;
-    int get_pack_pragma_val(const IR::MAU::Table *tbl, const IR::MAU::Table::Layout &layout_proto);
+    int get_pack_pragma_val(const P4::IR::MAU::Table *tbl, const P4::IR::MAU::Table::Layout &layout_proto);
 
  public:
     const safe_vector<LayoutOption> &
-    get_layout_options(const IR::MAU::Table *t, ActionData::FormatType_t type) {
+    get_layout_options(const P4::IR::MAU::Table *t, ActionData::FormatType_t type) {
         BUG_CHECK(t, "null table pointer");
         auto key = std::make_pair(t->name, type);
         if (!cache_layout_options.count(key))
             compute_layout_options(t, type);
         return cache_layout_options.at(key); }
-    const safe_vector<LayoutOption> &get_layout_options(const IR::MAU::Table *t) {
+    const safe_vector<LayoutOption> &get_layout_options(const P4::IR::MAU::Table *t) {
         return get_layout_options(t, ActionData::FormatType_t::default_for_table(t)); }
 
     const safe_vector<ActionData::Format::Use> &
-    get_action_formats(const IR::MAU::Table *t, ActionData::FormatType_t type) {
+    get_action_formats(const P4::IR::MAU::Table *t, ActionData::FormatType_t type) {
         BUG_CHECK(t, "null table pointer");
         auto key = std::make_pair(t->name, type);
         if (!cache_action_formats.count(key))
             compute_action_formats(t, type);
         return cache_action_formats.at(key); }
-    const safe_vector<ActionData::Format::Use> &get_action_formats(const IR::MAU::Table *t) {
+    const safe_vector<ActionData::Format::Use> &get_action_formats(const P4::IR::MAU::Table *t) {
         return get_action_formats(t, ActionData::FormatType_t::default_for_table(t)); }
 
     // meter output formats are stored here, but they are essentially completely independent
     // of the layout choices.
     std::map<cstring /* table name */, MeterALU::Format::Use> total_meter_output_format;
-    MeterALU::Format::Use get_attached_formats(const IR::MAU::Table *t,
+    MeterALU::Format::Use get_attached_formats(const P4::IR::MAU::Table *t,
                                                ActionData::FormatType_t format_type) const {
         if (!t || !total_meter_output_format.count(t->name) || !need_meter(t, format_type))
             return {};
@@ -137,18 +137,18 @@ class LayoutChoices {
     static LayoutChoices* create(PhvInfo &p, const ReductionOrInfo &ri, SplitAttachedInfo &a);
     LayoutChoices(PhvInfo &p, const ReductionOrInfo &ri, SplitAttachedInfo &a)
         : phv(p), att_info(a), red_info(ri), fpc(phv) {}
-    void add_payload_gw_layout(const IR::MAU::Table *tbl, const LayoutOption &base_option);
+    void add_payload_gw_layout(const P4::IR::MAU::Table *tbl, const LayoutOption &base_option);
 };
 
 /** Checks to see if the action(s) have hash distribution or rng access somewhere */
 class GetActionRequirements : public MauInspector {
     bool _hash_dist_needed = false;
     bool _rng_needed = false;
-    bool preorder(const IR::MAU::HashDist *) {
+    bool preorder(const P4::IR::MAU::HashDist *) {
         _hash_dist_needed = true;
         return false;
     }
-    bool preorder(const IR::MAU::RandomNumber *) {
+    bool preorder(const P4::IR::MAU::RandomNumber *) {
         _rng_needed = true;
         return false;
     }
@@ -160,12 +160,12 @@ class GetActionRequirements : public MauInspector {
 
 
 class RandomExternUsedOncePerAction : public MauInspector {
-    using RandExterns = ordered_set<const IR::MAU::RandomNumber *>;
-    using RandKey = std::pair<const IR::MAU::Table *, const IR::MAU::Action *>;
+    using RandExterns = ordered_set<const P4::IR::MAU::RandomNumber *>;
+    using RandKey = std::pair<const P4::IR::MAU::Table *, const P4::IR::MAU::Action *>;
     ordered_map<RandKey, RandExterns> rand_extern_per_action;
-    void postorder(const IR::MAU::RandomNumber *rn) override;
+    void postorder(const P4::IR::MAU::RandomNumber *rn) override;
 
-    Visitor::profile_t init_apply(const IR::Node *node) override {
+    Visitor::profile_t init_apply(const P4::IR::Node *node) override {
         auto rv = MauInspector::init_apply(node);
         rand_extern_per_action.clear();
         return rv;
@@ -176,11 +176,11 @@ class RandomExternUsedOncePerAction : public MauInspector {
 };
 
 class MeterColorMapramAddress : public PassManager {
-    ordered_map<const IR::MAU::Table *, bitvec> occupied_buses;
-    ordered_map<const IR::MAU::Meter *, bitvec> possible_addresses;
+    ordered_map<const P4::IR::MAU::Table *, bitvec> occupied_buses;
+    ordered_map<const P4::IR::MAU::Meter *, bitvec> possible_addresses;
     const SplitAttachedInfo &att_info;
 
-    Visitor::profile_t init_apply(const IR::Node *node) override {
+    Visitor::profile_t init_apply(const P4::IR::Node *node) override {
         auto rv = PassManager::init_apply(node);
         occupied_buses.clear();
         possible_addresses.clear();
@@ -189,10 +189,10 @@ class MeterColorMapramAddress : public PassManager {
 
     class FindBusUsers : public MauInspector {
         MeterColorMapramAddress &self;
-        bool preorder(const IR::MAU::IdleTime *) override;
-        bool preorder(const IR::MAU::Counter *) override;
+        bool preorder(const P4::IR::MAU::IdleTime *) override;
+        bool preorder(const P4::IR::MAU::Counter *) override;
         // Don't want to visit AttachedOutputs/StatefulCall
-        bool preorder(const IR::MAU::Action *) override { return false; }
+        bool preorder(const P4::IR::MAU::Action *) override { return false; }
 
      public:
         explicit FindBusUsers(MeterColorMapramAddress &self) : self(self) { }
@@ -200,9 +200,9 @@ class MeterColorMapramAddress : public PassManager {
 
     class DetermineMeterReqs : public MauInspector {
         MeterColorMapramAddress &self;
-        bool preorder(const IR::MAU::Meter *) override;
+        bool preorder(const P4::IR::MAU::Meter *) override;
         // Don't want to visit AttachedOutputs/StatefulCall
-        bool preorder(const IR::MAU::Action *) override { return false; }
+        bool preorder(const P4::IR::MAU::Action *) override { return false; }
 
      public:
         explicit DetermineMeterReqs(MeterColorMapramAddress &self) : self(self) { }
@@ -210,9 +210,9 @@ class MeterColorMapramAddress : public PassManager {
 
     class SetMapramAddress : public MauModifier {
         MeterColorMapramAddress &self;
-        bool preorder(IR::MAU::Meter *) override;
+        bool preorder(P4::IR::MAU::Meter *) override;
         // Don't want to visit AttachedOutputs/StatefulCall
-        bool preorder(IR::MAU::Action *) override { return false; }
+        bool preorder(P4::IR::MAU::Action *) override { return false; }
 
      public:
         explicit SetMapramAddress(MeterColorMapramAddress &self) : self(self) { }
@@ -231,22 +231,22 @@ class MeterColorMapramAddress : public PassManager {
 class ValidateActionProfileFormat : public MauInspector {
     LayoutChoices &lc;
 
-    bool preorder(const IR::MAU::ActionData *) override;
+    bool preorder(const P4::IR::MAU::ActionData *) override;
 
  public:
     explicit ValidateActionProfileFormat(LayoutChoices &l) : lc(l) { visitDagOnce = false; }
 };
 
 class ValidateTableSize : public MauInspector {
-    bool preorder(const IR::MAU::Table *) override;
+    bool preorder(const P4::IR::MAU::Table *) override;
 
  public:
     ValidateTableSize() { }
 };
 
 class ProhibitAtcamWideSelectors : public MauInspector {
-    bool preorder(const IR::MAU::Table *) override { visitOnce(); return true; }
-    bool preorder(const IR::MAU::Selector *) override;
+    bool preorder(const P4::IR::MAU::Table *) override { visitOnce(); return true; }
+    bool preorder(const P4::IR::MAU::Selector *) override;
  public:
      ProhibitAtcamWideSelectors() { visitDagOnce = false; }
 };
@@ -256,13 +256,13 @@ class CheckPlacementPriorities : public MauInspector {
     ordered_map<cstring, std::set<cstring>> placement_priorities;
     bool run_once = false;
 
-    profile_t init_apply(const IR::Node *root) override {
+    profile_t init_apply(const P4::IR::Node *root) override {
         auto rv = MauInspector::init_apply(root);
         placement_priorities.clear();
         return rv;
     }
 
-    bool preorder(const IR::MAU::Table *tbl) override;
+    bool preorder(const P4::IR::MAU::Table *tbl) override;
     void end_apply() override;
 
  public:
@@ -273,13 +273,13 @@ class TableLayout : public PassManager {
     LayoutChoices &lc;
     SplitAttachedInfo &att_info;
 
-    profile_t init_apply(const IR::Node *root) override;
+    profile_t init_apply(const P4::IR::Node *root) override;
  public:
     TableLayout(PhvInfo &p, LayoutChoices &l, SplitAttachedInfo &sia);
-    static void check_for_ternary(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl);
-    static void check_for_atcam(IR::MAU::Table::Layout &layout, const IR::MAU::Table *tbl,
+    static void check_for_ternary(P4::IR::MAU::Table::Layout &layout, const P4::IR::MAU::Table *tbl);
+    static void check_for_atcam(P4::IR::MAU::Table::Layout &layout, const P4::IR::MAU::Table *tbl,
                                 cstring &partition_index, const PhvInfo& phv);
-    static void check_for_alpm(IR::MAU::Table::Layout &, const IR::MAU::Table *tbl,
+    static void check_for_alpm(P4::IR::MAU::Table::Layout &, const P4::IR::MAU::Table *tbl,
                                cstring &partition_index, const PhvInfo& phv);
 };
 
@@ -291,7 +291,7 @@ class AssignCounterLRTValues : public PassManager {
   std::map<UniqueId, int> totalCounterRams = {};
 
  public:
-  Visitor::profile_t init_apply(const IR::Node *root) override {
+  Visitor::profile_t init_apply(const P4::IR::Node *root) override {
     auto rv = PassManager::init_apply(root);
     totalCounterRams.clear();
     return rv;
@@ -301,17 +301,17 @@ class AssignCounterLRTValues : public PassManager {
    private:
     AssignCounterLRTValues &self_;
    public:
-    bool preorder(const IR::MAU::Table *table) override;
+    bool preorder(const P4::IR::MAU::Table *table) override;
     explicit FindCounterRams(AssignCounterLRTValues &self) : self_(self) { }
   };
 
   class ComputeLRT : public MauModifier {
    private:
     AssignCounterLRTValues &self_;
-    void calculate_lrt_threshold_and_interval(const IR::MAU::Table *tbl,
-                                              IR::MAU::Counter *cntr);
+    void calculate_lrt_threshold_and_interval(const P4::IR::MAU::Table *tbl,
+                                              P4::IR::MAU::Counter *cntr);
    public:
-    bool preorder(IR::MAU::Counter *cntr) override;
+    bool preorder(P4::IR::MAU::Counter *cntr) override;
     explicit ComputeLRT(AssignCounterLRTValues &self) : self_(self) { }
   };
 

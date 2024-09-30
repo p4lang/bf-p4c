@@ -8,19 +8,19 @@
 #include "bf-p4c/phv/pragma/pa_alias.h"
 #include "bf-p4c/phv/transforms/auto_alias.h"
 
-/** This class generates a fieldExpressions map that stores a representative IR::Expression object
+/** This class generates a fieldExpressions map that stores a representative P4::IR::Expression object
   * corresponding to each field in the program.
   */
 class FindExpressionsForFields : public Inspector {
  private:
-    /// Map of IR::Expression objects corresponding to the field names.
-    ordered_map<cstring, const IR::Member*>& fieldNameToExpressionsMap;
+    /// Map of P4::IR::Expression objects corresponding to the field names.
+    ordered_map<cstring, const P4::IR::Member*>& fieldNameToExpressionsMap;
 
-    profile_t init_apply(const IR::Node* root) override;
-    bool preorder(const IR::HeaderOrMetadata* h) override;
+    profile_t init_apply(const P4::IR::Node* root) override;
+    bool preorder(const P4::IR::HeaderOrMetadata* h) override;
 
  public:
-    FindExpressionsForFields(const PhvInfo&, ordered_map<cstring, const IR::Member*>& f)
+    FindExpressionsForFields(const PhvInfo&, ordered_map<cstring, const P4::IR::Member*>& f)
         : fieldNameToExpressionsMap(f) { }
 };
 
@@ -34,18 +34,18 @@ class ReplaceAllAliases : public Transform {
     const PhvInfo& phv;
     /// Aliasing information from the \@pa_alias pragma.
     const PragmaAlias& pragmaAlias;
-    /// Map of IR::Expression objects corresponding to the alias destination fields.
-    const ordered_map<cstring, const IR::Member*>&    fieldExpressions;
+    /// Map of P4::IR::Expression objects corresponding to the alias destination fields.
+    const ordered_map<cstring, const P4::IR::Member*>&    fieldExpressions;
 
-    profile_t init_apply(const IR::Node* root) override;
-    IR::Node* preorder(IR::BFN::Pipe*) override;
-    IR::Node* preorder(IR::Expression* expr) override;
+    profile_t init_apply(const P4::IR::Node* root) override;
+    P4::IR::Node* preorder(P4::IR::BFN::Pipe*) override;
+    P4::IR::Node* preorder(P4::IR::Expression* expr) override;
 
  public:
     ReplaceAllAliases(
             const PhvInfo& p,
             const PragmaAlias& pragmaAlias,
-            const ordered_map<cstring, const IR::Member*>& f)
+            const ordered_map<cstring, const P4::IR::Member*>& f)
         : phv(p), pragmaAlias(pragmaAlias), fieldExpressions(f) { }
 };
 
@@ -63,9 +63,9 @@ class AddValidityBitSets : public Transform {
 
     inline cstring getFieldValidityName(cstring origName);
 
-    profile_t init_apply(const IR::Node* root) override;
-    IR::Node* preorder(IR::MAU::Instruction* inst) override;
-    IR::Node* postorder(IR::MAU::Action* action) override;
+    profile_t init_apply(const P4::IR::Node* root) override;
+    P4::IR::Node* preorder(P4::IR::MAU::Instruction* inst) override;
+    P4::IR::Node* postorder(P4::IR::MAU::Action* action) override;
 
  public:
     explicit AddValidityBitSets(const PhvInfo& p, const PragmaAlias& pa)
@@ -82,7 +82,7 @@ class AddValidityBitSets : public Transform {
   */
 class Alias : public Logging::PassManager {
  private:
-     ordered_map<cstring, const IR::Member*> fieldExpressions;
+     ordered_map<cstring, const P4::IR::Member*> fieldExpressions;
      const PragmaAlias &pragmaAlias;
 
  public:
@@ -104,7 +104,7 @@ class Alias : public Logging::PassManager {
 class ReinstateAliasSources : public Transform {
     PhvInfo&    phv;
 
-    IR::Node* preorder(IR::BFN::AliasMember* alias) override {
+    P4::IR::Node* preorder(P4::IR::BFN::AliasMember* alias) override {
         const PHV::Field* aliasSource = phv.field(alias->source);
         const PHV::Field* aliasDestination = phv.field(alias);
         BUG_CHECK(aliasSource, "Field %1% not found", alias->source);
@@ -113,7 +113,7 @@ class ReinstateAliasSources : public Transform {
         return alias->source->apply(ReinstateAliasSources(phv))->clone();
     }
 
-    IR::Node* preorder(IR::BFN::AliasSlice* alias) override {
+    P4::IR::Node* preorder(P4::IR::BFN::AliasSlice* alias) override {
         const PHV::Field* aliasSource = phv.field(alias->source);
         const PHV::Field* aliasDestination = phv.field(alias);
         BUG_CHECK(aliasSource, "Field %1% not found", alias->source);

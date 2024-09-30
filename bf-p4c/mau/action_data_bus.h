@@ -103,7 +103,7 @@ struct ActionDataBus {
             action_data_locs.clear();
             clobber_locs.clear(); }
         virtual Use *clone() const = 0;
-        virtual bool emit_adb_asm(std::ostream &, const IR::MAU::Table *, bitvec source) const = 0;
+        virtual bool emit_adb_asm(std::ostream &, const P4::IR::MAU::Table *, bitvec source) const = 0;
         virtual bool empty() const { return action_data_locs.empty() && clobber_locs.empty(); }
         virtual int rng_unit() const = 0;
         bool operator==(const Use &use) const {
@@ -123,25 +123,25 @@ struct ActionDataBus {
 
  protected:
     // Holds information on already allocated ActionProfiles, Meters, and Stateful Alus
-    ordered_map<const IR::MAU::AttachedMemory *, const Use &> allocated_attached;
+    ordered_map<const P4::IR::MAU::AttachedMemory *, const Use &> allocated_attached;
     // Holds information on already allocated stateful ALUs in the same reduction or group
     ordered_map<cstring, const Use &> reduction_or_mapping;
 
  public:
     virtual ~ActionDataBus() { }
 
-    virtual bool alloc_action_data_bus(const IR::MAU::Table *tbl,
+    virtual bool alloc_action_data_bus(const P4::IR::MAU::Table *tbl,
         const ActionData::Format::Use *use, TableResourceAlloc &alloc) = 0;
-    virtual bool alloc_action_data_bus(const IR::MAU::Table *tbl,
+    virtual bool alloc_action_data_bus(const P4::IR::MAU::Table *tbl,
         const MeterALU::Format::Use *use, TableResourceAlloc &alloc) = 0;
     virtual void update(cstring name, const Use &alloc);
     virtual void update(cstring name, const Use::ReservedSpace &rs) = 0;
-    virtual void update(const IR::MAU::Table *tbl);
-    virtual void update(cstring name, const TableResourceAlloc *alloc, const IR::MAU::Table *tbl);
+    virtual void update(const P4::IR::MAU::Table *tbl);
+    virtual void update(cstring name, const TableResourceAlloc *alloc, const P4::IR::MAU::Table *tbl);
     virtual void update_action_data(cstring name, const TableResourceAlloc *alloc,
-        const IR::MAU::Table *tbl);
+        const P4::IR::MAU::Table *tbl);
     virtual void update_meter(cstring name, const TableResourceAlloc *alloc,
-        const IR::MAU::Table *tbl);
+        const P4::IR::MAU::Table *tbl);
 
     static ActionDataBus *create();
     static int getAdbSize();

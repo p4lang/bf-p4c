@@ -26,24 +26,24 @@ SimplePowerGraph *BuildPowerGraph::get_graph(gress_t g) {
         return ingress_graph_;
 }
 
-Visitor::profile_t BuildPowerGraph::init_apply(const IR::Node *root) {
+Visitor::profile_t BuildPowerGraph::init_apply(const P4::IR::Node *root) {
     return MauInspector::init_apply(root);
 }
 
-void BuildPowerGraph::end_apply(const IR::Node *root) {
+void BuildPowerGraph::end_apply(const P4::IR::Node *root) {
     if (options_.debugInfo) {  // graph outputs
         for (gress_t g : Device::allGresses()) {
             SimplePowerGraph *graph = get_graph(g);
             std::string fname = graph->name_ + ".power.dot";
             auto logDir = BFNContext::get().getOutputDirectory(
-                "graphs"_cs, root->to<IR::BFN::Pipe>()->canon_id());
+                "graphs"_cs, root->to<P4::IR::BFN::Pipe>()->canon_id());
             if (logDir) fname = logDir + "/" + graph->name_ + ".power.dot";
             graph->to_dot(fname);
         }
     }
 }
 
-bool BuildPowerGraph::preorder(const IR::MAU::TableSeq *seq) {
+bool BuildPowerGraph::preorder(const P4::IR::MAU::TableSeq *seq) {
     LOG4("\nTable seq");
     for (auto t : seq->tables) {
         LOG4("  t = " << t->externalName());
@@ -60,11 +60,11 @@ bool BuildPowerGraph::preorder(const IR::MAU::TableSeq *seq) {
     return true;
 }
 
-bool BuildPowerGraph::preorder(const IR::MAU::Table *tbl) {
+bool BuildPowerGraph::preorder(const P4::IR::MAU::Table *tbl) {
     SimplePowerGraph *graph = get_graph(tbl->gress);
     LOG4("Table " << tbl->externalName());
     switch (tbl->always_run) {
-        case IR::MAU::AlwaysRun::TABLE:
+        case P4::IR::MAU::AlwaysRun::TABLE:
             LOG4("  always run!");
             if (always_run_.size() > 0) {
                 UniqueId last = always_run_.back();
@@ -77,10 +77,10 @@ bool BuildPowerGraph::preorder(const IR::MAU::Table *tbl) {
             always_run_.push_back(tbl->unique_id());
             break;
 
-        case IR::MAU::AlwaysRun::NONE:
+        case P4::IR::MAU::AlwaysRun::NONE:
             break;
 
-        case IR::MAU::AlwaysRun::ACTION:
+        case P4::IR::MAU::AlwaysRun::ACTION:
             return true;
     }
 
@@ -126,7 +126,7 @@ void BuildPowerGraph::flow_merge(Visitor & /* v */) {
 void BuildPowerGraph::flow_copy(::ControlFlowVisitor& /* v */) {
 }
 
-ordered_set<UniqueId> BuildPowerGraph::next_for(const IR::MAU::Table *tbl, cstring what) const {
+ordered_set<UniqueId> BuildPowerGraph::next_for(const P4::IR::MAU::Table *tbl, cstring what) const {
     return next_table_properties_->next_for(tbl, what);
 }
 

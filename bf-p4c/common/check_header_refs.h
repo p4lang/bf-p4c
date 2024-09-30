@@ -11,8 +11,8 @@
  * hold.
  */
 class CheckForHeaders final : public Inspector {
-    bool preorder(const IR::Member *) { return false; }
-    bool preorder(const IR::HeaderRef *h) {
+    bool preorder(const P4::IR::Member *) { return false; }
+    bool preorder(const P4::IR::HeaderRef *h) {
         if (h->toString() == "ghost::gh_intr_md") return false;
         BUG("Header present in IR not under Member: %s", h->toString());
     }

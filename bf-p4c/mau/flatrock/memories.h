@@ -156,13 +156,13 @@ struct Memories : public ::Memories {
 
     struct scm_alloc_stage {
         // Abstract the TCAM layout as a single column with 20 rows
-        BFN::Alloc1D<const IR::MAU::Table *, TCAM_ROWS>        tcam_use;
+        BFN::Alloc1D<const P4::IR::MAU::Table *, TCAM_ROWS>        tcam_use;
         BFN::Alloc1D<int, TCAM_ROWS>                           tcam_grp;
-        BFN::Alloc1D<const IR::MAU::Table *, TCAM_ROWS>        left_hbus1;
-        BFN::Alloc1D<const IR::MAU::Table *, TCAM_ROWS>        left_hbus2;
-        BFN::Alloc1D<const IR::MAU::Table *, TCAM_ROWS>        right_hbus1;
-        BFN::Alloc1D<const IR::MAU::Table *, TCAM_ROWS>        right_hbus2;
-        BFN::Alloc1D<const IR::MAU::Table *, TOTAL_LOCAL_TIND> local_tind_use;
+        BFN::Alloc1D<const P4::IR::MAU::Table *, TCAM_ROWS>        left_hbus1;
+        BFN::Alloc1D<const P4::IR::MAU::Table *, TCAM_ROWS>        left_hbus2;
+        BFN::Alloc1D<const P4::IR::MAU::Table *, TCAM_ROWS>        right_hbus1;
+        BFN::Alloc1D<const P4::IR::MAU::Table *, TCAM_ROWS>        right_hbus2;
+        BFN::Alloc1D<const P4::IR::MAU::Table *, TOTAL_LOCAL_TIND> local_tind_use;
         unsigned tcam_in_use;         // 20 bit mask
         unsigned left_hbus1_in_use;   // 20 bit mask
         unsigned left_hbus2_in_use;   // 20 bit mask
@@ -173,7 +173,7 @@ struct Memories : public ::Memories {
                             right_hbus1_in_use(0), right_hbus2_in_use(0) {}
     };
     struct scm_alloc {
-        std::map<const IR::MAU::Table *, int> tbl_to_local_stage;
+        std::map<const P4::IR::MAU::Table *, int> tbl_to_local_stage;
         std::map<int, scm_alloc_stage> stage_to_alloc;  // Ingress Stage is the key
 
         void clear() {
@@ -218,10 +218,10 @@ struct Memories : public ::Memories {
 
     friend class SetupAttachedTables;
 
-    // The resource information required for an individual IR::MAU::Table object in a single stage.
+    // The resource information required for an individual P4::IR::MAU::Table object in a single stage.
     // Could coordinate to multiple logical tables
     struct table_alloc {
-        const IR::MAU::Table *table;
+        const P4::IR::MAU::Table *table;
         const ::IXBar::Use *match_ixbar;
         const TableFormat::Use *table_format;
         const InstructionMemory::Use *instr_mem;
@@ -244,7 +244,7 @@ struct Memories : public ::Memories {
         // FIXME -- hack to avoid problems in payload calculation when the only reason we
         // have a payload is to set the match address for P4C-2938
         bool payload_match_addr_only = false;
-        table_alloc(const IR::MAU::Table *t, const ::IXBar::Use *mi, const TableFormat::Use *tf,
+        table_alloc(const P4::IR::MAU::Table *t, const ::IXBar::Use *mi, const TableFormat::Use *tf,
                     const InstructionMemory::Use *im, const ActionData::Format::Use *af,
                     std::map<UniqueId, Memories::Use> *mu, const LayoutOption *lo,
                     ActionData::FormatType_t ft,
@@ -256,19 +256,19 @@ struct Memories : public ::Memories {
         void link_table(table_alloc *ta) {table_link = ta;}
         int analysis_priority() const;
 
-        UniqueId build_unique_id(const IR::MAU::AttachedMemory *at = nullptr,
+        UniqueId build_unique_id(const P4::IR::MAU::AttachedMemory *at = nullptr,
             bool is_gw = false, int logical_table = -1,
             UniqueAttachedId::pre_placed_type_t ppt = UniqueAttachedId::NO_PP) const;
 
-        safe_vector<UniqueId> allocation_units(const IR::MAU::AttachedMemory *at = nullptr,
+        safe_vector<UniqueId> allocation_units(const P4::IR::MAU::AttachedMemory *at = nullptr,
             bool is_gw = false,
             UniqueAttachedId::pre_placed_type_t ppt = UniqueAttachedId::NO_PP) const;
 
 
-        safe_vector<UniqueId> unattached_units(const IR::MAU::AttachedMemory *at = nullptr,
+        safe_vector<UniqueId> unattached_units(const P4::IR::MAU::AttachedMemory *at = nullptr,
             UniqueAttachedId::pre_placed_type_t ppt = UniqueAttachedId::NO_PP) const;
 
-        safe_vector<UniqueId> accounted_units(const IR::MAU::AttachedMemory *at = nullptr,
+        safe_vector<UniqueId> accounted_units(const P4::IR::MAU::AttachedMemory *at = nullptr,
             UniqueAttachedId::pre_placed_type_t ppt = UniqueAttachedId::NO_PP) const;
     };
     int logical_tables_allowed = LOGICAL_TABLES;
@@ -326,7 +326,7 @@ struct Memories : public ::Memories {
     safe_vector<STM_group>           read_write_tables;
 
     int allocation_count = 0;
-    ordered_map<const IR::MAU::AttachedMemory *, table_alloc *> shared_attached;
+    ordered_map<const P4::IR::MAU::AttachedMemory *, table_alloc *> shared_attached;
     int mems_needed(int entries, int depth, int per_mem_row);
     void clear_table_vectors();
     void clear_uses();
@@ -345,7 +345,7 @@ struct Memories : public ::Memories {
     bool allocate_all_ternary();
     int ternary_TCAMs_necessary(table_alloc *ta);
     bool find_ternary_stretch(int TCAMs_necessary,
-                              BFN::Alloc1D<const IR::MAU::Table *, TCAM_ROWS> &tcam_use, int &row);
+                              BFN::Alloc1D<const P4::IR::MAU::Table *, TCAM_ROWS> &tcam_use, int &row);
 
     bool allocate_all_tind();
     void find_tind_groups();
@@ -364,12 +364,12 @@ struct Memories : public ::Memories {
     void remove(cstring name, const Use &alloc);
     void remove(const std::map<UniqueId, Use> &alloc);
     void clear();
-    void add_table(const IR::MAU::Table *t, const IR::MAU::Table *gw,
+    void add_table(const P4::IR::MAU::Table *t, const P4::IR::MAU::Table *gw,
                    TableResourceAlloc *resources, const LayoutOption *lo,
                    const ActionData::Format::Use *af, ActionData::FormatType_t ft,
                    int entries, int stage_table, attached_entries_t attached_entries);
     void shrink_allowed_lts() { logical_tables_allowed--; }
-    void fill_placed_scm_table(const IR::MAU::Table *, const TableResourceAlloc *);
+    void fill_placed_scm_table(const P4::IR::MAU::Table *, const TableResourceAlloc *);
     void printOn(std::ostream &) const;
     void init_shared(int stage) { local_stage = stage; scm_curr_alloc.clear(); }
     void visitUse(const Use &, std::function<void(cstring &, update_type_t)> fn);

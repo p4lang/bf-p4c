@@ -1,5 +1,6 @@
 #include "bf-p4c/ir/ir_enums.h"
 
+namespace P4 {
 namespace IR {
 namespace MAU {
 
@@ -253,3 +254,4 @@ bool operator>>(cstring s, IR::BFN::ParserWriteMode &t) {
 
 }  // end namespace BFN
 }  // end namespace IR
+}  // end namespace P4

@@ -47,11 +47,11 @@ class Field;
 class AdjustShiftInstructions : public MauTransform, TofinoWriteContext {
     const PhvInfo &phv;
 
-    const IR::Node *preorder(IR::MAU::Instruction *) override;
+    const P4::IR::Node *preorder(P4::IR::MAU::Instruction *) override;
     // ignore stuff related to stateful alus
-    const IR::Node *preorder(IR::MAU::AttachedOutput *ao) override { prune(); return ao; }
-    const IR::Node *preorder(IR::MAU::StatefulAlu *salu) override { prune(); return salu; }
-    const IR::Node *preorder(IR::MAU::HashDist *hd) override { prune(); return hd; }
+    const P4::IR::Node *preorder(P4::IR::MAU::AttachedOutput *ao) override { prune(); return ao; }
+    const P4::IR::Node *preorder(P4::IR::MAU::StatefulAlu *salu) override { prune(); return salu; }
+    const P4::IR::Node *preorder(P4::IR::MAU::HashDist *hd) override { prune(); return hd; }
 
  public:
     explicit AdjustShiftInstructions(const PhvInfo &p) : phv(p) { }
@@ -108,17 +108,17 @@ class AdjustShiftInstructions : public MauTransform, TofinoWriteContext {
 class SplitInstructions : public MauTransform, TofinoWriteContext {
     const PhvInfo &phv;
 
-    const IR::Node *preorder(IR::MAU::Instruction *) override;
+    const P4::IR::Node *preorder(P4::IR::MAU::Instruction *) override;
     // ignore stuff related to stateful alus
-    const IR::Node *preorder(IR::MAU::AttachedOutput *ao) override { prune(); return ao; }
-    const IR::Node *preorder(IR::MAU::StatefulAlu *salu) override { prune(); return salu; }
-    const IR::Node *preorder(IR::MAU::HashDist *hd) override { prune(); return hd; }
+    const P4::IR::Node *preorder(P4::IR::MAU::AttachedOutput *ao) override { prune(); return ao; }
+    const P4::IR::Node *preorder(P4::IR::MAU::StatefulAlu *salu) override { prune(); return salu; }
+    const P4::IR::Node *preorder(P4::IR::MAU::HashDist *hd) override { prune(); return hd; }
 
  public:
     explicit SplitInstructions(const PhvInfo &p) : phv(p) { }
 };
 
-/** Responsible for converting IR::Constant to IR::MAU::ActionDataConstants when necessary.
+/** Responsible for converting P4::IR::Constant to P4::IR::MAU::ActionDataConstants when necessary.
  *  If a constant is not able to be saved within an instruction, this will turn the constant
  *  into an action data slot location
  */
@@ -127,21 +127,21 @@ class ConstantsToActionData : public MauTransform, TofinoWriteContext {
     const ReductionOrInfo &red_info;
     ActionAnalysis::ContainerActionsMap container_actions_map;
 
-    const IR::MAU::Action *preorder(IR::MAU::Action *) override;
-    const IR::MAU::Instruction *preorder(IR::MAU::Instruction *) override;
-    const IR::MAU::ActionArg *preorder(IR::MAU::ActionArg *) override;
-    const IR::Expression *preorder(IR::Expression *) override;
-    const IR::Constant *preorder(IR::Constant *) override;
-    const IR::Slice *preorder(IR::Slice *) override;
-    void analyze_phv_field(IR::Expression *);
-    const IR::MAU::Primitive *preorder(IR::MAU::Primitive *) override;
-    const IR::MAU::Instruction *postorder(IR::MAU::Instruction *) override;
-    const IR::MAU::Action *postorder(IR::MAU::Action *) override;
+    const P4::IR::MAU::Action *preorder(P4::IR::MAU::Action *) override;
+    const P4::IR::MAU::Instruction *preorder(P4::IR::MAU::Instruction *) override;
+    const P4::IR::MAU::ActionArg *preorder(P4::IR::MAU::ActionArg *) override;
+    const P4::IR::Expression *preorder(P4::IR::Expression *) override;
+    const P4::IR::Constant *preorder(P4::IR::Constant *) override;
+    const P4::IR::Slice *preorder(P4::IR::Slice *) override;
+    void analyze_phv_field(P4::IR::Expression *);
+    const P4::IR::MAU::Primitive *preorder(P4::IR::MAU::Primitive *) override;
+    const P4::IR::MAU::Instruction *postorder(P4::IR::MAU::Instruction *) override;
+    const P4::IR::MAU::Action *postorder(P4::IR::MAU::Action *) override;
 
-    const IR::MAU::AttachedOutput *preorder(IR::MAU::AttachedOutput *) override;
-    const IR::MAU::StatefulAlu *preorder(IR::MAU::StatefulAlu *) override;
-    const IR::MAU::HashDist *preorder(IR::MAU::HashDist *) override;
-    const IR::Node *preorder(IR::Node *) override;
+    const P4::IR::MAU::AttachedOutput *preorder(P4::IR::MAU::AttachedOutput *) override;
+    const P4::IR::MAU::StatefulAlu *preorder(P4::IR::MAU::StatefulAlu *) override;
+    const P4::IR::MAU::HashDist *preorder(P4::IR::MAU::HashDist *) override;
+    const P4::IR::Node *preorder(P4::IR::Node *) override;
     bool has_constant = false;
     bool write_found = false;
     ordered_set<PHV::Container> constant_containers;
@@ -160,10 +160,10 @@ class ExpressionsToHash : public MauTransform {
     ActionAnalysis::ContainerActionsMap container_actions_map;
     ordered_set<PHV::Container> expr_to_hash_containers;
 
-    const IR::MAU::Action *preorder(IR::MAU::Action *) override;
-    const IR::MAU::Instruction *preorder(IR::MAU::Instruction *) override;
-    const IR::Node *preorder(IR::Node *n) override { visitOnce(); return n; }
-    const IR::MAU::StatefulAlu *preorder(IR::MAU::StatefulAlu *s) override { prune(); return s; }
+    const P4::IR::MAU::Action *preorder(P4::IR::MAU::Action *) override;
+    const P4::IR::MAU::Instruction *preorder(P4::IR::MAU::Instruction *) override;
+    const P4::IR::Node *preorder(P4::IR::Node *n) override { visitOnce(); return n; }
+    const P4::IR::MAU::StatefulAlu *preorder(P4::IR::MAU::StatefulAlu *s) override { prune(); return s; }
 
  public:
     ExpressionsToHash(const PhvInfo &p, const ReductionOrInfo &ri) : phv(p), red_info(ri) {
@@ -171,7 +171,7 @@ class ExpressionsToHash : public MauTransform {
 };
 
 /** Responsible for converting all FieldInstructions within a single Container operation into
- *  one large Container Instruction over IR::MAU::MultiOperands.  Let say the following fields
+ *  one large Container Instruction over P4::IR::MAU::MultiOperands.  Let say the following fields
  *  f1 and f2 are in container B1, while f3 and f4 are in container B2.  The instructions:
  *
  *      -set hdr.f1, hdr.f3
@@ -197,53 +197,53 @@ class MergeInstructions : public MauTransform, TofinoWriteContext {
     const ReductionOrInfo &red_info;
     ActionAnalysis::ContainerActionsMap container_actions_map;
 
-    const IR::MAU::Action *preorder(IR::MAU::Action *) override;
-    const IR::MAU::Instruction *preorder(IR::MAU::Instruction *) override;
-    const IR::Expression *preorder(IR::Expression *) override;
-    const IR::Slice *preorder(IR::Slice *) override;
-    void analyze_phv_field(IR::Expression *);
-    const IR::MAU::ActionDataConstant *preorder(IR::MAU::ActionDataConstant *) override;
-    const IR::MAU::ActionArg *preorder(IR::MAU::ActionArg *) override;
-    const IR::Constant *preorder(IR::Constant *) override;
-    const IR::MAU::Primitive *preorder(IR::MAU::Primitive *) override;
+    const P4::IR::MAU::Action *preorder(P4::IR::MAU::Action *) override;
+    const P4::IR::MAU::Instruction *preorder(P4::IR::MAU::Instruction *) override;
+    const P4::IR::Expression *preorder(P4::IR::Expression *) override;
+    const P4::IR::Slice *preorder(P4::IR::Slice *) override;
+    void analyze_phv_field(P4::IR::Expression *);
+    const P4::IR::MAU::ActionDataConstant *preorder(P4::IR::MAU::ActionDataConstant *) override;
+    const P4::IR::MAU::ActionArg *preorder(P4::IR::MAU::ActionArg *) override;
+    const P4::IR::Constant *preorder(P4::IR::Constant *) override;
+    const P4::IR::MAU::Primitive *preorder(P4::IR::MAU::Primitive *) override;
 
-    const IR::MAU::AttachedOutput *preorder(IR::MAU::AttachedOutput *ao) override;
-    const IR::MAU::StatefulAlu *preorder(IR::MAU::StatefulAlu *salu) override;
-    const IR::MAU::HashDist *preorder(IR::MAU::HashDist *hd) override;
+    const P4::IR::MAU::AttachedOutput *preorder(P4::IR::MAU::AttachedOutput *ao) override;
+    const P4::IR::MAU::StatefulAlu *preorder(P4::IR::MAU::StatefulAlu *salu) override;
+    const P4::IR::MAU::HashDist *preorder(P4::IR::MAU::HashDist *hd) override;
 
 
-    const IR::Node *preorder(IR::Node *) override;
-    const IR::MAU::Instruction *postorder(IR::MAU::Instruction *) override;
-    const IR::MAU::Action *postorder(IR::MAU::Action *) override;
+    const P4::IR::Node *preorder(P4::IR::Node *) override;
+    const P4::IR::MAU::Instruction *postorder(P4::IR::MAU::Instruction *) override;
+    const P4::IR::MAU::Action *postorder(P4::IR::MAU::Action *) override;
 
     ordered_set<PHV::Container> merged_fields;
 
     bool write_found = false;
     ordered_set<PHV::Container>::iterator merged_location;
 
-    IR::MAU::Instruction *dest_slice_to_container(PHV::Container container,
+    P4::IR::MAU::Instruction *dest_slice_to_container(PHV::Container container,
         ActionAnalysis::ContainerAction &cont_action);
 
 
     void build_actiondata_source(ActionAnalysis::ContainerAction &cont_action,
-        const IR::Expression **src1_p, bitvec &src1_writebits, ByteRotateMergeInfo &brm_info,
+        const P4::IR::Expression **src1_p, bitvec &src1_writebits, ByteRotateMergeInfo &brm_info,
         PHV::Container container);
     void build_phv_source(ActionAnalysis::ContainerAction &cont_action,
-        const IR::Expression **src1_p, const IR::Expression **src2_p, bitvec &src1_writebits,
+        const P4::IR::Expression **src1_p, const P4::IR::Expression **src2_p, bitvec &src1_writebits,
         bitvec &src2_writebits, ByteRotateMergeInfo &brm_info, PHV::Container container);
 
-    IR::MAU::Instruction *build_merge_instruction(PHV::Container container,
+    P4::IR::MAU::Instruction *build_merge_instruction(PHV::Container container,
         ActionAnalysis::ContainerAction &cont_action);
     void fill_out_write_multi_operand(ActionAnalysis::ContainerAction &cont_action,
-        IR::MAU::MultiOperand *mo);
+        P4::IR::MAU::MultiOperand *mo);
     void fill_out_read_multi_operand(ActionAnalysis::ContainerAction &cont_action,
         ActionAnalysis::ActionParam::type_t type, cstring match_name,
-        IR::MAU::MultiOperand *mo);
-    const IR::Expression *fill_out_hash_operand(PHV::Container container,
+        P4::IR::MAU::MultiOperand *mo);
+    const P4::IR::Expression *fill_out_hash_operand(PHV::Container container,
         ActionAnalysis::ContainerAction &cont_action);
-    const IR::Expression *fill_out_rand_operand(PHV::Container container,
+    const P4::IR::Expression *fill_out_rand_operand(PHV::Container container,
         ActionAnalysis::ContainerAction &cont_action);
-    const IR::Constant *find_field_action_constant(ActionAnalysis::ContainerAction &cont_action);
+    const P4::IR::Constant *find_field_action_constant(ActionAnalysis::ContainerAction &cont_action);
 
  public:
     MergeInstructions(const PhvInfo &p, const ReductionOrInfo &ri) : phv(p), red_info(ri) {
@@ -253,18 +253,18 @@ class MergeInstructions : public MauTransform, TofinoWriteContext {
 class AdjustStatefulInstructions : public MauTransform {
  private:
     const PhvInfo &phv;
-    const IR::Expression *preorder(IR::Expression *expr) override;
-    const IR::Annotations *preorder(IR::Annotations *) override;
-    const IR::MAU::IXBarExpression *preorder(IR::MAU::IXBarExpression *) override;
+    const P4::IR::Expression *preorder(P4::IR::Expression *expr) override;
+    const P4::IR::Annotations *preorder(P4::IR::Annotations *) override;
+    const P4::IR::MAU::IXBarExpression *preorder(P4::IR::MAU::IXBarExpression *) override;
 
     bool check_bit_positions(std::map<int, le_bitrange> &salu_inputs, le_bitrange field_bits,
         int starting_bit);
     // TOF5-DOC: FIXME -- these need to be folded into a virtual function on IXBar::Use to support
     // TOF5-DOC: both tofino and flatrock
-    bool verify_on_search_bus(const IR::MAU::StatefulAlu *, const Tofino::IXBar::Use &salu_ixbar,
+    bool verify_on_search_bus(const P4::IR::MAU::StatefulAlu *, const Tofino::IXBar::Use &salu_ixbar,
         const PHV::Field *field, le_bitrange &bits, bool &is_hi);
-    bool verify_on_hash_bus(const IR::MAU::StatefulAlu *salu,
-         const Tofino::IXBar::Use::MeterAluHash &mah, const IR::Expression *expr,
+    bool verify_on_hash_bus(const P4::IR::MAU::StatefulAlu *salu,
+         const Tofino::IXBar::Use::MeterAluHash &mah, const P4::IR::Expression *expr,
          le_bitrange &bits, bool &is_hi);
 
  public:
@@ -279,10 +279,10 @@ class EliminateNoopInstructions: public MauTransform {
     enum OP_TYPE { DST = 0, SRC1 = 1, SRC2 = 2 };
     const PhvInfo &phv;
     typedef std::set<std::pair<PHV::Container, le_bitrange>> AllocContainerSlice;
-    bool get_alloc_slice(IR::MAU::Instruction *ins, OP_TYPE type,
+    bool get_alloc_slice(P4::IR::MAU::Instruction *ins, OP_TYPE type,
                                 AllocContainerSlice &op_alloc) const;
-    const IR::MAU::Instruction *preorder(IR::MAU::Instruction *) override;
-    const IR::MAU::Synth2Port *preorder(IR::MAU::Synth2Port *s) override;
+    const P4::IR::MAU::Instruction *preorder(P4::IR::MAU::Instruction *) override;
+    const P4::IR::MAU::Synth2Port *preorder(P4::IR::MAU::Synth2Port *s) override;
     cstring toString(OP_TYPE ot) const {
         if (ot == DST) return "DST"_cs;
         else if (ot == SRC1) return "SRC1"_cs;

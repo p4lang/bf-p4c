@@ -3,15 +3,15 @@
 #include "lib/log.h"
 #include "lib/ltbitmatrix.h"
 
-Visitor::profile_t TableFindSeqDependencies::init_apply(const IR::Node *root) {
+Visitor::profile_t TableFindSeqDependencies::init_apply(const P4::IR::Node *root) {
     auto rv = MauModifier::init_apply(root);
     root->apply(uses);
     LOG2(uses);
     return rv;
 }
 
-static bool ignore_dep(const IR::MAU::Table *t1, const IR::MAU::Table *t2) {
-    std::vector<IR::ID>         pragmas;
+static bool ignore_dep(const P4::IR::MAU::Table *t1, const P4::IR::MAU::Table *t2) {
+    std::vector<P4::IR::ID>         pragmas;
     if (t1->getAnnotation("ignore_table_dependency"_cs, pragmas)) {
         for (auto name : pragmas) {
             if (t2->externalName().endsWith(name.string()))
@@ -24,7 +24,7 @@ static bool ignore_dep(const IR::MAU::Table *t1, const IR::MAU::Table *t2) {
     return false;
 }
 
-void TableFindSeqDependencies::postorder(IR::MAU::TableSeq *seq) {
+void TableFindSeqDependencies::postorder(P4::IR::MAU::TableSeq *seq) {
     if (seq->tables.size() <= 1) return;
     int size = seq->tables.size();
     seq->deps.clear();

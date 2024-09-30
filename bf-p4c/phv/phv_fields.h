@@ -65,7 +65,7 @@ class AllocContext {
     Type type;
 
     /// Populated iff type is TABLE.
-    const IR::MAU::Table* table;
+    const P4::IR::MAU::Table* table;
 
  private:
     /// Creates a context for a parser or a deparser.
@@ -74,7 +74,7 @@ class AllocContext {
     }
 
     /// Creates a table context.
-    explicit AllocContext(const IR::MAU::Table* table) : type(Type::TABLE), table(table) {
+    explicit AllocContext(const P4::IR::MAU::Table* table) : type(Type::TABLE), table(table) {
         BUG_CHECK(table, "Improper usage of PHV::AllocContext interface");
     }
 
@@ -96,12 +96,12 @@ class AllocContext {
     ///
     /// @param unit is expected to be a parser, a deparser, or a table. Anything else is a compiler
     ///             bug.
-    static const AllocContext* of_unit(const IR::BFN::Unit* unit) {
+    static const AllocContext* of_unit(const P4::IR::BFN::Unit* unit) {
         if (!unit) return nullptr;
-        if (unit->is<IR::BFN::ParserState>() || unit->is<IR::BFN::Parser>() ||
-            unit->is<IR::BFN::GhostParser>()) return PARSER;
-        if (unit->to<IR::BFN::Deparser>()) return DEPARSER;
-        if (auto table = unit->to<IR::MAU::Table>()) return new AllocContext(table);
+        if (unit->is<P4::IR::BFN::ParserState>() || unit->is<P4::IR::BFN::Parser>() ||
+            unit->is<P4::IR::BFN::GhostParser>()) return PARSER;
+        if (unit->to<P4::IR::BFN::Deparser>()) return DEPARSER;
+        if (auto table = unit->to<P4::IR::MAU::Table>()) return new AllocContext(table);
         BUG("Improper usage of PHV::AllocContext interface. Not a parser, deparser, or table: %1%",
             unit);
     }
@@ -111,14 +111,14 @@ std::ostream& operator<<(std::ostream&, const AllocContext&);
 struct FieldOperation {
     bool is_bitwise_op;
     bool is_salu_inst;
-    const IR::MAU::Instruction *inst;
+    const P4::IR::MAU::Instruction *inst;
     FieldAccessType rw_type;
     le_bitrange range;  // If range.size() == this->size, then the operation is
                         // over the whole field.
     FieldOperation(
         bool is_bitwise_op,
         bool is_salu_inst,
-        const IR::MAU::Instruction* inst,
+        const P4::IR::MAU::Instruction* inst,
         FieldAccessType rw_type,
         le_bitrange range)
         : is_bitwise_op(is_bitwise_op), is_salu_inst(is_salu_inst),
@@ -572,7 +572,7 @@ class Field : public LiftLess<Field> {
     void foreach_byte(le_bitrange r, const PHV::AllocContext* ctxt, const PHV::FieldUse* use,
             std::function<void(const PHV::AllocSlice&)> fn,
             SliceMatch useTblRefs = SliceMatch::DFLT) const;
-    void foreach_byte(le_bitrange r, const IR::MAU::Table* ctxt, const PHV::FieldUse* use,
+    void foreach_byte(le_bitrange r, const P4::IR::MAU::Table* ctxt, const PHV::FieldUse* use,
             std::function<void(const PHV::AllocSlice&)> fn,
             SliceMatch useTblRefs = SliceMatch::DFLT) const {
         foreach_byte(r, PHV::AllocContext::of_unit(ctxt), use, fn, useTblRefs); }
@@ -581,7 +581,7 @@ class Field : public LiftLess<Field> {
             std::function<void(const PHV::AllocSlice&)> fn,
             SliceMatch useTblRefs = SliceMatch::DFLT) const {
         foreach_byte(StartLen(0, this->size), ctxt, use, fn, useTblRefs); }
-    void foreach_byte(const IR::MAU::Table* ctxt, const PHV::FieldUse* use,
+    void foreach_byte(const P4::IR::MAU::Table* ctxt, const PHV::FieldUse* use,
             std::function<void(const PHV::AllocSlice&)> fn,
             SliceMatch useTblRefs = SliceMatch::DFLT) const {
         foreach_byte(PHV::AllocContext::of_unit(ctxt), use, fn, useTblRefs); }
@@ -596,7 +596,7 @@ class Field : public LiftLess<Field> {
             const PHV::FieldUse* use, std::function<void(const PHV::AllocSlice&)> fn,
             SliceMatch useTblRefs = SliceMatch::DFLT) const {
         foreach_byte(r ? *r : StartLen(0, this->size), ctxt, use, fn, useTblRefs); }
-    void foreach_byte(const le_bitrange* r, const IR::MAU::Table* ctxt,
+    void foreach_byte(const le_bitrange* r, const P4::IR::MAU::Table* ctxt,
             const PHV::FieldUse* use, std::function<void(const PHV::AllocSlice&)> fn,
             SliceMatch useTblRefs = SliceMatch::DFLT) const {
         foreach_byte(r, PHV::AllocContext::of_unit(ctxt), use, fn, useTblRefs); }
@@ -627,7 +627,7 @@ class Field : public LiftLess<Field> {
                        std::function<void(const PHV::AllocSlice&)> fn,
                        SliceMatch useTblRefs = SliceMatch::DFLT) const;
 
-    void foreach_alloc(le_bitrange r, const IR::MAU::Table *ctxt, const PHV::FieldUse* use,
+    void foreach_alloc(le_bitrange r, const P4::IR::MAU::Table *ctxt, const PHV::FieldUse* use,
                        std::function<void(const PHV::AllocSlice&)> fn,
                        SliceMatch useTblRefs = SliceMatch::DFLT) const {
         foreach_alloc(r, PHV::AllocContext::of_unit(ctxt), use, fn, useTblRefs);
@@ -640,7 +640,7 @@ class Field : public LiftLess<Field> {
 
     /** Equivalent to `foreach_alloc(StartLen(0, this->size), ctxt, fn)`.
      *
-     * @see foreach_alloc(le_bitrange, const IR::BFN::Unit *, const PHV::FieldUse&,
+     * @see foreach_alloc(le_bitrange, const P4::IR::BFN::Unit *, const PHV::FieldUse&,
      *                    std::function<void(const PHV::AllocSlice&)>).
      */
     void foreach_alloc(const PHV::AllocContext *ctxt, const PHV::FieldUse* use,
@@ -649,7 +649,7 @@ class Field : public LiftLess<Field> {
         foreach_alloc(StartLen(0, this->size), ctxt, use, fn, useTblRefs);
     }
 
-    void foreach_alloc(const IR::MAU::Table *ctxt, const PHV::FieldUse* use,
+    void foreach_alloc(const P4::IR::MAU::Table *ctxt, const PHV::FieldUse* use,
                        std::function<void(const PHV::AllocSlice&)> fn,
                        SliceMatch useTblRefs = SliceMatch::DFLT) const {
         foreach_alloc(PHV::AllocContext::of_unit(ctxt), use, fn, useTblRefs);
@@ -663,7 +663,7 @@ class Field : public LiftLess<Field> {
     /** Equivalent to `foreach_alloc(StartLen(0, this->size), ctxt, use, fn)`, or to
      * `foreach_alloc(ctxt, fn)` when @p r is null.
      *
-     * @see foreach_alloc(le_bitrange, const IR::BFN::Unit *,
+     * @see foreach_alloc(le_bitrange, const P4::IR::BFN::Unit *,
      *                    std::function<void(const PHV::AllocSlice&)>).
      */
     void foreach_alloc(const le_bitrange *r, const PHV::AllocContext *ctxt,
@@ -673,7 +673,7 @@ class Field : public LiftLess<Field> {
         foreach_alloc(r ? *r : StartLen(0, this->size), ctxt, use, fn, useTblRefs);
     }
 
-    void foreach_alloc(const le_bitrange *r, const IR::MAU::Table *ctxt,
+    void foreach_alloc(const le_bitrange *r, const P4::IR::MAU::Table *ctxt,
                        const PHV::FieldUse* use,
                        std::function<void(const PHV::AllocSlice&)> fn,
                        SliceMatch useTblRefs = SliceMatch::DFLT) const {
@@ -868,7 +868,7 @@ class AbstractField {
     template<typename T> const T &as() const { return dynamic_cast<const T&>(this); }
     template<typename T> const T *to() const { return dynamic_cast<const T*>(this); }
     template<typename T> bool is() const { return to<T>() != nullptr; }
-    static AbstractField *create(const PhvInfo &, const IR::Expression *);
+    static AbstractField *create(const PhvInfo &, const P4::IR::Expression *);
 };
 
 /**
@@ -878,14 +878,14 @@ class Constant : public AbstractField {
     le_bitrange range_i;
 
  public:
-    explicit Constant(const IR::Constant* value) : value(value) {
+    explicit Constant(const P4::IR::Constant* value) : value(value) {
         range_i = { 0, value->type->width_bits() - 1 };
     }
 
     int size() const override { return value->type->width_bits(); }
     const PHV::Field* field() const override { return nullptr; }
     const le_bitrange &range() const override { return range_i; }
-    const IR::Constant* value;
+    const P4::IR::Constant* value;
 };
 
 /** Represents a slice (range of bits) of a PHV::Field.  Constraints on the
@@ -994,7 +994,7 @@ class FieldSlice : public AbstractField, public LiftCompare<FieldSlice> {
     void foreach_byte(const PHV::AllocContext* ctxt, const PHV::FieldUse* use, FN fn) const {
         field_i->foreach_byte(range_i, ctxt, use, fn); }
     template<class FN>
-    void foreach_byte(const IR::MAU::Table* ctxt, const PHV::FieldUse* use, FN fn) const {
+    void foreach_byte(const P4::IR::MAU::Table* ctxt, const PHV::FieldUse* use, FN fn) const {
         field_i->foreach_byte(range_i, PHV::AllocContext::of_unit(ctxt), use, fn); }
 
     bool is_unallocated() const { return field_i->is_unallocated(); }
@@ -1069,11 +1069,11 @@ std::ostream &operator<<(std::ostream &out, const PackingLayout *);
 /// Expresses the constraints for inserting a table into the IR. The first element of the pair
 /// is the set of tables that must come before the inserted table; the second element
 /// identifies tables that must come after. Here, UniqueIds (as returned by
-/// IR::MAU::Table::pp_unique_id) are used to identify tables in the pipeline.
+/// P4::IR::MAU::Table::pp_unique_id) are used to identify tables in the pipeline.
 using InsertionConstraints = std::pair<std::set<UniqueId>, std::set<UniqueId>>;
 
 /// Maps tables to their corresponding constraints for insertion into the IR.
-using ConstraintMap = ordered_map<const IR::MAU::Table*, InsertionConstraints>;
+using ConstraintMap = ordered_map<const P4::IR::MAU::Table*, InsertionConstraints>;
 
 /**
  * PhvInfo stores information about the PHV-backed storage in the program -
@@ -1113,7 +1113,7 @@ class PhvInfo {
             const PhvUse &uses)
           : phv(phv), uses(uses) { }
 
-        const IR::Node *apply_visitor(const IR::Node *n, const char *) override;
+        const P4::IR::Node *apply_visitor(const P4::IR::Node *n, const char *) override;
         /** Prints a histogram of all field sizes (number of fields of a particular size) in a
          * particular gress. Also prints number of fields and total number of bits to be allocated
          */
@@ -1316,7 +1316,7 @@ class PhvInfo {
         return alwaysRunTables; }
 
     // Add insertion constraints for table @tbl in gress @grs
-    bool add_table_constraints(gress_t grs, IR::MAU::Table* tbl, InsertionConstraints cnstrs) {
+    bool add_table_constraints(gress_t grs, P4::IR::MAU::Table* tbl, InsertionConstraints cnstrs) {
         bool has_constrs = (alwaysRunTables.count(grs) ?
                             (alwaysRunTables[grs].count(tbl) ? true : false) : false);
 
@@ -1342,14 +1342,14 @@ class PhvInfo {
 
     static int getDeparserStage() { return PhvInfo::deparser_stage; }
 
-    static std::set<int> minStages(const IR::MAU::Table *tbl);
-    static std::set<int> physicalStages(const IR::MAU::Table *tbl);
+    static std::set<int> minStages(const P4::IR::MAU::Table *tbl);
+    static std::set<int> physicalStages(const P4::IR::MAU::Table *tbl);
 
-    static void addMinStageEntry(const IR::MAU::Table *tbl, int stage,
+    static void addMinStageEntry(const P4::IR::MAU::Table *tbl, int stage,
                                  bool remove_prev_stages = false);
-    static void setPhysicalStages(const IR::MAU::Table *tbl, const std::set<int>& stage);
+    static void setPhysicalStages(const P4::IR::MAU::Table *tbl, const std::set<int>& stage);
 
-    static bool hasMinStageEntry(const IR::MAU::Table *tbl);
+    static bool hasMinStageEntry(const P4::IR::MAU::Table *tbl);
 
     static cstring reportMinStages();
 
@@ -1358,7 +1358,7 @@ class PhvInfo {
     // When a gateway and a table is merged together, we need to make sure that the slices used in
     // the gateway are alive at the table with which it is merged. @returns true if the liveness
     // check allows the merging of the gateway with the table.
-    bool darkLivenessOkay(const IR::MAU::Table* gateway, const IR::MAU::Table* t) const;
+    bool darkLivenessOkay(const P4::IR::MAU::Table* gateway, const P4::IR::MAU::Table* t) const;
 
     // return true if some bit of two fieldslice will share the same container after allocation.
     bool must_alloc_same_container(const PHV::FieldSlice& a, const PHV::FieldSlice& b) const {
@@ -1431,7 +1431,7 @@ class PhvInfo {
 
     /// Mapping of all the fields to the TempVars created. This is needed by the Alias
     /// transformation to automatically add initializations of validity bits for alias sources.
-    ordered_map<const PHV::Field*, const IR::TempVar*>  fields_to_tempvars_i;
+    ordered_map<const PHV::Field*, const P4::IR::TempVar*>  fields_to_tempvars_i;
 
     /// lookup table for fieldslices that must be allocated to one container
     /// due to PARDE constraints.
@@ -1465,11 +1465,11 @@ class PhvInfo {
 
     void clear();
 
-    void add_hdr(cstring headerName, const IR::Type_StructLike* type,
+    void add_hdr(cstring headerName, const P4::IR::Type_StructLike* type,
                  gress_t gress, bool isMetadata);
-    void add_struct(cstring structName, const IR::Type_StructLike* type, gress_t gress, bool meta,
+    void add_struct(cstring structName, const P4::IR::Type_StructLike* type, gress_t gress, bool meta,
             bool bridged, int offset);
-    void addPadding(const IR::Padding* padding, gress_t gress);
+    void addPadding(const P4::IR::Padding* padding, gress_t gress);
 
     template<typename Iter>
     class iterator {
@@ -1501,20 +1501,20 @@ class PhvInfo {
 
  public:  // class PhvInfo
     PhvInfo() { }
-    void addTempVar(const IR::TempVar* tempVar, gress_t gress);
+    void addTempVar(const P4::IR::TempVar* tempVar, gress_t gress);
     bool isTempVar(const PHV::Field* f) const { return fields_to_tempvars_i.count(f) > 0;}
     const PHV::Field *field(int idx) const {
         return size_t(idx) < by_id.size() ? by_id.at(idx) : 0; }
     const PHV::Field *field(const cstring&) const;
-    const PHV::Field *field(const IR::Expression *, le_bitrange *bits = 0) const;
-    const PHV::Field *field(const IR::Member *, le_bitrange *bits = 0) const;
+    const PHV::Field *field(const P4::IR::Expression *, le_bitrange *bits = 0) const;
+    const PHV::Field *field(const P4::IR::Member *, le_bitrange *bits = 0) const;
     PHV::Field *field(int idx) {
         return (size_t)idx < by_id.size() ? by_id.at(idx) : 0; }
     PHV::Field *field(const cstring& name) {
         return const_cast<PHV::Field *>(const_cast<const PhvInfo *>(this)->field(name)); }
-    PHV::Field *field(const IR::Expression *e, le_bitrange *bits = 0) {
+    PHV::Field *field(const P4::IR::Expression *e, le_bitrange *bits = 0) {
         return const_cast<PHV::Field *>(const_cast<const PhvInfo *>(this)->field(e, bits)); }
-    PHV::Field *field(const IR::Member *fr, le_bitrange *bits = 0) {
+    PHV::Field *field(const P4::IR::Member *fr, le_bitrange *bits = 0) {
         return const_cast<PHV::Field *>(const_cast<const PhvInfo *>(this)->field(fr, bits)); }
     bool has_struct_info(cstring name) const;
     void get_hdr_fields(cstring name_, ordered_set<const PHV::Field*> & flds) const;
@@ -1522,13 +1522,13 @@ class PhvInfo {
     const PhvInfo::StructInfo* hdr(const cstring& name_) const;
 
     const StructInfo struct_info(cstring name) const;
-    const StructInfo struct_info(const IR::HeaderRef *hr) const {
+    const StructInfo struct_info(const P4::IR::HeaderRef *hr) const {
         return struct_info(hr->toString()); }
     const std::map<cstring, PHV::Field>& get_all_fields() const { return all_fields; }
     size_t num_fields() const { return all_fields.size(); }
     /// @returns the TempVar pointer corresponding to @p f, if the underlying expression
     /// for field @p f is a TempVar. @returns nullptr otherwise.
-    const IR::TempVar* getTempVar(const PHV::Field* f) const;
+    const P4::IR::TempVar* getTempVar(const PHV::Field* f) const;
 
     PHV::Field* add(cstring fieldName, gress_t gress, int size, int offset,
              bool isMetadata, bool isPOV, bool bridged = false, bool isPad = false,
@@ -1538,7 +1538,7 @@ class PhvInfo {
     PHV::Field* create_dummy_padding(size_t sz, gress_t gress, bool overlayable = true);
 
     std::vector<PHV::AllocSlice> get_alloc(
-            const IR::Expression* f,
+            const P4::IR::Expression* f,
             const PHV::AllocContext* ctxt = nullptr,
             const PHV::FieldUse* use = nullptr) const;
 
@@ -1597,7 +1597,7 @@ class PhvInfo {
 
     bitvec bits_allocated(
             const PHV::Container container,
-            const IR::MAU::Table *ctxt,
+            const P4::IR::MAU::Table *ctxt,
             const PHV::FieldUse* use = nullptr) const {
         return bits_allocated(container, PHV::AllocContext::of_unit(ctxt), use);
     }
@@ -1614,7 +1614,7 @@ class PhvInfo {
     bitvec bits_allocated(
             const PHV::Container container,
             const PHV::Field* field,
-            const IR::MAU::Table *ctxt,
+            const P4::IR::MAU::Table *ctxt,
             const PHV::FieldUse* use = nullptr) const {
         return bits_allocated(container, field, PHV::AllocContext::of_unit(ctxt), use);
     }
@@ -1635,16 +1635,16 @@ class PhvInfo {
     bitvec bits_allocated(
             const PHV::Container container,
             const ordered_set<const PHV::Field*>& fields,
-            const IR::MAU::Table *ctxt,
+            const P4::IR::MAU::Table *ctxt,
             const PHV::FieldUse* use = nullptr) const {
         return bits_allocated(container, fields, PHV::AllocContext::of_unit(ctxt), use);
     }
 
-    /** @returns the alias source name, if the given expression is either a IR::BFN::AliasMember type
-      * or is a slice with a IR::BFN::AliasMember object as the underlying base expression.
+    /** @returns the alias source name, if the given expression is either a P4::IR::BFN::AliasMember type
+      * or is a slice with a P4::IR::BFN::AliasMember object as the underlying base expression.
       * @returns std::nullopt otherwise.
       */
-    std::optional<cstring> get_alias_name(const IR::Expression* expr) const;
+    std::optional<cstring> get_alias_name(const P4::IR::Expression* expr) const;
 
     /// Adds an entry to the aliasMap.
     void addAliasMapEntry(const PHV::Field* f1, const PHV::Field* f2) {
@@ -1685,7 +1685,7 @@ class PhvInfo {
     /// notes down a required dependence from table t1 to table t2, induced by metadata
     /// initialization to enable live range shrinking. Updates both the metadataDeps and
     /// reverseMetadataDeps members.
-    void addMetadataDependency(const IR::MAU::Table* t1, const IR::MAU::Table* t2,
+    void addMetadataDependency(const P4::IR::MAU::Table* t1, const P4::IR::MAU::Table* t2,
                                   const PHV::FieldSlice* slice = nullptr) {
         metadataDeps[t1->name].insert(t2->name);
         reverseMetadataDeps[t2->name].insert(t1->name);
@@ -1699,7 +1699,7 @@ class PhvInfo {
     }
 
     /// @returns the set of tables which must be placed before table @p t.
-    const ordered_set<cstring> getReverseMetadataDeps(const IR::MAU::Table* t) const {
+    const ordered_set<cstring> getReverseMetadataDeps(const P4::IR::MAU::Table* t) const {
         static ordered_set<cstring> emptySet;
         if (!reverseMetadataDeps.count(t->name)) return emptySet;
         return reverseMetadataDeps.at(t->name);
@@ -1761,7 +1761,7 @@ struct CollectPhvInfo : public PassManager {
 class CollectExtractedTogetherFields : public Inspector {
  private:
     PhvInfo& phv_i;
-    bool preorder(const IR::BFN::ParserState* state) override;
+    bool preorder(const P4::IR::BFN::ParserState* state) override;
 
  public:
     explicit CollectExtractedTogetherFields(PhvInfo &p) : phv_i(p) { }
@@ -1772,27 +1772,27 @@ struct MapFieldToParserStates : public Inspector {
     const PhvInfo& phv_i;
 
     ordered_map<const PHV::Field*,
-                ordered_set<const IR::BFN::ParserState*>> field_to_parser_states;
+                ordered_set<const P4::IR::BFN::ParserState*>> field_to_parser_states;
 
     ordered_map<const PHV::Field*,
-                ordered_set<const IR::BFN::ParserPrimitive*>> field_to_writes;
+                ordered_set<const P4::IR::BFN::ParserPrimitive*>> field_to_writes;
 
     ordered_map<PHV::Container,
-                ordered_set<const IR::BFN::ParserState*>> container_to_parser_states;
+                ordered_set<const P4::IR::BFN::ParserState*>> container_to_parser_states;
 
     ordered_map<PHV::Container,
-                ordered_set<const IR::BFN::ParserPrimitive*>> container_to_writes;
+                ordered_set<const P4::IR::BFN::ParserPrimitive*>> container_to_writes;
 
-    ordered_map<const IR::BFN::ParserPrimitive*, const IR::BFN::ParserState*> write_to_state;
+    ordered_map<const P4::IR::BFN::ParserPrimitive*, const P4::IR::BFN::ParserState*> write_to_state;
 
-    std::map<const IR::BFN::ParserState*, const IR::BFN::Parser*> state_to_parser;
+    std::map<const P4::IR::BFN::ParserState*, const P4::IR::BFN::Parser*> state_to_parser;
 
-    ordered_map<const IR::BFN::ParserState*,
-                ordered_set<const IR::BFN::ParserPrimitive*>> state_to_writes;
+    ordered_map<const P4::IR::BFN::ParserState*,
+                ordered_set<const P4::IR::BFN::ParserPrimitive*>> state_to_writes;
 
     explicit MapFieldToParserStates(const PhvInfo& phv) : phv_i(phv) { }
 
-    profile_t init_apply(const IR::Node* root) override {
+    profile_t init_apply(const P4::IR::Node* root) override {
         field_to_parser_states.clear();
         field_to_writes.clear();
         container_to_parser_states.clear();
@@ -1803,23 +1803,23 @@ struct MapFieldToParserStates : public Inspector {
         return Inspector::init_apply(root);
     }
 
-    bool preorder(const IR::BFN::ParserChecksumWritePrimitive* checksum) override {
+    bool preorder(const P4::IR::BFN::ParserChecksumWritePrimitive* checksum) override {
         if (auto dest = checksum->getWriteDest())
             add_field(dest->field, checksum);
         return true;
     }
 
-    bool preorder(const IR::BFN::Extract* extract) override {
-        if (auto lval = extract->dest->to<IR::BFN::FieldLVal>())
+    bool preorder(const P4::IR::BFN::Extract* extract) override {
+        if (auto lval = extract->dest->to<P4::IR::BFN::FieldLVal>())
             add_field(lval->field, extract);
         return true;
     }
 
  private:
-    void add_field(const IR::Expression* field, const IR::BFN::ParserPrimitive *prim) {
+    void add_field(const P4::IR::Expression* field, const P4::IR::BFN::ParserPrimitive *prim) {
         if (auto* f = phv_i.field(field)) {
-            auto state = findContext<IR::BFN::ParserState>();
-            auto parser = findContext<IR::BFN::Parser>();
+            auto state = findContext<P4::IR::BFN::ParserState>();
+            auto parser = findContext<P4::IR::BFN::Parser>();
 
             field_to_parser_states[f].insert(state);
             state_to_parser[state] = parser;

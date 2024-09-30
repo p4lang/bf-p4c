@@ -8,9 +8,9 @@ class LayoutChoices;
 
 namespace MeterALU {
     using OperationsPerAction = std::map<cstring, safe_vector<ActionData::ALUOperation *>>;
-    using OperationsPerTable = ordered_map<const IR::MAU::Table *, OperationsPerAction>;
+    using OperationsPerTable = ordered_map<const P4::IR::MAU::Table *, OperationsPerAction>;
     using AttachedToTableMap =
-        ordered_map<const IR::MAU::AttachedMemory *, ordered_set<const IR::MAU::Table *>>;
+        ordered_map<const P4::IR::MAU::AttachedMemory *, ordered_set<const P4::IR::MAU::Table *>>;
 
 class Format : public MauInspector {
     const PhvInfo &phv;
@@ -43,7 +43,7 @@ class Format : public MauInspector {
     };
 
  private:
-    profile_t init_apply(const IR::Node *node) override {
+    profile_t init_apply(const P4::IR::Node *node) override {
         auto rv = MauInspector::init_apply(node);
         operations_per_table.clear();
         attached_to_table_map.clear();
@@ -54,7 +54,7 @@ class Format : public MauInspector {
         le_bitrange container_bits);
     void create_alu_ops_for_action(ActionAnalysis::ContainerActionsMap &ca_map,
         cstring action_name, OperationsPerAction &ops_per_action);
-    bool preorder(const IR::MAU::Table *tbl) override;
+    bool preorder(const P4::IR::MAU::Table *tbl) override;
     void build_use(OperationsPerAction &ops_per_action, Use *use);
     void end_apply() override;
 

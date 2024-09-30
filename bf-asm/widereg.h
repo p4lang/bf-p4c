@@ -8,7 +8,7 @@
 #include "log.h"
 #include "bitvec.h"
 
-// using namespace P4;
+using namespace P4;
 
 void print_regname(std::ostream &out, const void *addr, const void *end);
 

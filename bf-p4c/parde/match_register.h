@@ -4,10 +4,10 @@
 #include <iostream>
 #include "lib/cstring.h"
 
+namespace P4 {
+
 class JSONGenerator;
 class JSONLoader;
-
-namespace P4 {
 
 class MatchRegister {
  public:
@@ -21,8 +21,8 @@ class MatchRegister {
     }
 
     /// JSON serialization/deserialization.
-    void toJSON(JSONGenerator& json) const;
-    static MatchRegister fromJSON(JSONLoader& json);
+    void toJSON(P4::JSONGenerator& json) const;
+    static MatchRegister fromJSON(P4::JSONLoader& json);
 
     cstring name;
     size_t  size;

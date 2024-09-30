@@ -33,7 +33,7 @@ struct HashFuncLoc {
     HashFuncLoc(int s, int hg) : stage(s), hash_group(hg) {}
 };
 
-using NameToHashGen = std::map<cstring, const IR::MAU::HashGenExpression *>;
+using NameToHashGen = std::map<cstring, const P4::IR::MAU::HashGenExpression *>;
 using HashGenToAlloc
     = std::map<cstring, safe_vector<std::pair<HashFuncLoc, const Tofino::IXBar::HashDistIRUse *>>>;
 using AllocToHashUse = std::map<HashFuncLoc, safe_vector<const Tofino::IXBar::HashDistIRUse *>>;
@@ -41,13 +41,13 @@ using AllocToHashUse = std::map<HashFuncLoc, safe_vector<const Tofino::IXBar::Ha
 class VerifyUniqueDynamicHash : public MauInspector {
     NameToHashGen &verify_hash_gen;
 
-    profile_t init_apply(const IR::Node *node) override {
+    profile_t init_apply(const P4::IR::Node *node) override {
         auto rv = MauInspector::init_apply(node);
         verify_hash_gen.clear();
         return rv;
     }
 
-    bool preorder(const IR::MAU::HashGenExpression *) override;
+    bool preorder(const P4::IR::MAU::HashGenExpression *) override;
  public:
     explicit VerifyUniqueDynamicHash(NameToHashGen &vhg) : verify_hash_gen(vhg) {}
 };
@@ -56,13 +56,13 @@ class GatherDynamicHashAlloc : public MauInspector {
     const NameToHashGen &verify_hash_gen;
     HashGenToAlloc &hash_gen_alloc;
 
-    profile_t init_apply(const IR::Node *node) override {
+    profile_t init_apply(const P4::IR::Node *node) override {
         auto rv = MauInspector::init_apply(node);
         hash_gen_alloc.clear();
         return rv;
     }
 
-    bool preorder(const IR::MAU::Table *) override;
+    bool preorder(const P4::IR::MAU::Table *) override;
 
  public:
     GatherDynamicHashAlloc(const NameToHashGen &vhg, HashGenToAlloc &hga)
@@ -89,21 +89,21 @@ class GenerateDynamicHashJson : public MauInspector {
     const HashGenToAlloc &hash_gen_alloc;
     bool all_placed = true;
 
-    bool preorder(const IR::MAU::Table *tbl) override;
+    bool preorder(const P4::IR::MAU::Table *tbl) override;
     void gen_ixbar_json(const IXBar::Use *ixbar_use,
         Util::JsonObject *_dhc, int stage, const cstring field_list_name,
-        const IR::NameList *algorithms, int hash_width = -1);
+        const P4::IR::NameList *algorithms, int hash_width = -1);
 
     void end_apply() override;
 
     void gen_ixbar_bytes_json(Util::JsonArray *_xbar_cfgs, int stage,
         const std::map<cstring, cstring> &fieldNames, const IXBar::Use &ixbar_use);
-    void gen_algo_json(Util::JsonObject *_dhc, const IR::MAU::HashGenExpression *hge);
-    void gen_single_algo_json(Util::JsonArray *_algos, const IR::MAU::HashFunction *alg,
+    void gen_algo_json(Util::JsonObject *_dhc, const P4::IR::MAU::HashGenExpression *hge);
+    void gen_single_algo_json(Util::JsonArray *_algos, const P4::IR::MAU::HashFunction *alg,
         cstring alg_name, bool &is_default);
     void gen_hash_json(Util::JsonArray *_hash_cfgs, int stage, Tofino::IXBar::Use &ixbar_use,
         int &hash_bit_width);
-    void gen_field_list_json(Util::JsonObject *_field_list, const IR::MAU::HashGenExpression *hge,
+    void gen_field_list_json(Util::JsonObject *_field_list, const P4::IR::MAU::HashGenExpression *hge,
         std::map<cstring, cstring> &fieldNames);
     void gen_hash_dist_json(cstring dyn_hash_name);
 

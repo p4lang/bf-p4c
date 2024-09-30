@@ -102,7 +102,7 @@ int IXBarSpec::xcmpBytes() const { MAU_SPEC_UNSUPPORTED }
 int IXBarSpec::xcmpWords() const {MAU_SPEC_UNSUPPORTED }
 #endif
 
-IR::Node *MauSpec::postTransformTables(IR::MAU::Table *const table) const {
+P4::IR::Node *MauSpec::postTransformTables(P4::IR::MAU::Table *const table) const {
     return table;
 }
 
@@ -244,7 +244,7 @@ const IXBarSpec &FlatrockMauSpec::getIXBarSpec() const { return ixbar_; }
 
 const IMemSpec &FlatrockMauSpec::getIMemSpec() const { return imem_; }
 
-IR::Node *FlatrockMauSpec::postTransformTables(IR::MAU::Table *const table) const { return table; }
+P4::IR::Node *FlatrockMauSpec::postTransformTables(P4::IR::MAU::Table *const table) const { return table; }
 
 int FlatrockMauSpec::tcam_width() const { return 40; }
 

@@ -1011,8 +1011,8 @@ const RamSection *ALUOperation::create_RamSection(bool shift_to_lsb) const {
             Parameter *param;
             if (has_hash) {
                 P4HashFunction func;
-                func.inputs.push_back(new IR::Constant(IR::Type::Bits::get(br_size), 0));
-                func.algorithm = IR::MAU::HashFunction::identity();
+                func.inputs.push_back(new P4::IR::Constant(P4::IR::Type::Bits::get(br_size), 0));
+                func.algorithm = P4::IR::MAU::HashFunction::identity();
                 func.hash_bits = { 0, br_size - 1 };
                 param = new Hash(func);
             } else {
@@ -2325,14 +2325,14 @@ const RamSection *Format::Use::build_locked_in_sect() const {
 
 
 /**
- * Creates an Argument from an IR::MAU::ActionArg or slice of one
+ * Creates an Argument from an P4::IR::MAU::ActionArg or slice of one
  */
 void Format::create_argument(ALUOperation &alu,
         ActionAnalysis::ActionParam &read, le_bitrange container_bits,
-        const IR::MAU::ConditionalArg *cond_arg) {
+        const P4::IR::MAU::ConditionalArg *cond_arg) {
     Log::TempIndent indent;
     LOG7("Create argument" << indent);
-    auto ir_arg = read.unsliced_expr()->to<IR::MAU::ActionArg>();
+    auto ir_arg = read.unsliced_expr()->to<P4::IR::MAU::ActionArg>();
     BUG_CHECK(ir_arg != nullptr, "Cannot create argument");
     Argument *arg = new Argument(ir_arg->name.name, read.range());
     if (cond_arg)
@@ -2343,14 +2343,14 @@ void Format::create_argument(ALUOperation &alu,
 }
 
 /**
- * Creates a Constant from an IR::Constant.  Assume to be <= 32 bits as all operations
+ * Creates a Constant from an P4::IR::Constant.  Assume to be <= 32 bits as all operations
  * at most are 32 bit ALU operations.
  */
-void Format::create_constant(ALUOperation &alu, const IR::Expression *read,
+void Format::create_constant(ALUOperation &alu, const P4::IR::Expression *read,
         le_bitrange container_bits, int &constant_alias_index,
-        const IR::MAU::ConditionalArg *cond_arg) {
+        const P4::IR::MAU::ConditionalArg *cond_arg) {
     LOG7("Create constant");
-    auto ir_con = read->to<IR::Constant>();
+    auto ir_con = read->to<P4::IR::Constant>();
     BUG_CHECK(ir_con != nullptr, "Cannot create constant");
 
     uint32_t constant_value = 0U;
@@ -2370,18 +2370,18 @@ void Format::create_constant(ALUOperation &alu, const IR::Expression *read,
 }
 
 /**
- * Creates a Hash parameter from an IR::MAU::HashDist based read
+ * Creates a Hash parameter from an P4::IR::MAU::HashDist based read
  */
 void Format::create_hash(ALUOperation &alu, ActionAnalysis::ActionParam &read,
        le_bitrange container_bits) {
     Log::TempIndent indent;
     LOG7("Create hash for " << read << indent);
-    auto ir_hd = read.unsliced_expr()->to<IR::MAU::HashDist>();
+    auto ir_hd = read.unsliced_expr()->to<P4::IR::MAU::HashDist>();
     BUG_CHECK(ir_hd != nullptr, "Cannot create a hash argument out of a non-HashDist");
     BuildP4HashFunction builder(phv);
     ir_hd->apply(builder);
     P4HashFunction *func = builder.func();
-    if (auto sl = read.expr->to<IR::Slice>()) {
+    if (auto sl = read.expr->to<P4::IR::Slice>()) {
         le_bitrange hash_range = { static_cast<int>(sl->getL()), static_cast<int>(sl->getH()) };
         func->slice(hash_range);
     }
@@ -2392,19 +2392,19 @@ void Format::create_hash(ALUOperation &alu, ActionAnalysis::ActionParam &read,
 }
 
 /**
- * Creates a Hash parameter from a IR::Constant that will be returned from a hash function,
- * as that constant is in the same action as a IR::MAU::HashDist, and thus will be
+ * Creates a Hash parameter from a P4::IR::Constant that will be returned from a hash function,
+ * as that constant is in the same action as a P4::IR::MAU::HashDist, and thus will be
  * converted to one of the outputs of the HashFunction
  */
 void Format::create_hash_constant(ALUOperation &alu, ActionAnalysis::ActionParam &read,
         le_bitrange container_bits) {
     Log::TempIndent indent;
     LOG7("Create hash constant" << indent);
-    auto ir_con = read.unsliced_expr()->to<IR::Constant>();
+    auto ir_con = read.unsliced_expr()->to<P4::IR::Constant>();
     BUG_CHECK(ir_con != nullptr, "Cannot create constant");
     P4HashFunction func;
     func.inputs.push_back(ir_con);
-    func.algorithm = IR::MAU::HashFunction::identity();
+    func.algorithm = P4::IR::MAU::HashFunction::identity();
     func.hash_bits = { 0, ir_con->type->width_bits() - 1 };
     Hash *hash = new Hash(func);
     ALUParameter ap(hash, container_bits);
@@ -2419,7 +2419,7 @@ void Format::create_random_number(ALUOperation &alu, ActionAnalysis::ActionParam
         le_bitrange container_bits, cstring action_name) {
     Log::TempIndent indent;
     LOG7("Create random number" << indent);
-    auto ir_rn = read.unsliced_expr()->to<IR::MAU::RandomNumber>();
+    auto ir_rn = read.unsliced_expr()->to<P4::IR::MAU::RandomNumber>();
     BUG_CHECK(ir_rn != nullptr, "Cannot create random");
     cstring rand_name = ir_rn->name;
     RandomNumber *rn = new RandomNumber(rand_name, action_name, read.range());
@@ -2448,7 +2448,7 @@ void Format::create_meter_color(ALUOperation &alu, ActionAnalysis::ActionParam &
         le_bitrange container_bits) {
     Log::TempIndent indent;
     LOG7("Create meter color" << indent);
-    auto ir_ao = read.unsliced_expr()->to<IR::MAU::AttachedOutput>();
+    auto ir_ao = read.unsliced_expr()->to<P4::IR::MAU::AttachedOutput>();
     BUG_CHECK(ir_ao != nullptr, "Cannot create meter color");
     auto meter_name = ir_ao->attached->name;
     auto range = read.range();
@@ -2468,7 +2468,7 @@ void Format::create_mask_argument(ALUOperation &alu, ActionAnalysis::ActionParam
         le_bitrange container_bits) {
     Log::TempIndent indent;
     LOG7("Create mask argument" << indent);
-    auto cond_arg = read.unsliced_expr()->to<IR::MAU::ConditionalArg>();
+    auto cond_arg = read.unsliced_expr()->to<P4::IR::MAU::ConditionalArg>();
     BUG_CHECK(cond_arg != nullptr, "Cannot create argument");
     for (int i = container_bits.lo; i <= container_bits.hi; i++) {
         Argument *arg = new Argument(cond_arg->orig_arg->name, {0, 0});
@@ -2537,12 +2537,12 @@ bool Format::fix_bitwise_overwrite(ALUOperation &alu,
 
             const auto container_bits = le_bitrange(FromTo(start, end - 1));
             const auto read_size = end - start;
-            const auto type = IR::Type_Bits::get(read_size);
+            const auto type = P4::IR::Type_Bits::get(read_size);
 
             constexpr unsigned int fill = 0xffffffff;
             constexpr size_t fill_size_bits = sizeof(fill) * 8;
 
-            const auto constant = new IR::Constant(type, fill >> (fill_size_bits - read_size));
+            const auto constant = new P4::IR::Constant(type, fill >> (fill_size_bits - read_size));
             create_constant(alu, constant, container_bits, constant_alias_index, nullptr);
 
             alias_required_reads++;
@@ -2612,10 +2612,10 @@ void Format::create_alu_ops_for_action(ActionAnalysis::ContainerActionsMap &ca_m
             if (write_count > 1)
                 BUG("Splitting of writes handled incorrectly");
 
-            const IR::MAU::ConditionalArg *cond_arg = nullptr;
+            const P4::IR::MAU::ConditionalArg *cond_arg = nullptr;
             if (field_action.name == "conditionally-set") {
                 auto last_read = field_action.reads.back();
-                cond_arg = last_read.unsliced_expr()->to<IR::MAU::ConditionalArg>();
+                cond_arg = last_read.unsliced_expr()->to<P4::IR::MAU::ConditionalArg>();
                 BUG_CHECK(cond_arg != nullptr, "Last read of set-conditional instruction should "
                     "be a conditional argument");
             }
@@ -3087,7 +3087,7 @@ bool Format::determine_next_immediate_bytes(bool immediate_forced) {
  * the ability to set up these different sizes of action data entry sizes.
  */
 bool Format::determine_bytes_per_loc(bool &initialized,
-                                     IR::MAU::Table::ImmediateControl_t imm_ctrl) {
+                                     P4::IR::MAU::Table::ImmediateControl_t imm_ctrl) {
     action_bus_inputs.resize(AD_LOCATIONS);
     action_bus_input_bitvecs.resize(AD_LOCATIONS);
     for (int i = 0; i < AD_LOCATIONS; i++) {
@@ -3137,15 +3137,15 @@ bool Format::determine_bytes_per_loc(bool &initialized,
 
     // Action profiles cannot have immediate data by definition
     for (auto ba : tbl->attached) {
-        if (ba->attached->is<IR::MAU::ActionData>()) {
+        if (ba->attached->is<P4::IR::MAU::ActionData>()) {
             go_imm = false;
             break; }
     }
 
-    if (imm_ctrl == IR::MAU::Table::FORCE_NON_IMMEDIATE)
+    if (imm_ctrl == P4::IR::MAU::Table::FORCE_NON_IMMEDIATE)
         go_imm = false;
 
-    bool imm_forced = imm_ctrl == IR::MAU::Table::FORCE_IMMEDIATE;
+    bool imm_forced = imm_ctrl == P4::IR::MAU::Table::FORCE_IMMEDIATE;
     bool imm_path_used = locked_in_all_actions_sects.size() > 0;
 
     go_imm &= !(imm_path_used);
@@ -3722,7 +3722,7 @@ void Format::build_potential_format(bool immediate_forced) {
  *        improve, e.g. O(n^2) approach of allocating all tables simultaneously rather than one at
  *        a time, mutual exclusive optimizations, and the extra copies of the entry from lsb.
  */
-void Format::allocate_format(IR::MAU::Table::ImmediateControl_t imm_ctrl,
+void Format::allocate_format(P4::IR::MAU::Table::ImmediateControl_t imm_ctrl,
                              FormatType_t format_type) {
     BUG_CHECK(format_type.valid(), "invalid format in Format::allocate_format");
     Log::TempIndent indent;
@@ -3737,7 +3737,7 @@ void Format::allocate_format(IR::MAU::Table::ImmediateControl_t imm_ctrl,
         if (!can_allocate)
             break;
         assign_RamSections_to_bytes();
-        build_potential_format(imm_ctrl == IR::MAU::Table::FORCE_IMMEDIATE);
+        build_potential_format(imm_ctrl == P4::IR::MAU::Table::FORCE_IMMEDIATE);
     }
 }
 

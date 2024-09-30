@@ -44,16 +44,16 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
      */
     struct ActionParam {
         enum type_t { PHV, ACTIONDATA, CONSTANT, TOTAL_TYPES } type;
-        const IR::Expression *expr;
+        const P4::IR::Expression *expr;
         enum speciality_t { NO_SPECIAL, HASH_DIST, METER_COLOR, RANDOM, METER_ALU, STFUL_COUNTER }
              speciality = NO_SPECIAL;
         bool is_conditional = false;
 
         ActionParam() : type(PHV), expr(nullptr) {}
-        ActionParam(type_t t, const IR::Expression *e)
+        ActionParam(type_t t, const P4::IR::Expression *e)
             : type(t), expr(e) {}
 
-        ActionParam(type_t t, const IR::Expression *e, speciality_t s)
+        ActionParam(type_t t, const P4::IR::Expression *e, speciality_t s)
             : type(t), expr(e), speciality(s) {}
 
         int size() const {
@@ -62,7 +62,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
         }
 
         le_bitrange range() const {
-            if (auto sl = expr->to<IR::Slice>())
+            if (auto sl = expr->to<P4::IR::Slice>())
                 return { static_cast<int>(sl->getL()), static_cast<int>(sl->getH()) };
             return {0, size() - 1};
         }
@@ -71,7 +71,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
         std::string to_string() const;
 
         // void dbprint(std::ostream &out) const;
-        const IR::Expression *unsliced_expr() const;
+        const P4::IR::Expression *unsliced_expr() const;
 
         cstring get_type_string() const {
             if (type == PHV)             return "PHV"_cs;
@@ -98,7 +98,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
     struct FieldAction {
         bool write_found = false;
         cstring name;
-        const IR::MAU::Instruction *instruction;
+        const P4::IR::MAU::Instruction *instruction;
         ActionParam write;
         safe_vector<ActionParam> reads;
         void clear() {
@@ -372,7 +372,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
         static const std::vector<cstring> error_code_string_t;
 
         cstring name;
-        const IR::MAU::Table *table_context = nullptr;
+        const P4::IR::MAU::Table *table_context = nullptr;
         ActionDataInfo adi;
         ConstantInfo ci;
         bitvec invalidate_write_bits;
@@ -393,7 +393,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
         safe_vector<FieldAction> field_actions;
 
         ContainerAction() {}  // used to by std::map to build an default object
-        ContainerAction(cstring n, const IR::MAU::Table *tbl) : name(n), table_context(tbl) {}
+        ContainerAction(cstring n, const P4::IR::MAU::Table *tbl) : name(n), table_context(tbl) {}
 
         int total_types() {
             return counts[ActionParam::PHV]
@@ -546,7 +546,7 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
         std::string to_string() const;
     };
 
-    typedef ordered_map<const IR::MAU::Instruction *, FieldAction> FieldActionsMap;
+    typedef ordered_map<const P4::IR::MAU::Instruction *, FieldAction> FieldActionsMap;
     typedef std::map<PHV::Container, ContainerAction> ContainerActionsMap;
 
  private:
@@ -564,41 +564,41 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
 
     FieldActionsMap *field_actions_map = nullptr;
     ContainerActionsMap *container_actions_map = nullptr;
-    const IR::MAU::Table *tbl;
+    const P4::IR::MAU::Table *tbl;
     const ReductionOrInfo &red_info;
     FieldAction field_action;
     ordered_set<std::pair<cstring, le_bitrange>> single_ad_params;
     ordered_set<std::pair<cstring, le_bitrange>> multiple_ad_params;
 
-    void initialize_phv_field(const IR::Expression *expr);
-    void initialize_action_data(const IR::Expression *expr);
-    ActionParam::speciality_t classify_attached_output(const IR::MAU::AttachedOutput *);
-    bool preorder(const IR::MAU::Action *) override { visitOnce(); return true; }
-    bool preorder(const IR::MAU::Table *) override { visitOnce(); return true; }
-    bool preorder(const IR::MAU::TableSeq *) override { visitOnce(); return true; }
-    bool preorder(const IR::Annotation *) override { return false; }
+    void initialize_phv_field(const P4::IR::Expression *expr);
+    void initialize_action_data(const P4::IR::Expression *expr);
+    ActionParam::speciality_t classify_attached_output(const P4::IR::MAU::AttachedOutput *);
+    bool preorder(const P4::IR::MAU::Action *) override { visitOnce(); return true; }
+    bool preorder(const P4::IR::MAU::Table *) override { visitOnce(); return true; }
+    bool preorder(const P4::IR::MAU::TableSeq *) override { visitOnce(); return true; }
+    bool preorder(const P4::IR::Annotation *) override { return false; }
 
-    bool preorder(const IR::Slice *) override;
-    bool preorder(const IR::MAU::ActionArg *) override;
-    bool preorder(const IR::MAU::ConditionalArg *) override;
-    bool preorder(const IR::Cast *) override;
-    bool preorder(const IR::Expression *) override;
-    bool preorder(const IR::Mux *) override;
-    bool preorder(const IR::Member *) override;
-    bool preorder(const IR::MAU::ActionDataConstant *) override;
-    bool preorder(const IR::Constant *) override;
-    bool preorder(const IR::MAU::AttachedOutput *) override;
-    bool preorder(const IR::MAU::HashDist *) override;
-    bool preorder(const IR::MAU::IXBarExpression *) override;
-    bool preorder(const IR::MAU::RandomNumber *) override;
-    bool preorder(const IR::MAU::StatefulAlu *) override;
-    bool preorder(const IR::MAU::Instruction *) override;
-    bool preorder(const IR::MAU::StatefulCall *) override;
-    bool preorder(const IR::MAU::StatefulCounter *sc) override;
-    bool preorder(const IR::MAU::Primitive *) override;
-    void postorder(const IR::MAU::Instruction *) override;
-    void postorder(const IR::MAU::Action *) override;
-    bool preorder(const IR::BFN::ReinterpretCast* cast) override;
+    bool preorder(const P4::IR::Slice *) override;
+    bool preorder(const P4::IR::MAU::ActionArg *) override;
+    bool preorder(const P4::IR::MAU::ConditionalArg *) override;
+    bool preorder(const P4::IR::Cast *) override;
+    bool preorder(const P4::IR::Expression *) override;
+    bool preorder(const P4::IR::Mux *) override;
+    bool preorder(const P4::IR::Member *) override;
+    bool preorder(const P4::IR::MAU::ActionDataConstant *) override;
+    bool preorder(const P4::IR::Constant *) override;
+    bool preorder(const P4::IR::MAU::AttachedOutput *) override;
+    bool preorder(const P4::IR::MAU::HashDist *) override;
+    bool preorder(const P4::IR::MAU::IXBarExpression *) override;
+    bool preorder(const P4::IR::MAU::RandomNumber *) override;
+    bool preorder(const P4::IR::MAU::StatefulAlu *) override;
+    bool preorder(const P4::IR::MAU::Instruction *) override;
+    bool preorder(const P4::IR::MAU::StatefulCall *) override;
+    bool preorder(const P4::IR::MAU::StatefulCounter *sc) override;
+    bool preorder(const P4::IR::MAU::Primitive *) override;
+    void postorder(const P4::IR::MAU::Instruction *) override;
+    void postorder(const P4::IR::MAU::Action *) override;
+    bool preorder(const P4::IR::BFN::ReinterpretCast* cast) override;
 
     bool initialize_invalidate_alignment(const ActionParam &write, ContainerAction &cont_action);
     bool initialize_alignment(const ActionParam &write, const ActionParam &read,
@@ -632,16 +632,16 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
     void verify_P4_action_without_phv(cstring action_name);
     void verify_P4_action_with_phv(cstring action_name);
 
-    bool is_allowed_unalloc(const IR::Expression *e) {
+    bool is_allowed_unalloc(const P4::IR::Expression *e) {
         if (!allow_unalloc) return false;
-        while (auto *sl = e->to<IR::Slice>()) e = sl->e0;
-        return e->is<IR::TempVar>(); }
+        while (auto *sl = e->to<P4::IR::Slice>()) e = sl->e0;
+        return e->is<P4::IR::TempVar>(); }
 
  public:
-    const IR::Expression *isActionParam(const IR::Expression *expr,
+    const P4::IR::Expression *isActionParam(const P4::IR::Expression *expr,
         le_bitrange *bits_out = nullptr, ActionParam::type_t *type = nullptr);
-    const IR::Expression *isStrengthReducible(const IR::Expression *expr);
-    const IR::MAU::ActionArg *isActionArg(const IR::Expression *expr,
+    const P4::IR::Expression *isStrengthReducible(const P4::IR::Expression *expr);
+    const P4::IR::MAU::ActionArg *isActionArg(const P4::IR::Expression *expr,
         le_bitrange *bits_out = nullptr);
     bool isReductionOr(ContainerAction &cont_action) const;
 
@@ -672,10 +672,10 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
     bool get_action_data_misaligned() const { return action_data_misaligned; }
     bool get_verbose() const { return verbose; }
     bool get_error_verbose() const { return error_verbose; }
-    const IR::MAU::Table* get_table() const { return tbl; }
+    const P4::IR::MAU::Table* get_table() const { return tbl; }
     const ContainerActionsMap* get_container_actions_map() const { return container_actions_map; }
 
-    ActionAnalysis(const PhvInfo &p, bool pa, bool aa, const IR::MAU::Table *t,
+    ActionAnalysis(const PhvInfo &p, bool pa, bool aa, const P4::IR::MAU::Table *t,
             const ReductionOrInfo &ri, bool au = false, bool seq = true)
         : phv(p), phv_alloc(pa), ad_alloc(aa), allow_unalloc(au), sequential(seq), tbl(t),
           red_info(ri) {visitDagOnce = false;}

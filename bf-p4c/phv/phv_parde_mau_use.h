@@ -31,7 +31,7 @@ class Phv_Parde_Mau_Use : public Inspector, public TofinoWriteContext {
     ordered_map<
         const PHV::Field *,
         ordered_map<le_bitrange,
-                    ordered_set<std::pair<const IR::MAU::Table *, const IR::MAU::TableKey *>>>>
+                    ordered_set<std::pair<const P4::IR::MAU::Table *, const P4::IR::MAU::TableKey *>>>>
         ixbar_read_i;
 
     /// fields that are read by deparser learning engine, including selector.
@@ -109,7 +109,7 @@ class Phv_Parde_Mau_Use : public Inspector, public TofinoWriteContext {
     /// @returns ixbar read of sub-ranges to tables of @p range of @p f.
     /// premise: @p range must be a fine-sliced range that either all of or none of
     /// the bits in the range are read by ixbar. Otherwise, BUG will be thrown.
-    ordered_set<std::pair<const IR::MAU::Table *, const IR::MAU::TableKey *>> ixbar_read(
+    ordered_set<std::pair<const P4::IR::MAU::Table *, const P4::IR::MAU::TableKey *>> ixbar_read(
         const PHV::Field *f, le_bitrange range) const;
 
  protected:
@@ -119,15 +119,15 @@ class Phv_Parde_Mau_Use : public Inspector, public TofinoWriteContext {
     bool          in_dep = false;
 
  protected:
-    profile_t init_apply(const IR::Node *) override;
-    bool preorder(const IR::BFN::Parser *) override;
-    bool preorder(const IR::BFN::Extract *) override;
-    bool preorder(const IR::BFN::ParserChecksumWritePrimitive *) override;
-    bool preorder(const IR::BFN::Deparser *) override;
-    bool preorder(const IR::BFN::Digest *) override;
-    bool preorder(const IR::MAU::TableSeq *) override;
-    bool preorder(const IR::MAU::TableKey *) override;
-    bool preorder(const IR::Expression *) override;
+    profile_t init_apply(const P4::IR::Node *) override;
+    bool preorder(const P4::IR::BFN::Parser *) override;
+    bool preorder(const P4::IR::BFN::Extract *) override;
+    bool preorder(const P4::IR::BFN::ParserChecksumWritePrimitive *) override;
+    bool preorder(const P4::IR::BFN::Deparser *) override;
+    bool preorder(const P4::IR::BFN::Digest *) override;
+    bool preorder(const P4::IR::MAU::TableSeq *) override;
+    bool preorder(const P4::IR::MAU::TableKey *) override;
+    bool preorder(const P4::IR::Expression *) override;
 };
 
 /// Consider additional cases specific to Phv Allocation, e.g., treat
@@ -137,11 +137,11 @@ class PhvUse : public Phv_Parde_Mau_Use {
     explicit PhvUse(const PhvInfo &p) : Phv_Parde_Mau_Use(p) { }
 
  private:
-    bool preorder(const IR::BFN::Deparser *d) override;
-    bool preorder(const IR::BFN::DeparserParameter *param) override;
-    void postorder(const IR::BFN::DeparserParameter *param) override;
-    bool preorder(const IR::BFN::Digest *digest) override;
-    void postorder(const IR::BFN::Digest *digest) override;
+    bool preorder(const P4::IR::BFN::Deparser *d) override;
+    bool preorder(const P4::IR::BFN::DeparserParameter *param) override;
+    void postorder(const P4::IR::BFN::DeparserParameter *param) override;
+    bool preorder(const P4::IR::BFN::Digest *digest) override;
+    void postorder(const P4::IR::BFN::Digest *digest) override;
 };
 
 #endif /* BF_P4C_PHV_PHV_PARDE_MAU_USE_H_ */

@@ -108,9 +108,11 @@ class BFN_Options : public CompilerOptions {
 };
 
 // forward declarations so we do not include ir-generated.h
+namespace P4 {
 namespace IR {
 class P4Program;      // NOLINT(build/forward_decl)
 class ToplevelBlock;  // NOLINT(build/forward_decl)
+}
 }
 
 /// A CompileContext for bf-p4c.
@@ -151,7 +153,7 @@ class BFNContext : public virtual P4CContext {
     cstring getOutputDirectory(const cstring &suffix = cstring(), int pipe_id = -1);
 
     /// identify the pipelines in the program and setup the _pipes map
-    void discoverPipes(const IR::P4Program *, const IR::ToplevelBlock*);
+    void discoverPipes(const P4::IR::P4Program *, const P4::IR::ToplevelBlock*);
 
     /// Return the pipeline name or empty if the program has not been parsed
     cstring &getPipeName(int pipe_id) {
@@ -203,11 +205,11 @@ inline BFN_Options& BackendOptions() { return BFNContext::get().options(); }
 class BFNOptionPragmaParser : public P4::P4COptionPragmaParser {
  public:
     std::optional<CommandLineOptions>
-    tryToParse(const IR::Annotation* annotation) override;
+    tryToParse(const P4::IR::Annotation* annotation) override;
 
  private:
     std::optional<CommandLineOptions>
-    parseCompilerOption(const IR::Annotation* annotation);
+    parseCompilerOption(const P4::IR::Annotation* annotation);
 };
 
 #endif /* EXTENSIONS_BF_P4C_BF_P4C_OPTIONS_H_ */
