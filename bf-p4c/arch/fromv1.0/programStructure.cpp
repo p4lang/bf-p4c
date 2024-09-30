@@ -13,6 +13,7 @@
 #include "bf-p4c/arch/intrinsic_metadata.h"
 #include "bf-p4c/common/pragma/all_pragmas.h"
 
+namespace P4 {
 namespace P4V1 {
 
 // TODO: older definition of ProgramStructure used by 14-to-v1model conversion path
@@ -2790,3 +2791,4 @@ bool use_v1model() {
 }
 
 }  // namespace P4V1
+}  // namespace P4

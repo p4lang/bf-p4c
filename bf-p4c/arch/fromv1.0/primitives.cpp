@@ -4,6 +4,7 @@
 #include "bf-p4c/device.h"
 #include "bf-p4c/bf-p4c-options.h"
 
+namespace P4 {
 namespace P4V1 {
 
 #define OPS_CK(primitive, n) BUG_CHECK((primitive)->operands.size() == n, \
@@ -426,3 +427,4 @@ CONVERT_PRIMITIVE(swap) {
 }
 
 }  // end namespace P4V1
+}  // end namespace P4

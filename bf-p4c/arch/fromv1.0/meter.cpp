@@ -1,19 +1,19 @@
 #include "meter.h"
 #include "programStructure.h"
 
-P4V1::MeterConverter::MeterConverter() {
+P4::P4V1::MeterConverter::MeterConverter() {
     addConverter("meter"_cs, this);
 }
 
-const IR::Type_Extern *P4V1::MeterConverter::convertExternType(P4V1::ProgramStructure *structure,
+const IR::Type_Extern *P4::P4V1::MeterConverter::convertExternType(P4::P4V1::ProgramStructure *structure,
                                                                const IR::Type_Extern *, cstring) {
     if (use_v1model())
         structure->include("tofino/meter.p4"_cs);
     return nullptr;
 }
 
-const IR::Declaration_Instance *P4V1::MeterConverter::convertExternInstance(
-        P4V1::ProgramStructure *structure, const IR::Declaration_Instance *ext, cstring name,
+const IR::Declaration_Instance *P4::P4V1::MeterConverter::convertExternInstance(
+        P4::P4V1::ProgramStructure *structure, const IR::Declaration_Instance *ext, cstring name,
         IR::IndexedVector<IR::Declaration> *) {
     auto *et = ext->type->to<IR::Type_Extern>();
     BUG_CHECK(et && et->name == "meter", "Extern %s is not meter type, but %s", ext, ext->type);
@@ -90,7 +90,7 @@ const IR::Declaration_Instance *P4V1::MeterConverter::convertExternInstance(
     }
 }
 
-const IR::Statement *P4V1::MeterConverter::convertExternCall(P4V1::ProgramStructure *structure,
+const IR::Statement *P4::P4V1::MeterConverter::convertExternCall(P4::P4V1::ProgramStructure *structure,
         const IR::Declaration_Instance *ext, const IR::Primitive *prim) {
     auto *et = ext->type->to<IR::Type_Extern>();
     BUG_CHECK(et && et->name == "meter", "Extern %s is not meter type, but %s", ext, ext->type);
@@ -110,7 +110,7 @@ const IR::Statement *P4V1::MeterConverter::convertExternCall(P4V1::ProgramStruct
     IR::BlockStatement *block = nullptr;
     if (prim->name == "execute_with_pre_color_from_hash") {
         cstring temp = structure->makeUniqueName("temp"_cs);
-        block = P4V1::generate_hash_block_statement(structure, prim, temp, conv, 4);
+        block = P4::P4V1::generate_hash_block_statement(structure, prim, temp, conv, 4);
         args->push_back(new IR::Argument(new IR::Cast(IR::Type_Bits::get(32),
                         new IR::PathExpression(new IR::Path(temp)))));
     } else {
@@ -135,4 +135,4 @@ const IR::Statement *P4V1::MeterConverter::convertExternCall(P4V1::ProgramStruct
     return rv;
 }
 
-P4V1::MeterConverter P4V1::MeterConverter::singleton;
+P4::P4V1::MeterConverter P4::P4V1::MeterConverter::singleton;

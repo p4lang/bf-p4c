@@ -1,19 +1,19 @@
 #include "wred.h"
 #include "programStructure.h"
 
-P4V1::WREDConverter::WREDConverter() {
+P4::P4V1::WREDConverter::WREDConverter() {
     addConverter("wred"_cs, this);
 }
 
-const IR::Type_Extern *P4V1::WREDConverter::convertExternType(P4V1::ProgramStructure *structure,
+const IR::Type_Extern *P4::P4V1::WREDConverter::convertExternType(P4::P4V1::ProgramStructure *structure,
                                                              const IR::Type_Extern *, cstring) {
     if (use_v1model())
         structure->include("tofino/wred.p4"_cs);
     return nullptr;
 }
 
-const IR::Declaration_Instance *P4V1::WREDConverter::convertExternInstance(
-        P4V1::ProgramStructure *structure, const IR::Declaration_Instance *ext, cstring name,
+const IR::Declaration_Instance *P4::P4V1::WREDConverter::convertExternInstance(
+        P4::P4V1::ProgramStructure *structure, const IR::Declaration_Instance *ext, cstring name,
         IR::IndexedVector<IR::Declaration> *) {
     auto *et = ext->type->to<IR::Type_Extern>();
     BUG_CHECK(et && et->name == "wred", "Extern %s is not wred type, but %s", ext, ext->type);
@@ -76,7 +76,7 @@ const IR::Declaration_Instance *P4V1::WREDConverter::convertExternInstance(
     }
 }
 
-const IR::Statement *P4V1::WREDConverter::convertExternCall(P4V1::ProgramStructure *structure,
+const IR::Statement *P4::P4V1::WREDConverter::convertExternCall(P4::P4V1::ProgramStructure *structure,
         const IR::Declaration_Instance *ext, const IR::Primitive *prim) {
     auto *et = ext->type->to<IR::Type_Extern>();
     BUG_CHECK(et && et->name == "wred", "Extern %s is not wred type, but %s", ext, ext->type);
@@ -96,7 +96,7 @@ const IR::Statement *P4V1::WREDConverter::convertExternCall(P4V1::ProgramStructu
     IR::BlockStatement *block = nullptr;
     if (prim->name == "execute_from_hash") {
         cstring temp = structure->makeUniqueName("temp"_cs);
-        block = P4V1::generate_hash_block_statement(structure, prim, temp, conv, 3);
+        block = P4::P4V1::generate_hash_block_statement(structure, prim, temp, conv, 3);
         args->push_back(new IR::Argument(new IR::Cast(IR::Type_Bits::get(32),
                         new IR::PathExpression(new IR::Path(temp)))));
     } else if (prim->name == "execute") {
@@ -116,4 +116,4 @@ const IR::Statement *P4V1::WREDConverter::convertExternCall(P4V1::ProgramStructu
     return rv;
 }
 
-P4V1::WREDConverter P4V1::WREDConverter::singleton;
+P4::P4V1::WREDConverter P4::P4V1::WREDConverter::singleton;

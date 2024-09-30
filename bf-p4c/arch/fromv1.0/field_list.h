@@ -5,6 +5,7 @@
 #include "frontends/p4/fromv1.0/converters.h"
 #include "bf-p4c/midend/path_linearizer.h"
 
+namespace P4 {
 namespace P4V1 {
 
 class FieldListConverter {
@@ -15,5 +16,6 @@ class FieldListConverter {
 };
 
 }  // namespace P4V1
+}  // namespace P4
 
 #endif /* EXTENSIONS_BF_P4C_ARCH_FROMV1_0_FIELD_LIST_H_ */

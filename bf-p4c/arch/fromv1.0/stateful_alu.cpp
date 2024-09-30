@@ -8,12 +8,12 @@
 #include "lib/bitops.h"
 #include "programStructure.h"
 
-P4V1::StatefulAluConverter::StatefulAluConverter() {
+P4::P4V1::StatefulAluConverter::StatefulAluConverter() {
     addConverter("stateful_alu"_cs, this);
 }
 
-const IR::Type_Extern *P4V1::StatefulAluConverter::convertExternType(
-    P4V1::ProgramStructure *structure, const IR::Type_Extern *, cstring) {
+const IR::Type_Extern *P4::P4V1::StatefulAluConverter::convertExternType(
+    P4::P4V1::ProgramStructure *structure, const IR::Type_Extern *, cstring) {
     if (!has_stateful_alu) {
         has_stateful_alu = true;
         if (use_v1model()) {
@@ -201,7 +201,7 @@ class CreateSaluApplyFunction : public Inspector {
     // These annotations will be put on the RegisterAction instance that will be
     // created to contain the apply function being created by this inspector
     IR::Annotations *annots = nullptr;
-    P4V1::ProgramStructure *structure;
+    P4::P4V1::ProgramStructure *structure;
     const IR::Type *rtype;
     const IR::Type::Bits *utype;
     cstring math_unit_name;
@@ -673,7 +673,7 @@ class CreateSaluApplyFunction : public Inspector {
     }
 
  public:
-    CreateSaluApplyFunction(IR::Annotations *annots, P4V1::ProgramStructure *s,
+    CreateSaluApplyFunction(IR::Annotations *annots, P4::P4V1::ProgramStructure *s,
                             const IR::Type *rtype, const IR::Type::Bits *utype, cstring mu,
                             bool saturating)
         : annots(annots), structure(s), rtype(rtype), utype(utype), math_unit_name(mu),
@@ -702,7 +702,7 @@ class CreateSaluApplyFunction : public Inspector {
         apply = new IR::Function("apply",
                 new IR::Type_Method(IR::Type_Void::get(), apply_params, "apply"_cs), body);
     }
-    static const IR::Function *create(IR::Annotations *annots, P4V1::ProgramStructure *structure,
+    static const IR::Function *create(IR::Annotations *annots, P4::P4V1::ProgramStructure *structure,
                 const IR::Declaration_Instance *ext, const IR::Type *rtype,
                 const IR::Type::Bits *utype, cstring math_unit_name = cstring(),
                 bool saturating = false) {
@@ -778,7 +778,7 @@ class CreateMathUnit : public Inspector {
         if (!table) table = new IR::ExpressionListValue({});
         /// TODO: remove when v1model is retired
         IR::Type* mutype;
-        if (P4V1::use_v1model()) {
+        if (P4::P4V1::use_v1model()) {
             auto *tuple_type = new IR::Type_Tuple;
             for (int i = table->expressions.size(); i > 0; --i)
                 tuple_type->components.push_back(utype);
@@ -800,7 +800,7 @@ class CreateMathUnit : public Inspector {
                 });
         unit = new IR::Declaration_Instance(name, annotations, mutype, ctor_args);
     }
-    static const IR::Declaration_Instance *create(P4V1::ProgramStructure *structure,
+    static const IR::Declaration_Instance *create(P4::P4V1::ProgramStructure *structure,
                 const IR::Declaration_Instance *ext, const IR::Type::Bits *utype) {
         LOG3("creating math unit " << ext);
         CreateMathUnit create_math(structure->makeUniqueName(ext->name + "_math_unit"), utype);
@@ -828,8 +828,8 @@ IR::IndexedVector<IR::Node>::iterator find_in_scope(
     return scope->end();
 }
 
-P4V1::StatefulAluConverter::reg_info P4V1::StatefulAluConverter::getRegInfo(
-        P4V1::ProgramStructure *structure, const IR::Declaration_Instance *ext,
+P4::P4V1::StatefulAluConverter::reg_info P4::P4V1::StatefulAluConverter::getRegInfo(
+        P4::P4V1::ProgramStructure *structure, const IR::Declaration_Instance *ext,
         IR::Vector<IR::Node> *scope) {
     reg_info rv;
     if (auto rp = ext->properties.get<IR::Property>("reg"_cs)) {
@@ -889,8 +889,8 @@ P4V1::StatefulAluConverter::reg_info P4V1::StatefulAluConverter::getRegInfo(
     return rv;
 }
 
-const IR::ActionProfile *P4V1::StatefulAluConverter::getSelectorProfile(
-        P4V1::ProgramStructure *structure, const IR::Declaration_Instance *ext) {
+const IR::ActionProfile *P4::P4V1::StatefulAluConverter::getSelectorProfile(
+        P4::P4V1::ProgramStructure *structure, const IR::Declaration_Instance *ext) {
     if (auto sel_bind = ext->properties.get<IR::Property>("selector_binding"_cs)) {
         auto ev = sel_bind->value->to<IR::ExpressionValue>();
         auto gref = ev ? ev->expression->to<IR::GlobalRef>() : nullptr;
@@ -907,8 +907,8 @@ const IR::ActionProfile *P4V1::StatefulAluConverter::getSelectorProfile(
     return nullptr;
 }
 
-const IR::Declaration_Instance *P4V1::StatefulAluConverter::convertExternInstance(
-        P4V1::ProgramStructure *structure, const IR::Declaration_Instance *ext, cstring name,
+const IR::Declaration_Instance *P4::P4V1::StatefulAluConverter::convertExternInstance(
+        P4::P4V1::ProgramStructure *structure, const IR::Declaration_Instance *ext, cstring name,
         IR::IndexedVector<IR::Declaration> *scope) {
     auto *et = ext->type->to<IR::Type_Extern>();
     BUG_CHECK(et && et->name == "stateful_alu",
@@ -990,8 +990,8 @@ const IR::Declaration_Instance *P4V1::StatefulAluConverter::convertExternInstanc
     return ExternConverter::convertExternInstance(structure, ext, name, scope);
 }
 
-const IR::Statement *P4V1::StatefulAluConverter::convertExternCall(
-            P4V1::ProgramStructure *structure, const IR::Declaration_Instance *ext,
+const IR::Statement *P4::P4V1::StatefulAluConverter::convertExternCall(
+            P4::P4V1::ProgramStructure *structure, const IR::Declaration_Instance *ext,
             const IR::Primitive *prim) {
     auto *et = ext->type->to<IR::Type_Extern>();
     BUG_CHECK(et && et->name == "stateful_alu",
@@ -1039,7 +1039,7 @@ const IR::Statement *P4V1::StatefulAluConverter::convertExternCall(
             return nullptr; }
         block = new IR::BlockStatement;
         cstring temp = structure->makeUniqueName("temp"_cs);
-        block = P4V1::generate_hash_block_statement(structure, prim, temp, conv, 2);
+        block = P4::P4V1::generate_hash_block_statement(structure, prim, temp, conv, 2);
         args->push_back(new IR::Argument(new IR::Cast(IR::Type_Bits::get(reg_index_width),
                         new IR::PathExpression(new IR::Path(temp)))));
     } else if (prim->name == "execute_stateful_log") {
@@ -1072,4 +1072,4 @@ const IR::Statement *P4V1::StatefulAluConverter::convertExternCall(
     return rv;
 }
 
-P4V1::StatefulAluConverter P4V1::StatefulAluConverter::singleton;
+P4::P4V1::StatefulAluConverter P4::P4V1::StatefulAluConverter::singleton;

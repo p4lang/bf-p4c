@@ -3,6 +3,7 @@
 
 #include "frontends/p4/fromv1.0/converters.h"
 
+namespace P4 {
 namespace P4V1 {
 
 class WREDConverter : public ExternConverter {
@@ -19,5 +20,6 @@ class WREDConverter : public ExternConverter {
 };
 
 }  // namespace P4V1
+}  // namespace P4
 
 #endif /* EXTENSIONS_BF_P4C_ARCH_FROMV1_0_WRED_H_ */

@@ -2,13 +2,13 @@
 #include <typeindex>
 #include "field_list.h"
 
-P4V1::FieldListConverter::FieldListConverter() {
+P4::P4V1::FieldListConverter::FieldListConverter() {
     ExpressionConverter::addConverter(
             cstring(std::type_index(typeid(IR::FieldList)).name()),
             convertFieldList);
 }
 
-const IR::Node *P4V1::FieldListConverter::convertFieldList(const IR::Node *node) {
+const IR::Node *P4::P4V1::FieldListConverter::convertFieldList(const IR::Node *node) {
     auto fl = node->to<IR::FieldList>();
     BUG_CHECK(fl != nullptr, "Invalid node type %1%", node);
 
@@ -70,4 +70,4 @@ const IR::Node *P4V1::FieldListConverter::convertFieldList(const IR::Node *node)
     return new IR::ListExpression(fl->srcInfo, *components);
 }
 
-P4V1::FieldListConverter P4V1::FieldListConverter::singleton;
+P4::P4V1::FieldListConverter P4::P4V1::FieldListConverter::singleton;

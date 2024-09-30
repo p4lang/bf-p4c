@@ -8,6 +8,7 @@
 // Converters for converting from P4-14 to TNA For a full list of supported
 // tofino primitives, see google doc titled: "Supported Tofino Primitives"
 
+namespace P4 {
 namespace P4V1 {
 
 // Primitives are ordered alphabetically, if a primitive can reuse the open-source
@@ -603,3 +604,4 @@ CONVERT_PRIMITIVE(sample_e2e, 1) {
 }
 
 }  // namespace P4V1
+}  // namespace P4
