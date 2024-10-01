@@ -1,0 +1,17 @@
+
+add t1 data.h1:0x0101 t1_act(b3:0xf7)
+add t2 data.h2:0x0101 t2_act(b4:0xb3)
+
+add port_setter data.h1:0x0101 data.h2:0x0101 set_port(port:2)
+add port_setter data.h1:0x0202 data.h2:0x0101 set_port(port:4)
+
+expect 2 0101 0101 00 03 f7 05
+packet 0 0101 0101 00 03 04 05
+
+expect 2 0101 0101 02 03 04 b3
+packet 0 0101 0101 02 03 04 05
+
+expect 4 0202 0101 00 03 04 b3
+packet 0 0202 0101 00 03 04 05
+
+

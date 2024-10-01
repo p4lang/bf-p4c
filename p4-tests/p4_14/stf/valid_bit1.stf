@@ -1,0 +1,7 @@
+add test1 data.f1:0x01010101 setflag(port:2)
+
+expect 2 01010101 00000202 55 01 aaaaaaaa bbbbbbbb cc dd
+packet 0 01010101 00000202 55 00 aaaaaaaa bbbbbbbb cc dd
+expect 2 01010101 00000202 00 fe aaaaaaaa bbbbbbbb cc dd
+packet 0 01010101 00000202 00 ff aaaaaaaa bbbbbbbb cc dd
+

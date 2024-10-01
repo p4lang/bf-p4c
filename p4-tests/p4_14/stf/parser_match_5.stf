@@ -1,0 +1,16 @@
+# a -> c
+expect 2 010c cccc
+packet 0 010c cccc
+
+# a -> c -> d
+expect 2 0d0c cccc dddd
+packet 0 0d0c cccc dddd
+
+# a -> b -> c
+expect 2 010b bbbb cccc
+packet 0 010b bbbb cccc
+
+# a -> b -> c -> d
+expect 2 0d0b bbbb cccc dddd
+packet 0 0d0b bbbb cccc dddd
+

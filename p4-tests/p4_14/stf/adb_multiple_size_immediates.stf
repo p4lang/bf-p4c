@@ -1,0 +1,19 @@
+add table_0 pkt.b:0x01010101 action_0(word:0x01010101)
+add table_0 pkt.b:0x02020202 action_1(halfword:0x0101)
+add table_0 pkt.b:0x03030303 action_2(byte:0x1)
+
+add setting_port pkt.a:0x12345678 setport(port:0x2)
+add setting_port pkt.a:0x9ABCDEF0 setport(port:0x4)
+add setting_port pkt.a:0x456789AB setport(port:0x8)
+
+expect 2  12345678 01010101 01010103 00 0000 
+packet 0  12345678 01010101 01010102 04 ABCD
+
+expect 2  12345678 01010101 03030303 00 0000 
+packet 0  12345678 01010101 02020202 04 0202
+
+expect 4  9ABCDEF0 02020202 00000000 00 0303
+packet 0  9ABCDEF0 02020202 ABCDEF01 04 0202
+
+expect 8  456789AB 03030303 00000000 05 0000
+packet 0  456789AB 03030303 ABCDEF01 04 ABCD

@@ -1,0 +1,22 @@
+add test1 data.read:0x0101 bitmasked_full(param1:0x00657483, param2:0x1)
+add test1 data.read:0x0202 all_bytes(byte1:0x23, byte2:0x34, byte3:0x45, byte4:0x56)
+add test1 data.read:0x0303 some_halves(half1:0x6767, half2:0x7878)
+add test2 data.read:0x0404 bitmasked_full2(param1:0x987654, param2:0x3)
+add test2 data.read:0x0505 all_halves(half1:0x6767, half2:0x7878, half3:0x8989, half4:0x9a9a)
+
+add port_setter data.read:0x0101 setport(port:2)
+add port_setter data.read:0x0202 setport(port:2)
+add port_setter data.read:0x0303 setport(port:2)
+add port_setter data.read:0x0404 setport(port:2)
+add port_setter data.read:0x0505 setport(port:2)
+
+expect 2 0101 65 47 34 23 abcd face fade cafe 195d20f4
+packet 0 0101 65 47 34 23 abcd face fade cafe 24343630
+expect 2 0202 23 34 45 56 abcd face fade cafe 24343630
+packet 0 0202 65 47 34 23 abcd face fade cafe 24343630
+expect 2 0303 65 47 34 23 6767 7878 fade cafe 24343630
+packet 0 0303 65 47 34 23 abcd face fade cafe 24343630
+expect 2 0404 65 47 34 23 abcd face fade cafe 261d953c 
+packet 0 0404 65 47 34 23 abcd face fade cafe 24343630
+expect 2 0505 65 47 34 23 6767 7878 8989 9a9a 24343630
+packet 0 0505 65 47 34 23 abcd face fade cafe 24343630

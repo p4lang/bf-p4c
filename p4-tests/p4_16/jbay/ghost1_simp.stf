@@ -1,0 +1,14 @@
+
+# Need to figure out how to inject ghost packets in the model.  For now just a couple
+# of normal packets
+
+ghost run 0x333:11000
+
+expect 4 11111111 00002af8 3333 44 55 01 02 03 04
+packet 0 11111111 22222222 3333 44 55 01 02 03 04
+
+expect 4 12345678 00000000 abcd 44 55 01 02 03 04
+packet 0 12345678 12345678 abcd 44 55 01 02 03 04
+
+expect 4 11111111 00002af8 3333 44 55 01 02 03 04
+packet 0 11111111 22222222 3333 44 55 01 02 03 04

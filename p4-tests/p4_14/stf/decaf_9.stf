@@ -1,0 +1,10 @@
+add t1 data.k:0x0101 pop_tag()
+
+expect 2 0101 0f0f
+packet 0 0101 8100 0303 0f0f 
+
+expect 2 0101 babe 0505 0606
+packet 0 0101 8100 0303 babe 0505 0606 
+
+expect 2 0101 babe 0505 babe 0707 0808 
+packet 0 0101 8100 0f0f babe 0505 babe 0707 0808

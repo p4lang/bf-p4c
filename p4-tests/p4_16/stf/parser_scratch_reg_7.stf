@@ -1,0 +1,9 @@
+# Packet hits header_i_parsed()
+#        |         ethernet         | header_a|h_a0| header_c |header_d|header_f| header_i
+expect 4 ffffffffffffeeeeeeeeeeee09a0 a1b1c200 0000  c0c1c2c3  00000000 fffefdfc 00000000
+packet 4 ffffffffffffeeeeeeeeeeee09a0 a1b1c200 0000  c0c1c2c3  00000000 fffefdfc 00000000
+
+# Packet hits header_j_parsed()
+#        |         ethernet         | header_a|h_a0| header_c |header_d|header_f| header_i
+expect 6 ffffffffffffeeeeeeeeeeee09a0 a2b2c300 0000  d0d1d2d3  00000000 fffefdfc 00000000
+packet 4 ffffffffffffeeeeeeeeeeee09a0 a2b2c300 0000  d0d1d2d3  00000000 fffefdfc 00000000

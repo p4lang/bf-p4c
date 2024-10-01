@@ -1,0 +1,8 @@
+expect 2 a0b0
+packet 0 a0b0
+
+expect 6 0a0b
+packet 0 0a0b
+
+expect 10 1a0b
+packet 0 1a0b

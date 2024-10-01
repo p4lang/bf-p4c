@@ -1,0 +1,9 @@
+
+add test1 700 data.f1:0xababab** data.f2:0xcdcdcd** data.f3:0xefefef** data.f4:0xababab** data.f5:0xcdcdcd** data.f6:0xefefef** setb1(val:0x98, port:2)
+add test1 200 data.f1:0xabab**** data.f2:0xcdcd**** data.f3:0xefef**** data.f4:0xabab**** data.f5:0xcdcd**** data.f6:0xefef**** setb1(val:0x54, port:2)
+
+expect 2 ababab** cdcdcd** efefef** ababab** cdcdcd** efefef** 98
+packet 0 ababab22 cdcdcd33 efefef44 ababab55 cdcdcd66 efefef77 12
+expect 2 abab**** cdcd**** efef**** abab**** cdcd**** efef**** 54
+packet 0 abab2222 cdcd3333 efef4444 abab5555 cdcd6666 efef7777 32
+

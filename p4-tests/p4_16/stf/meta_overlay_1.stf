@@ -1,0 +1,9 @@
+add test1 f1:0x1010 set1(port:0x2, val:0x8)
+add test2 f2:0x0101 set2(port:0xc)
+add test3 f1:0x0008 set3(port:0x8, val:0xF)
+add test4 f2:0x000F set4(port:0x4, val:0xAF)
+add test5 f1:0x00AF set5(port:0x6, val:0xBB)
+add test6 f2:0x00BB set6(port:0xa)
+
+expect 10 00AF 00BB 0000 1234 0000 0000 04
+packet  0 1010 0101

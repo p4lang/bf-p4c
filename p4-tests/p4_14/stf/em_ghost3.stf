@@ -1,0 +1,9 @@
+
+add test1 data.n1:0x00 data.n2:0x00 data.n3:0x00 data.b1:0x01 data.b2:0x01 setb_out(val:0x7f, port:2)
+add test1 data.n1:0x00 data.n2:0x00 data.n3:0x00 data.b1:0x02 data.b2:0x02 setb_out(val:0x53, port:4)
+
+expect 2 01 01 01 01 01 7f
+packet 0 01 01 01 01 01 aa
+
+expect 4 02 02 02 02 02 53
+packet 0 02 02 02 02 02 aa

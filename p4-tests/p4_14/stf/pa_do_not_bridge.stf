@@ -1,0 +1,8 @@
+
+add test1 pkt.f2:0x01 first()
+add test2 meta.m:0x02 second(param:0x5)
+add test2 meta.m:0x00 second(param:0x4)
+add setting_port pkt.f1:0x8 setport(port:0x8)
+
+expect 8 040000
+packet 2 010101

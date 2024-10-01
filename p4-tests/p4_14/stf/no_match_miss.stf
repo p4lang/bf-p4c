@@ -1,0 +1,11 @@
+add set_port data.f1:0x8989abab set_port_act(port:2)
+add set_port data.f1:0xbaba9898 set_port_act(port:4)
+
+expect 2 8989abab 8989abab 12345678 76543210 6789 12 54
+packet 0 baba9898 8989abab 4623abcd dbca6436 3243 12 54
+
+# wait
+# setdefault t1 a2
+
+# expect 4 baba9898 8989abab 12345678 76543210 6789 54 54
+# packet 0 baba9898 8989abab 4623abcd dbca6436 3243 12 54 

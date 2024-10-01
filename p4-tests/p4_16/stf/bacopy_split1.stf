@@ -1,0 +1,20 @@
+add ingress.t1 h1:0x0001 s0()
+add ingress.t1 h1:0x0002 s2()
+add ingress.t1 h1:0x0003 s5()
+add ingress.t1 h1:0x0004 s8()
+add ingress.t1 h1:0x0005 s13()
+add ingress.t1 h1:0x0006 s17()
+
+expect 4 555555ff 555555ff 0001 ff 00 11 22 33
+expect 4 555557fd 555557fd 0002 ff 00 11 22 33
+expect 4 55555ff5 55555ff5 0003 ff 00 11 22 33
+expect 4 5555ff55 5555ff55 0004 ff 00 11 22 33
+expect 4 555ff555 555ff555 0005 ff 00 11 22 33
+expect 4 55ff5555 55ff5555 0006 ff 00 11 22 33
+
+packet 0 55555555 deaddead 0001 ff 00 11 22 33
+packet 0 55555555 deaddead 0002 ff 00 11 22 33
+packet 0 55555555 deaddead 0003 ff 00 11 22 33
+packet 0 55555555 deaddead 0004 ff 00 11 22 33
+packet 0 55555555 deaddead 0005 ff 00 11 22 33
+packet 0 55555555 deaddead 0006 ff 00 11 22 33

@@ -1,0 +1,36 @@
+add test_table hdr.data.action_id:0x01 write_action1
+add test_table hdr.data.action_id:0x02 write_action2
+add test_table hdr.data.action_id:0x10 read_action1
+add test_table hdr.data.action_id:0x20 read_action2
+
+#        index  action_id  write_value  value1    value2
+expect 0 01     01         11223344     aaaaaaaa  aaaaaaaa
+packet 0 01     01         11223344     aaaaaaaa  aaaaaaaa
+wait
+
+check_register reg(1) lo = 0x11223344
+
+#        index  action_id  write_value  value1    value2
+expect 0 01     10         11111111     11223344  11111111
+packet 0 01     10         11111111     aaaaaaaa  aaaaaaaa
+expect 0 01     20         22222222     22222222  11223344
+packet 0 01     20         22222222     aaaaaaaa  aaaaaaaa
+wait
+
+check_register reg(1) lo = 0x11223344
+
+#        index  action_id  write_value  value1    value2
+expect 0 01     02         55667788     aaaaaaaa  aaaaaaaa
+packet 0 01     02         55667788     aaaaaaaa  aaaaaaaa
+wait
+
+check_register reg(1) lo = 0x55667788
+
+#        index  action_id  write_value  value1    value2
+expect 0 01     10         11111111     55667788  11111111
+packet 0 01     10         11111111     aaaaaaaa  aaaaaaaa
+expect 0 01     20         22222222     22222222  55667788
+packet 0 01     20         22222222     aaaaaaaa  aaaaaaaa
+wait
+
+check_register reg(1) lo = 0x55667788

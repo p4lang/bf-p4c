@@ -1,0 +1,5 @@
+expect 2 aaaa ff
+packet 0 aaaa bbbb ff
+
+expect 2 ffff bbbb ff 
+packet 0 ffff bbbb ff

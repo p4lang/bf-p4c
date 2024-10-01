@@ -1,0 +1,17 @@
+packet 0 ffff
+expect 0 ffff
+
+packet 0 0a1affff
+expect 0 0a1affff
+
+# all parsed & both checksums valid -> output on 2
+packet 0 0a1a f5e5 0c1c f3e3
+expect 2 0a1a f5e5 0c1c f3e3
+
+# all parsed & first checksums invalid -> output on 4
+packet 0 0a1a f5e4 0c1c f3e3
+expect 4 0a1a f5e4 0c1c f3e3
+
+# all parsed & second checksums invalid -> output on 4
+packet 0 0a1a f5e5 0c1c f3e2
+expect 4 0a1a f5e5 0c1c f3e2

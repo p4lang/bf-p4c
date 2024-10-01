@@ -1,0 +1,7 @@
+# Fields:
+#          |---------------h1----------------|   |----------------------h2-----------------------|
+#          f1       f2       f3       f4         f1       f2       f3       f4       f4       csum
+
+packet 0   aaaaaaaa bbbbbbbb cccccccc dddddddd   00000000 11111111 22222222 33333333 444a444b 5555
+
+expect 0   aaaaaaaa bbbbbbbb cccccccc dddddddd   444a444b 11111111 22222222 33333333 444a444b aa9d

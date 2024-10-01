@@ -1,0 +1,1091 @@
+{
+    "schema_version": "1.0.0",
+    "symbols": [
+        {
+            "references": [
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 231,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchEgressDeparser.mirror",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 226,
+                "column": 14
+            },
+            "symbol_type": "Declaration_Instance_Type_Extern"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 113,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.mirror",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 108,
+                "column": 14
+            },
+            "symbol_type": "Declaration_Instance_Type_Extern"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 273,
+                    "column": 8
+                }
+            ],
+            "symbol_name": "pipe",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 271,
+                "column": 34
+            },
+            "symbol_type": "Declaration_Instance_Type_Specialized"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 206,
+                    "column": 21
+                }
+            ],
+            "symbol_name": "SwitchEgressParser.mirror_md",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 205,
+                "column": 9
+            },
+            "symbol_type": "Declaration_Variable_Type_Header"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 205,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchEgressParser.mirror_md.$valid",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 205,
+                "column": 9
+            },
+            "symbol_type": "Declaration_Variable_Type_Header"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 150,
+                    "column": 9,
+                    "end_line": 158
+                },
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 154,
+                    "column": 20,
+                    "end_line": 155
+                }
+            ],
+            "symbol_name": "NoAction",
+            "declaration": {
+                "file": "/workspaces/bf-p4c2/build/p4c/p4include/core.p4",
+                "line": 70,
+                "column": 8
+            },
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 261,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchEgress.set_mirror",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 249,
+                "column": 12
+            },
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 155,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.set_md",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 141,
+                "column": 12
+            },
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 167,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.set_mirror_type",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 131,
+                "column": 12
+            },
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 170,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngress.set_normal_pkt",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 136,
+                "column": 12
+            },
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 163,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.mirror_fwd",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 149,
+                "column": 11
+            },
+            "symbol_type": "P4Table"
+        },
+        {
+            "references": [],
+            "symbol_name": "tbl_set_mirror",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 261,
+                "column": 13
+            },
+            "symbol_type": "P4Table"
+        },
+        {
+            "references": [],
+            "symbol_name": "tbl_set_mirror_type",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 167,
+                "column": 13
+            },
+            "symbol_type": "P4Table"
+        },
+        {
+            "references": [],
+            "symbol_name": "tbl_set_normal_pkt",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 170,
+                "column": 9
+            },
+            "symbol_type": "P4Table"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 252,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchEgress.eg_dprsr_md.mirror_type",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 246,
+                "column": 56
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 250,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchEgress.eg_md.egr_mir_ses",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 243,
+                "column": 26
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 251,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchEgress.eg_md.pkt_type",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 243,
+                "column": 26
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 260,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchEgress.hdr.bridged_md.do_egr_mirroring",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 242,
+                "column": 25
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 250,
+                    "column": 29
+                }
+            ],
+            "symbol_name": "SwitchEgress.hdr.bridged_md.egr_mir_ses",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 242,
+                "column": 25
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 230,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchEgressDeparser.eg_dprsr_md.mirror_type",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 224,
+                "column": 53
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 231,
+                    "column": 35
+                }
+            ],
+            "symbol_name": "SwitchEgressDeparser.eg_md.egr_mir_ses",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 223,
+                "column": 23
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 231,
+                    "column": 55
+                }
+            ],
+            "symbol_name": "SwitchEgressDeparser.eg_md.pkt_type",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 223,
+                "column": 23
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 234,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchEgressDeparser.hdr.ethernet",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 222,
+                "column": 25
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 234,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchEgressDeparser.pkt",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 221,
+                "column": 20
+            },
+            "symbol_type": "Parameter_Type_Extern"
+        },
+        {
+            "references": [
+                {
+                    "file": "common/util.p4",
+                    "line": 49,
+                    "column": 21
+                },
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 186,
+                    "column": 34
+                }
+            ],
+            "symbol_name": "SwitchEgressParser.eg_intr_md",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 181,
+                "column": 41
+            },
+            "symbol_type": "Parameter_Type_Header"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 186,
+                    "column": 34
+                }
+            ],
+            "symbol_name": "SwitchEgressParser.eg_intr_md.$valid",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 181,
+                "column": 41
+            },
+            "symbol_type": "Parameter_Type_Header"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 200,
+                    "column": 21
+                }
+            ],
+            "symbol_name": "SwitchEgressParser.hdr.bridged_md",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 179,
+                "column": 23
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 211,
+                    "column": 21
+                }
+            ],
+            "symbol_name": "SwitchEgressParser.hdr.ethernet",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 179,
+                "column": 23
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "common/util.p4",
+                    "line": 49,
+                    "column": 9
+                },
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 186,
+                    "column": 29
+                },
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 191,
+                    "column": 30
+                },
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 200,
+                    "column": 9
+                },
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 206,
+                    "column": 9
+                },
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 211,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchEgressParser.pkt",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 178,
+                "column": 19
+            },
+            "symbol_type": "Parameter_Type_Extern"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 137,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngress.hdr.bridged_md.$valid",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 124,
+                "column": 25
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 145,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngress.hdr.bridged_md.do_egr_mirroring",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 124,
+                "column": 25
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 146,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngress.hdr.bridged_md.egr_mir_ses",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 124,
+                "column": 25
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 138,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngress.hdr.bridged_md.pkt_type",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 124,
+                "column": 25
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 132,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngress.ig_dprsr_md.mirror_type",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 128,
+                "column": 57
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 151,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.ig_intr_md.ingress_port",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 126,
+                "column": 41
+            },
+            "symbol_type": "Parameter_Type_Header"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 162,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.ig_intr_md.resubmit_flag",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 126,
+                "column": 41
+            },
+            "symbol_type": "Parameter_Type_Header"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 143,
+                    "column": 9
+                },
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 166,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.ig_md.do_ing_mirroring",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 125,
+                "column": 26
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 144,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngress.ig_md.ing_mir_ses",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 125,
+                "column": 26
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 133,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngress.ig_md.pkt_type",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 125,
+                "column": 26
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 142,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngress.ig_tm_md.ucast_egress_port",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 129,
+                "column": 51
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 142,
+                    "column": 38
+                }
+            ],
+            "symbol_name": "SwitchIngress.set_md.dest_port",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 141,
+                "column": 28
+            },
+            "symbol_type": "Parameter_Type_Bits"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 145,
+                    "column": 43
+                }
+            ],
+            "symbol_name": "SwitchIngress.set_md.egr_mir",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 141,
+                "column": 82
+            },
+            "symbol_type": "Parameter_Type_Bits"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 146,
+                    "column": 38
+                }
+            ],
+            "symbol_name": "SwitchIngress.set_md.egr_ses",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 141,
+                "column": 102
+            },
+            "symbol_type": "Parameter_Type_Bits"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 143,
+                    "column": 34
+                }
+            ],
+            "symbol_name": "SwitchIngress.set_md.ing_mir",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 141,
+                "column": 46
+            },
+            "symbol_type": "Parameter_Type_Bits"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 144,
+                    "column": 29
+                }
+            ],
+            "symbol_name": "SwitchIngress.set_md.ing_ses",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 141,
+                "column": 66
+            },
+            "symbol_type": "Parameter_Type_Bits"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 116,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.bridged_md",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 104,
+                "column": 25
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 116,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.ethernet",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 104,
+                "column": 25
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 116,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.ipv4",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 104,
+                "column": 25
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 116,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.ipv6",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 104,
+                "column": 25
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 116,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.tcp",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 104,
+                "column": 25
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 116,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.udp",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 104,
+                "column": 25
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 116,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.vlan_tag",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 104,
+                "column": 25
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 112,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.ig_dprsr_md.mirror_type",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 106,
+                "column": 54
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 113,
+                    "column": 35
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.ig_md.ing_mir_ses",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 105,
+                "column": 23
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 113,
+                    "column": 55
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.ig_md.pkt_type",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 105,
+                "column": 23
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 116,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.pkt",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 103,
+                "column": 20
+            },
+            "symbol_type": "Parameter_Type_Extern"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 93,
+                    "column": 21
+                }
+            ],
+            "symbol_name": "SwitchIngressParser.hdr.ethernet",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 81,
+                "column": 23
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "common/util.p4",
+                    "line": 27,
+                    "column": 21
+                },
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 88,
+                    "column": 34
+                }
+            ],
+            "symbol_name": "SwitchIngressParser.ig_intr_md",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 83,
+                "column": 42
+            },
+            "symbol_type": "Parameter_Type_Header"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 88,
+                    "column": 34
+                }
+            ],
+            "symbol_name": "SwitchIngressParser.ig_intr_md.$valid",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 83,
+                "column": 42
+            },
+            "symbol_type": "Parameter_Type_Header"
+        },
+        {
+            "references": [
+                {
+                    "file": "common/util.p4",
+                    "line": 28,
+                    "column": 27
+                },
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 88,
+                    "column": 34
+                }
+            ],
+            "symbol_name": "SwitchIngressParser.ig_intr_md.resubmit_flag",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 83,
+                "column": 42
+            },
+            "symbol_type": "Parameter_Type_Header"
+        },
+        {
+            "references": [
+                {
+                    "file": "common/util.p4",
+                    "line": 27,
+                    "column": 9
+                },
+                {
+                    "file": "common/util.p4",
+                    "line": 40,
+                    "column": 9
+                },
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 88,
+                    "column": 29
+                },
+                {
+                    "file": "tna_mirror.p4",
+                    "line": 93,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngressParser.pkt",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 80,
+                "column": 19
+            },
+            "symbol_type": "Parameter_Type_Extern"
+        },
+        {
+            "references": [],
+            "symbol_name": "cond-1",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 162,
+                "column": 9
+            },
+            "symbol_type": "IfStatement"
+        },
+        {
+            "references": [],
+            "symbol_name": "cond-2",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 166,
+                "column": 9
+            },
+            "symbol_type": "IfStatement"
+        },
+        {
+            "references": [],
+            "symbol_name": "cond-3",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 260,
+                "column": 9
+            },
+            "symbol_type": "IfStatement"
+        },
+        {
+            "references": [],
+            "symbol_name": "cond-4",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 162,
+                "column": 9
+            },
+            "symbol_type": "IfStatement"
+        },
+        {
+            "references": [],
+            "symbol_name": "cond-5",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 166,
+                "column": 9
+            },
+            "symbol_type": "IfStatement"
+        },
+        {
+            "references": [],
+            "symbol_name": "cond-6",
+            "declaration": {
+                "file": "tna_mirror.p4",
+                "line": 260,
+                "column": 9
+            },
+            "symbol_type": "IfStatement"
+        }
+    ],
+    "source_root": "/workspaces/bf-p4c2/p4-tests/internal/p4-programs/p4_16_programs/tna_mirror"
+}

@@ -1,0 +1,17 @@
+
+add test1 data.f1:0x01010101 first(byte1:0x1, byte2:0x2, byte3:0x3, byte4:0x4, half1:0x0505, half2:0x0606)
+add test1 data.f1:0x02020202 second(full1:0x07070707, full2:0x08080808)
+add test2 data.f1:0x03030303 third(byte1:0x0a, byte2:0x0b, half1:0xcdef)
+
+
+add setting_port data.f1:0x01010101 setport(port:0x2)
+add setting_port data.f1:0x02020202 setport(port:0x2)
+add setting_port data.f1:0x03030303 setport(port:0x2)
+
+expect 2 02020202 09090909 12 34 56 78 9abc def0 07070707 08080808
+packet 0 02020202 09090909 12 34 56 78 9abc def0 12345678 9abcdef0
+expect 2 01010101 12345678 01 02 03 04 0505 0606 ad0becab face0ffa
+packet 0 01010101 12345678 76 47 05 49 7685 adbe ad0becab face0ffa
+expect 2 03030303 faba00fa 0a 0b 23 34 cdef 3735 979abc34 9c904de2
+packet 0 03030303 faba00fa 56 34 23 34 2737 3735 979abc34 9c904de2
+

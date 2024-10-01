@@ -1,0 +1,653 @@
+{
+    "schema_version": "1.0.0",
+    "symbols": [
+        {
+            "references": [
+                {
+                    "file": "bri_with_pdfixed_thrift.p4",
+                    "line": 142,
+                    "column": 8
+                }
+            ],
+            "symbol_name": "pipe",
+            "declaration": {
+                "file": "bri_with_pdfixed_thrift.p4",
+                "line": 140,
+                "column": 33
+            },
+            "symbol_type": "Declaration_Instance_Type_Specialized"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_with_pdfixed_thrift.p4",
+                    "line": 115,
+                    "column": 13
+                },
+                {
+                    "file": "bri_with_pdfixed_thrift.p4",
+                    "line": 128,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngress.vrf",
+            "declaration": {
+                "file": "bri_with_pdfixed_thrift.p4",
+                "line": 82,
+                "column": 5
+            },
+            "symbol_type": "Declaration_Variable_Type_Bits"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_with_pdfixed_thrift.p4",
+                    "line": 114,
+                    "column": 9,
+                    "end_line": 123
+                },
+                {
+                    "file": "bri_with_pdfixed_thrift.p4",
+                    "line": 119,
+                    "column": 20,
+                    "end_line": 120
+                }
+            ],
+            "symbol_name": "NoAction",
+            "declaration": {
+                "file": "/workspaces/bf-p4c2/build/p4c/p4include/core.p4",
+                "line": 70,
+                "column": 8
+            },
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_with_pdfixed_thrift.p4",
+                    "line": 98,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.hit",
+            "declaration": {
+                "file": "bri_with_pdfixed_thrift.p4",
+                "line": 84,
+                "column": 12
+            },
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_with_pdfixed_thrift.p4",
+                    "line": 99,
+                    "column": 13
+                },
+                {
+                    "file": "bri_with_pdfixed_thrift.p4",
+                    "line": 102,
+                    "column": 32
+                }
+            ],
+            "symbol_name": "SwitchIngress.miss",
+            "declaration": {
+                "file": "bri_with_pdfixed_thrift.p4",
+                "line": 88,
+                "column": 12
+            },
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_with_pdfixed_thrift.p4",
+                    "line": 120,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.route",
+            "declaration": {
+                "file": "bri_with_pdfixed_thrift.p4",
+                "line": 106,
+                "column": 12
+            },
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_with_pdfixed_thrift.p4",
+                    "line": 128,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "bri_with_pdfixed_thrift128",
+            "declaration": {
+                "file": "bri_with_pdfixed_thrift.p4",
+                "line": 128,
+                "column": 13
+            },
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_with_pdfixed_thrift.p4",
+                    "line": 131,
+                    "column": 32
+                }
+            ],
+            "symbol_name": "bri_with_pdfixed_thrift131",
+            "declaration": {
+                "file": "bri_with_pdfixed_thrift.p4",
+                "line": 131,
+                "column": 32
+            },
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_with_pdfixed_thrift.p4",
+                    "line": 127,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngress.forward",
+            "declaration": {
+                "file": "bri_with_pdfixed_thrift.p4",
+                "line": 92,
+                "column": 11
+            },
+            "symbol_type": "P4Table"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_with_pdfixed_thrift.p4",
+                    "line": 129,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngress.ipRouteMulticast",
+            "declaration": {
+                "file": "bri_with_pdfixed_thrift.p4",
+                "line": 113,
+                "column": 11
+            },
+            "symbol_type": "P4Table"
+        },
+        {
+            "references": [],
+            "symbol_name": "tbl_bri_with_pdfixed_thrift128",
+            "declaration": {
+                "file": "bri_with_pdfixed_thrift.p4",
+                "line": 128,
+                "column": 13
+            },
+            "symbol_type": "P4Table"
+        },
+        {
+            "references": [],
+            "symbol_name": "tbl_bri_with_pdfixed_thrift131",
+            "declaration": {
+                "file": "bri_with_pdfixed_thrift.p4",
+                "line": 131,
+                "column": 32
+            },
+            "symbol_type": "P4Table"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_with_pdfixed_thrift.p4",
+                    "line": 94,
+                    "column": 13
+                },
+                {
+                    "file": "bri_with_pdfixed_thrift.p4",
+                    "line": 109,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngress.hdr.ethernet.dst_addr",
+            "declaration": {
+                "file": "bri_with_pdfixed_thrift.p4",
+                "line": 75,
+                "column": 24
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_with_pdfixed_thrift.p4",
+                    "line": 110,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngress.hdr.ethernet.src_addr",
+            "declaration": {
+                "file": "bri_with_pdfixed_thrift.p4",
+                "line": 75,
+                "column": 24
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_with_pdfixed_thrift.p4",
+                    "line": 116,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "SwitchIngress.hdr.ipv4.dst_addr",
+            "declaration": {
+                "file": "bri_with_pdfixed_thrift.p4",
+                "line": 75,
+                "column": 24
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_with_pdfixed_thrift.p4",
+                    "line": 85,
+                    "column": 38
+                }
+            ],
+            "symbol_name": "SwitchIngress.hit.port",
+            "declaration": {
+                "file": "bri_with_pdfixed_thrift.p4",
+                "line": 84,
+                "column": 25
+            },
+            "symbol_type": "Parameter_Type_Bits"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_with_pdfixed_thrift.p4",
+                    "line": 89,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngress.ig_dprsr_md.drop_ctl",
+            "declaration": {
+                "file": "bri_with_pdfixed_thrift.p4",
+                "line": 79,
+                "column": 57
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_with_pdfixed_thrift.p4",
+                    "line": 131,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngress.ig_tm_md.bypass_egress",
+            "declaration": {
+                "file": "bri_with_pdfixed_thrift.p4",
+                "line": 80,
+                "column": 51
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_with_pdfixed_thrift.p4",
+                    "line": 108,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngress.ig_tm_md.mcast_grp_a",
+            "declaration": {
+                "file": "bri_with_pdfixed_thrift.p4",
+                "line": 80,
+                "column": 51
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_with_pdfixed_thrift.p4",
+                    "line": 85,
+                    "column": 9
+                },
+                {
+                    "file": "bri_with_pdfixed_thrift.p4",
+                    "line": 107,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngress.ig_tm_md.ucast_egress_port",
+            "declaration": {
+                "file": "bri_with_pdfixed_thrift.p4",
+                "line": 80,
+                "column": 51
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_with_pdfixed_thrift.p4",
+                    "line": 109,
+                    "column": 33
+                }
+            ],
+            "symbol_name": "SwitchIngress.route.dstMac",
+            "declaration": {
+                "file": "bri_with_pdfixed_thrift.p4",
+                "line": 106,
+                "column": 48
+            },
+            "symbol_type": "Parameter_Type_Bits"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_with_pdfixed_thrift.p4",
+                    "line": 107,
+                    "column": 38
+                }
+            ],
+            "symbol_name": "SwitchIngress.route.dst_port",
+            "declaration": {
+                "file": "bri_with_pdfixed_thrift.p4",
+                "line": 106,
+                "column": 65
+            },
+            "symbol_type": "Parameter_Type_Bits"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_with_pdfixed_thrift.p4",
+                    "line": 108,
+                    "column": 32
+                }
+            ],
+            "symbol_name": "SwitchIngress.route.mgid1",
+            "declaration": {
+                "file": "bri_with_pdfixed_thrift.p4",
+                "line": 106,
+                "column": 83
+            },
+            "symbol_type": "Parameter_Type_Bits"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_with_pdfixed_thrift.p4",
+                    "line": 110,
+                    "column": 33
+                }
+            ],
+            "symbol_name": "SwitchIngress.route.srcMac",
+            "declaration": {
+                "file": "bri_with_pdfixed_thrift.p4",
+                "line": 106,
+                "column": 29
+            },
+            "symbol_type": "Parameter_Type_Bits"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_with_pdfixed_thrift.p4",
+                    "line": 70,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.ethernet",
+            "declaration": {
+                "file": "bri_with_pdfixed_thrift.p4",
+                "line": 65,
+                "column": 24
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_with_pdfixed_thrift.p4",
+                    "line": 70,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.ipv4",
+            "declaration": {
+                "file": "bri_with_pdfixed_thrift.p4",
+                "line": 65,
+                "column": 24
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_with_pdfixed_thrift.p4",
+                    "line": 70,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.ipv6",
+            "declaration": {
+                "file": "bri_with_pdfixed_thrift.p4",
+                "line": 65,
+                "column": 24
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_with_pdfixed_thrift.p4",
+                    "line": 70,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.tcp",
+            "declaration": {
+                "file": "bri_with_pdfixed_thrift.p4",
+                "line": 65,
+                "column": 24
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_with_pdfixed_thrift.p4",
+                    "line": 70,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.udp",
+            "declaration": {
+                "file": "bri_with_pdfixed_thrift.p4",
+                "line": 65,
+                "column": 24
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_with_pdfixed_thrift.p4",
+                    "line": 70,
+                    "column": 18
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.vlan_tag",
+            "declaration": {
+                "file": "bri_with_pdfixed_thrift.p4",
+                "line": 65,
+                "column": 24
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [],
+            "symbol_name": "SwitchIngressDeparser.ig_dprsr_md.mirror_type",
+            "declaration": {
+                "file": "bri_with_pdfixed_thrift.p4",
+                "line": 67,
+                "column": 54
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_with_pdfixed_thrift.p4",
+                    "line": 70,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.pkt",
+            "declaration": {
+                "file": "bri_with_pdfixed_thrift.p4",
+                "line": 64,
+                "column": 20
+            },
+            "symbol_type": "Parameter_Type_Extern"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_with_pdfixed_thrift.p4",
+                    "line": 50,
+                    "column": 21
+                }
+            ],
+            "symbol_name": "SwitchIngressParser.hdr.ethernet",
+            "declaration": {
+                "file": "bri_with_pdfixed_thrift.p4",
+                "line": 38,
+                "column": 22
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_with_pdfixed_thrift.p4",
+                    "line": 55,
+                    "column": 21
+                }
+            ],
+            "symbol_name": "SwitchIngressParser.hdr.ipv4",
+            "declaration": {
+                "file": "bri_with_pdfixed_thrift.p4",
+                "line": 38,
+                "column": 22
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "common/util.p4",
+                    "line": 27,
+                    "column": 21
+                },
+                {
+                    "file": "bri_with_pdfixed_thrift.p4",
+                    "line": 45,
+                    "column": 34
+                }
+            ],
+            "symbol_name": "SwitchIngressParser.ig_intr_md",
+            "declaration": {
+                "file": "bri_with_pdfixed_thrift.p4",
+                "line": 40,
+                "column": 42
+            },
+            "symbol_type": "Parameter_Type_Header"
+        },
+        {
+            "references": [
+                {
+                    "file": "bri_with_pdfixed_thrift.p4",
+                    "line": 45,
+                    "column": 34
+                }
+            ],
+            "symbol_name": "SwitchIngressParser.ig_intr_md.$valid",
+            "declaration": {
+                "file": "bri_with_pdfixed_thrift.p4",
+                "line": 40,
+                "column": 42
+            },
+            "symbol_type": "Parameter_Type_Header"
+        },
+        {
+            "references": [
+                {
+                    "file": "common/util.p4",
+                    "line": 28,
+                    "column": 27
+                },
+                {
+                    "file": "bri_with_pdfixed_thrift.p4",
+                    "line": 45,
+                    "column": 34
+                }
+            ],
+            "symbol_name": "SwitchIngressParser.ig_intr_md.resubmit_flag",
+            "declaration": {
+                "file": "bri_with_pdfixed_thrift.p4",
+                "line": 40,
+                "column": 42
+            },
+            "symbol_type": "Parameter_Type_Header"
+        },
+        {
+            "references": [
+                {
+                    "file": "common/util.p4",
+                    "line": 27,
+                    "column": 9
+                },
+                {
+                    "file": "common/util.p4",
+                    "line": 40,
+                    "column": 9
+                },
+                {
+                    "file": "bri_with_pdfixed_thrift.p4",
+                    "line": 45,
+                    "column": 29
+                },
+                {
+                    "file": "bri_with_pdfixed_thrift.p4",
+                    "line": 50,
+                    "column": 9
+                },
+                {
+                    "file": "bri_with_pdfixed_thrift.p4",
+                    "line": 55,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngressParser.pkt",
+            "declaration": {
+                "file": "bri_with_pdfixed_thrift.p4",
+                "line": 37,
+                "column": 19
+            },
+            "symbol_type": "Parameter_Type_Extern"
+        }
+    ],
+    "source_root": "/workspaces/bf-p4c2/p4-tests/internal/p4-programs/p4_16_programs/bri_with_pdfixed_thrift"
+}

@@ -1,0 +1,20 @@
+#         h8a  h64a              h56a            h8b  h48b1         h64b              h8c
+expect 10 00   deadbeef8badf00d  feed421337ca05  00   facefa11badd  ba5eba11cafed00d  00
+packet 0  00   deadbeef8badf00d  feed421337ca05  00   facefa11badd  ba5eba11cafed00d  ff
+
+
+#         h8a  h64a              h56a            h8b  h48b2         h64b              h8c
+expect 10 00   deadbeef8badf00d  feed421337ca05  01   facefa11badd  ba5eba11cafed00d  00
+packet 0  00   deadbeef8badf00d  feed421337ca05  01   facefa11badd  ba5eba11cafed00d  ff
+
+
+#         h8a  h64a              h56a            h8b  h48b1         h64b              h8c
+expect 10 01   deadbeef8badf00d  feed421337ca05  00   facefa11badd  ba5eba11cafed00d  00
+#         h8a  h56a            h64a              h8b  h48b1         h64b              h8c
+packet 0  01   feed421337ca05  deadbeef8badf00d  00   facefa11badd  ba5eba11cafed00d  ff
+                                                 
+                                                 
+#         h8a  h64a              h56a            h8b  h48b2         h64b              h8c
+expect 10 01   deadbeef8badf00d  feed421337ca05  01   facefa11badd  ba5eba11cafed00d  00
+#         h8a  h56a            h64a              h8b  h48b2         h64b              h8c
+packet 0  01   feed421337ca05  deadbeef8badf00d  01   facefa11badd  ba5eba11cafed00d  ff

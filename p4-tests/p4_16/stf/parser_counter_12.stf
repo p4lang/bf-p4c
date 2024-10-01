@@ -1,0 +1,17 @@
+expect 2 06 bb cccc dddddd
+packet 0 06 bb cccc dddddd
+
+expect 2 06 bb cccc dddddd
+packet 0 06 dddddd bb cccc
+
+expect 2 06 bb cccc dddddd
+packet 0 06 cccc dddddd bb 
+
+expect 2 04 bb dddddd
+packet 0 04 dddddd bb
+
+expect 2 03 bb cccc
+packet 0 03 cccc bb
+
+expect 2 02 cccc
+packet 0 02 cccc

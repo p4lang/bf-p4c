@@ -1,0 +1,5 @@
+expect 2 9000 dead fafafafa
+packet 0 9000 dead fafafafa  
+
+expect 2 010c dead fafafafa
+packet 0 010c dead fafafafa  

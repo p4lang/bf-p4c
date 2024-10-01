@@ -1,0 +1,462 @@
+{
+    "schema_version": "1.0.0",
+    "symbols": [
+        {
+            "references": [
+                {
+                    "file": "tna_port_metadata.p4",
+                    "line": 150,
+                    "column": 8
+                }
+            ],
+            "symbol_name": "pipe",
+            "declaration": {
+                "file": "tna_port_metadata.p4",
+                "line": 148,
+                "column": 33
+            },
+            "symbol_type": "Declaration_Instance_Type_Specialized"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_port_metadata.p4",
+                    "line": 127,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngress.hit",
+            "declaration": {
+                "file": "tna_port_metadata.p4",
+                "line": 110,
+                "column": 12
+            },
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_port_metadata.p4",
+                    "line": 128,
+                    "column": 9
+                },
+                {
+                    "file": "tna_port_metadata.p4",
+                    "line": 131,
+                    "column": 32
+                }
+            ],
+            "symbol_name": "SwitchIngress.miss",
+            "declaration": {
+                "file": "tna_port_metadata.p4",
+                "line": 114,
+                "column": 12
+            },
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_port_metadata.p4",
+                    "line": 139,
+                    "column": 32
+                }
+            ],
+            "symbol_name": "tna_port_metadata139",
+            "declaration": {
+                "file": "tna_port_metadata.p4",
+                "line": 139,
+                "column": 32
+            },
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_port_metadata.p4",
+                    "line": 136,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngress.port_md_exm_match",
+            "declaration": {
+                "file": "tna_port_metadata.p4",
+                "line": 118,
+                "column": 11
+            },
+            "symbol_type": "P4Table"
+        },
+        {
+            "references": [],
+            "symbol_name": "tbl_tna_port_metadata139",
+            "declaration": {
+                "file": "tna_port_metadata.p4",
+                "line": 139,
+                "column": 32
+            },
+            "symbol_type": "P4Table"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_port_metadata.p4",
+                    "line": 111,
+                    "column": 38
+                }
+            ],
+            "symbol_name": "SwitchIngress.hit.port",
+            "declaration": {
+                "file": "tna_port_metadata.p4",
+                "line": 110,
+                "column": 25
+            },
+            "symbol_type": "Parameter_Type_Bits"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_port_metadata.p4",
+                    "line": 115,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngress.ig_dprsr_md.drop_ctl",
+            "declaration": {
+                "file": "tna_port_metadata.p4",
+                "line": 107,
+                "column": 57
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_port_metadata.p4",
+                    "line": 120,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngress.ig_md.port_md.field1",
+            "declaration": {
+                "file": "tna_port_metadata.p4",
+                "line": 104,
+                "column": 26
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_port_metadata.p4",
+                    "line": 121,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngress.ig_md.port_md.field2",
+            "declaration": {
+                "file": "tna_port_metadata.p4",
+                "line": 104,
+                "column": 26
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_port_metadata.p4",
+                    "line": 122,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngress.ig_md.port_md.field3",
+            "declaration": {
+                "file": "tna_port_metadata.p4",
+                "line": 104,
+                "column": 26
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_port_metadata.p4",
+                    "line": 123,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngress.ig_md.port_md.field4",
+            "declaration": {
+                "file": "tna_port_metadata.p4",
+                "line": 104,
+                "column": 26
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_port_metadata.p4",
+                    "line": 139,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngress.ig_tm_md.bypass_egress",
+            "declaration": {
+                "file": "tna_port_metadata.p4",
+                "line": 108,
+                "column": 51
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_port_metadata.p4",
+                    "line": 111,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngress.ig_tm_md.ucast_egress_port",
+            "declaration": {
+                "file": "tna_port_metadata.p4",
+                "line": 108,
+                "column": 51
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_port_metadata.p4",
+                    "line": 98,
+                    "column": 19
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.ethernet",
+            "declaration": {
+                "file": "tna_port_metadata.p4",
+                "line": 93,
+                "column": 24
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_port_metadata.p4",
+                    "line": 98,
+                    "column": 19
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.ipv4",
+            "declaration": {
+                "file": "tna_port_metadata.p4",
+                "line": 93,
+                "column": 24
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_port_metadata.p4",
+                    "line": 98,
+                    "column": 19
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.ipv6",
+            "declaration": {
+                "file": "tna_port_metadata.p4",
+                "line": 93,
+                "column": 24
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_port_metadata.p4",
+                    "line": 98,
+                    "column": 19
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.tcp",
+            "declaration": {
+                "file": "tna_port_metadata.p4",
+                "line": 93,
+                "column": 24
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_port_metadata.p4",
+                    "line": 98,
+                    "column": 19
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.udp",
+            "declaration": {
+                "file": "tna_port_metadata.p4",
+                "line": 93,
+                "column": 24
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_port_metadata.p4",
+                    "line": 98,
+                    "column": 19
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.hdr.vlan_tag",
+            "declaration": {
+                "file": "tna_port_metadata.p4",
+                "line": 93,
+                "column": 24
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [],
+            "symbol_name": "SwitchIngressDeparser.ig_dprsr_md.mirror_type",
+            "declaration": {
+                "file": "tna_port_metadata.p4",
+                "line": 95,
+                "column": 54
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_port_metadata.p4",
+                    "line": 98,
+                    "column": 10
+                }
+            ],
+            "symbol_name": "SwitchIngressDeparser.pkt",
+            "declaration": {
+                "file": "tna_port_metadata.p4",
+                "line": 92,
+                "column": 20
+            },
+            "symbol_type": "Parameter_Type_Extern"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_port_metadata.p4",
+                    "line": 78,
+                    "column": 21
+                }
+            ],
+            "symbol_name": "SwitchIngressParser.hdr.ethernet",
+            "declaration": {
+                "file": "tna_port_metadata.p4",
+                "line": 49,
+                "column": 22
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_port_metadata.p4",
+                    "line": 83,
+                    "column": 21
+                }
+            ],
+            "symbol_name": "SwitchIngressParser.hdr.ipv4",
+            "declaration": {
+                "file": "tna_port_metadata.p4",
+                "line": 49,
+                "column": 22
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_port_metadata.p4",
+                    "line": 54,
+                    "column": 21
+                }
+            ],
+            "symbol_name": "SwitchIngressParser.ig_intr_md",
+            "declaration": {
+                "file": "tna_port_metadata.p4",
+                "line": 51,
+                "column": 42
+            },
+            "symbol_type": "Parameter_Type_Header"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_port_metadata.p4",
+                    "line": 55,
+                    "column": 27
+                }
+            ],
+            "symbol_name": "SwitchIngressParser.ig_intr_md.resubmit_flag",
+            "declaration": {
+                "file": "tna_port_metadata.p4",
+                "line": 51,
+                "column": 42
+            },
+            "symbol_type": "Parameter_Type_Header"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_port_metadata.p4",
+                    "line": 67,
+                    "column": 21
+                }
+            ],
+            "symbol_name": "SwitchIngressParser.ig_md.port_md",
+            "declaration": {
+                "file": "tna_port_metadata.p4",
+                "line": 50,
+                "column": 24
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_port_metadata.p4",
+                    "line": 54,
+                    "column": 9
+                },
+                {
+                    "file": "tna_port_metadata.p4",
+                    "line": 67,
+                    "column": 9
+                },
+                {
+                    "file": "tna_port_metadata.p4",
+                    "line": 78,
+                    "column": 9
+                },
+                {
+                    "file": "tna_port_metadata.p4",
+                    "line": 83,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "SwitchIngressParser.pkt",
+            "declaration": {
+                "file": "tna_port_metadata.p4",
+                "line": 48,
+                "column": 19
+            },
+            "symbol_type": "Parameter_Type_Extern"
+        }
+    ],
+    "source_root": "/workspaces/bf-p4c2/p4-tests/internal/p4-programs/p4_16_programs/tna_port_metadata"
+}

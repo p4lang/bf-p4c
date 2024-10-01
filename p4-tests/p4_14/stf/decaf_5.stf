@@ -1,0 +1,5 @@
+add do_push data.a:0xbabe push() 
+add do_pop  data.a:0xbabe pop() 
+
+expect 2 babe babe
+packet 2 babe dead

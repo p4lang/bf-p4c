@@ -1,0 +1,19 @@
+# Packet hits parse_e from state parse_c.
+#
+# headers = a, b, c, e
+#
+#       |Headers|
+#       |A B C E|
+expect 6 0a0b0c0e 0102030405060708 1112131415161718
+packet 2 0a0b0c0e 0102030405060708 1112131415161718
+
+# Packet hits parse_f from state parse_c.
+#
+# headers = a, c, f
+#
+#       |Hdrs  |
+#       |A C F |
+expect 8 0c0c0c 0102030405060708 1112131415161718
+packet 2 0c0c0c 0102030405060708 1112131415161718
+
+

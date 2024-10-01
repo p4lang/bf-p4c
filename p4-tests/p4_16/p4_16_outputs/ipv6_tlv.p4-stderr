@@ -1,0 +1,12 @@
+util.h(133): [--Wwarn=uninitialized_out_param] warning: out parameter hdr may be uninitialized when EmptyEgressParser terminates
+        out H hdr,
+              ^^^
+util.h(131)
+parser EmptyEgressParser<H, M>(
+       ^^^^^^^^^^^^^^^^^
+util.h(134): [--Wwarn=uninitialized_out_param] warning: out parameter eg_md may be uninitialized when EmptyEgressParser terminates
+        out M eg_md,
+              ^^^^^
+util.h(131)
+parser EmptyEgressParser<H, M>(
+       ^^^^^^^^^^^^^^^^^

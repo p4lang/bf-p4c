@@ -1,0 +1,5 @@
+add ingress.t meta.ingress_port:0x0 user.data.f1:0x0 hdrs.data.f1:0x01 set_port(port:2)
+
+#        f1         payload
+expect 2 01         DEADBEEF
+packet 0 01         DEADBEEF

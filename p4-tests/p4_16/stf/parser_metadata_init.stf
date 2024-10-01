@@ -1,0 +1,5 @@
+
+add ingress.test1 0 meta:0x01 ingress.set(val:0x7f, port:2)
+
+expect 2 0000007f
+packet 0 00000101

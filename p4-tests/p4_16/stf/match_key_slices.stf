@@ -1,0 +1,17 @@
+
+add slice_it0 0 data.f1:0x123456789ABC data.f2:0x123456789ABC setb1(b1:0xFF, port:2) 
+add slice_it1 0 data.f1:0x123456789ABC data.f2:0x123456789ABC setb2(b2:0xFF) 
+
+# Model bug - passes with strtoull fix
+# add long_mask 0 data.l1:0xdeadbeefdeadbeef0000000000000000 setb3(b3:0xFF) 
+
+#        l1                                f1           f2          b1 b2 b3
+# expect 2 deadbeefdeadbeefdeadbeefdeadbeef 12FF56FF9AFF FF34FF78FFBC FF FF FF
+# packet 0 deadbeefdeadbeefdeadbeefdeadbeef 12FF56FF9AFF FF34FF78FFBC 99 99 99
+ 
+add long_mask 0 data.l1:0x10101010101010102020202020202020 setb3(b3:0xFF) 
+
+#        l1                                f1           f2          b1 b2 b3
+expect 2 10101010101010101010101010101010 12FF56FF9AFF FF34FF78FFBC FF FF FF
+packet 0 10101010101010101010101010101010 12FF56FF9AFF FF34FF78FFBC 99 99 99
+

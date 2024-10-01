@@ -1,0 +1,5 @@
+add t ig_intr_md.ingress_port:0x1 do()
+
+#        dstAddr        srcAddr        etherType    payload
+expect 2 1111 2222 3333 4444 5555 6666 0001         DEADBEEF
+packet 0 1111 2222 3333 4444 5555 6666 0800         DEADBEEF

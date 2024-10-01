@@ -1,0 +1,5 @@
+add update ethernet.ethertype:0x1 upd(p:0x8)
+
+#        dstAddr      srcAddr      ethertype
+expect 8 000000000000 000000000001 0001
+packet 0 000000000000 000000000001 0001

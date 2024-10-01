@@ -1,0 +1,7 @@
+#       | fabric_base_t  |qos|     fabric_ig_fpga3_t     |    ig_fpga4    |                         ethernet                                           |
+expect 4 8000020003000400 00 a000000000000000000000000000 0000000000000000 ffffffffffffffffffffffffaabb789abcde789abcde789abcde789abcde789abcde789abcde
+packet 4 8000020003000400 00 a000000000000000000000000000 0000000000000000 ffffffffffffffffffffffffaabb789abcde789abcde789abcde789abcde789abcde789abcde
+
+#       | fabric_base_t  |qos|     fabric_ig_fpga3_t     |fg3a|   ig_fpga4     |                         ethernet                                           |
+expect 8 8000020003000400 00 9f00000000000000000000000000 bbaa 0000000000000000 ffffffffffffffffffffffffaabb789abcde789abcde789abcde789abcde789abcde789abcde
+packet 4 8000020003000400 00 9f00000000000000000000000000 bbaa 0000000000000000 ffffffffffffffffffffffffaabb789abcde789abcde789abcde789abcde789abcde789abcde

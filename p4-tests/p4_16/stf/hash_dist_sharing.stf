@@ -1,0 +1,104 @@
+add test_table1 hdr.data.action_id:0x01 write_action1
+add test_table1 hdr.data.action_id:0x02 read_action1
+add test_table2 hdr.data.action_id:0x03 write_action2
+add test_table2 hdr.data.action_id:0x04 read_action2
+add test_table3 hdr.data.action_id:0x05 write_action3
+add test_table3 hdr.data.action_id:0x06 read_action3
+
+add test_table1 hdr.data.action_id:0x11 write_action1
+add test_table2 hdr.data.action_id:0x11 write_action2
+
+#        index  action_id  write_value  value1    value2    value3
+expect 0 03     01         11223344     aaaaaaaa  aaaaaaaa  aaaaaaaa
+packet 0 03     01         11223344     aaaaaaaa  aaaaaaaa  aaaaaaaa
+wait
+
+check_register reg1(3) lo = 0x11223344
+check_counter index_packet_counter(3) packets = 1
+check_counter index_bytes_counter(3) bytes = 22
+check_counter port_packet_counter(0) packets = 1
+check_counter port_bytes_counter(0) bytes = 22
+
+#        index  action_id  write_value  value1    value2    value3
+expect 4 03     02         aaaaaaaa     11223344  aaaaaaaa  aaaaaaaa
+packet 4 03     02         aaaaaaaa     aaaaaaaa  aaaaaaaa  aaaaaaaa
+wait
+
+check_register reg1(3) lo = 0x11223344
+check_counter index_packet_counter(3) packets = 2
+check_counter index_bytes_counter(3) bytes = 44
+check_counter port_packet_counter(4) packets = 1
+check_counter port_bytes_counter(4) bytes = 22
+
+#        index  action_id  write_value  value1    value2    value3
+expect 4 03     03         12345678     aaaaaaaa  aaaaaaaa  aaaaaaaa
+packet 4 03     03         12345678     aaaaaaaa  aaaaaaaa  aaaaaaaa
+wait
+
+check_register reg1(3) lo = 0x11223344
+check_register reg2(3) lo = 0x12345678
+check_counter index_packet_counter(3) packets = 3
+check_counter index_bytes_counter(3) bytes = 66
+check_counter port_packet_counter(4) packets = 2
+check_counter port_bytes_counter(4) bytes = 44
+
+#        index  action_id  write_value  value1    value2    value3
+expect 4 03     11         98765432     aaaaaaaa  aaaaaaaa  aaaaaaaa
+packet 4 03     11         98765432     aaaaaaaa  aaaaaaaa  aaaaaaaa
+wait
+
+check_register reg1(3) lo = 0x98765432
+check_register reg2(3) lo = 0x12345678
+check_counter index_packet_counter(3) packets = 4
+check_counter index_bytes_counter(3) bytes = 88
+check_counter port_packet_counter(4) packets = 3
+check_counter port_bytes_counter(4) bytes = 66
+
+#        index  action_id  write_value  value1    value2    value3
+expect 4 03     05         abcdef12     aaaaaaaa  aaaaaaaa  aaaaaaaa
+packet 4 03     05         abcdef12     aaaaaaaa  aaaaaaaa  aaaaaaaa
+wait
+
+check_register reg1(3) lo = 0x98765432
+check_register reg2(3) lo = 0x12345678
+check_register reg3(3) lo = 0xabcdef12
+check_counter index_packet_counter(3) packets = 5
+check_counter index_bytes_counter(3) bytes = 110
+check_counter port_packet_counter(4) packets = 4
+check_counter port_bytes_counter(4) bytes = 88
+check_counter val3_write_packet_counter(0x305) packets = 1
+check_counter val3_read_packet_counter(0x305) packets = 0
+
+#        index  action_id  write_value  value1    value2    value3
+expect 4 03     06         aaaaaaaa     aaaaaaaa  aaaaaaaa  abcdef12
+packet 4 03     06         aaaaaaaa     aaaaaaaa  aaaaaaaa  aaaaaaaa
+wait
+
+check_register reg1(3) lo = 0x98765432
+check_register reg2(3) lo = 0x12345678
+check_register reg3(3) lo = 0xabcdef12
+check_counter index_packet_counter(3) packets = 6
+check_counter index_bytes_counter(3) bytes = 132
+check_counter port_packet_counter(4) packets = 5
+check_counter port_bytes_counter(4) bytes = 110
+check_counter val3_write_packet_counter(0x305) packets = 1
+check_counter val3_read_packet_counter(0x305) packets = 0
+check_counter val3_write_packet_counter(0xf12) packets = 0
+check_counter val3_read_packet_counter(0xf12) packets = 1
+
+#        index  action_id  write_value  value1    value2    value3
+expect 4 03     09         aaaaaaaa     aaaaaaaa  aaaaaaaa  aaaaaaaa
+packet 4 03     09         aaaaaaaa     aaaaaaaa  aaaaaaaa  aaaaaaaa
+wait
+
+check_register reg1(3) lo = 0x98765432
+check_register reg2(3) lo = 0x12345678
+check_register reg3(3) lo = 0xabcdef12
+check_counter index_packet_counter(3) packets = 7
+check_counter index_bytes_counter(3) bytes = 154
+check_counter port_packet_counter(4) packets = 6
+check_counter port_bytes_counter(4) bytes = 132
+check_counter val3_write_packet_counter(0x309) packets = 0
+check_counter val3_read_packet_counter(0x309) packets = 0
+check_counter val3_write_packet_counter(0xaaa) packets = 0
+check_counter val3_read_packet_counter(0xaaa) packets = 0

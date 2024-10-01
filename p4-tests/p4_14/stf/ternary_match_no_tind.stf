@@ -1,0 +1,5 @@
+add test1 100 data.f1:0x01010101 data.f2:0x02020202 setb1
+add test2 100 data.f1:0x******** set_port port:2
+
+expect 2 01010101 02020202 07
+packet 0 01010101 02020202 fe

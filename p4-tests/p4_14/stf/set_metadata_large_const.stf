@@ -1,0 +1,4 @@
+add test1 data.h1:0xc0de setf1(port:2)
+
+expect 2 c0de 00000000 babedead 03030303 
+packet 0 c0de 01010101 02020202 03030303

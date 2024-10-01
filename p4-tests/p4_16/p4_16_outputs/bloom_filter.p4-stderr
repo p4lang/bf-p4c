@@ -1,0 +1,7 @@
+bloom_filter.p4(46): warning: index shadows index
+        bit<32> execute_instr( in op_num op, in bit<32> index, in bit<32> digest, in bit<32> not_used ) {
+                                                        ^^^^^
+bloom_filter.p4(43)
+control PLT_bloom_filter_way_ctrl(in bit<32> index, in Metadata metadata, out bit<32> result) {
+                                             ^^^^^
+warning: Program does not contain a `main' module

@@ -1,0 +1,3 @@
+gateway_control_deps.p4(64): warning: SwitchCase: label following default label
+            a1 : {
+            ^

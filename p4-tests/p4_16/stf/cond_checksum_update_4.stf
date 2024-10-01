@@ -1,0 +1,12 @@
+add test sample.a:0x1111 act1(val1:0x1 val2:0x1)
+add test sample.a:0x2222 act1(val1:0x0 val2:0x1)
+add test sample.a:0x3333 act1(val1:0x0 val2:0x0)
+#        a    b    c    CSUM1 CSUM2 CSUM3
+expect 2 1111 2222 3333 9999 7777 1111
+packet 0 1111 2222 3333 1111 7777 1111
+
+expect 2 2222 3333 4444 1111 5555 1111
+packet 0 2222 3333 4444 1111 7777 1111
+
+expect 2 3333 3333 4444 1111 7777 cccc
+packet 0 3333 3333 4444 1111 7777 3333

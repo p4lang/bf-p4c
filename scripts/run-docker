@@ -1,0 +1,36 @@
+#!/bin/sh
+
+# Copyright (C) 2024 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License.  You may obtain
+# a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+# License for the specific language governing permissions and limitations
+# under the License.
+#
+#
+# SPDX-License-Identifier: Apache-2.0
+
+tag=latest
+
+while [ $# -gt 0 ]; do
+    case $1 in
+    tofino_debug)
+        tag=$1
+        ;;
+    *)
+        echo 2>&2 "Unrecognized argument $1"
+        exit 1 ;;
+    esac
+done
+
+docker pull amr-registry.caas.intel.com/bxd-sw/jarvis:$tag
+docker system prune -f
+docker images -f "dangling=true" -q | xargs -r docker rmi
+exec docker run --privileged -w /mnt -v $(pwd):/mnt -v $HOME:/root -p 8080:80 -it amr-registry.caas.intel.com/bxd-sw/jarvis:$tag /bin/bash

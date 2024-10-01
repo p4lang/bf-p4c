@@ -1,0 +1,6 @@
+
+add ingress.t 0 data$0.f:0x0000 ingress.set_port(port:2)
+
+#        f[0]     payload
+expect 2 0000     00000202 0303 55 66
+packet 0 00000101 00000202 0303 55 66

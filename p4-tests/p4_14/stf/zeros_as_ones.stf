@@ -1,0 +1,12 @@
+add test_zeros_as_ones sample1.a:0x2222 set_no_zeros_as_ones()
+add test_zeros_as_ones sample1.a:0x1111 set_zeros_as_ones()
+
+add test sample1.a:0x1111  act()
+add test sample1.a:0x2222  act()
+
+#        a    b    c    csum a    b    c    csum
+expect 2 1111 2222 cccc ffff 4444 3333 4444 1111
+packet 0 1111 2222 cccc ffff 4444 3333 4444 1111
+
+expect 2 2222 1111 cccc 0000 4444 3333 4444 1111
+packet 0 2222 1111 cccc ffff 4444 3333 4444 1111

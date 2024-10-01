@@ -1,0 +1,286 @@
+version:
+  version: 1.0.1
+  run_id: "7d0d9668a68e6351"
+phv ingress:
+  bridged_metadata.bridged_metadata_indicator: TB0
+  ig_intr_md_for_tm.ucast_egress_port: H0(0..8)
+  data.m: H3(8..15)
+  data.k: H3(0..7)
+  data.a.0-7: B1
+  data.a.8-23: H2
+  data.b.0-15: TH0
+  data.b.16-23: TB1
+  a3.$ctl: B2(4)
+  data.b_v1.$valid: B2(0)
+  data.b_v0.$valid: B2(1)
+  ig_intr_md_for_dprsr.mirror_type: B0(0..2)
+  compiler_generated_meta.mirror_id: H1(0..9)
+  bridged_metadata.$valid: B2(2)
+  data.$valid: B2(3)
+phv egress:
+  eg_intr_md.egress_port: H16(0..8)
+  data.m: TH6(8..15)
+  data.k: TH6(0..7)
+  data.a: TW4(8..31)
+  data.b.0-15: TH7
+  data.b.16-23: TW4(0..7)
+  data.$valid: B16(0)
+parser ingress:
+  start: $entry_point.$ingress_tna_entry_point.$ingress_metadata
+  init_zero: [ B2, H1 ]
+  multi_write: [ B2 ]
+  hdr_len_adj: 16
+  states:
+    $entry_point.$ingress_tna_entry_point.$ingress_metadata:  # from state $entry_point.$ingress_tna_entry_point.$ingress_metadata
+      0:
+        B2: 4  # value 1 -> B2 L[2]b: ingress::^bridged_metadata.$valid
+        save: { byte0 : 0 }
+        shift: 8
+        buf_req: 8
+        next: $check_resubmit
+    $check_resubmit:  # from state ingress::$check_resubmit
+      match: [ byte0 ]
+      # - match N[-8]B: cast
+      0b0*******:
+        buf_req: 0
+        next: $phase0
+      0b1*******:
+        buf_req: 0
+        next: $resubmit
+    $phase0:  # from state ingress::$phase0
+      0:
+        shift: 8
+        buf_req: 8
+        next: $skip_to_packet.start
+    $skip_to_packet.start:  # from state $skip_to_packet.start
+      0:
+        0..1: H3
+            # - N[0..7]b -> H3 L[8..15]b: ingress::data.m
+            # - N[8..15]b -> H3 L[0..7]b: ingress::data.k
+        2..3: H2  # ingress::data.a.8-23
+        4: B1  # ingress::data.a.0-7
+        5: TB1  # ingress::data.b.16-23
+        6..7: TH0  # ingress::data.b.0-15
+        B2: 8  # value 1 -> B2 L[3]b: ingress::data.$valid
+        H0: 2  # value 2 -> H0 L[0..8]b: ingress::ig_intr_md_for_tm.ucast_egress_port
+        shift: 8
+        buf_req: 8
+        next: end
+    $resubmit:  # from state $resubmit
+      0:
+        shift: 8
+        buf_req: 8
+        next: $skip_to_packet.start
+deparser ingress:
+  dictionary:
+    TB0: B2(2)  # ingress::^bridged_metadata.^bridged_metadata_indicator if ingress::^bridged_metadata.$valid
+    H3: B2(3)
+        # - L[8..15]b: ingress::data.m if ingress::data.$valid
+        # - L[0..7]b: ingress::data.k if ingress::data.$valid
+    H2: B2(3)  # ingress::data.a.8-23 if ingress::data.$valid
+    B1: B2(3)  # ingress::data.a.0-7 if ingress::data.$valid
+    H2: B2(0)  # ingress::data.a.8-23 if ingress::data.b_v1.$valid
+    B1: B2(0)  # ingress::data.a.0-7 if ingress::data.b_v1.$valid
+    TB1: B2(1)  # ingress::data.b.16-23 if ingress::data.b_v0.$valid
+    TH0: B2(1)  # ingress::data.b.0-15 if ingress::data.b_v0.$valid
+  egress_unicast_port: H0(0..8)  # L[0..8]b: ingress::ig_intr_md_for_tm.ucast_egress_port
+  mirror:
+    select: B0(0..2)  # L[0..2]b: ingress::ig_intr_md_for_dprsr.mirror_type
+    0:
+      - H1(0..9)  # L[0..9]b: ingress::compiler_generated_meta.mirror_id
+parser egress:
+  start: $entry_point.$egress_tna_entry_point.$egress_metadata
+  init_zero: [ B16 ]
+  multi_write: [ B16, H16 ]
+  hdr_len_adj: 2
+  meta_opt: 0
+  states:
+    $entry_point.$egress_tna_entry_point.$egress_metadata:  # from state $entry_point.$egress_tna_entry_point.$egress_metadata
+      0:
+        0..1: H16  # N[7..15]b -> H16 L[0..8]b: egress::eg_intr_md.egress_port
+        save: { byte0 : 2 }
+        shift: 2
+        buf_req: 3
+        next: $check_mirrored
+    $check_mirrored:  # from state egress::$check_mirrored
+      match: [ byte0 ]
+      # - match N[0]B: packet.lookahead
+      0b****0***:
+        buf_req: 0
+        next: $bridged_metadata
+      0b****1***:
+        save: { byte0 : 0 }
+        buf_req: 1
+        next: $mirrored
+    $bridged_metadata:  # from state egress::$bridged_metadata
+      0:
+        shift: 1
+        buf_req: 1
+        next: start
+    start:  # from state egress::start
+      0:
+        0..1: TH6
+            # - N[0..7]b -> TH6 L[8..15]b: egress::data.m
+            # - N[8..15]b -> TH6 L[0..7]b: egress::data.k
+        2..5: TW4
+            # - N[16..39]b -> TW4 L[8..31]b: egress::data.a
+            # - N[40..47]b -> TW4 L[0..7]b: egress::data.b.16-23
+        6..7: TH7  # egress::data.b.0-15
+        B16: 1  # value 1 -> B16 L[0]b: egress::data.$valid
+        H16: 2  # value 2 -> H16 L[0..8]b: egress::eg_intr_md.egress_port
+        shift: 8
+        buf_req: 8
+        next: end
+    $mirrored:  # from state egress::$mirrored
+      match: [ byte0 ]
+      # - match N[0]B: (buffer)
+      0x**:
+        shift: 1
+        buf_req: 1
+        next: start
+deparser egress:
+  dictionary:
+    TH6: B16(0)
+        # - L[8..15]b: egress::data.m if egress::data.$valid
+        # - L[0..7]b: egress::data.k if egress::data.$valid
+    TW4: B16(0)
+        # - L[8..31]b: egress::data.a if egress::data.$valid
+        # - L[0..7]b: egress::data.b.16-23 if egress::data.$valid
+    TH7: B16(0)  # egress::data.b.0-15 if egress::data.$valid
+  egress_unicast_port: H16(0..8)  # L[0..8]b: egress::eg_intr_md.egress_port
+stage 0 ingress:
+  exact_match t2_0 0:
+    p4: { name: t2 }
+    p4_param_order: 
+      data.k: { type: exact, size: 8, full_size: 8, key_name: "data.k" }
+    row: 7
+    bus: 1
+    column: 3
+    ways:
+      - [0, 0, 0x0, [7, 3]]
+    input_xbar:
+      exact group 0: { 0: data.k }
+      hash 0:
+        0..7: data.k
+      hash group 0:
+        table: [0]
+        seed: 0x0
+    format: { version(0): 112..115 }
+    hit: [ t1_0 ]
+    miss: t1_0
+    instruction: t2_0($DEFAULT, $DEFAULT)
+    actions:
+      a3(0, 1):
+      - default_action: { allowed: true }
+      - handle: 0x20000004
+      - next_table: 0
+      - set a3.$ctl, 1
+      NoAction(-1, 0):
+      - default_only_action: { allowed: true }
+      - handle: 0x20000005
+      - next_table: 0
+    default_only_action: NoAction
+  exact_match t1_0 1:
+    p4: { name: t1 }
+    p4_param_order: 
+      data.m: { type: exact, size: 8, full_size: 8, key_name: "data.m" }
+    row: 7
+    bus: 0
+    column: 2
+    ways:
+      - [0, 1, 0x0, [7, 2]]
+    input_xbar:
+      exact group 0: { 8: data.m }
+      hash 0:
+        10..17: data.m
+      hash group 0:
+        table: [0]
+        seed: 0x0
+    format: { action(0): 0..0, immediate(0): 1..24, version(0): 112..115 }
+    hit: [ ingress_decaf_pov_encoder_0 ]
+    miss: ingress_decaf_pov_encoder_0
+    action_bus: { 2 : immediate(16..23), 32..33 : immediate(0..15) }
+    instruction: t1_0(action, $DEFAULT)
+    actions:
+      a1(0, 2):
+      - p4_param_order: {param: 24 }
+      - default_action: { allowed: true }
+      - handle: 0x20000001
+      - next_table: 0
+      - { param.8-23: immediate(0..15), param.0-7: immediate(16..23) }
+      - set data.a.0-7, param.0-7
+      - set data.a.8-23, param.8-23
+      a2(1, 4):
+      - default_action: { allowed: true }
+      - handle: 0x20000002
+      - next_table: 0
+      - {  }
+      - not data.a.0-7, data.a.0-7
+      - not data.a.8-23, data.a.8-23
+      NoAction(-1, 0):
+      - default_only_action: { allowed: true }
+      - handle: 0x20000003
+      - next_table: 0
+      - {  }
+    default_only_action: NoAction
+stage 1 ingress:
+  exact_match ingress_decaf_pov_encoder_0 0:
+    p4: { name: ingress_decaf_pov_encoder_0_ingress, hidden: true }
+    p4_param_order: 
+      data.$valid: { type: exact, size: 1, full_size: 1 }
+      a3.$ctl: { type: exact, size: 1, full_size: 1 }
+    row: 7
+    bus: 0
+    column: 2
+    ways:
+      - [0, 0, 0x0, [7, 2]]
+    input_xbar:
+      exact group 0: { 3: data.$valid, 4: a3.$ctl }
+      hash 0:
+        0: data.$valid
+        1: a3.$ctl
+      hash group 0:
+        table: [0]
+        seed: 0x0
+    format: { action(0): 0..1, version(0): 112..115 }
+    hit: [ END ]
+    miss: END
+    context_json:
+      static_entries:
+      - priority: 0
+        match_key_fields_values:
+        - field_name: data
+          value: 1
+        - field_name: a3.$ctl
+          value: 1
+        action_handle: 536870918
+        is_default_entry: false
+        action_parameters_values: []
+      - priority: 1
+        match_key_fields_values:
+        - field_name: data
+          value: 1
+        - field_name: a3.$ctl
+          value: 0
+        action_handle: 536870919
+        is_default_entry: false
+        action_parameters_values: []
+    instruction: ingress_decaf_pov_encoder_0(action, $DEFAULT)
+    actions:
+      __act_0(0, 1):
+      - default_action: { allowed: false, reason: none }
+      - handle: 0x20000006
+      - next_table: 0
+      - set data.b_v1.$valid, 1
+      __act_1(1, 2):
+      - default_action: { allowed: false, reason: none }
+      - handle: 0x20000007
+      - next_table: 0
+      - set data.b_v0.$valid, 1
+      __nop_(2, 0):
+      - default_action: { allowed: true }
+      - handle: 0x20000008
+      - next_table: 0
+    default_action: __nop_
+primitives: "deparser_copy_opt_4.tofino/deparser_copy_opt_4.prim.json"
+dynhash: "deparser_copy_opt_4.tofino/deparser_copy_opt_4.dynhash.json"

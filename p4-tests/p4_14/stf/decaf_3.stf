@@ -1,0 +1,19 @@
+add paws data.m:0x01 a1() 
+add paws data.m:0x02 a2() 
+add paws data.m:0x03 a3() 
+add paws data.m:0x04 a4() 
+
+expect 2 00 01010202 08080505 aabbccdd c0def00d
+packet 2 00 01010202 08080505 aabbccdd c0def00d
+
+expect 2 01 08080505 01010202 aabbccdd c0def00d
+packet 2 01 01010202 08080505 aabbccdd c0def00d
+
+expect 2 02 01010202 08080505 c0def00d aabbccdd
+packet 2 02 01010202 08080505 aabbccdd c0def00d
+
+expect 2 03 aabbccdd 08080505 01010202 c0def00d
+packet 2 03 01010202 08080505 aabbccdd c0def00d
+
+expect 2 04 01010202 c0def00d aabbccdd 08080505
+packet 2 04 01010202 08080505 aabbccdd c0def00d

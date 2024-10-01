@@ -1,0 +1,14 @@
+add test1 data.read:0x0101 bitmasked_adt(param1:0x2, param2:0x3, param3:0x01010101)
+add test2 data.read:0x0202 bitmasked_immed(param1:0x1, param2:0x2, param3:0x67)
+add test2 data.read:0x0303 bitmasked_immed2(param1:0x1, param2:0x3, param3:0x78, param4:0x89)
+
+add port_setter data.read:0x0101 set_port(port:2)
+add port_setter data.read:0x0202 set_port(port:2)
+add port_setter data.read:0x0303 set_port(port:2)
+
+expect 2 0101 01010101 23 0a bf
+packet 0 0101 74729434 23 0a 33
+expect 2 0202 74729434 67 0a 7b
+packet 0 0202 74729434 23 0a 33
+expect 2 0303 74729434 78 89 13 
+packet 0 0303 74729434 23 0a 33

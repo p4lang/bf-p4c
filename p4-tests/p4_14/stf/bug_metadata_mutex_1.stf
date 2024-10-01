@@ -1,0 +1,3 @@
+#        dstAddr                       srcAddr                       etherType    payload
+expect 2 0101 0101 0101 0101 0101 0101 0202 0202 0202 0202 0202 0202 0800         DEADBEEF
+packet 0 0101 0101 0101 0101 0101 0101 0202 0202 0202 0202 0202 0202 0800         DEADBEEF

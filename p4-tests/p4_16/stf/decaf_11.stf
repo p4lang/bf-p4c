@@ -1,0 +1,13 @@
+add add_header a.f:0x0101 a0a0()
+add add_header a.f:0x0202 b0b0()
+add add_header a.f:0x0303 ffff()
+
+expect 2 0101 a0a0
+packet 0 0101
+
+expect 2 0202 b0b0
+packet 0 0202 
+
+expect 2 0303 ffff
+packet 0 0303 
+

@@ -1,0 +1,9 @@
+ipv4_options.p4(38): warning: Checksum16: Using deprecated feature Checksum16. Please use verify_checksum/update_checksum instead.
+    Checksum16() ck; // instantiate checksum unit
+    ^^^^^^^^^^
+v1model.p4(150)
+extern Checksum16 {
+       ^^^^^^^^^^
+ipv4_options.p4(38): warning: ck: unused instance
+    Checksum16() ck; // instantiate checksum unit
+                 ^^

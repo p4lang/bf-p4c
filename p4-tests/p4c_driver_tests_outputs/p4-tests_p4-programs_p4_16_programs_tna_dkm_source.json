@@ -1,0 +1,848 @@
+{
+    "schema_version": "1.0.0",
+    "symbols": [
+        {
+            "references": [
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 133,
+                    "column": 31
+                }
+            ],
+            "symbol_name": "Egr.cntr",
+            "declaration": {
+                "file": "tna_dkm.p4",
+                "line": 131,
+                "column": 60
+            },
+            "symbol_type": "Declaration_Instance_Type_Specialized"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 89,
+                    "column": 33
+                }
+            ],
+            "symbol_name": "IngDprsr.ipv4_checksum",
+            "declaration": {
+                "file": "tna_dkm.p4",
+                "line": 86,
+                "column": 16
+            },
+            "symbol_type": "Declaration_Instance_Type_Extern"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 173,
+                    "column": 8
+                }
+            ],
+            "symbol_name": "pipe",
+            "declaration": {
+                "file": "tna_dkm.p4",
+                "line": 171,
+                "column": 40
+            },
+            "symbol_type": "Declaration_Instance_Type_Specialized"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 142,
+                    "column": 13
+                },
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 145,
+                    "column": 32
+                }
+            ],
+            "symbol_name": "Egr.count",
+            "declaration": {
+                "file": "tna_dkm.p4",
+                "line": 133,
+                "column": 12
+            },
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 67,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "Ing.fwd",
+            "declaration": {
+                "file": "tna_dkm.p4",
+                "line": 53,
+                "column": 12
+            },
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 59,
+                    "column": 9,
+                    "end_line": 70
+                },
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 66,
+                    "column": 20,
+                    "end_line": 67
+                }
+            ],
+            "symbol_name": "NoAction",
+            "declaration": {
+                "file": "/workspaces/bf-p4c2/build/p4c/p4include/core.p4",
+                "line": 70,
+                "column": 8
+            },
+            "symbol_type": "P4Action"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 151,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "Egr.t2",
+            "declaration": {
+                "file": "tna_dkm.p4",
+                "line": 135,
+                "column": 11
+            },
+            "symbol_type": "P4Table"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 74,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "Ing.t1",
+            "declaration": {
+                "file": "tna_dkm.p4",
+                "line": 58,
+                "column": 11
+            },
+            "symbol_type": "P4Table"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 133,
+                    "column": 42
+                }
+            ],
+            "symbol_name": "Egr.count.i",
+            "declaration": {
+                "file": "tna_dkm.p4",
+                "line": 133,
+                "column": 26
+            },
+            "symbol_type": "Parameter_Type_Bits"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 137,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "Egr.hdr.ethernet.dst_addr",
+            "declaration": {
+                "file": "tna_dkm.p4",
+                "line": 124,
+                "column": 28
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 138,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "Egr.intr_md.egress_port",
+            "declaration": {
+                "file": "tna_dkm.p4",
+                "line": 126,
+                "column": 44
+            },
+            "symbol_type": "Parameter_Type_Header"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 165,
+                    "column": 19
+                }
+            ],
+            "symbol_name": "EgrDprsr.hdr.ethernet",
+            "declaration": {
+                "file": "tna_dkm.p4",
+                "line": 159,
+                "column": 33
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 165,
+                    "column": 19
+                }
+            ],
+            "symbol_name": "EgrDprsr.hdr.ipv4",
+            "declaration": {
+                "file": "tna_dkm.p4",
+                "line": 159,
+                "column": 33
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 165,
+                    "column": 19
+                }
+            ],
+            "symbol_name": "EgrDprsr.hdr.ipv6",
+            "declaration": {
+                "file": "tna_dkm.p4",
+                "line": 159,
+                "column": 33
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 165,
+                    "column": 19
+                }
+            ],
+            "symbol_name": "EgrDprsr.hdr.tcp",
+            "declaration": {
+                "file": "tna_dkm.p4",
+                "line": 159,
+                "column": 33
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 165,
+                    "column": 19
+                }
+            ],
+            "symbol_name": "EgrDprsr.hdr.udp",
+            "declaration": {
+                "file": "tna_dkm.p4",
+                "line": 159,
+                "column": 33
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 165,
+                    "column": 19
+                }
+            ],
+            "symbol_name": "EgrDprsr.hdr.vlan_tag",
+            "declaration": {
+                "file": "tna_dkm.p4",
+                "line": 159,
+                "column": 33
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 165,
+                    "column": 10
+                }
+            ],
+            "symbol_name": "EgrDprsr.pkt",
+            "declaration": {
+                "file": "tna_dkm.p4",
+                "line": 158,
+                "column": 29
+            },
+            "symbol_type": "Parameter_Type_Extern"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 116,
+                    "column": 21
+                }
+            ],
+            "symbol_name": "EgrPrsr.hdr.ethernet",
+            "declaration": {
+                "file": "tna_dkm.p4",
+                "line": 110,
+                "column": 29
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 115,
+                    "column": 21
+                }
+            ],
+            "symbol_name": "EgrPrsr.intr_md",
+            "declaration": {
+                "file": "tna_dkm.p4",
+                "line": 112,
+                "column": 48
+            },
+            "symbol_type": "Parameter_Type_Header"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 115,
+                    "column": 9
+                },
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 116,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "EgrPrsr.pkt",
+            "declaration": {
+                "file": "tna_dkm.p4",
+                "line": 109,
+                "column": 26
+            },
+            "symbol_type": "Parameter_Type_Extern"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 54,
+                    "column": 38
+                }
+            ],
+            "symbol_name": "Ing.fwd.port",
+            "declaration": {
+                "file": "tna_dkm.p4",
+                "line": 53,
+                "column": 25
+            },
+            "symbol_type": "Parameter_Type_Bits"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 61,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "Ing.hdr.ipv4.dst_addr",
+            "declaration": {
+                "file": "tna_dkm.p4",
+                "line": 46,
+                "column": 28
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 63,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "Ing.hdr.ipv4.protocol",
+            "declaration": {
+                "file": "tna_dkm.p4",
+                "line": 46,
+                "column": 28
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 62,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "Ing.hdr.ipv4.src_addr",
+            "declaration": {
+                "file": "tna_dkm.p4",
+                "line": 46,
+                "column": 28
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 60,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "Ing.ig_intr_md.ingress_port",
+            "declaration": {
+                "file": "tna_dkm.p4",
+                "line": 48,
+                "column": 45
+            },
+            "symbol_type": "Parameter_Type_Header"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 54,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "Ing.ig_tm_md.ucast_egress_port",
+            "declaration": {
+                "file": "tna_dkm.p4",
+                "line": 51,
+                "column": 55
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 102,
+                    "column": 19
+                }
+            ],
+            "symbol_name": "IngDprsr.hdr.ethernet",
+            "declaration": {
+                "file": "tna_dkm.p4",
+                "line": 82,
+                "column": 33
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 102,
+                    "column": 19
+                }
+            ],
+            "symbol_name": "IngDprsr.hdr.ipv4",
+            "declaration": {
+                "file": "tna_dkm.p4",
+                "line": 82,
+                "column": 33
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 92,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "IngDprsr.hdr.ipv4.diffserv",
+            "declaration": {
+                "file": "tna_dkm.p4",
+                "line": 82,
+                "column": 33
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 100,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "IngDprsr.hdr.ipv4.dst_addr",
+            "declaration": {
+                "file": "tna_dkm.p4",
+                "line": 82,
+                "column": 33
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 95,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "IngDprsr.hdr.ipv4.flags",
+            "declaration": {
+                "file": "tna_dkm.p4",
+                "line": 82,
+                "column": 33
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 96,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "IngDprsr.hdr.ipv4.frag_offset",
+            "declaration": {
+                "file": "tna_dkm.p4",
+                "line": 82,
+                "column": 33
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 89,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "IngDprsr.hdr.ipv4.hdr_checksum",
+            "declaration": {
+                "file": "tna_dkm.p4",
+                "line": 82,
+                "column": 33
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 94,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "IngDprsr.hdr.ipv4.identification",
+            "declaration": {
+                "file": "tna_dkm.p4",
+                "line": 82,
+                "column": 33
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 91,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "IngDprsr.hdr.ipv4.ihl",
+            "declaration": {
+                "file": "tna_dkm.p4",
+                "line": 82,
+                "column": 33
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 98,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "IngDprsr.hdr.ipv4.protocol",
+            "declaration": {
+                "file": "tna_dkm.p4",
+                "line": 82,
+                "column": 33
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 99,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "IngDprsr.hdr.ipv4.src_addr",
+            "declaration": {
+                "file": "tna_dkm.p4",
+                "line": 82,
+                "column": 33
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 93,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "IngDprsr.hdr.ipv4.total_len",
+            "declaration": {
+                "file": "tna_dkm.p4",
+                "line": 82,
+                "column": 33
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 97,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "IngDprsr.hdr.ipv4.ttl",
+            "declaration": {
+                "file": "tna_dkm.p4",
+                "line": 82,
+                "column": 33
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 90,
+                    "column": 13
+                }
+            ],
+            "symbol_name": "IngDprsr.hdr.ipv4.version",
+            "declaration": {
+                "file": "tna_dkm.p4",
+                "line": 82,
+                "column": 33
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 102,
+                    "column": 19
+                }
+            ],
+            "symbol_name": "IngDprsr.hdr.ipv6",
+            "declaration": {
+                "file": "tna_dkm.p4",
+                "line": 82,
+                "column": 33
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 102,
+                    "column": 19
+                }
+            ],
+            "symbol_name": "IngDprsr.hdr.tcp",
+            "declaration": {
+                "file": "tna_dkm.p4",
+                "line": 82,
+                "column": 33
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 102,
+                    "column": 19
+                }
+            ],
+            "symbol_name": "IngDprsr.hdr.udp",
+            "declaration": {
+                "file": "tna_dkm.p4",
+                "line": 82,
+                "column": 33
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 102,
+                    "column": 19
+                }
+            ],
+            "symbol_name": "IngDprsr.hdr.vlan_tag",
+            "declaration": {
+                "file": "tna_dkm.p4",
+                "line": 82,
+                "column": 33
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [],
+            "symbol_name": "IngDprsr.ig_dprsr_md.mirror_type",
+            "declaration": {
+                "file": "tna_dkm.p4",
+                "line": 84,
+                "column": 63
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 102,
+                    "column": 10
+                }
+            ],
+            "symbol_name": "IngDprsr.pkt",
+            "declaration": {
+                "file": "tna_dkm.p4",
+                "line": 81,
+                "column": 29
+            },
+            "symbol_type": "Parameter_Type_Extern"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 37,
+                    "column": 21
+                }
+            ],
+            "symbol_name": "IngPrsr.hdr.ethernet",
+            "declaration": {
+                "file": "tna_dkm.p4",
+                "line": 30,
+                "column": 29
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 38,
+                    "column": 21
+                }
+            ],
+            "symbol_name": "IngPrsr.hdr.ipv4",
+            "declaration": {
+                "file": "tna_dkm.p4",
+                "line": 30,
+                "column": 29
+            },
+            "symbol_type": "Parameter_Type_Struct"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 35,
+                    "column": 21
+                }
+            ],
+            "symbol_name": "IngPrsr.ig_intr_md",
+            "declaration": {
+                "file": "tna_dkm.p4",
+                "line": 32,
+                "column": 49
+            },
+            "symbol_type": "Parameter_Type_Header"
+        },
+        {
+            "references": [
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 35,
+                    "column": 9
+                },
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 36,
+                    "column": 9
+                },
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 37,
+                    "column": 9
+                },
+                {
+                    "file": "tna_dkm.p4",
+                    "line": 38,
+                    "column": 9
+                }
+            ],
+            "symbol_name": "IngPrsr.pkt",
+            "declaration": {
+                "file": "tna_dkm.p4",
+                "line": 29,
+                "column": 26
+            },
+            "symbol_type": "Parameter_Type_Extern"
+        }
+    ],
+    "source_root": "/workspaces/bf-p4c2/p4-tests/internal/p4-programs/p4_16_programs/tna_dkm"
+} 

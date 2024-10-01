@@ -1,0 +1,87 @@
+add learn_1.learn_match 2 learn_result:0b000000000000000* do_learn_match()
+add learn_1.learn_match 0 learn_result:0x**** do_retire_cid()
+add learn_2.learn_match 2 learn_result:0b000000000000000* do_learn_match()
+add learn_2.learn_match 0 learn_result:0x**** do_retire_cid()
+add learn_3.learn_match 2 learn_result:0b000000000000000* do_learn_match()
+add learn_3.learn_match 0 learn_result:0x**** do_retire_cid()
+
+#prime the fid fifo with some (16) fids.
+$(for fid in $(seq 10 25); do printf "packet 4 %012x %012x ffff %012x;" $fid 0 0; done)
+
+expect 4  # packets come out port 3
+
+# most of the ethernet + the ipv4 header.  We leave off the first 2 bytes so we can make them
+# different for every packet (easier to track where a packet came from if it comes out somewhere
+# unexpected.  Also matches packet #s in verbose model trace)
+#        | ethernet header            | | IPv4 header                                  |
+#        dstAddr      srcAddr      type VL   len  id       ttl    csum                 |
+setenv FIXED aaaaaaaa bbbbbbbbbbbb 0800 4500 002c 0000 0065 40 11 6c55 01020304 0a000002
+
+
+#                    | UDP header      | | payload ...
+#       pkt #        |sp   dp  len     | |
+packet 2 0011 $FIXED 0064 0065 0010 0000 000102030405060708090a0b0c0d0e0f
+packet 2 0012 $FIXED 0064 0065 0010 0000 000102030405060708090a0b0c0d0e0f
+packet 2 0013 $FIXED 0064 0065 0010 0000 000102030405060708090a0b0c0d0e0f
+wait
+check_register flow_counter(10) lo = 3
+check_register output_fifo(0) lo = 0x640065
+check_register output_fifo(0) hi = 2
+
+packet 2 0014 $FIXED 0064 0066 0010 0000 000102030405060708090a0b0c0d0e0f
+packet 2 0015 $FIXED 0064 0066 0010 0000 000102030405060708090a0b0c0d0e0f
+wait
+check_register flow_counter(11) lo = 2
+check_register output_fifo(1) lo = 0x640066
+check_register output_fifo(1) hi = 3
+
+packet 2 0016 $FIXED 0064 0065 0010 0000 000102030405060708090a0b0c0d0e0f
+wait
+check_register flow_counter(10) lo = 4
+
+packet 2 0017 $FIXED 0064 0067 0010 0000 000102030405060708090a0b0c0d0e0f
+packet 2 0018 $FIXED 0064 0067 0010 0000 000102030405060708090a0b0c0d0e0f
+packet 2 0019 $FIXED 0064 0067 0010 0000 000102030405060708090a0b0c0d0e0f
+wait
+check_register flow_counter(12) lo = 3
+check_register output_fifo(2) lo = 0x640067
+check_register output_fifo(2) hi = 4
+
+packet 2 001a $FIXED 0064 0068 0010 0000 000102030405060708090a0b0c0d0e0f
+packet 2 001b $FIXED 0064 0068 0010 0000 000102030405060708090a0b0c0d0e0f
+wait
+check_register flow_counter(13) lo = 2
+check_register output_fifo(3) lo = 0x640068
+check_register output_fifo(3) hi = 5
+
+packet 2 001c $FIXED 0064 0069 0010 0000 000102030405060708090a0b0c0d0e0f
+packet 2 001d $FIXED 0064 0069 0010 0000 000102030405060708090a0b0c0d0e0f
+packet 2 001e $FIXED 0064 0069 0010 0000 000102030405060708090a0b0c0d0e0f
+wait
+check_register flow_counter(14) lo = 3
+check_register output_fifo(4) lo = 0x640069
+check_register output_fifo(4) hi = 6
+
+packet 2 001f $FIXED 0064 006a 0010 0000 000102030405060708090a0b0c0d0e0f
+packet 2 0020 $FIXED 0064 006a 0010 0000 000102030405060708090a0b0c0d0e0f
+wait
+check_register flow_counter(15) lo = 2
+check_register output_fifo(5) lo = 0x64006a
+check_register output_fifo(5) hi = 7
+
+packet 2 0021 $FIXED 0064 0065 0010 0000 000102030405060708090a0b0c0d0e0f
+wait
+check_register flow_counter(10) lo = 5
+
+add cuckoo_match src_addr:0x01020304 dst_addr:0x0a000002 protocol:0x11 src_port:0x0064 dst_port:0x0065 match_flow(fid:10)
+
+packet 2 0022 $FIXED 0064 0065 0010 0000 000102030405060708090a0b0c0d0e0f
+wait
+check_register flow_counter(10) lo = 6
+
+packet 2 0023 $FIXED 0064 006b 0010 0000 000102030405060708090a0b0c0d0e0f
+wait
+check_register flow_counter(16) lo = 1
+check_register output_fifo(6) lo = 0x64006b
+check_register output_fifo(6) hi = 2
+

@@ -1,0 +1,16 @@
+add t1 data.m:0x01 a1(param:0xdecaff)
+add t1 data.m:0x02 a2()
+
+add t2 data.k:0x01 a3()
+
+expect 2 01 01 decaff decaff
+packet 0 01 01 c0ffee c0ffee
+
+expect 2 01 00 decaff c0ffee
+packet 0 01 00 c0ffee c0ffee
+
+expect 2 02 01 3f0011 3f0011
+packet 0 02 01 c0ffee c0ffee
+
+expect 2 00 00 c0ffee c0ffee
+packet 0 00 00 c0ffee c0ffee

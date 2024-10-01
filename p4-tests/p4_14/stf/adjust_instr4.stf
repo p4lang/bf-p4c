@@ -1,0 +1,7 @@
+add test1 data.f1:0x01010101 set_stuff(param1:0x1, param2:0x2, param3:0x01010101, port:0x2)
+add test1 data.f1:0x02020202 set_stuff(param1:0x4, param2:0x3, param3:0x02020202, port:0x2)
+
+expect 2 01010101 12 01010101
+packet 0 01010101 75 32252343
+expect 2 02020202 43 02020202
+packet 0 02020202 12 3452363a

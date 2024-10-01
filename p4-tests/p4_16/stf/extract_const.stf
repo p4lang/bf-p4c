@@ -1,0 +1,8 @@
+add t hdr.h2.f:42 forward()
+add t hdr.h2.f:0xdead forward()
+
+expect 10 00 002a deadbeef
+packet 0  00 deadbeef
+
+expect 10 01 dead beef
+packet 0  01 dead beef

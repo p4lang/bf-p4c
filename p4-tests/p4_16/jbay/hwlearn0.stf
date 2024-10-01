@@ -1,0 +1,48 @@
+
+# setup the translation of predicate to learning action
+add process_dleft_result 16 learn:0b1*************** old_flow()
+add process_dleft_result 15 learn:0b**1************* old_flow()
+add process_dleft_result 14 learn:0b****1*********** old_flow()
+add process_dleft_result 13 learn:0b******1********* old_flow()
+add process_dleft_result 12 learn:0b********1******* old_flow()
+add process_dleft_result 11 learn:0b**********1***** old_flow()
+add process_dleft_result 10 learn:0b************1*** old_flow()
+add process_dleft_result  9 learn:0b**************1* old_flow()
+add process_dleft_result  8 learn:0b*1************** old_flow()
+add process_dleft_result  7 learn:0b*****1********** old_flow()
+add process_dleft_result  6 learn:0b*********1****** old_flow()
+add process_dleft_result  5 learn:0b*************1** old_flow()
+add process_dleft_result  4 learn:0b***1************ new_flow()
+add process_dleft_result  3 learn:0b***********1**** new_flow()
+add process_dleft_result  2 learn:0b*******1******** new_flow()
+add process_dleft_result  1 learn:0b***************1 failed_overflow()
+
+#prime the fid fifo with some fids.
+packet 4 00000000000a 000000000000 ffff 000000000000
+packet 4 00000000000b 000000000000 ffff 000000000000
+packet 4 00000000000c 000000000000 ffff 000000000000
+packet 4 00000000000d 000000000000 ffff 000000000000
+
+expect 4  # packets come out port 3
+
+#        | ethernet header            | | IPv4 header                                  | | UDP header      | | payload ...
+#        dstAddr      srcAddr      type VL   len  id       ttl    csum                 |  sp   dp  len     | |
+packet 2 aaaaaaaaaaaa bbbbbbbbbbbb 0800 4500 002c 0000 0065 40 11 6c55 01020304 0a000002 0064 0065 0010 0000 000102030405060708090a0b0c0d0e0f
+wait
+check_register flow_counter(10) lo = 1
+packet 2 aaaaaaaaaaaa bbbbbbbbbbbb 0800 4500 002c 0000 0065 40 11 6c55 01020304 0a000002 0064 0065 0010 0000 000102030405060708090a0b0c0d0e0f
+wait
+check_register flow_counter(10) lo = 2
+packet 2 aaaaaaaaaaaa bbbbbbbbbbbb 0800 4500 002c 0000 0065 40 11 6c55 01020304 0a000002 0064 0065 0010 0000 000102030405060708090a0b0c0d0e0f
+wait
+check_register flow_counter(10) lo = 3
+
+packet 2 aaaaaaaaaaaa bbbbbbbbbbbb 0800 4500 002c 0000 0065 40 11 6c55 02030401 0a000002 0064 0065 0010 0000 000102030405060708090a0b0c0d0e0f
+wait
+check_register flow_counter(11) lo = 1
+packet 2 aaaaaaaaaaaa bbbbbbbbbbbb 0800 4500 002c 0000 0065 40 11 6c55 02030401 0a000002 0064 0065 0010 0000 000102030405060708090a0b0c0d0e0f
+wait
+check_register flow_counter(11) lo = 2
+packet 2 aaaaaaaaaaaa bbbbbbbbbbbb 0800 4500 002c 0000 0065 40 11 6c55 02030401 0a000002 0064 0065 0010 0000 000102030405060708090a0b0c0d0e0f
+wait
+check_register flow_counter(11) lo = 3

@@ -1,0 +1,6 @@
+add test1 data.f1:0x01010101 set_data_f1(port:2)
+add test2 load3.h1:0x0505 remove_load1()
+
+expect 2 80 01010101 0202babe 413d 5678 56781234 0505 bbbb
+packet 0 80 01010101 0202babe ffff 0303 04040404 0505 ffff
+

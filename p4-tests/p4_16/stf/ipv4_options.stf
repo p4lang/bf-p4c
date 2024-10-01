@@ -1,0 +1,15 @@
+
+# add test1 0 data.f1:0x****0101 setb1(val:0x7f, port:2)
+# add test1 503 data.f1:0x****0202 setb1(val:7, port:4)
+
+# check a packet with options going to CPU
+expect 64 4 7 ** **** **** ****  22 ** **** ******** ********
+packet  0 4 7 00 0000 0000 0000  22 00 0000 00000000 00000000
+
+# check a packet without options going to port 1
+expect 2 4 5 ** **** **** ****  22 ** **** ******** ********
+packet 0 4 5 00 0000 0000 0000  22 00 0000 00000000 00000000
+
+# check an invalid packet that throws a parser error
+# expect ?? 4 7 ** **** **** ****  22 ** **** ******** ********
+# packet 0 4 3b ** **** **** ****  22 ** **** ******** ********

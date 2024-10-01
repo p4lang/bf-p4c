@@ -1,0 +1,36 @@
+add set_port 100 read_values.f1:0x******** port_set(port:2)
+
+add test1 read_values.f1:0x01010101 bm_set1(param1:0x1, param2:0x2, param3:0x3)
+add test1 read_values.f1:0x02020202 bm_set2(param1:0x3, param2:0x2, param3:0x1)
+add test1 read_values.f1:0x03030303 bm_set3(param1:0x4, param2:0x5, param3:0x6)
+add test1 read_values.f1:0x04040404 bm_set4(param1:0x6, param2:0x5, param3:0x4)
+add test1 read_values.f1:0x05050505 bm_set5(param1:0x7, param2:0x8, param3:0x9)
+add test1 read_values.f1:0x06060606 bm_set6(param1:0x9, param2:0x8, param3:0x7)
+add test1 read_values.f1:0x07070707 bm_set7(param1:0xa, param2:0xb, param3:0xc)
+
+expect 2 01010101 1c93 1ddd 1ddd
+packet 0 01010101 dddd dddd dddd
+
+expect 2 02020202 3c91 dcdd ddd3
+packet 0 02020202 dddd dddd dddd
+
+# BMV2 ERROR:
+# expect 2 03030303 4d56 4dd6 dddd
+
+expect 2 03030303 4d56 5dd6 dddd
+packet 0 03030303 dddd dddd dddd
+
+expect 2 04040404 6d54 6d54 dddd
+packet 0 04040404 dddd dddd dddd
+
+expect 2 05050505 7e19 9e17 dddd
+packet 0 05050505 dddd dddd dddd
+
+expect 2 06060606 9e17 9e17 7ddd
+packet 0 06060606 dddd dddd dddd
+
+expect 2 07070707 aedc aedc addc
+packet 0 07070707 dddd dddd dddd
+
+
+
