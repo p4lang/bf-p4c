@@ -4,8 +4,8 @@
 #include "bf-p4c/parde/clot/pragma/do_not_use_clot.h"
 #include "bf-p4c/phv/pragma/phv_pragmas.h"
 
-const std::vector<cstring>*
-CollectGlobalPragma::g_global_pragma_names = new std::vector<cstring>{
+const std::vector<std::string>*
+CollectGlobalPragma::g_global_pragma_names = new std::vector<std::string>{
     PragmaAlias::name,
     PragmaAtomic::name,
     PragmaAutoInitMetadata::name,
@@ -33,7 +33,7 @@ CollectGlobalPragma::g_global_pragma_names = new std::vector<cstring>{
 };
 
 cstring CollectGlobalPragma::getStructFieldName(const IR::StructField* s) const {
-    const auto nameAnnotation = s->annotations->getSingle("name");
+    const auto nameAnnotation = s->annotations->getSingle("name"_cs);
     if (!nameAnnotation || nameAnnotation->expr.size() != 1)
         return cstring();
     auto structName = nameAnnotation->expr.at(0)->to<IR::StringLiteral>();
@@ -76,7 +76,7 @@ bool CollectGlobalPragma::preorder(const IR::StructField* s) {
 
         if (!PHV::Pragmas::checkNumberArgs(ann, required_arguments,
                 min_required_arguments, true, ann->name.name,
-                "`gress'")) {
+                "`gress'"_cs)) {
             continue;
         }
 

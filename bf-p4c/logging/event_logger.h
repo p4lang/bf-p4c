@@ -194,7 +194,7 @@ class EventLogger {
     }
 };
 
-#define TAB1 "  "
+#define TAB1 "  "_cs
 #define TAB2 TAB1 TAB1
 #define TAB3 TAB1 TAB2
 #define TAB4 TAB2 TAB2

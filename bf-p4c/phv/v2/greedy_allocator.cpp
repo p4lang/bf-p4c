@@ -564,7 +564,7 @@ bool GreedyAllocator::allocate(std::list<SuperCluster *> clusters_input,
         score_maker->record_commit(tx, sc);
         history << "Allocating deparser-zero cluster "<< sc;
         history << "Allocation Decisions: \n";
-        history << AllocResult::pretty_print_tx(tx, "") << "\n";
+        history << AllocResult::pretty_print_tx(tx, cstring::empty) << "\n";
         history << "\n";
         alloc.commit(tx);
     }
@@ -584,7 +584,7 @@ bool GreedyAllocator::allocate(std::list<SuperCluster *> clusters_input,
         } else {
             history << "Allocating strided cluster " << sc;
             history << "Allocation Decisions: \n";
-            history << rst.tx_str("") << "\n";
+            history << rst.tx_str(cstring::empty) << "\n";
             history << "\n";
             score_maker->record_commit(*rst.tx, sc);
             alloc.commit(*rst.tx);
@@ -673,13 +673,13 @@ bool GreedyAllocator::allocate(std::list<SuperCluster *> clusters_input,
     alloc_metrics.stop_clock();
 
     // log allocation history.
-    auto logfile = greedy_allocator_file_log(pipe_id_i, "phv_greedy_allocation_history_", 1);
+    auto logfile = greedy_allocator_file_log(pipe_id_i, "phv_greedy_allocation_history_"_cs, 1);
     LOG1("Greedy Allocation history");
     LOG1(history.str());
     Logging::FileLog::close(logfile);
 
     // log allocation summary
-    auto summary_logfile = greedy_allocator_file_log(pipe_id_i, "phv_allocation_summary_", 1);
+    auto summary_logfile = greedy_allocator_file_log(pipe_id_i, "phv_allocation_summary_"_cs, 1);
     LOG1(alloc);
     Logging::FileLog::close(summary_logfile);
 

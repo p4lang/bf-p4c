@@ -132,7 +132,7 @@ class ComputeMergeableState : public ParserInspector {
 
         int shifted = 0;
         const State* tail = states.front();
-        cstring name = "";
+        cstring name = ""_cs;
 
         IR::Vector<IR::BFN::ParserPrimitive>    extractions;
         IR::Vector<IR::BFN::SaveToRegister>     saves;

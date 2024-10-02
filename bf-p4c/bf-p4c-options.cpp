@@ -74,16 +74,16 @@ const char * ANSI_reset_maybe(FILE* output_channel) {
 
 
 BFN_Options::BFN_Options() {
-    target = "tofino";
-    arch   = "v1model";
+    target = "tofino"_cs;
+    arch   = "v1model"_cs;
 
-    compilerVersion = BF_P4C_VERSION;
+    compilerVersion = cstring(BF_P4C_VERSION);
 
     // Initialize in case process is never called. This can occur in gtests.
-    outputDir = ".";
+    outputDir = "."_cs;
 
     registerOption("-o", "dir",
-                   [this](const char* arg) { outputDir = arg; return true; },
+                   [this](const char* arg) { outputDir = cstring(arg); return true; },
                    "Write output to outdir.\n");
     registerOption("--allowUnimplemented", nullptr,
         [this](const char *) { allowUnimplemented = true; return true; },
@@ -255,7 +255,7 @@ BFN_Options::BFN_Options() {
         [this](const char *) { disable_split_attached = true; return true; },
         "Do not split meters or registers across stages");
     registerOption("--bf-rt-schema", "file",
-        [this](const char *arg) { bfRtSchema = arg; return true; },
+        [this](const char *arg) { bfRtSchema = cstring(arg); return true; },
         "Generate and write BF-RT JSON schema to the specified file");
     registerOption("--backward-compatible", nullptr,
         [this](const char *) {
@@ -405,7 +405,7 @@ BFN_Options::BFN_Options() {
             excludeBackendPasses = true;
             auto copy = strdup(arg);
             while (auto pass = strsep(&copy, ","))
-                passesToExcludeBackend.push_back(pass);
+                passesToExcludeBackend.push_back(cstring(pass));
             return true;
         },
         "Exclude passes from backend passes whose name is equal\n"
@@ -492,43 +492,43 @@ BFN_Options::BFN_Options() {
 using Target = std::pair<cstring, cstring>;
 std::vector<const char*>* BFN_Options::process(int argc, char* const argv[]) {
     static const ordered_set<Target> supportedTargets = {
-        {"tofino", "v1model"},
-        {"tofino", "tna"},
-        {"tofino", "psa"},
+        {"tofino"_cs, "v1model"_cs},
+        {"tofino"_cs, "tna"_cs},
+        {"tofino"_cs, "psa"_cs},
   #if BAREFOOT_INTERNAL
         // allow p4-14 support on Tofino2 only for internal builds
-        {"tofino2", "v1model"},
-        {"tofino2h", "v1model"},
-        {"tofino2m", "v1model"},
-        {"tofino2u", "v1model"},
-        {"tofino2a0", "v1model"},
+        {"tofino2"_cs, "v1model"_cs},
+        {"tofino2h"_cs, "v1model"_cs},
+        {"tofino2m"_cs, "v1model"_cs},
+        {"tofino2u"_cs, "v1model"_cs},
+        {"tofino2a0"_cs, "v1model"_cs},
   #endif  /* BAREFOOT_INTERNAL */
-        {"tofino2", "tna"},
-        {"tofino2", "t2na"},
+        {"tofino2"_cs, "tna"_cs},
+        {"tofino2"_cs, "t2na"_cs},
   #if BAREFOOT_INTERNAL
-        {"tofino2h", "tna"},
-        {"tofino2h", "t2na"},
+        {"tofino2h"_cs, "tna"_cs},
+        {"tofino2h"_cs, "t2na"_cs},
   #endif  /* BAREFOOT_INTERNAL */
-        {"tofino2m", "tna"},
-        {"tofino2m", "t2na"},
-        {"tofino2u", "tna"},
-        {"tofino2u", "t2na"},
-        {"tofino2a0", "tna"},
-        {"tofino2a0", "t2na"},
+        {"tofino2m"_cs, "tna"_cs},
+        {"tofino2m"_cs, "t2na"_cs},
+        {"tofino2u"_cs, "tna"_cs},
+        {"tofino2u"_cs, "t2na"_cs},
+        {"tofino2a0"_cs, "tna"_cs},
+        {"tofino2a0"_cs, "t2na"_cs},
   #if HAVE_CLOUDBREAK
-        {"tofino3", "v1model"},
-        {"tofino3", "tna"},
-        {"tofino3", "t2na"},
-        {"tofino3", "t3na"},
+        {"tofino3"_cs, "v1model"_cs},
+        {"tofino3"_cs, "tna"_cs},
+        {"tofino3"_cs, "t2na"_cs},
+        {"tofino3"_cs, "t3na"_cs},
   #endif /* HAVE_CLOUDBREAK */
   #if HAVE_FLATROCK
-        {"tofino5", "v1model"},
+        {"tofino5"_cs, "v1model"_cs},
   #if BAREFOOT_INTERNAL
-        {"tofino5", "tna"},
-        {"tofino5", "t2na"},
-        {"tofino5", "t3na"},
+        {"tofino5"_cs, "tna"_cs},
+        {"tofino5"_cs, "t2na"_cs},
+        {"tofino5"_cs, "t3na"_cs},
   #endif /* BAREFOOT_INTERNAL */
-        {"tofino5", "t5na"},
+        {"tofino5"_cs, "t5na"_cs},
   #endif /* HAVE_FLATROCK */
     };
 
@@ -537,17 +537,17 @@ std::vector<const char*>* BFN_Options::process(int argc, char* const argv[]) {
     // in driver/p4c.tofino2.cfg
     // !!!!!!!!!!!!
     static const std::map<cstring, unsigned int> supportedT2Variants = {
-        {"tofino2",  1},
-        {"tofino2u", 1},
-        {"tofino2m", 2},
-        {"tofino2h", 3},
-        {"tofino2a0", 4}
+        {"tofino2"_cs,  1},
+        {"tofino2u"_cs, 1},
+        {"tofino2m"_cs, 2},
+        {"tofino2h"_cs, 3},
+        {"tofino2a0"_cs, 4}
     };
 
     // need this before processing options in the base class for gtest
     // which is corrupting outputDir data member (on Linux!). Why?
     // Don't know, and I'm at the end of my patience with it ...
-    if (!processed) outputDir = ".";
+    if (!processed) outputDir = "."_cs;
 
     // sde installs p4include directory to $SDE/install/share/p4c/p4include
     // and installs p4c to $SDE/install/bin/
@@ -555,10 +555,10 @@ std::vector<const char*>* BFN_Options::process(int argc, char* const argv[]) {
     // Therefore, we need to search ../share/p4c/p4include from the
     // directory that p4c resides in.
     searchForIncludePath(p4includePath,
-            {"../share/p4c/p4include"}, exename(argv[0]));
+            {"../share/p4c/p4include"_cs}, exename(argv[0]));
 
     searchForIncludePath(p4_14includePath,
-            {"../share/p4c/p4_14include"}, exename(argv[0]));
+            {"../share/p4c/p4_14include"_cs}, exename(argv[0]));
 
     auto remainingOptions = CompilerOptions::process(argc, argv);
 
@@ -665,7 +665,7 @@ cstring BFNContext::getOutputDirectory(const cstring &suffix, int pipe_id) {
             int rc = mkdir(relDir.c_str(), 0755);
             if (rc != 0 && errno != EEXIST) {
                 ::error("Failed to create directory: %1%", relDir);
-                return "";
+                return ""_cs;
             }
         }
         free(start);
@@ -673,7 +673,7 @@ cstring BFNContext::getOutputDirectory(const cstring &suffix, int pipe_id) {
         int rc = mkdir(dir.c_str(), 0755);
         if (rc != 0 && errno != EEXIST) {
             ::error("Failed to create directory: %1%", dir);
-            return "";
+            return ""_cs;
         }
     }
     return dir;
@@ -686,7 +686,7 @@ void BFNContext::discoverPipes(const IR::P4Program *program, const IR::ToplevelB
         if (!pkg.second) continue;
         if (!pkg.second->is<IR::PackageBlock>()) continue;
         auto getPipeName = [program, pipe_id]() -> cstring {
-            auto mainDecls = program->getDeclsByName("main")->toVector();
+            auto mainDecls = program->getDeclsByName("main"_cs)->toVector();
             if (mainDecls.size() == 0) return nullptr;  // no main
             auto decl = mainDecls.at(0);
             auto expr = decl->to<IR::Declaration_Instance>()->arguments->at(pipe_id)->expression;
@@ -710,7 +710,7 @@ BfErrorReporter& BFNContext::errorReporter() {
 
 bool BFNContext::isRecognizedDiagnostic(cstring diagnostic) {
     static const std::unordered_set<cstring> recognizedDiagnostics = {
-        "phase0_annotation",
+        "phase0_annotation"_cs,
     };
 
     if (recognizedDiagnostics.count(diagnostic)) return true;
@@ -739,20 +739,20 @@ std::optional<P4::IOptionPragmaParser::CommandLineOptions>
 BFNOptionPragmaParser::parseCompilerOption(const IR::Annotation* annotation) {
     // See `supported_cmd_line_pragmas` in glass/p4c_tofino/target/tofino/compile.py:205
     static const std::map<cstring, bool> cmdLinePragmas = {
-        { "--no-dead-code-elimination",  false },
-        { "--force-match-dependency",    false },
-        { "--metadata-overlay",          false },
-        { "--placement",                 true },
-        { "--placement-order",           false },
-        { "--auto-init-metadata",        true },  // brig only
-        { "--decaf",                     true },  // brig only
-        { "--infer-payload-offset",      true },
-        { "--relax-phv-init",            true },
-        { "--excludeBackendPasses",      true },
-        { "--disable-parse-depth-limit", false },
-        { "--disable-parse-min-depth-limit", true },  // brig only
-        { "--disable-parse-max-depth-limit", true },  // brig only
-        { "--num-stages-override", true },  // brig only
+        { "--no-dead-code-elimination"_cs,  false },
+        { "--force-match-dependency"_cs,    false },
+        { "--metadata-overlay"_cs,          false },
+        { "--placement"_cs,                 true },
+        { "--placement-order"_cs,           false },
+        { "--auto-init-metadata"_cs,        true },  // brig only
+        { "--decaf"_cs,                     true },  // brig only
+        { "--infer-payload-offset"_cs,      true },
+        { "--relax-phv-init"_cs,            true },
+        { "--excludeBackendPasses"_cs,      true },
+        { "--disable-parse-depth-limit"_cs, false },
+        { "--disable-parse-min-depth-limit"_cs, true },  // brig only
+        { "--disable-parse-max-depth-limit"_cs, true },  // brig only
+        { "--num-stages-override"_cs, true },  // brig only
     };
 
     std::optional<CommandLineOptions> newOptions;
@@ -774,7 +774,7 @@ BFNOptionPragmaParser::parseCompilerOption(const IR::Annotation* annotation) {
     bool first = true;
     for (auto* arg : *args) {
         // Try to convert the parsed expression to a valid option string
-        cstring optionString = "";
+        cstring optionString = ""_cs;
         if (auto* argString = arg->to<IR::StringLiteral>()) {
             optionString = argString->value;
         } else {

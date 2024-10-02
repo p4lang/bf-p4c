@@ -31,7 +31,7 @@ std::vector<const Group*> GroupConstraintExtractor::getGroups(const cstring &nam
 
 /* MauGroupExtractor */
 bool MauGroupExtractor::superClusterContainsOnlySingleField(const PHV::SuperCluster *sc) const {
-    cstring fieldName = "";
+    cstring fieldName = ""_cs;
     return sc->all_of_fieldslices([&fieldName] (const PHV::FieldSlice &slice) {
         if (fieldName == "") fieldName = slice.field()->name;
         return fieldName == slice.field()->name;

@@ -421,7 +421,7 @@ class CollectWeakFields : public MauInspector, BFN::ControlFlowVisitor {
                          const IR::Constant* const_src,
                          const IR::MAU::Instruction* instr);
 
-    void add_strong_field(const PHV::Field* f, cstring reason = cstring());
+    void add_strong_field(const PHV::Field* f, std::string reason = "");
 
     static bool other_elim_reason(const PHV::Field* f) {
         return !f->deparsed() ||  // we need the weak field's value to reach deparser
@@ -790,7 +790,7 @@ class DeparserCopyOpt : public Logging::PassManager {
 
     DeparserCopyOpt(const PhvInfo &phv, PhvUse &uses,
                     const FieldDefUse& defuse, const DependencyGraph& dg) :
-            Logging::PassManager("decaf", Logging::Mode::AUTO),
+            Logging::PassManager("decaf"_cs, Logging::Mode::AUTO),
             collect_hdr_valid_bits(phv),
             collect_weak_fields(phv, uses, defuse, dg),
             values_at_deparser(collect_weak_fields),

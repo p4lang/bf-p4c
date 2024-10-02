@@ -87,7 +87,7 @@ class Alias : public Logging::PassManager {
 
  public:
     explicit Alias(PhvInfo& phv, const PragmaAlias &pa) :
-        Logging::PassManager("pragmas", Logging::Mode::AUTO), pragmaAlias(pa) {
+        Logging::PassManager("pragmas"_cs, Logging::Mode::AUTO), pragmaAlias(pa) {
         addPasses({
             new FindExpressionsForFields(phv, fieldExpressions),
             new AddValidityBitSets(phv, pragmaAlias),

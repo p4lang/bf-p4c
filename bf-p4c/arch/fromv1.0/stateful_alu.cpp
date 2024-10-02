@@ -9,7 +9,7 @@
 #include "programStructure.h"
 
 P4V1::StatefulAluConverter::StatefulAluConverter() {
-    addConverter("stateful_alu", this);
+    addConverter("stateful_alu"_cs, this);
 }
 
 const IR::Type_Extern *P4V1::StatefulAluConverter::convertExternType(
@@ -20,7 +20,7 @@ const IR::Type_Extern *P4V1::StatefulAluConverter::convertExternType(
             auto &options = BackendOptions();
             std::stringstream versionArg;
             versionArg << "-DV1MODEL_VERSION=" << options.v1ModelVersion;
-            structure->include("tofino/stateful_alu.p4", versionArg.str());
+            structure->include("tofino/stateful_alu.p4"_cs, versionArg.str());
         }
     }
     return nullptr;
@@ -374,8 +374,8 @@ class CreateSaluApplyFunction : public Inspector {
             return self.makeRegFieldMember(
                     new IR::PathExpression(attr->srcInfo, self.rtype, var), idx); }
         const IR::Expression *postorder(IR::Primitive *prim) override {
-            if (prim->name == "salu_min") prim->name = "min";
-            if (prim->name == "salu_max") prim->name = "max";
+            if (prim->name == "salu_min") prim->name = "min"_cs;
+            if (prim->name == "salu_max") prim->name = "max"_cs;
             return prim; }
 
      public:
@@ -680,7 +680,7 @@ class CreateSaluApplyFunction : public Inspector {
           saturating(saturating),
           rewrite({ new RewriteExpr(*this), new TypeCheck }) {
         body = new IR::BlockStatement({
-            new IR::Declaration_Variable("in_value", rtype),
+            new IR::Declaration_Variable("in_value"_cs, rtype),
             new IR::AssignmentStatement(new IR::PathExpression("in_value"),
                                         new IR::PathExpression("value")) });
         if (auto st = rtype->to<IR::Type_StructLike>())
@@ -700,7 +700,7 @@ class CreateSaluApplyFunction : public Inspector {
         // Emit body and prepare the apply method
         emit_salu_body();
         apply = new IR::Function("apply",
-                new IR::Type_Method(IR::Type_Void::get(), apply_params, "apply"), body);
+                new IR::Type_Method(IR::Type_Void::get(), apply_params, "apply"_cs), body);
     }
     static const IR::Function *create(IR::Annotations *annots, P4V1::ProgramStructure *structure,
                 const IR::Declaration_Instance *ext, const IR::Type *rtype,
@@ -832,7 +832,7 @@ P4V1::StatefulAluConverter::reg_info P4V1::StatefulAluConverter::getRegInfo(
         P4V1::ProgramStructure *structure, const IR::Declaration_Instance *ext,
         IR::Vector<IR::Node> *scope) {
     reg_info rv;
-    if (auto rp = ext->properties.get<IR::Property>("reg")) {
+    if (auto rp = ext->properties.get<IR::Property>("reg"_cs)) {
         auto rpv = rp->value->to<IR::ExpressionValue>();
         auto gref = rpv ? rpv->expression->to<IR::GlobalRef>() : nullptr;
         if ((rv.reg = gref ? gref->obj->to<IR::Register>() : nullptr)) {
@@ -865,7 +865,7 @@ P4V1::StatefulAluConverter::reg_info P4V1::StatefulAluConverter::getRegInfo(
                 if (width > 1 && width < 8) width = 8;
                 if (width > 32 || usesRegHi(ext)) {
                     rv.utype = IR::Type::Bits::get(width/2, rv.reg->signed_);
-                    cstring rtype_name = structure->makeUniqueName(ext->name + "_layout");
+                    cstring rtype_name = structure->makeUniqueName(ext->name + "_layout"_cs);
                     rv.rtype = new IR::Type_Struct(IR::ID(rtype_name), {
                         new IR::StructField("lo", rv.utype),
                         new IR::StructField("hi", rv.utype) });
@@ -891,7 +891,7 @@ P4V1::StatefulAluConverter::reg_info P4V1::StatefulAluConverter::getRegInfo(
 
 const IR::ActionProfile *P4V1::StatefulAluConverter::getSelectorProfile(
         P4V1::ProgramStructure *structure, const IR::Declaration_Instance *ext) {
-    if (auto sel_bind = ext->properties.get<IR::Property>("selector_binding")) {
+    if (auto sel_bind = ext->properties.get<IR::Property>("selector_binding"_cs)) {
         auto ev = sel_bind->value->to<IR::ExpressionValue>();
         auto gref = ev ? ev->expression->to<IR::GlobalRef>() : nullptr;
         auto tbl = gref ? gref->obj->to<IR::V1Table>() : nullptr;
@@ -915,11 +915,12 @@ const IR::Declaration_Instance *P4V1::StatefulAluConverter::convertExternInstanc
               "Extern %s is not stateful_alu type, but %s", ext, ext->type);
 
     auto *annots = new IR::Annotations();
-    if (auto prop = ext->properties.get<IR::Property>("reduction_or_group")) {
+    if (auto prop = ext->properties.get<IR::Property>("reduction_or_group"_cs)) {
         bool understood = false;
         if (auto ev = prop->value->to<IR::ExpressionValue>()) {
             if (auto pe = ev->expression->to<IR::PathExpression>()) {
-                annots->addAnnotation("reduction_or_group", new IR::StringLiteral(pe->path->name));
+                annots->addAnnotation("reduction_or_group"_cs,
+                                      new IR::StringLiteral(pe->path->name));
                 understood = true;
             }
         }
@@ -941,7 +942,7 @@ const IR::Declaration_Instance *P4V1::StatefulAluConverter::convertExternInstanc
         annots->addAnnotation(IR::ID("name"), externalName);
         // 1-bit selector alu may not need a 'fake' reg property
         // see sful_sel1.p4
-        if (ext->properties.get<IR::Property>("reg")) {
+        if (ext->properties.get<IR::Property>("reg"_cs)) {
             auto info = getRegInfo(structure, ext, structure->declarations);
             if (info.utype) {
                 auto* regName = new IR::StringLiteral(IR::ID(info.reg->name));
@@ -1016,7 +1017,7 @@ const IR::Statement *P4V1::StatefulAluConverter::convertExternCall(
     const IR::Statement *rv = nullptr;
     IR::BlockStatement *block = nullptr;
     auto extref = new IR::PathExpression(structure->externs.get(ext));
-    auto method = new IR::Member(prim->srcInfo, extref, "execute");
+    auto method = new IR::Member(prim->srcInfo, extref, "execute"_cs);
     auto args = new IR::Vector<IR::Argument>();
     if (prim->name == "execute_stateful_alu") {
         BUG_CHECK(prim->operands.size() <= 2, "Wrong number of operands to %s", prim->name);
@@ -1037,7 +1038,7 @@ const IR::Statement *P4V1::StatefulAluConverter::convertExternCall(
             error("%s: Expected a field_list_calculation", prim->operands.at(1));
             return nullptr; }
         block = new IR::BlockStatement;
-        cstring temp = structure->makeUniqueName("temp");
+        cstring temp = structure->makeUniqueName("temp"_cs);
         block = P4V1::generate_hash_block_statement(structure, prim, temp, conv, 2);
         args->push_back(new IR::Argument(new IR::Cast(IR::Type_Bits::get(reg_index_width),
                         new IR::PathExpression(new IR::Path(temp)))));
@@ -1048,10 +1049,10 @@ const IR::Statement *P4V1::StatefulAluConverter::convertExternCall(
         BUG("Unknown method %s in stateful_alu", prim->name); }
 
     auto mc = new IR::MethodCallExpression(prim->srcInfo, rtype, method, args);
-    if (auto prop = ext->properties.get<IR::Property>("output_dst")) {
+    if (auto prop = ext->properties.get<IR::Property>("output_dst"_cs)) {
         if (auto ev = prop->value->to<IR::ExpressionValue>()) {
             auto type = ev->expression->type;
-            if (ext->properties.get<IR::Property>("reduction_or_group")) {
+            if (ext->properties.get<IR::Property>("reduction_or_group"_cs)) {
                 const IR::Expression *expr = mc;
                 if (expr->type != type)
                     expr = new IR::Cast(type, expr);

@@ -96,8 +96,8 @@ bool PragmaContainerType::preorder(const IR::BFN::Pipe* pipe) {
         }
 
         if (!PHV::Pragmas::checkNumberArgs(annotation, required_arguments,
-                min_required_arguments, true, PragmaContainerType::name,
-                "`gress', `field', `type'")) {
+                min_required_arguments, true, cstring(PragmaContainerType::name),
+                "`gress', `field', `type'"_cs)) {
             continue;
         }
 

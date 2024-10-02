@@ -14,7 +14,6 @@
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/ir/gress.h"
 #include "lib/cstring.h"
-#include "lib/path.h"
 
 namespace Logging {
 
@@ -52,7 +51,7 @@ class Manifest : public Inspector {
         cstring m_type;
         cstring m_format;
         GraphOutput(const cstring path_in, const gress_t gress_in, const cstring type_in,
-            const cstring format_in = ".dot") :
+            const cstring format_in = ".dot"_cs) :
             m_path(path_in), m_gress(gress_in), m_type(type_in), m_format(format_in) { }
 
         void serialize(Writer&) const;
@@ -122,11 +121,11 @@ class Manifest : public Inspector {
     void addContext(const int pipe, const cstring path) {
         getPipeOutputs(pipe) -> m_context = path;
     }
-    void addResources(const int pipe, const cstring path, const cstring type = "resources") {
+    void addResources(const int pipe, const cstring path, const cstring type = "resources"_cs) {
         getPipeOutputs(pipe) -> m_resources.insert(PathAndType(path, type));
     }
     void addGraph(int pipe, const cstring graphType, const cstring graphName, const gress_t gress,
-                  const cstring extension_including_the_leading_period = ".dot");
+                  const cstring extension_including_the_leading_period = ".dot"_cs);
     void addLog(int pipe, const cstring logType, const cstring logName);
     void addArchitecture(const BFN::ProgramPipelines& pipelines_in) {
         m_pipelines = pipelines_in;

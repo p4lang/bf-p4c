@@ -14,7 +14,7 @@
 
 class DotDumper {
  protected:
-    cstring filename;
+    std::string filename;
 
     // use this to override the default color for nodes and edges
     // each group will be assign an unique color
@@ -29,10 +29,10 @@ class DotDumper {
          "red", "blue", "green", "cyan", "orchid"};
 
  public:
-    explicit DotDumper(cstring filename, bool detail)
+    explicit DotDumper(std::string filename, bool detail)
         : filename(filename), detail(detail) {}
 
-    DotDumper(cstring filename,
+    DotDumper(std::string filename,
               std::vector<assoc::set<void*>>& color_groups,
               bool detail)
         : filename(filename),
@@ -268,7 +268,7 @@ class DotDumper {
             write_to_file(fs);
     }
 
-    std::ofstream* open_file(gress_t gress, int pipe_id, cstring directory = "graphs") {
+    std::ofstream* open_file(gress_t gress, int pipe_id, cstring directory = "graphs"_cs) {
         auto outdir = BFNContext::get().getOutputDirectory(directory, pipe_id);
         if (!outdir)
             return nullptr;
@@ -292,10 +292,10 @@ class DotDumper {
  */
 class DumpParser : public Visitor, public DotDumper {
  public:
-    explicit DumpParser(cstring filename, bool detail = false, bool to_log = false)
+    explicit DumpParser(std::string filename, bool detail = false, bool to_log = false)
         : DotDumper(filename, detail || LOGGING(4)), log(to_log) { }
 
-    DumpParser(cstring filename,
+    DumpParser(std::string filename,
               std::vector<assoc::set<void*>>& color_groups,
               bool detail = false, bool to_log = false)
         : DotDumper(filename, color_groups, detail || LOGGING(4)), log(to_log) { }

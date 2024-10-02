@@ -59,8 +59,8 @@ createFieldDefUseTestCase(const std::string& ingress) {
 
     auto& options = BackendOptions();
     options.langVersion = CompilerOptions::FrontendVersion::P4_16;
-    options.target = "tofino";
-    options.arch = "v1model";
+    options.target = "tofino"_cs;
+    options.arch = "v1model"_cs;
     options.disable_parse_min_depth_limit = true;
 
     return TofinoPipeTestCase::createWithThreadLocalInstances(source);
@@ -93,7 +93,7 @@ TEST_F(FieldDefUseTest, SimpleTest) {
     PhvInfo phv;
     FieldDefUse defuse(phv);
     runMockPasses(test->pipe, phv, defuse);
-    auto field = phv.field("ingress::foo_0");
+    auto field = phv.field("ingress::foo_0"_cs);
     ASSERT_TRUE(field);
     auto uses = defuse.getAllUses(field->id);
     ASSERT_EQ(uses.size(), 1U);
@@ -124,7 +124,7 @@ TEST_F(FieldDefUseTest, SimpleSliceTest) {
     PhvInfo phv;
     FieldDefUse defuse(phv);
     runMockPasses(test->pipe, phv, defuse);
-    auto field = phv.field("ingress::foo_0");
+    auto field = phv.field("ingress::foo_0"_cs);
     ASSERT_TRUE(field);
     auto uses = defuse.getAllUses(field->id);
     ASSERT_EQ(uses.size(), 1U);
@@ -158,7 +158,7 @@ TEST_F(FieldDefUseTest, ComplexSliceTest1) {
     PhvInfo phv;
     FieldDefUse defuse(phv);
     runMockPasses(test->pipe, phv, defuse);
-    auto field = phv.field("ingress::foo_0");
+    auto field = phv.field("ingress::foo_0"_cs);
     ASSERT_TRUE(field);
     auto uses = defuse.getAllUses(field->id);
     ASSERT_EQ(uses.size(), 1U);
@@ -192,7 +192,7 @@ TEST_F(FieldDefUseTest, ComplexSliceTest2) {
     PhvInfo phv;
     FieldDefUse defuse(phv);
     runMockPasses(test->pipe, phv, defuse);
-    auto field = phv.field("ingress::foo_0");
+    auto field = phv.field("ingress::foo_0"_cs);
     ASSERT_TRUE(field);
     auto uses = defuse.getAllUses(field->id);
     ASSERT_EQ(uses.size(), 1U);
@@ -225,7 +225,7 @@ TEST_F(FieldDefUseTest, ComplexSliceTest3) {
     PhvInfo phv;
     FieldDefUse defuse(phv);
     runMockPasses(test->pipe, phv, defuse);
-    auto field = phv.field("ingress::foo_0");
+    auto field = phv.field("ingress::foo_0"_cs);
     ASSERT_TRUE(field);
     auto uses = defuse.getAllUses(field->id);
     ASSERT_EQ(uses.size(), 1U);
@@ -260,7 +260,7 @@ TEST_F(FieldDefUseTest, ComplexSliceTest4) {
     PhvInfo phv;
     FieldDefUse defuse(phv);
     runMockPasses(test->pipe, phv, defuse);
-    auto field = phv.field("ingress::foo_0");
+    auto field = phv.field("ingress::foo_0"_cs);
     ASSERT_TRUE(field);
     auto uses = defuse.getAllUses(field->id);
     ASSERT_EQ(uses.size(), 1U);
@@ -299,7 +299,7 @@ TEST_F(FieldDefUseTest, ComplexSliceTest5) {
     PhvInfo phv;
     FieldDefUse defuse(phv);
     runMockPasses(test->pipe, phv, defuse);
-    auto field = phv.field("ingress::foo_0");
+    auto field = phv.field("ingress::foo_0"_cs);
     ASSERT_TRUE(field);
     auto uses = defuse.getAllUses(field->id);
     ASSERT_EQ(uses.size(), 1U);
@@ -338,7 +338,7 @@ TEST_F(FieldDefUseTest, ComplexSliceTest6) {
     PhvInfo phv;
     FieldDefUse defuse(phv);
     runMockPasses(test->pipe, phv, defuse);
-    auto field = phv.field("ingress::foo_0");
+    auto field = phv.field("ingress::foo_0"_cs);
     ASSERT_TRUE(field);
     auto uses = defuse.getAllUses(field->id);
     ASSERT_EQ(uses.size(), 1U);
@@ -372,7 +372,7 @@ TEST_F(FieldDefUseTest, ComplexUseSlice1) {
     PhvInfo phv;
     FieldDefUse defuse(phv);
     runMockPasses(test->pipe, phv, defuse);
-    auto field = phv.field("ingress::foo_0");
+    auto field = phv.field("ingress::foo_0"_cs);
     ASSERT_TRUE(field);
     auto uses = defuse.getAllUses(field->id);
     ASSERT_EQ(uses.size(), 1U);
@@ -406,7 +406,7 @@ TEST_F(FieldDefUseTest, ComplexUseSlice2) {
     PhvInfo phv;
     FieldDefUse defuse(phv);
     runMockPasses(test->pipe, phv, defuse);
-    auto field = phv.field("ingress::foo_0");
+    auto field = phv.field("ingress::foo_0"_cs);
     ASSERT_TRUE(field);
     auto uses = defuse.getAllUses(field->id);
     ASSERT_EQ(uses.size(), 1U);
@@ -439,7 +439,7 @@ TEST_F(FieldDefUseTest, ComplexUseSlice3) {
     PhvInfo phv;
     FieldDefUse defuse(phv);
     runMockPasses(test->pipe, phv, defuse);
-    auto field = phv.field("ingress::foo_0");
+    auto field = phv.field("ingress::foo_0"_cs);
     ASSERT_TRUE(field);
     auto uses = defuse.getAllUses(field->id);
     ASSERT_EQ(uses.size(), 1U);
@@ -478,7 +478,7 @@ TEST_F(FieldDefUseTest, ComplexUseSlice4) {
     PhvInfo phv;
     FieldDefUse defuse(phv);
     runMockPasses(test->pipe, phv, defuse);
-    auto field = phv.field("ingress::foo_0");
+    auto field = phv.field("ingress::foo_0"_cs);
     ASSERT_TRUE(field);
     auto uses = defuse.getAllUses(field->id);
     ASSERT_EQ(uses.size(), 1U);
@@ -517,7 +517,7 @@ TEST_F(FieldDefUseTest, ComplexUseSlice5) {
     PhvInfo phv;
     FieldDefUse defuse(phv);
     runMockPasses(test->pipe, phv, defuse);
-    auto field = phv.field("ingress::foo_0");
+    auto field = phv.field("ingress::foo_0"_cs);
     ASSERT_TRUE(field);
     auto uses = defuse.getAllUses(field->id);
     ASSERT_EQ(uses.size(), 1U);

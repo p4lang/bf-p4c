@@ -64,7 +64,7 @@ Visitor *setup_passes() {
         new BFN::ArchTranslation(refMap, typeMap, BackendOptions()),
         new BFN::ElimCasts(refMap, typeMap),
         new P4::MoveDeclarations(),
-        new P4::SimplifyControlFlow(refMap, typeMap, typeChecking),
+        new P4::SimplifyControlFlow(typeMap, typeChecking),
         new P4::SynthesizeActions(
             refMap, typeMap, new BFN::ActionSynthesisPolicy(new std::set<cstring>, refMap, typeMap),
             typeChecking),

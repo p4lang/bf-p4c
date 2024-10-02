@@ -123,7 +123,7 @@ IR::Node *CanonGatewayExpr::preorder(IR::MAU::Table *tbl) {
         return tbl;
     if (!tbl->gateway_cond.isNullOrEmpty()) return tbl;
     // Store original condition string as specified in p4 program
-    cstring gateway_cond = cstring::to_cstring(rows[0].first).c_str();
+    cstring gateway_cond = cstring::to_cstring(rows[0].first);
     // Remove local gress references
     gateway_cond = gateway_cond.replace("ingress::", "");
     gateway_cond = gateway_cond.replace("egress::", "");

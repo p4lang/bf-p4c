@@ -11,7 +11,7 @@
 const Device::StatefulAluSpec &TofinoDevice::getStatefulAluSpec() const {
     static const Device::StatefulAluSpec spec = {
         /* .CmpMask = */ false,
-        /* .CmpUnits = */ { "lo", "hi" },
+        /* .CmpUnits = */ { "lo"_cs, "hi"_cs },
         /* .MaxSize = */ 32,
         /* .MaxDualSize = */ 64,
         /* .MaxPhvInputWidth = */ 32,
@@ -31,7 +31,7 @@ const Device::StatefulAluSpec &TofinoDevice::getStatefulAluSpec() const {
 const Device::StatefulAluSpec &JBayDevice::getStatefulAluSpec() const {
     static const Device::StatefulAluSpec spec = {
         /* .CmpMask = */ true,
-        /* .CmpUnits = */ { "cmp0", "cmp1", "cmp2", "cmp3" },
+        /* .CmpUnits = */ { "cmp0"_cs, "cmp1"_cs, "cmp2"_cs, "cmp3"_cs },
         /* .MaxSize = */ 128,
         /* .MaxDualSize = */ 128,
         /* .MaxPhvInputWidth = */ 64,
@@ -52,7 +52,7 @@ const Device::StatefulAluSpec &JBayDevice::getStatefulAluSpec() const {
 const Device::StatefulAluSpec &CloudbreakDevice::getStatefulAluSpec() const {
     static const Device::StatefulAluSpec spec = {
         /* .CmpMask = */ true,
-        /* .CmpUnits = */ { "cmp0", "cmp1", "cmp2", "cmp3" },
+        /* .CmpUnits = */ { "cmp0"_cs, "cmp1"_cs, "cmp2"_cs, "cmp3"_cs },
         /* .MaxSize = */ 128,
         /* .MaxDualSize = */ 128,
         /* .MaxPhvInputWidth = */ 64,
@@ -73,7 +73,7 @@ const Device::StatefulAluSpec &CloudbreakDevice::getStatefulAluSpec() const {
 const Device::StatefulAluSpec &FlatrockDevice::getStatefulAluSpec() const {
     static const Device::StatefulAluSpec spec = {
         /* .CmpMask = */ true,
-        /* .CmpUnits = */ { "cmp0", "cmp1", "cmp2", "cmp3" },
+        /* .CmpUnits = */ { "cmp0"_cs, "cmp1"_cs, "cmp2"_cs, "cmp3"_cs },
         /* .MaxSize = */ 128,
         /* .MaxDualSize = */ 128,
         /* .MaxPhvInputWidth = */ 64,
@@ -365,7 +365,7 @@ bool CreateSaluInstruction::applyArg(const IR::PathExpression *pe, cstring field
         if (field_idx > 1) {
             /* three or more fields in the register type will flag an error later */
             field_idx = 0; } }
-    cstring name = field_idx ? "hi" : "lo";
+    cstring name = field_idx ? "hi"_cs : "lo"_cs;
     switch (param_types->at(idx)) {
     case param_t::VALUE:        /* inout value or local var */
         if (islvalue(etype)) {
@@ -373,20 +373,20 @@ bool CreateSaluInstruction::applyArg(const IR::PathExpression *pe, cstring field
             if (!dest)
                 alu_write[field_idx] = true;
             etype = VALUE; }
-        if (!opcode) opcode = "alu_a";
+        if (!opcode) opcode = "alu_a"_cs;
         if (etype == OUTPUT) {
-            const char *pfx = "mem_";
+            const char *pfx = "mem_"_cs;
             if (local) {
                 if (local->use == LocalVar::ALUHI) {
-                    pfx = "alu_";
+                    pfx = "alu_"_cs;
                 } else if (local->use == LocalVar::NONE) {
                     e = new IR::Constant(0);
                     break; }
             } else if (alu_write[field_idx]) {
-                pfx = "alu_"; }
+                pfx = "alu_"_cs; }
             name = pfx + name; }
         else if (etype == MINMAX_SRC)
-            name = "mem";
+            name = "mem"_cs;
         if (local && local->use == LocalVar::REGFILE) {
             e = local->regfile;
             negate_regfile = negate;
@@ -406,7 +406,7 @@ bool CreateSaluInstruction::applyArg(const IR::PathExpression *pe, cstring field
             error(ErrorType::ERR_UNSUPPORTED, "Only %d stateful output%s supported",
                   Device::statefulAluSpec().OutputWords,
                   Device::statefulAluSpec().OutputWords > 1 ? "s" : "");
-        if (!opcode) opcode = "output";
+        if (!opcode) opcode = "output"_cs;
         break;
     case param_t::HASH:         /* in digest */
         if (islvalue(etype)) {
@@ -420,7 +420,7 @@ bool CreateSaluInstruction::applyArg(const IR::PathExpression *pe, cstring field
             error(ErrorType::ERR_UNSUPPORTED, "Writing in param %s in %s not supported", pe,
                   action_type_name);
             return false; }
-        e = new IR::MAU::SaluReg(pe->srcInfo, argType, "learn", false);
+        e = new IR::MAU::SaluReg(pe->srcInfo, argType, "learn"_cs, false);
         break;
     case param_t::MATCH:        /* out match */
         if (!islvalue(etype)) {
@@ -428,7 +428,7 @@ bool CreateSaluInstruction::applyArg(const IR::PathExpression *pe, cstring field
                   action_type_name);
             return false; }
         etype = MATCH;
-        if (!opcode) opcode = "#match";
+        if (!opcode) opcode = "#match"_cs;
         break;
     default:
         return false; }
@@ -452,7 +452,7 @@ bool CreateSaluInstruction::outputAluHi() {
     // value that uses both lo and hi stateful memory, which is possible on JB / CB / FTR.
     if (salu->width > Device::statefulAluSpec().MaxDualSize / 2) return false;
     if (locals.empty())
-        locals.emplace("--output--", LocalVar("--output--", false, LocalVar::ALUHI));
+        locals.emplace("--output--"_cs, LocalVar("--output--"_cs, false, LocalVar::ALUHI));
     return locals.begin()->first == "--output--";
 }
 
@@ -553,7 +553,7 @@ void CreateSaluInstruction::postorder(const IR::Function *func) {
         // but we hide that in the assembler, just specifying the predicate here as 'lmatch'
         auto &output = outputs[kv.first];
         BUG_CHECK(is_address_output(output->operands.back()), "not address output?");
-        output->operands.push_back(new IR::MAU::SaluFunction(kv.second, "lmatch")); }
+        output->operands.push_back(new IR::MAU::SaluFunction(kv.second, "lmatch"_cs)); }
     splitWideInstructions();
     assignOutputAlus();
     for (std::size_t i = 0; i < outputs.size(); ++i) {
@@ -598,7 +598,7 @@ void CreateSaluInstruction::postorder(const IR::Function *func) {
     if (action->action.empty()) {
         // Action body is empty, insert the nop instruction directly - we don't need
         // to merge any instructions.
-        action->action.push_back(new IR::MAU::SaluInstruction("nop"));
+        action->action.push_back(new IR::MAU::SaluInstruction("nop"_cs));
         warning(ErrorType::ERR_EXPECTED,
                 "%1%: Expected stateful action '%2%' to have instructions "
                 "assigned. Please verify the action is valid.",
@@ -687,10 +687,10 @@ void CreateSaluInstruction::doAssignment(const Util::SourceInfo &srcInfo) {
             etype = VALUE;
             auto *val = operands.at(0);
             operands.insert(operands.begin(),
-                            new IR::MAU::SaluReg(val->srcInfo, val->type, "hi", true));
+                            new IR::MAU::SaluReg(val->srcInfo, val->type, "hi"_cs, true));
             createInstruction();
             operands.clear();
-            operands.push_back(new IR::MAU::SaluReg(val->srcInfo, val->type, "alu_hi", true));
+            operands.push_back(new IR::MAU::SaluReg(val->srcInfo, val->type, "alu_hi"_cs, true));
             etype = OUTPUT; }
         createInstruction();
     } else if (dest->use == LocalVar::ALUHI) {
@@ -904,7 +904,7 @@ void CreateSaluInstruction::doPrimary(const IR::Expression *e, const IR::PathExp
     if (etype == IF && (!reg || reg->name != "learn") && e->type->is<IR::Type::Boolean>() &&
         !getParent<IR::Operation::Relation>()) {
         operands.push_back(new IR::Constant(0));
-        setupCmp("neq");
+        setupCmp("neq"_cs);
         LOG4("  -- adding != 0 comparison"); }
 }
 
@@ -1020,11 +1020,12 @@ static double fn_max[2][3] = { { 1.36930639376291528364, 1.875, 3.515625 },
 
 bool CreateSaluInstruction::preorder(const IR::MAU::Primitive *prim) {
     cstring method;
-    if (auto p = prim->name.find('.'))
-        method = p + 1;
+    if (const char* p = prim->name.find('.')) {
+        method = cstring(p + 1);
+    }
     if (prim->name == "min" || prim->name == "max") {
         if (etype == VALUE || (etype == OUTPUT && outputAluHi())) {
-            opcode = prim->name + (isSigned(prim->type) ? "s" : "u");
+            opcode = prim->name + (isSigned(prim->type) ? "s"_cs : "u"_cs);
             if (etype == OUTPUT) etype = OUTPUT_ALUHI;
             return true; }
         error(ErrorType::ERR_UNSUPPORTED, "%s%s must write back to memory", prim->srcInfo,
@@ -1037,7 +1038,8 @@ bool CreateSaluInstruction::preorder(const IR::MAU::Primitive *prim) {
                     error(ErrorType::ERR_UNSUPPORTED_ON_TARGET, "%1% can only output to "
                           "lower half of memory", prim); } }
         visit(prim->operands.at(1), "math_input");
-        operands.back() = new IR::MAU::SaluFunction(prim->srcInfo, operands.back(), "math_table");
+        operands.back() =
+            new IR::MAU::SaluFunction(prim->srcInfo, operands.back(), "math_table"_cs);
         LOG4("Math Unit operand: " << operands.back());
         auto gref = prim->operands.at(0)->to<IR::GlobalRef>();
         auto mu = gref ? gref->obj->to<IR::Declaration_Instance>() : nullptr;
@@ -1122,7 +1124,7 @@ bool CreateSaluInstruction::preorder(const IR::MAU::Primitive *prim) {
                   mu->arguments->at(i)->expression, i > 1 ? "list expression" : "constant");
         }
     } else if (method == "address") {
-        operands.push_back(new IR::MAU::SaluReg(prim->srcInfo, prim->type, "address", false));
+        operands.push_back(new IR::MAU::SaluReg(prim->srcInfo, prim->type, "address"_cs, false));
         address_subword = 0;
         if (prim->operands.size() == 2) {
             auto k = prim->operands.at(1)->to<IR::Constant>();
@@ -1140,7 +1142,7 @@ bool CreateSaluInstruction::preorder(const IR::MAU::Primitive *prim) {
             if (auto *b = prim->operands.at(i)->to<IR::BoolLiteral>()) {
                 operands.clear();
                 operands.push_back(new IR::Constant(0));
-                setupCmp(b->value ? "equ" : "neq"); }
+                setupCmp(b->value ? "equ"_cs : "neq"_cs); }
             if (pred_operands.size() > 1) {
                 problem = "can only have one comparison per predicate argument";
             } else if (pred_operands.size() < 1) {
@@ -1158,7 +1160,7 @@ bool CreateSaluInstruction::preorder(const IR::MAU::Primitive *prim) {
             pred_operands.clear(); }
         operands.clear();
         etype = OUTPUT;
-        operands.push_back(new IR::MAU::SaluReg(prim->type, "predicate", false));
+        operands.push_back(new IR::MAU::SaluReg(prim->type, "predicate"_cs, false));
         // auto psize = 1 << Device::statefulAluSpec().CmpUnits.size();
         // FIXME -- should shift up to the top 16 bits of the word to maximize space
         // for the comb_shift constant, but doing so break action bus allocation
@@ -1196,13 +1198,13 @@ bool CreateSaluInstruction::preorder(const IR::MAU::Primitive *prim) {
             visit(prim->operands[3], "index");
             BUG_CHECK(operands.size() == 0 || ::errorCount() > 0, "%1%: recursion failure",
                       prim->operands[3]);
-            operands.push_back(new IR::MAU::SaluReg(prim->type, "minmax_index", false));
+            operands.push_back(new IR::MAU::SaluReg(prim->type, "minmax_index"_cs, false));
             createInstruction();
             operands.clear(); }
         output_index = saved_output_index;
         predicate = saved_predicate;
         etype = OUTPUT;
-        operands.push_back(new IR::MAU::SaluReg(prim->type, "minmax", false));
+        operands.push_back(new IR::MAU::SaluReg(prim->type, "minmax"_cs, false));
     } else if (prim->name == "RegisterParam.read") {
         cstring name;
         // Retrieve the name of the RegisterParam
@@ -1243,11 +1245,11 @@ bool CreateSaluInstruction::preorder(const IR::MAU::SaluRegfileRow *regfile) {
 }
 
 static std::map<cstring, cstring> negate_op = {
-    { "equ", "neq" }, { "neq", "equ" },
-    { "geq.s", "lss.s" }, { "geq.u", "lss.u" }, { "geq.uus", "lss.uus" },
-    { "grt.s", "leq.s" }, { "grt.u", "leq.u" }, { "grt.uus", "leq.uus" },
-    { "leq.s", "grt.s" }, { "leq.u", "grt.u" }, { "leq.uus", "grt.uus" },
-    { "lss.s", "geq.s" }, { "lss.u", "geq.u" }, { "lss.uus", "geq.uus" },
+    { "equ"_cs, "neq"_cs }, { "neq"_cs, "equ"_cs },
+    { "geq.s"_cs, "lss.s"_cs }, { "geq.u"_cs, "lss.u"_cs }, { "geq.uus"_cs, "lss.uus"_cs },
+    { "grt.s"_cs, "leq.s"_cs }, { "grt.u"_cs, "leq.u"_cs }, { "grt.uus"_cs, "leq.uus"_cs },
+    { "leq.s"_cs, "grt.s"_cs }, { "leq.u"_cs, "grt.u"_cs }, { "leq.uus"_cs, "grt.uus"_cs },
+    { "lss.s"_cs, "geq.s"_cs }, { "lss.u"_cs, "geq.u"_cs }, { "lss.uus"_cs, "geq.uus"_cs },
 };
 
 const IR::Expression *CreateSaluInstruction::reuseCmp(const IR::MAU::SaluInstruction *cmp,
@@ -1284,10 +1286,10 @@ void CreateSaluInstruction::setupCmp(cstring op) {
 }
 
 static std::map<cstring, cstring> negate_rel_op = {
-    { "geq.s", "leq.s" }, { "geq.u", "leq.u" }, { "geq.uus", "leq.uus" },
-    { "grt.s", "lss.s" }, { "grt.u", "lss.u" }, { "grt.uus", "lss.uus" },
-    { "leq.s", "geq.s" }, { "leq.u", "geq.u" }, { "leq.uus", "geq.uus" },
-    { "lss.s", "grt.s" }, { "lss.u", "grt.u" }, { "lss.uus", "grt.uus" },
+    { "geq.s"_cs, "leq.s"_cs }, { "geq.u"_cs, "leq.u"_cs }, { "geq.uus"_cs, "leq.uus"_cs },
+    { "grt.s"_cs, "lss.s"_cs }, { "grt.u"_cs, "lss.u"_cs }, { "grt.uus"_cs, "lss.uus"_cs },
+    { "leq.s"_cs, "geq.s"_cs }, { "leq.u"_cs, "geq.u"_cs }, { "leq.uus"_cs, "geq.uus"_cs },
+    { "lss.s"_cs, "grt.s"_cs }, { "lss.u"_cs, "grt.u"_cs }, { "lss.uus"_cs, "grt.uus"_cs },
 };
 
 static bool can_be_uus_cmp(const IR::Operation::Relation *rel, const IR::Type::Bits *type) {
@@ -1311,7 +1313,7 @@ bool CreateSaluInstruction::preorder(const IR::Operation::Relation *rel, cstring
         if (Device::statefulAluSpec().CmpMask &&
             ((e1 & k) == e2).match(rel) && !k->fitsUint() && !k->fitsInt()) {
             // FIXME -- wide "neq" can be done with tmatch too?
-            opcode = "tmatch";
+            opcode = "tmatch"_cs;
             visit(rel->left, "left");
             visit(rel->right, "right");
         } else {
@@ -1382,12 +1384,12 @@ bool CreateSaluInstruction::preorder(const IR::BFN::SignExtend *c) {
 
 void CreateSaluInstruction::postorder(const IR::Cast *c) {
     if (etype == IF && c->type->to<IR::Type::Boolean>())
-        setupCmp("neq");
+        setupCmp("neq"_cs);
 }
 
 void CreateSaluInstruction::postorder(const IR::BFN::ReinterpretCast *c) {
     if (etype == IF && c->type->to<IR::Type::Boolean>())
-        setupCmp("neq");
+        setupCmp("neq"_cs);
 }
 
 inline void condition_error(const IR::Node *node, const char *operation) {
@@ -1456,7 +1458,7 @@ bool CreateSaluInstruction::preorder(const IR::Add *e) {
     if (etype == IF)
         return true;
     if (etype == VALUE || (etype == OUTPUT && outputAluHi())) {
-        opcode = "add";
+        opcode = "add"_cs;
         if (etype == OUTPUT) etype = OUTPUT_ALUHI;
         return true; }
     only_operation_error(e, "addition", salu);
@@ -1465,7 +1467,7 @@ bool CreateSaluInstruction::preorder(const IR::Add *e) {
 bool CreateSaluInstruction::preorder(const IR::AddSat *e) {
     checkAndReportComplexInstruction(e);
     if (etype == VALUE || (etype == OUTPUT && outputAluHi())) {
-        opcode = isSigned(e->type) ? "sadds" : "saddu";
+        opcode = isSigned(e->type) ? "sadds"_cs : "saddu"_cs;
         if (etype == OUTPUT) etype = OUTPUT_ALUHI;
         return true;
     } else {
@@ -1482,7 +1484,7 @@ bool CreateSaluInstruction::preorder(const IR::Sub *e) {
         negate = !negate;
         return false; }
     if (etype == VALUE || (etype == OUTPUT && outputAluHi())) {
-        opcode = "sub";
+        opcode = "sub"_cs;
         if (etype == OUTPUT) etype = OUTPUT_ALUHI;
         return true; }
     only_operation_error(e, "subtraction", salu);
@@ -1491,7 +1493,7 @@ bool CreateSaluInstruction::preorder(const IR::Sub *e) {
 bool CreateSaluInstruction::preorder(const IR::SubSat *e) {
     checkAndReportComplexInstruction(e);
     if (etype == VALUE || (etype == OUTPUT && outputAluHi())) {
-        opcode = isSigned(e->type) ? "ssubs" : "ssubu";
+        opcode = isSigned(e->type) ? "ssubs"_cs : "ssubu"_cs;
         if (etype == OUTPUT) etype = OUTPUT_ALUHI;
         return true;
     } else {
@@ -1503,11 +1505,11 @@ void CreateSaluInstruction::postorder(const IR::BAnd *e) {
     checkAndReportComplexInstruction(e);
     if (etype == VALUE || etype == OUTPUT_ALUHI) {
         if (e->left->is<IR::Cmpl>())
-            opcode = "andca";
+            opcode = "andca"_cs;
         else if (e->right->is<IR::Cmpl>())
-            opcode = "andcb";
+            opcode = "andcb"_cs;
         else
-            opcode = "and";
+            opcode = "and"_cs;
     } else if (etype == IF) {
         if (operands.size() < 2) return;  // can only happen if there has been an error
         if (opcode == "tmatch") return;  // separate operands
@@ -1616,11 +1618,11 @@ void CreateSaluInstruction::postorder(const IR::BOr *e) {
 
     if (etype == VALUE || etype == OUTPUT_ALUHI) {
         if (e->left->is<IR::Cmpl>())
-            opcode = "orca";
+            opcode = "orca"_cs;
         else if (e->right->is<IR::Cmpl>())
-            opcode = "orcb";
+            opcode = "orcb"_cs;
         else
-            opcode = "or";
+            opcode = "or"_cs;
     } else {
         only_operation_error(e, "disjunction", salu); }
 }
@@ -1642,16 +1644,16 @@ void CreateSaluInstruction::postorder(const IR::BXor *e) {
     checkAndReportComplexInstruction(e);
     if (etype == VALUE || etype == OUTPUT_ALUHI) {
         if (e->left->is<IR::Cmpl>() || e->right->is<IR::Cmpl>())
-            opcode = "xnor";
+            opcode = "xnor"_cs;
         else
-            opcode = "xor";
+            opcode = "xor"_cs;
     } else {
         only_operation_error(e, "xor", salu); }
 }
 void CreateSaluInstruction::postorder(const IR::Neg *e) {
     // There is no opcode for unary negation, so we use subtraction instead. SUBR performs B - A
     // with A being the value to negate and B = 0.
-    opcode = "subr";
+    opcode = "subr"_cs;
     if (operands.size() <= 2) {
         BUG_CHECK(!operands.empty(), "No operands for unary negation in SALU action %1%", salu);
         const auto *negated = operands.back();
@@ -1662,10 +1664,12 @@ void CreateSaluInstruction::postorder(const IR::Neg *e) {
 }
 void CreateSaluInstruction::postorder(const IR::Cmpl *e) {
     static const std::map<cstring, cstring> complement = {
-        { "alu_a", "nota" }, { "alu_b", "notb" }, { "andca", "orcb" }, { "andcb", "orca" },
-        { "and", "nand" }, { "nand", "and" }, { "nor", "or" }, { "nota", "alu_a" },
-        { "notb", "alu_b" }, { "orca", "andcb" }, { "orcb", "andca" }, { "or", "nor" },
-        { "sethi", "setz" }, { "setz", "sethi" }, { "xnor", "xor" }, { "xor", "xnor" } };
+        {"alu_a"_cs, "nota"_cs}, {"alu_b"_cs, "notb"_cs}, {"andca"_cs, "orcb"_cs},
+        {"andcb"_cs, "orca"_cs}, {"and"_cs, "nand"_cs},   {"nand"_cs, "and"_cs},
+        {"nor"_cs, "or"_cs},     {"nota"_cs, "alu_a"_cs}, {"notb"_cs, "alu_b"_cs},
+        {"orca"_cs, "andcb"_cs}, {"orcb"_cs, "andca"_cs}, {"or"_cs, "nor"_cs},
+        {"sethi"_cs, "setz"_cs}, {"setz"_cs, "sethi"_cs}, {"xnor"_cs, "xor"_cs},
+        {"xor"_cs, "xnor"_cs}};
     if (etype == OUTPUT && regtype->width_bits() == 1) {
         onebit_cmpl = true;
         return; }
@@ -1678,7 +1682,7 @@ void CreateSaluInstruction::postorder(const IR::Cmpl *e) {
         // bit complements in ALUHI, eg. ret = ~hdr.field;. If this bit complement is part of a
         // binary bitwise operation, eg. ORCA, the opcode will be changed again in the relevant
         // postorder method for the binary operation.
-        opcode = "nota";
+        opcode = "nota"_cs;
     } else if (etype != VALUE)
         only_operation_error(e, "bit complement", salu);
 }
@@ -1705,7 +1709,7 @@ bool CreateSaluInstruction::divmod(const IR::Operation::Binary *e, cstring op) {
         auto *saved_predicate = predicate;
         etype = VALUE;
         predicate = nullptr;
-        opcode = "divmod";
+        opcode = "divmod"_cs;
         visit(e->left, "left");
         visit(e->right, "right");
         if (divmod_instr) {
@@ -1779,9 +1783,9 @@ void CreateSaluInstruction::splitWideInstructions() {
                             // flyover is implicit
                             auto *n = inst->clone();
                             if (i > 1)
-                                n->operands.at(n->output_operand) =
-                                    new IR::MAU::SaluReg(dest->srcInfo, words[i]->type, "hi", true);
-                            n->operands.back() = MakeSlice(src, bit, bit+63);
+                                n->operands.at(n->output_operand) = new IR::MAU::SaluReg(
+                                    dest->srcInfo, words[i]->type, "hi"_cs, true);
+                            n->operands.back() = MakeSlice(src, bit, bit + 63);
                             LOG4("add " << *n);
                             code.push_back(n); } }
                     continue;
@@ -1943,7 +1947,7 @@ const IR::MAU::SaluInstruction *CreateSaluInstruction::setup_output() {
                 return output;
         } else if (predicate) {
             return output; } }
-    return output = new IR::MAU::SaluInstruction("output", out_idx, &operands);
+    return output = new IR::MAU::SaluInstruction("output"_cs, out_idx, &operands);
 }
 
 const IR::MAU::SaluInstruction *CreateSaluInstruction::createInstruction() {
@@ -1959,7 +1963,7 @@ const IR::MAU::SaluInstruction *CreateSaluInstruction::createInstruction() {
         };
     auto generate_alu_a = [this](const IR::Expression *val, const IR::Expression *predicate,
                                  const IR::MAU::SaluReg *reg, bool is_mem) {
-        const cstring MEM_PREFIX = "mem_";
+        const cstring MEM_PREFIX = "mem_"_cs;
 
         // mem_lo/mem_hi can be used in output ALU instructions but not in state update ALU
         // instructions such as ALU_A. In state update ALU instructions, lo/hi should be
@@ -1969,15 +1973,15 @@ const IR::MAU::SaluInstruction *CreateSaluInstruction::createInstruction() {
             val = new IR::MAU::SaluReg(reg->srcInfo, reg->type, trimmed_name, reg->hi);
         }
 
-        const auto *dest_op = new IR::MAU::SaluReg(val->srcInfo, val->type, "hi", true);
+        const auto *dest_op = new IR::MAU::SaluReg(val->srcInfo, val->type, "hi"_cs, true);
         if (predicate) {
             insert_instruction(
-                new IR::MAU::SaluInstruction("alu_a", 1, predicate, dest_op, val));
+                new IR::MAU::SaluInstruction("alu_a"_cs, 1, predicate, dest_op, val));
         } else {
-            insert_instruction(new IR::MAU::SaluInstruction("alu_a", 0, dest_op, val));
+            insert_instruction(new IR::MAU::SaluInstruction("alu_a"_cs, 0, dest_op, val));
         }
         LOG3("  add " << *action->action.back());
-        return new IR::MAU::SaluReg(val->srcInfo, val->type, "alu_hi", true);
+        return new IR::MAU::SaluReg(val->srcInfo, val->type, "alu_hi"_cs, true);
     };
 
     switch (etype) {
@@ -1991,7 +1995,7 @@ const IR::MAU::SaluInstruction *CreateSaluInstruction::createInstruction() {
         if (regtype->width_bits() == 1) {
             BUG_CHECK(operands.size() == 2, "one-bit register VALUE instruction should have two"
                                             " operands only (output and a constant)");
-            opcode = "clr_bit";
+            opcode = "clr_bit"_cs;
             if (predicate)
                 error(ErrorType::ERR_UNSUPPORTED,
                       "%scan't have condition in a RegisterAction<bit<1>>", predicate->srcInfo);
@@ -2000,7 +2004,7 @@ const IR::MAU::SaluInstruction *CreateSaluInstruction::createInstruction() {
                       "%scan't write non-constant value to Register<bit<1>>",
                       operands.back()->srcInfo);
             else if (k->value)
-                opcode = "set_bit";
+                opcode = "set_bit"_cs;
             if (onebit_cmpl) opcode += 'c';
             /* For non-resilient hashes, all the bits must be updated whenever a port comes
              * up or down and hence must use the adjust_total instructions */
@@ -2032,9 +2036,9 @@ const IR::MAU::SaluInstruction *CreateSaluInstruction::createInstruction() {
                 auto &output = outputs[output_index];
                 skip_direct = !equiv(operands.back(), output->operands.back());
             } else if (outputAluHi()) {
-                const cstring MEM_PREFIX = "mem_";
+                const cstring MEM_PREFIX = "mem_"_cs;
                 const auto *reg = operands.at(0)->to<IR::MAU::SaluReg>();
-                const bool is_mem = reg && reg->name.startsWith(MEM_PREFIX);
+                const bool is_mem = reg && reg->name.startsWith(MEM_PREFIX.string());
 
                 auto *val = operands.at(0);
 
@@ -2045,7 +2049,8 @@ const IR::MAU::SaluInstruction *CreateSaluInstruction::createInstruction() {
                     const auto trimmed_name = reg->name.substr(MEM_PREFIX.size());
                     val = new IR::MAU::SaluReg(reg->srcInfo, reg->type, trimmed_name, reg->hi);
                 }
-                auto *new_operand = new IR::MAU::SaluReg(val->srcInfo, val->type, "alu_hi", true);
+                auto *new_operand =
+                    new IR::MAU::SaluReg(val->srcInfo, val->type, "alu_hi"_cs, true);
 
                 auto &output = outputs[output_index];
                 if (!equiv(new_operand, output->operands.back())) {
@@ -2054,7 +2059,7 @@ const IR::MAU::SaluInstruction *CreateSaluInstruction::createInstruction() {
                     // use ALU_HI to drive the output as it is otherwise unused
                     auto *val = output->operands.back();
                     const auto *reg = val->to<IR::MAU::SaluReg>();
-                    const bool is_mem = reg && reg->name.startsWith(MEM_PREFIX);
+                    const bool is_mem = reg && reg->name.startsWith(MEM_PREFIX.string());
 
                     output->operands.back() =
                         generate_alu_a(val, output_predicates[output_index], reg, is_mem);
@@ -2069,11 +2074,11 @@ const IR::MAU::SaluInstruction *CreateSaluInstruction::createInstruction() {
                 error(ErrorType::ERR_UNSUPPORTED, "%scan't have predicate on 1-bit instruction",
                       predicate->srcInfo);
             }
-            opcode = onebit ? onebit->name : "read_bit";
+            opcode = onebit ? onebit->name : "read_bit"_cs;
             if (onebit_cmpl) opcode += "c";
             rv = onebit = new IR::MAU::SaluInstruction(opcode);
             operands.clear();
-            operands.push_back(new IR::MAU::SaluReg(IR::Type::Bits::get(1), "alu_lo", false));
+            operands.push_back(new IR::MAU::SaluReg(IR::Type::Bits::get(1), "alu_lo"_cs, false));
         } else if (k && k->value == 0) {
             // 0 will be output if we don't drive it at all
             output_param_operands.insert({output_index, nullptr});
@@ -2088,9 +2093,9 @@ const IR::MAU::SaluInstruction *CreateSaluInstruction::createInstruction() {
             // output it
         } else if (const bool directly = canOutputDirectly(operands.at(0)), alu_hi = outputAluHi();
                    directly || alu_hi) {
-            const cstring MEM_PREFIX = "mem_";
+            const cstring MEM_PREFIX = "mem_"_cs;
             const auto *reg = operands.at(0)->to<IR::MAU::SaluReg>();
-            const bool is_mem = reg && reg->name.startsWith(MEM_PREFIX);
+            const bool is_mem = reg && reg->name.startsWith(MEM_PREFIX.string());
 
             // Prefer to output values from stateful memory via ALU_HI, because this way it's
             // possible for other sources to be assigned to the same output parameter with different
@@ -2119,7 +2124,7 @@ const IR::MAU::SaluInstruction *CreateSaluInstruction::createInstruction() {
                     predicate_error("constant");
             } else {
                 salu->pred_shift = 28; }
-            operands.at(0) = new IR::MAU::SaluReg(k->srcInfo, k->type, "predicate", false);
+            operands.at(0) = new IR::MAU::SaluReg(k->srcInfo, k->type, "predicate"_cs, false);
         } else if (outputEnumAsPredicate(operands.at(0)->to<IR::Member>())) {
             auto psize = 1 << Device::statefulAluSpec().CmpUnits.size();
             // FIXME -- should shift up to the top 16 bits of the word to maximize space
@@ -2128,8 +2133,8 @@ const IR::MAU::SaluInstruction *CreateSaluInstruction::createInstruction() {
             if (salu->pred_comb_shift >= 0) {
                 if (comb_pred_width > salu->pred_shift + 4)
                     predicate_error("enum"); }
-            operands.at(0) = new IR::MAU::SaluReg(operands.at(0)->srcInfo,
-                                                  IR::Type::Bits::get(psize), "predicate", false);
+            operands.at(0) = new IR::MAU::SaluReg(
+                operands.at(0)->srcInfo, IR::Type::Bits::get(psize), "predicate"_cs, false);
             action->return_predicate_words |= 1 << output_index;
         } else {
             error(ErrorType::ERR_UNSUPPORTED, "can't output %1% from a RegisterAction",
@@ -2220,23 +2225,23 @@ bool CreateSaluInstruction::preorder(const IR::Declaration_Variable *v) {
 
 std::map<std::pair<cstring, cstring>, std::vector<CreateSaluInstruction::param_t>>
 CreateSaluInstruction::function_param_types = {
-    {{"DirectRegisterAction", "apply"}, { param_t::VALUE, param_t::OUTPUT, param_t::OUTPUT,
-                                          param_t::OUTPUT, param_t::OUTPUT }},
-    {{ "RegisterAction", "apply" },     { param_t::VALUE, param_t::OUTPUT, param_t::OUTPUT,
-                                          param_t::OUTPUT, param_t::OUTPUT }},
-    {{ "RegisterAction", "overflow" },  { param_t::VALUE, param_t::OUTPUT, param_t::OUTPUT,
-                                          param_t::OUTPUT, param_t::OUTPUT }},
-    {{ "RegisterAction", "underflow" }, { param_t::VALUE, param_t::OUTPUT, param_t::OUTPUT,
-                                          param_t::OUTPUT, param_t::OUTPUT }},
+    {{"DirectRegisterAction"_cs, "apply"_cs}, { param_t::VALUE, param_t::OUTPUT, param_t::OUTPUT,
+                                                param_t::OUTPUT, param_t::OUTPUT }},
+    {{ "RegisterAction"_cs, "apply"_cs },     { param_t::VALUE, param_t::OUTPUT, param_t::OUTPUT,
+                                                param_t::OUTPUT, param_t::OUTPUT }},
+    {{ "RegisterAction"_cs, "overflow"_cs },  { param_t::VALUE, param_t::OUTPUT, param_t::OUTPUT,
+                                                param_t::OUTPUT, param_t::OUTPUT }},
+    {{ "RegisterAction"_cs, "underflow"_cs }, { param_t::VALUE, param_t::OUTPUT, param_t::OUTPUT,
+                                                param_t::OUTPUT, param_t::OUTPUT }},
 #ifdef HAVE_JBAY
-    {{ "LearnAction", "apply" },        { param_t::VALUE, param_t::HASH, param_t::LEARN,
-                                          param_t::OUTPUT, param_t::OUTPUT,
-                                          param_t::OUTPUT, param_t::OUTPUT }},
-    {{ "MinMaxAction", "apply" },       { param_t::VALUE, param_t::OUTPUT, param_t::OUTPUT,
-                                          param_t::OUTPUT, param_t::OUTPUT }},
+    {{ "LearnAction"_cs, "apply"_cs },        { param_t::VALUE, param_t::HASH, param_t::LEARN,
+                                                param_t::OUTPUT, param_t::OUTPUT,
+                                                param_t::OUTPUT, param_t::OUTPUT }},
+    {{ "MinMaxAction"_cs, "apply"_cs },       { param_t::VALUE, param_t::OUTPUT, param_t::OUTPUT,
+                                                param_t::OUTPUT, param_t::OUTPUT }},
 #endif
-    {{ "SelectorAction", "apply" },    { param_t::VALUE, param_t::OUTPUT, param_t::OUTPUT,
-                                          param_t::OUTPUT, param_t::OUTPUT }}
+    {{ "SelectorAction"_cs, "apply"_cs },    { param_t::VALUE, param_t::OUTPUT, param_t::OUTPUT,
+                                                param_t::OUTPUT, param_t::OUTPUT }}
 };
 
 bool CreateSaluInstruction::preorder(const IR::Declaration_Instance *di) {
@@ -2321,12 +2326,12 @@ bool CheckStatefulAlu::preorder(IR::MAU::StatefulAlu *salu) {
     // instr are already present, if not add them. Test - p4factory stful.p4 -
     // TestOneBit
     if (bits->size == 1) {
-        ordered_set<cstring> set_clr { "set_bit", "clr_bit" };
+        ordered_set<cstring> set_clr { "set_bit"_cs, "clr_bit"_cs };
         if (salu->selector) {
-            set_clr = ordered_set<cstring> { "set_bit_at", "clr_bit_at" };
+            set_clr = ordered_set<cstring> { "set_bit_at"_cs, "clr_bit_at"_cs };
             if (salu->selector->mode == IR::MAU::SelectorMode::RESILIENT) {
-                set_clr.insert("set_bit");
-                set_clr.insert("clr_bit"); } }
+                set_clr.insert("set_bit"_cs);
+                set_clr.insert("clr_bit"_cs); } }
         for (auto &salu_action : salu->instruction) {
             auto &salu_action_instr = salu_action.second;
             if (salu_action_instr) {
@@ -2336,7 +2341,7 @@ bool CheckStatefulAlu::preorder(IR::MAU::StatefulAlu *salu) {
                     std::string name = std::string(salu_instr->name);
                     /* make sure that if the "bitc" variant instruction exists then
                      * we do not add the non-c variant. */
-                    auto pos = name.find("bitc");
+                    auto pos = name.find("bitc"_cs);
                     if (pos != std::string::npos) name.erase(pos+3, 1);
                     set_clr.erase(name); } } }
         for (auto sc : set_clr) {
@@ -2351,7 +2356,7 @@ bool CheckStatefulAlu::preorder(IR::MAU::StatefulAlu *salu) {
 
     const IR::MAU::SaluAction *first = nullptr;;
     for (auto salu_action : Values(salu->instruction)) {
-        auto chain = salu_action->annotations->getSingle("chain_address");
+        auto chain = salu_action->annotations->getSingle("chain_address"_cs);
         if (first) {
             if (salu->chain_vpn != (chain != nullptr))
                 error(ErrorType::ERR_UNSUPPORTED, "Inconsistent chaining for %s and %s", first,

@@ -70,10 +70,10 @@ class GreedyClotAllocator : public Visitor {
                 const auto* adj_field = field;
                 if (auto stack_index = get_element_index(field)) {
                     cstring name = field->name;
-                    cstring field_name = name.findlast('.') + 1;
+                    cstring field_name = cstring(name.findlast('.') + 1);
                     cstring header_name = field->header();
                     header_name = header_name.before(strrchr(header_name, '['));
-                    cstring new_field_name = header_name + "[" +
+                    cstring new_field_name = header_name + "["_cs +
                                              cstring::to_cstring(*stack_index + stack_offset) +
                                              "]." + field_name;
                     header_stack_name = header_name;
@@ -1025,8 +1025,8 @@ class GreedyClotAllocator : public Visitor {
                     const PHV::FieldSlice* slice = extract_slice;
                     if (tag != first_tag) {
                         cstring name = slice->field()->name;
-                        cstring field_name = name.findlast('.') + 1;
-                        cstring new_field_name = hs->name + "[" +
+                        cstring field_name = cstring(name.findlast('.') + 1);
+                        cstring new_field_name = hs->name + "["_cs +
                                                  cstring::to_cstring(first_idx + tag - first_tag) +
                                                  "]." + field_name;
                         auto *field = phvInfo.field(new_field_name);
@@ -1254,7 +1254,7 @@ class GreedyClotAllocator : public Visitor {
         // Configure logging for this visitor.
         if (BackendOptions().verbose > 0) {
             if (auto pipe = root->to<IR::BFN::Pipe>())
-                log = new Logging::FileLog(pipe->canon_id(), "clot_allocation.log");
+                log = new Logging::FileLog(pipe->canon_id(), "clot_allocation.log"_cs);
         }
 
         // Make sure we clear our state from previous invocations of the visitor.
@@ -1323,7 +1323,7 @@ class GreedyClotAllocator : public Visitor {
 
         if (logAllocation)
             if (auto *pipe = root->to<IR::BFN::Pipe>())
-                Logging::FileLog parserLog(pipe->canon_id(), "clot_allocation.log");
+                Logging::FileLog parserLog(pipe->canon_id(), "clot_allocation.log"_cs);
 
         LOG2(clotInfo.print());
 
@@ -1589,7 +1589,7 @@ Visitor::profile_t ClotAdjuster::init_apply(const IR::Node* root) {
     // Configure logging for this visitor.
     if (BackendOptions().verbose > 0) {
         if (auto pipe = root->to<IR::BFN::Pipe>())
-            log = new Logging::FileLog(pipe->canon_id(), "clot_allocation.log");
+            log = new Logging::FileLog(pipe->canon_id(), "clot_allocation.log"_cs);
     }
 
     return result;
@@ -1600,7 +1600,7 @@ const IR::Node *ClotAdjuster::apply_visitor(const IR::Node* root, const char*) {
 
     const IR::BFN::Pipe *pipe = root->to<IR::BFN::Pipe>();
     if (pipe)
-        Logging::FileLog parserLog(pipe->canon_id(), "clot_allocation.log");
+        Logging::FileLog parserLog(pipe->canon_id(), "clot_allocation.log"_cs);
     LOG1(clotInfo.print(&phv));
 
     return root;

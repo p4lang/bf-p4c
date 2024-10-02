@@ -407,12 +407,12 @@ bool TrivialAllocator::allocate(const std::list<PHV::SuperCluster *> &clusters,
     kit_i.parser_packing_validator->set_trivial_alloc(false);
     LOG1("Ended TrivialAllocator");
 
-    auto logfile = trivial_allocator_file_log(pipe_id_i, 1, "history");
+    auto logfile = trivial_allocator_file_log(pipe_id_i, 1, "history"_cs);
     LOG1("Trivial Allocation history");
     LOG1(history.str());
     Logging::FileLog::close(logfile);
 
-    auto summary_logfile = trivial_allocator_file_log(pipe_id_i, 1, "summary");
+    auto summary_logfile = trivial_allocator_file_log(pipe_id_i, 1, "summary"_cs);
     LOG1("Trivial Allocation summary");
     ConcreteAllocation alloc(phv_i, kit_i.uses, /* trivial */ true);
     LOG1(alloc);

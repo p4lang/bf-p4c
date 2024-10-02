@@ -179,7 +179,7 @@ class AddInitTable : public Transform {
 
             for (auto& slice : mauInitSlices) {
                 auto type = IR::Type_Bits::get(slice->getH() - slice->getL() + 1);
-                auto instr = new IR::MAU::Instruction("set", {slice, new IR::Constant(type, 0)});
+                auto instr = new IR::MAU::Instruction("set"_cs, {slice, new IR::Constant(type, 0)});
                 LOG3("AddInitTable: " << "adding " << instr);
                 action->action.push_back(instr);
             }

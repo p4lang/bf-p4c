@@ -317,7 +317,7 @@ analyzeUpdateChecksumStatement(const IR::AssignmentStatement* assignment,
             LOG4("checksum update includes field:" << source);
 
         } else {
-            cstring entry_type = " ";
+            std::string entry_type = " ";
             if (source->is<IR::TempVar>())
                 entry_type = " local variable ";
             ::error(ErrorType::ERR_UNSUPPORTED,
@@ -688,8 +688,8 @@ void add_checksum_condition_table(IR::MAU::TableSeq* tableSeq,
                                   gress_t gress) {
     if (csumInfo->isUnconditional)
         return;
-    cstring tableName = csumInfo->dest + "_encode_update_condition_";
-    cstring actionName = "_set_checksum_update_";
+    cstring tableName = csumInfo->dest + "_encode_update_condition_"_cs;
+    cstring actionName = "_set_checksum_update_"_cs;
     // Get matchkeys
     std::vector<const IR::Expression*> keys;
     keys.push_back(csumInfo->povBit->field);
@@ -758,19 +758,19 @@ void add_checksum_condition_table(IR::MAU::TableSeq* tableSeq,
 void add_entry_duplication_tables(IR::MAU::TableSeq* tableSeq,
                                  ChecksumUpdateInfo* csumInfo,
                                  gress_t gress) {
-    cstring tableName = csumInfo->dest + "_duplication_" + toString(gress);
+    cstring tableName = csumInfo->dest + "_duplication_"_cs + toString(gress);
     auto table = new IR::MAU::Table(tableName , gress);
     table->is_compiler_generated = true;
     auto p4Name = tableName + "_" + cstring::to_cstring(gress);
     table->match_table = new IR::P4Table(p4Name.c_str(), new IR::TableProperties());
-    auto action = new IR::MAU::Action("__checksum_field_duplication__");
+    auto action = new IR::MAU::Action("__checksum_field_duplication__"_cs);
     for (auto& fieldInfo : csumInfo->fieldListInfos) {
         if (fieldInfo->duplicatedFields.empty()) {
             continue;
         } else {
             for (auto& dupf : fieldInfo->duplicatedFields) {
                 action->default_allowed = action->init_default = true;
-                auto setdup = new IR::MAU::Instruction("set", {dupf.second, dupf.first});
+                auto setdup = new IR::MAU::Instruction("set"_cs, {dupf.second, dupf.first});
                 action->action.push_back(setdup);
             }
             table->actions[action->name] = action;
@@ -1041,7 +1041,7 @@ extractChecksumFromDeparser(const IR::BFN::TnaDeparser* deparser, IR::BFN::Pipe*
     if (!deparser) return pipe;
 
     if (BackendOptions().verbose > 0)
-        Logging::FileLog parserLog(pipe->canon_id(), "parser.log");
+        Logging::FileLog parserLog(pipe->canon_id(), "parser.log"_cs);
 
     auto gress = deparser->thread;
 

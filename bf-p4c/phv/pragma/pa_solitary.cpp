@@ -49,8 +49,8 @@ bool PragmaSolitary::preorder(const IR::BFN::Pipe* pipe) {
         }
 
         if (!PHV::Pragmas::checkNumberArgs(annotation, required_arguments,
-                min_required_arguments, true, PragmaSolitary::name,
-                "`gress', `field'")) {
+                min_required_arguments, true, cstring(PragmaSolitary::name),
+                "`gress', `field'"_cs)) {
             continue;
         }
 

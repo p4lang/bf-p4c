@@ -24,7 +24,7 @@ void generate_bfrt(TestCode &test) {
     // BFN's generateRuntime re-registers handler for psa architecture to a BFN handler
     // Re-register the original p4c one so that (plain) p4c tests are not affected
     auto p4RuntimeSerializer = P4::P4RuntimeSerializer::get();
-    p4RuntimeSerializer->registerArch("psa",
+    p4RuntimeSerializer->registerArch("psa"_cs,
         new P4::ControlPlaneAPI::Standard::PSAArchHandlerBuilder());
 }
 

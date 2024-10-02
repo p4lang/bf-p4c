@@ -136,7 +136,7 @@ std::optional<int> invalid_whole_container_set(const std::vector<Assign>& assign
 
 // convert empty container id to readable format.
 ContainerID pretty_print(ContainerID c) {
-    return c == "" ? "ad_or_const" : c;
+    return c == ""_cs ? "ad_or_const"_cs : c;
 }
 
 }  // namespace
@@ -160,7 +160,7 @@ cstring ContainerSet::to_cstring() const {
     return (boost::format("%1% %2%, %3%") % name() % dest % pretty_print(src)).str();
 }
 
-Operand make_ad_or_const_operand() { return Operand{true, "", le_bitrange()}; }
+Operand make_ad_or_const_operand() { return Operand{true, ""_cs, le_bitrange()}; }
 
 Operand make_container_operand(ContainerID c, le_bitrange r) {
     return Operand{false, c, r};

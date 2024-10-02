@@ -1221,7 +1221,7 @@ void DfsItrContext::iterate(const IterateCb& cb) {
     // presplit by adjacent no_pack fields at byte boundary.
     auto after_pre_split = presplit_by(
         to_be_split_i, [&](SuperCluster* sc) { return split_by_adjacent_no_pack(sc); },
-        "adjacent_no_pack");
+        "adjacent_no_pack"_cs);
     if (!after_pre_split) {
         LOG1("split by adjacent_no_pack fields failed, iteration stopped.");
         return;
@@ -1231,7 +1231,7 @@ void DfsItrContext::iterate(const IterateCb& cb) {
     // presplit by deparsed bottom bits.
     after_pre_split = presplit_by(
         to_be_split_i, [&](SuperCluster* sc) { return split_by_deparsed_bottom_bits(sc); },
-        "deparsed_bottom_bits");
+        "deparsed_bottom_bits"_cs);
     if (!after_pre_split) {
         LOG1("split by deparsed_bottom_bits fields failed, iteration stopped.");
         return;
@@ -1242,7 +1242,7 @@ void DfsItrContext::iterate(const IterateCb& cb) {
     after_pre_split = presplit_by(
         to_be_split_i,
         [&](SuperCluster* sc) { return split_by_adjacent_deparsed_and_non_deparsed(sc); },
-        "adjacent_deparsed_and_non_deparsed");
+        "adjacent_deparsed_and_non_deparsed"_cs);
     if (!after_pre_split) {
         LOG1("split by adjacent_deparsed_and_non_deparsed fields failed, iteration stopped.");
         return;
@@ -1253,7 +1253,7 @@ void DfsItrContext::iterate(const IterateCb& cb) {
     after_pre_split = presplit_by(
         to_be_split_i,
         [&](SuperCluster* sc) { return split_by_parser_write_mode(sc); },
-        "parser_write_mode");
+        "parser_write_mode"_cs);
     if (!after_pre_split) {
         LOG1("split by parser_write_mode fields failed, iteration stopped.");
         return;
@@ -1268,7 +1268,7 @@ void DfsItrContext::iterate(const IterateCb& cb) {
     // after_pre_split = presplit_by(
     //     to_be_split_i,
     //     [&](SuperCluster* sc) { return split_by_valid_container_range(sc); },
-    //     "valid_container_range_limit");
+    //     "valid_container_range_limit"_cs);
     // if (!after_pre_split) {
     //     LOG1("split by valid_container_range_limit fields failed, iteration stopped.");
     //     return;
@@ -1300,7 +1300,7 @@ void DfsItrContext::iterate(const IterateCb& cb) {
                 is_any_long_field_split = splitted && splitted->size() > 1;
                 return splitted;
             },
-            "split_by_long_fieldslices");
+            "split_by_long_fieldslices"_cs);
         if (!after_pre_split) {
             LOG1("split by split_by_long_fieldslices fields failed, iteration stopped.");
             return;
@@ -2217,7 +2217,7 @@ void DfsItrContext::invalidate(const SuperCluster::SliceList* sl) {
 
 std::ostream& operator<<(std::ostream& out, const PHV::Slicing::AfterSplitConstraint& c) {
     out << "{";
-    cstring sep = "";
+    std::string sep = "";
     for (const auto& s : c.sizes) {
         out << sep << s;
         sep = ",";

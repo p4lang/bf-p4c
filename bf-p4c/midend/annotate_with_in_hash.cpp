@@ -160,7 +160,7 @@ bool DoAnnotateWithInHash::checkHeaderMetadataReference(const IR::Expression &op
  * do not annotate it again.
  */
 const IR::Node *DoAnnotateWithInHash::preorder(IR::BlockStatement *b) {
-    if (b->getAnnotation("in_hash") || b->getAnnotation("in_vliw")) {
+    if (b->getAnnotation("in_hash"_cs) || b->getAnnotation("in_vliw"_cs)) {
         prune();
     }
     return b;

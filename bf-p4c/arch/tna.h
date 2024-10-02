@@ -19,9 +19,9 @@ class BFN_Options;
 namespace BFN {
 
 /** \ingroup TnaArchTranslation */
-const cstring ExternPortMetadataUnpackString    = "port_metadata_unpack";
+const cstring ExternPortMetadataUnpackString    = "port_metadata_unpack"_cs;
 /** \ingroup TnaArchTranslation */
-const cstring ExternDynamicHashString           = "hash";
+const cstring ExternDynamicHashString           = "hash"_cs;
 
 /**
  * \ingroup TnaArchTranslation

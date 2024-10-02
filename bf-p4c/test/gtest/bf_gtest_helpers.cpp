@@ -434,26 +434,26 @@ TestCode::TestCode(Hdr header, std::string code,
     o.langVersion = CompilerOptions::FrontendVersion::P4_16;
     switch (header) {
         default:
-            o.target = "tofino";
-            o.arch = "tna";
+            o.target = "tofino"_cs;
+            o.arch = "tna"_cs;
             // Disable the min depth limit by default as we typically don't want to add parser
             // padding in tests. Set to false if needed.
             o.disable_parse_min_depth_limit = true;
             break;
         case Hdr::Tofino2arch:
-            o.target = "tofino2";
-            o.arch = "t2na";
+            o.target = "tofino2"_cs;
+            o.arch = "t2na"_cs;
            break;
 #if HAVE_CLOUDBREAK
         case Hdr::Tofino3arch:
-            o.target = "tofino3";
-            o.arch = "t3na";
+            o.target = "tofino3"_cs;
+            o.arch = "t3na"_cs;
             break;
 #endif  /* HAVE_CLOUDBREAK */
 #if HAVE_FLATROCK
         case Hdr::Tofino5arch:
-            o.target = "tofino5";
-            o.arch = "t5na";
+            o.target = "tofino5"_cs;
+            o.arch = "t5na"_cs;
             break;
 #endif  /* HAVE_FLATROCK */
     }

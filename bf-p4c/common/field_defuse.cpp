@@ -8,8 +8,8 @@
 const FieldDefUse::LocPairSet FieldDefUse::emptyset;
 
 const std::unordered_set<cstring> FieldDefUse::write_by_parser = {
-    "ingress::ig_intr_md_from_prsr.parser_err",
-    "egress::eg_intr_md_from_prsr.parser_err"
+    "ingress::ig_intr_md_from_prsr.parser_err"_cs,
+    "egress::eg_intr_md_from_prsr.parser_err"_cs
 };
 
 static std::ostream &operator<<(std::ostream &out, const FieldDefUse::locpair &loc) {

@@ -204,8 +204,8 @@ V1Switch(parse(), verifyChecksum(), mau(), my_egress(),
 
     auto& options = BackendOptions();
     options.langVersion = CompilerOptions::FrontendVersion::P4_16;
-    options.target = "tofino2";
-    options.arch = "v1model";
+    options.target = "tofino2"_cs;
+    options.arch = "v1model"_cs;
 
     return TofinoPipeTestCase::createWithThreadLocalInstances(source);
 }

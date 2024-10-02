@@ -30,7 +30,7 @@ bool FindInitializationNode::preorder(const IR::MAU::Action* act) {
     }
 
     auto *tbl = findContext<IR::MAU::Table>();
-    if (tbl && tbl->getAnnotation("no_field_initialization")) {
+    if (tbl && tbl->getAnnotation("no_field_initialization"_cs)) {
       doNotInitActions.insert(act);
       LOG_DEBUG3("Pragma @no_field_initialization found for action: "<< act->externalName()
                  << " in table " << tbl->externalName());

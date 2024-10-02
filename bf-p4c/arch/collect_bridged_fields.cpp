@@ -20,7 +20,7 @@ bool isMetadataType(const IR::Type* type) {
     if (type->is<IR::Type_Struct>()) return true;
     if (auto* annotated = type->to<IR::IAnnotated>()) {
         /// TODO: note that we are looking for the annotation in stratum.p4
-        auto* intrinsicMetadata = annotated->getAnnotation("__intrinsic_metadata");
+        auto* intrinsicMetadata = annotated->getAnnotation("__intrinsic_metadata"_cs);
         if (intrinsicMetadata) return true;
     }
     return false;
@@ -237,7 +237,7 @@ bool CollectBridgedFields::preorder(const IR::BFN::TnaControl *c) {
     return false;
 }
 bool CollectBridgedFields::preorder(const IR::BFN::TnaParser *p) {
-    if (auto start = p->states.getDeclaration<IR::ParserState>("start")) {
+    if (auto start = p->states.getDeclaration<IR::ParserState>("start"_cs)) {
         visit(start, "start");
     } else {
         BUG("No start state in %s", p); }
@@ -294,7 +294,7 @@ bool CollectBridgedFields::preorder(const IR::Annotation* annot) {
                   "ingress field instead", field);
 
     // The fieldRef object names start with a . followed by the field name
-    cstring fieldName = "." + field->value;
+    cstring fieldName = "."_cs + field->value;
     doNotBridge.insert(fieldName);
     LOG1("@pragma do_not_bridge set for " << field);
 

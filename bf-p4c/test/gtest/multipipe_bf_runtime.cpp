@@ -152,7 +152,7 @@ TEST(MultipipeBFRuntime, Test1) {
     // Re-register the original p4c one so that (plain) p4c tests are not affected
     auto p4RuntimeSerializer = P4::P4RuntimeSerializer::get();
     p4RuntimeSerializer->registerArch(
-        "psa",
+        "psa"_cs,
         new P4::ControlPlaneAPI::Standard::PSAArchHandlerBuilder());
     // Check the runtime JSON file
     std::ifstream bfrt_stream(bfrt_file);
@@ -161,9 +161,9 @@ TEST(MultipipeBFRuntime, Test1) {
     unsigned meta1_found = 0;
     unsigned meta2_found = 0;
     while (std::getline(bfrt_stream, line)) {
-        if (line.find("ing_meta1.ingress_port") != std::string::npos)
+        if (line.find("ing_meta1.ingress_port"_cs) != std::string::npos)
             meta1_found++;
-        if (line.find("ing_meta2.ingress_port") != std::string::npos)
+        if (line.find("ing_meta2.ingress_port"_cs) != std::string::npos)
             meta2_found++;
     }
 

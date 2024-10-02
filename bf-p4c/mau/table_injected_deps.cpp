@@ -31,7 +31,7 @@ bool InjectControlDependencies::preorder(const IR::MAU::TableSeq *seq) {
             }
 
             auto edge_label = DependencyGraph::NONE;
-            auto ctrl_annot = "";
+            auto ctrl_annot = ""_cs;
             // Find control type relationship between parent & child
             for (auto options : parent->next) {
                 LOG5("      ICD seq:" << options.first);
@@ -415,7 +415,7 @@ void InjectControlExitDependencies::link_run_before_exit_tables() {
 void InjectControlExitDependencies::inject_control_exit_dependency(
         const IR::MAU::Table* source,
         const IR::MAU::Table* destination) {
-    auto annotation = "exit";
+    auto annotation = "exit"_cs;
     auto edge_pair = dg.add_edge(source, destination, DependencyGraph::CONTROL_EXIT);
     if (!edge_pair.first) return;
     LOG4("    Injecting CONTROL_EXIT dependency: "

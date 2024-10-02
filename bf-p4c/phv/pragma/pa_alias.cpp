@@ -218,8 +218,8 @@ void PragmaAlias::postorder(const IR::BFN::Pipe* pipe) {
         }
 
         if (!PHV::Pragmas::checkNumberArgs(annotation, required_arguments,
-                min_required_arguments, false, PragmaAlias::name,
-                "`gress', `field1', `field2'")) {
+                min_required_arguments, false, cstring(PragmaAlias::name),
+                "`gress', `field1', `field2'"_cs)) {
             continue;
         }
 
@@ -238,7 +238,7 @@ void PragmaAlias::postorder(const IR::BFN::Pipe* pipe) {
 
         std::vector<const PHV::Field*> fields;
         for (const auto* field_ir : field_irs) {
-            cstring field_name = gress_arg->value + "::" + field_ir->value;
+            cstring field_name = gress_arg->value + "::"_cs + field_ir->value;
             const auto* field = phv_i.field(field_name);
             if (!field) {
                 PHV::Pragmas::reportNoMatchingPHV(pipe, field_ir, field_name);

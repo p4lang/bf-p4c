@@ -1,3 +1,6 @@
+#include <fstream>       // Ensure this header is included
+#include <filesystem>    // If not already included
+
 #include "bf-p4c/arch/arch.h"
 #include "bf-p4c/control-plane/bfruntime_ext.h"
 #include "bf-p4c/control-plane/runtime.h"
@@ -29,14 +32,14 @@ bool SetDefaultSize::preorder(IR::P4Table *table) {
     auto sizeProperty = table->getSizeProperty();
     if (sizeProperty == nullptr) {
         int defaultSize = 512;
-        if (auto k = table->getConstantProperty("min_size"))
+        if (auto k = table->getConstantProperty("min_size"_cs))
             defaultSize = k->asInt();
         auto properties = new IR::TableProperties(table->properties->properties);
         auto sizeProp = new IR::Property(IR::ID("size"),
                 new IR::ExpressionValue(new IR::Constant(defaultSize)), true);
         properties->properties.push_back(sizeProp);
         if (warn) {
-            auto hidden = table->getAnnotation("hidden");
+            auto hidden = table->getAnnotation("hidden"_cs);
             if (!hidden)
                 ::warning("No size defined for table '%s', setting default size to %d",
                         table->name, defaultSize);
@@ -65,14 +68,14 @@ void generateRuntime(const IR::P4Program* program,
 
     // By design we can use the same architecture handler implementation for
     // both TNA and T2NA.
-    p4RuntimeSerializer->registerArch("psa", new PSAArchHandlerBuilder());
-    p4RuntimeSerializer->registerArch("tna", new TofinoArchHandlerBuilder());
-    p4RuntimeSerializer->registerArch("t2na", new TofinoArchHandlerBuilder());
+    p4RuntimeSerializer->registerArch("psa"_cs, new PSAArchHandlerBuilder());
+    p4RuntimeSerializer->registerArch("tna"_cs, new TofinoArchHandlerBuilder());
+    p4RuntimeSerializer->registerArch("t2na"_cs, new TofinoArchHandlerBuilder());
 #if HAVE_CLOUDBREAK
-    p4RuntimeSerializer->registerArch("t3na", new TofinoArchHandlerBuilder());
+    p4RuntimeSerializer->registerArch("t3na"_cs, new TofinoArchHandlerBuilder());
 #endif
 #if HAVE_FLATROCK
-    p4RuntimeSerializer->registerArch("t5na", new TofinoArchHandlerBuilder());
+    p4RuntimeSerializer->registerArch("t5na"_cs, new TofinoArchHandlerBuilder());
 #endif
 
     auto arch = P4::P4RuntimeSerializer::resolveArch(options);
@@ -119,11 +122,14 @@ void generateRuntime(const IR::P4Program* program,
 
     // Generate BFRT json o/p
     if (generateBFRT) {
-        std::ostream* out = openFile(options.bfRtSchema, false);
-        if (!out) {
-            ::error("Couldn't open BF-RT schema file: %1%", options.bfRtSchema);
+        std::filesystem::path schemaFilePath = options.bfRtSchema.string();
+        std::ofstream outFile(schemaFilePath);
+
+        if (!outFile.is_open()) {
+            ::error("Couldn't open BF-RT schema file: %1%", schemaFilePath.string());
             return;
         }
+        std::ostream& out = outFile;
 
         // New types must be eliminated to resolve their bitwidths to be
         // generated in BF-RT json.
@@ -137,7 +143,7 @@ void generateRuntime(const IR::P4Program* program,
 
         LOG1("Generating BFRuntime JSON for architecture " << arch << Log::indent);
         auto *bfrt = new BFRT::BFRuntimeSchemaGenerator(*p4Runtime.p4Info);
-        bfrt->serializeBFRuntimeSchema(out);
+        bfrt->serializeBFRuntimeSchema(&out);
         LOG1_UNINDENT;
 
         if (::errorCount() > 0) return;

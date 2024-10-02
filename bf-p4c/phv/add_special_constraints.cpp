@@ -89,7 +89,7 @@ bool AddSpecialConstraints::preorder(BFN_MAYBE_UNUSED const IR::ConcreteHeaderRe
 
             // Add the fields
             for (auto mdp_field : mdp_vld_vec) {
-                cstring field_name = md->name + "." + mdp_field;
+                cstring field_name = md->name + "."_cs + mdp_field;
                 const auto* field = phv_i.field(field_name);
                 // The field function matches suffixes, so make sure we have the field we actually
                 // care about
@@ -114,7 +114,7 @@ bool AddSpecialConstraints::preorder(BFN_MAYBE_UNUSED const IR::ConcreteHeaderRe
             // Require 9-16b fields to be in the upper half
             // FIXME: should the packet_length field be excluded?
             for (auto& struct_field : ts->fields) {
-                cstring field_name = md->name + "." + struct_field->name;
+                cstring field_name = md->name + "."_cs + struct_field->name;
                 auto* field = phv_i.field(field_name);
                 BUG_CHECK(field, "Couldn't find field: %1%", field_name);
                 if (field->size >= 9 && field->size <= 16) field->set_deparsed_top_bits(true);

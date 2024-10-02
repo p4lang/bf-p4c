@@ -126,10 +126,10 @@ TEST_F(InputXbarAlloc, hello) {
 
 TEST_F(InputXbarAlloc, TestXbarUseByteVisualizationDetail) {
     IXBar::Use::Byte byte("W10", 16);
-    byte.add_info(IXBar::FieldInfo("ingress::hdr.inner_ethernet.$valid", 0, 0, 3, std::nullopt));
-    byte.add_info(IXBar::FieldInfo("ingress::hdr.inner_ipv4.$valid", 0, 0, 4, std::nullopt));
-    byte.add_info(IXBar::FieldInfo("ingress::hdr.inner_tcp.$valid", 0, 0, 6, std::nullopt));
-    byte.add_info(IXBar::FieldInfo("ingress::hdr.inner_udp.$valid", 0, 0, 7, std::nullopt));
+    byte.add_info(IXBar::FieldInfo("ingress::hdr.inner_ethernet.$valid"_cs, 0, 0, 3, std::nullopt));
+    byte.add_info(IXBar::FieldInfo("ingress::hdr.inner_ipv4.$valid"_cs, 0, 0, 4, std::nullopt));
+    byte.add_info(IXBar::FieldInfo("ingress::hdr.inner_tcp.$valid"_cs, 0, 0, 6, std::nullopt));
+    byte.add_info(IXBar::FieldInfo("ingress::hdr.inner_udp.$valid"_cs, 0, 0, 7, std::nullopt));
 
     auto detail = byte.visualization_detail();
     ASSERT_EQ(detail, "{unused[0:2], "

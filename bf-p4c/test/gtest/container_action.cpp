@@ -1,7 +1,9 @@
 #include <sstream>
 
-#include "gtest/gtest.h"
-#include "gmock/gmock.h"
+#include <gtest/gtest.h>
+#include <gmock/gmock-matchers.h>
+#include <gtest/gtest-message.h>
+#include <gtest/gtest-test-part.h>
 
 #include "bf-p4c/ir/gress.h"
 #include "bf-p4c/phv/utils/utils.h"
@@ -20,9 +22,9 @@ namespace Test {
 class ContainerAction: public BackendTest {
  protected:
     ContainerAction() {
-        tbl = new IR::MAU::Table("test", INGRESS);
-        act = new IR::MAU::Action("act");
-        tbl->actions["act"] = act;
+        tbl = new IR::MAU::Table("test"_cs, INGRESS);
+        act = new IR::MAU::Action("act"_cs);
+        tbl->actions["act"_cs] = act;
     }
 
     PhvInfo phv;
@@ -30,7 +32,7 @@ class ContainerAction: public BackendTest {
     IR::MAU::Action* act;
 
     void add_set(const PHV::Field* dst, const PHV::Field* src) {
-        auto set = new IR::MAU::Instruction("set");
+        auto set = new IR::MAU::Instruction("set"_cs);
 
         set->operands.push_back(
             new IR::TempVar(IR::Type::Bits::get(dst->size), false, dst->name));
@@ -41,7 +43,7 @@ class ContainerAction: public BackendTest {
     }
 
     void add_set(const PHV::Field* dst, unsigned src) {
-        auto set = new IR::MAU::Instruction("set");
+        auto set = new IR::MAU::Instruction("set"_cs);
 
         set->operands.push_back(
             new IR::TempVar(IR::Type::Bits::get(dst->size), false, dst->name));
@@ -52,19 +54,19 @@ class ContainerAction: public BackendTest {
     }
 
     void add_set(const PHV::Field* dst, cstring param) {
-        auto set = new IR::MAU::Instruction("set");
+        auto set = new IR::MAU::Instruction("set"_cs);
 
         set->operands.push_back(
             new IR::TempVar(IR::Type::Bits::get(dst->size), false, dst->name));
         set->operands.push_back(
-            new IR::MAU::ActionArg(IR::Type::Bits::get(dst->size), "act", param));
+            new IR::MAU::ActionArg(IR::Type::Bits::get(dst->size), "act"_cs, param));
 
         act->action.push_back(set);
     }
 
     void add_set_from_meter(const PHV::Field* dst,
                             cstring meter) {
-        auto set = new IR::MAU::Instruction("set");
+        auto set = new IR::MAU::Instruction("set"_cs);
 
         set->operands.push_back(
             new IR::TempVar(IR::Type::Bits::get(dst->size), false, dst->name));
@@ -81,7 +83,7 @@ class ContainerAction: public BackendTest {
                             int slice_hi,
                             int slice_lo,
                             cstring meter) {
-        auto set = new IR::MAU::Instruction("set");
+        auto set = new IR::MAU::Instruction("set"_cs);
 
         set->operands.push_back(
             new IR::Slice(
@@ -123,7 +125,7 @@ class ContainerAction: public BackendTest {
         instr->operands.push_back(
             new IR::TempVar(IR::Type::Bits::get(src1->size), false, src1->name));
         instr->operands.push_back(
-            new IR::MAU::ActionArg(IR::Type::Bits::get(dst->size), "act", src2));
+            new IR::MAU::ActionArg(IR::Type::Bits::get(dst->size), "act"_cs, src2));
 
         act->action.push_back(instr);
     }
@@ -185,12 +187,12 @@ class ContainerAction: public BackendTest {
 class TofinoContainerAction : public ContainerAction {
  public:
     TofinoContainerAction() {
-        Device::init("Tofino");
+        Device::init("Tofino"_cs);
     }
 };
 
 #define FIELD(field, size)                                \
-    field = phv.add(#field, INGRESS, size, 0, true, false);
+    field = phv.add(cstring(#field), INGRESS, size, 0, true, false);
 
 TEST_F(TofinoContainerAction, sanity) {
     PHV::Field *f1, *f2;
@@ -198,8 +200,8 @@ TEST_F(TofinoContainerAction, sanity) {
     FIELD(f1, 6);
     FIELD(f2, 6);
 
-    alloc(f1, "B0", 0, 0, 6);
-    alloc(f2, "B2", 0, 0, 6);
+    alloc(f1, "B0"_cs, 0, 0, 6);
+    alloc(f2, "B2"_cs, 0, 0, 6);
 
     add_set(f1, f2);
 
@@ -219,10 +221,10 @@ class DepositFieldContigousMask : public TofinoContainerAction {
         FIELD(f4, 8);
         FIELD(f5, 8);
 
-        alloc(f1, "W1", 0, 0, 8);
-        alloc(f2, "W1", 0, 8, 8);
-        alloc(f3, "W1", 0, 16, 16);
-        alloc(f5, "W0", 0, 16, 8);
+        alloc(f1, "W1"_cs, 0, 0, 8);
+        alloc(f2, "W1"_cs, 0, 8, 8);
+        alloc(f3, "W1"_cs, 0, 16, 16);
+        alloc(f5, "W0"_cs, 0, 16, 8);
 
         add_set(f1, f4);
         add_set(f2, f5);
@@ -233,13 +235,13 @@ class DepositFieldContigousMask : public TofinoContainerAction {
 };
 
 TEST_F(DepositFieldContigousMask, test1) {
-    alloc(f4, "W0", 0, 0, 8);
+    alloc(f4, "W0"_cs, 0, 0, 8);
 
     nok();
 }
 
 TEST_F(DepositFieldContigousMask, test2) {
-    alloc(f4, "W0", 0, 8, 8);
+    alloc(f4, "W0"_cs, 0, 8, 8);
 
     ok();
 }
@@ -259,11 +261,11 @@ class ByteRotateMerge : public TofinoContainerAction {
         d_p1->set_padding(true);
         d_p2->set_padding(true);
 
-        alloc(d1, "W0", 0, 0, 2);
-        alloc(d_p1, "W0", 0, 2, 6);
-        alloc(d2, "W0", 0, 8, 1);
-        alloc(d3, "W0", 0, 9, 2);
-        alloc(d_p2, "W0", 0, 11, 5);
+        alloc(d1, "W0"_cs, 0, 0, 2);
+        alloc(d_p1, "W0"_cs, 0, 2, 6);
+        alloc(d2, "W0"_cs, 0, 8, 1);
+        alloc(d3, "W0"_cs, 0, 9, 2);
+        alloc(d_p2, "W0"_cs, 0, 11, 5);
 
         add_set(d1, 0xabcd);
         add_set(d2, s2);
@@ -275,8 +277,8 @@ class ByteRotateMerge : public TofinoContainerAction {
 };
 
 TEST_F(ByteRotateMerge, one_const_and_one_source) {
-    alloc(s2, "W1", 0, 0, 1);
-    alloc(s3, "W1", 0, 1, 2);
+    alloc(s2, "W1"_cs, 0, 0, 1);
+    alloc(s3, "W1"_cs, 0, 1, 2);
     ok();
 }
 
@@ -300,18 +302,18 @@ class SlidesExamples : public TofinoContainerAction {
         FIELD(fb, 2);
         FIELD(fc, 2);
 
-        alloc(f1, "B0", 0, 0, 2);
-        alloc(f2, "B0", 0, 2, 2);
-        alloc(f3, "B0", 0, 4, 2);
-        alloc(f4, "B0", 0, 6, 2);
-        alloc(f5, "B1", 0, 0, 2);
-        alloc(f6, "B1", 0, 2, 2);
-        alloc(f7, "B1", 0, 4, 2);
-        alloc(f8, "B1", 0, 6, 2);
-        alloc(f9, "B2", 0, 0, 2);
-        alloc(fa, "B2", 0, 2, 2);
-        alloc(fb, "B2", 0, 4, 2);
-        alloc(fc, "B2", 0, 6, 2);
+        alloc(f1, "B0"_cs, 0, 0, 2);
+        alloc(f2, "B0"_cs, 0, 2, 2);
+        alloc(f3, "B0"_cs, 0, 4, 2);
+        alloc(f4, "B0"_cs, 0, 6, 2);
+        alloc(f5, "B1"_cs, 0, 0, 2);
+        alloc(f6, "B1"_cs, 0, 2, 2);
+        alloc(f7, "B1"_cs, 0, 4, 2);
+        alloc(f8, "B1"_cs, 0, 6, 2);
+        alloc(f9, "B2"_cs, 0, 0, 2);
+        alloc(fa, "B2"_cs, 0, 2, 2);
+        alloc(fb, "B2"_cs, 0, 4, 2);
+        alloc(fc, "B2"_cs, 0, 6, 2);
     }
 
     PHV::Field *f1, *f2, *f3, *f4, *f5, *f6, *f7, *f8, *f9, *fa, *fb, *fc;
@@ -416,21 +418,21 @@ TEST_F(SlidesExamples, a12) {
 }
 
 TEST_F(SlidesExamples, b1) {
-    add_set(f1, "param1");
+    add_set(f1, "param1"_cs);
 
     ok();
 }
 
 TEST_F(SlidesExamples, b2) {
-    add_set(f1, "param1");
-    add_set(f2, "param2");
+    add_set(f1, "param1"_cs);
+    add_set(f2, "param2"_cs);
 
     ok();
 }
 
 TEST_F(SlidesExamples, b3) {
-    add_set(f1, "param1");
-    add_set(f2, "param2");
+    add_set(f1, "param1"_cs);
+    add_set(f2, "param2"_cs);
     add_set(f3, f7);
     add_set(f4, f8);
 
@@ -438,8 +440,8 @@ TEST_F(SlidesExamples, b3) {
 }
 
 TEST_F(SlidesExamples, b4) {
-    add_set(f1, "param1");
-    add_set(f2, "param2");
+    add_set(f1, "param1"_cs);
+    add_set(f2, "param2"_cs);
     add_set(f3, f5);
     add_set(f4, f6);
 
@@ -447,34 +449,34 @@ TEST_F(SlidesExamples, b4) {
 }
 
 TEST_F(SlidesExamples, b5) {
-    add_set(f1, "param1");
-    add_set(f3, "param2");
+    add_set(f1, "param1"_cs);
+    add_set(f3, "param2"_cs);
 
     ok();
 }
 
 TEST_F(SlidesExamples, b6) {
-    add_set(f1, "param1");
+    add_set(f1, "param1"_cs);
     add_set(f2, f6);
-    add_set(f3, "param2");
+    add_set(f3, "param2"_cs);
     add_set(f4, f8);
 
     ok();
 }
 
 TEST_F(SlidesExamples, b7) {
-    add_set(f1, "param1");
+    add_set(f1, "param1"_cs);
     add_set(f2, f6);
-    add_set(f3, "param2");
+    add_set(f3, "param2"_cs);
 
     nok();
 }
 
 TEST_F(SlidesExamples, b8) {
-    add_set(f1, "param1");
-    add_set(f2, "param2");
+    add_set(f1, "param1"_cs);
+    add_set(f2, "param2"_cs);
     add_set(f3, f7);
-    add_set(f4, "param3");
+    add_set(f4, "param3"_cs);
 
     ok();
 }
@@ -487,14 +489,14 @@ TEST_F(SlidesExamples, b9) {
 
 TEST_F(SlidesExamples, b10) {
     add_set(f1, 0x2);
-    add_set(f2, "param1");
+    add_set(f2, "param1"_cs);
 
     ok();
 }
 
 TEST_F(SlidesExamples, b11) {
     add_set(f1, 0x2);
-    add_set(f2, "param2");
+    add_set(f2, "param2"_cs);
     add_set(f3, f7);
     add_set(f4, f8);
 
@@ -502,32 +504,32 @@ TEST_F(SlidesExamples, b11) {
 }
 
 TEST_F(SlidesExamples, c1) {
-    add_op(f1, "bor", f1, f5);
+    add_op(f1, "bor"_cs, f1, f5);
 
     nok();
 }
 
 TEST_F(SlidesExamples, c2) {
-    add_op(f1, "bor", f1, f5);
-    add_op(f2, "bor", f2, f6);
-    add_op(f3, "bor", f3, f7);
-    add_op(f4, "bor", f4, f8);
+    add_op(f1, "bor"_cs, f1, f5);
+    add_op(f2, "bor"_cs, f2, f6);
+    add_op(f3, "bor"_cs, f3, f7);
+    add_op(f4, "bor"_cs, f4, f8);
 
     ok();
 }
 
 TEST_F(SlidesExamples, c3) {
-    add_op(f1, "bor", f5, f9);
-    add_op(f2, "bor", f6, fa);
-    add_op(f3, "bor", f7, fb);
-    add_op(f4, "bor", f8, fc);
+    add_op(f1, "bor"_cs, f5, f9);
+    add_op(f2, "bor"_cs, f6, fa);
+    add_op(f3, "bor"_cs, f7, fb);
+    add_op(f4, "bor"_cs, f8, fc);
 
     ok();
 }
 
 TEST_F(SlidesExamples, c4) {
-    add_op(f1, "bor", f1, f5);
-    add_op(f2, "bor", f2, f6);
+    add_op(f1, "bor"_cs, f1, f5);
+    add_op(f2, "bor"_cs, f2, f6);
     add_set(f3, f3);
     add_set(f4, f4);
 
@@ -535,17 +537,17 @@ TEST_F(SlidesExamples, c4) {
 }
 
 TEST_F(SlidesExamples, c5) {
-    add_op(f1, "bor", f1, f5);
-    add_op(f2, "bor", f2, f6);
-    add_op(f3, "bor", f3, "param1");
-    add_op(f4, "bor", f4, "param2");
+    add_op(f1, "bor"_cs, f1, f5);
+    add_op(f2, "bor"_cs, f2, f6);
+    add_op(f3, "bor"_cs, f3, "param1"_cs);
+    add_op(f4, "bor"_cs, f4, "param2"_cs);
 
     nok();
 }
 
 TEST_F(SlidesExamples, c6) {
-    add_op(f1, "bor", f1, "param1");
-    add_op(f2, "bor", f2, "param2");
+    add_op(f1, "bor"_cs, f1, "param1"_cs);
+    add_op(f2, "bor"_cs, f2, "param2"_cs);
 
     nok();
     // TODO this can be supported if compiler can pad zero param1 and param2
@@ -563,8 +565,8 @@ class MultipleActionFromMeter : public TofinoContainerAction {
     void SetUp() override {
         FIELD(f1, 8);
 
-        alloc(f1, "B0", 0, 0, 4);
-        alloc(f1, "B0", 4, 4, 4);
+        alloc(f1, "B0"_cs, 0, 0, 4);
+        alloc(f1, "B0"_cs, 4, 4, 4);
     }
 
     PHV::Field* f1;
@@ -573,7 +575,7 @@ class MultipleActionFromMeter : public TofinoContainerAction {
 // Test 1: Regular set from a parameter
 // Expectation: OK -- no speciality
 TEST_F(MultipleActionFromMeter, test_1) {
-    add_set(f1, "param1");
+    add_set(f1, "param1"_cs);
 
     ok();
 }
@@ -581,7 +583,7 @@ TEST_F(MultipleActionFromMeter, test_1) {
 // Test 2: Set from meter
 // Expectation: OK - sourced from the same meter
 TEST_F(MultipleActionFromMeter, test_2) {
-    add_set_from_meter(f1, "meter1");
+    add_set_from_meter(f1, "meter1"_cs);
 
     ok();
 }
@@ -589,8 +591,8 @@ TEST_F(MultipleActionFromMeter, test_2) {
 // Test 3: Set from two meters
 // Expectation: EXCEPTION -- setting from multiple speciality sources
 TEST_F(MultipleActionFromMeter, test_3) {
-    add_set_from_meter(f1, 3, 0, "meter1");
-    add_set_from_meter(f1, 7, 4, "meter2");
+    add_set_from_meter(f1, 3, 0, "meter1"_cs);
+    add_set_from_meter(f1, 7, 4, "meter2"_cs);
 
     NOK_UNIMPLEMENTED("packing is too complicated");
 }
@@ -601,8 +603,8 @@ class JBayContainerAction : public ContainerAction {
     static constexpr unsigned W = PHV::FieldUse::WRITE;
 
     JBayContainerAction() {
-        Device::init("Tofino2");
-        PhvInfo::table_to_min_stages["test"] = { 0 };
+        Device::init("Tofino2"_cs);
+        PhvInfo::table_to_min_stages["test"_cs] = { 0 };
     }
 
  protected:
@@ -633,31 +635,31 @@ class Dark : public JBayContainerAction {
 TEST_F(Dark, test1) {
     // JIRA-DOC: This one is extracted from P4C-2802
 
-    alloc_dst(f1, "DB8", 0);
-    alloc_src(f2, "DB8", 1);
-    alloc_src(f3, "B28", 0);
+    alloc_dst(f1, "DB8"_cs, 0);
+    alloc_src(f2, "DB8"_cs, 1);
+    alloc_src(f3, "B28"_cs, 0);
 
     nok();
 }
 
 TEST_F(Dark, test2) {
-    alloc_dst(f1, "DB8", 0);
-    alloc_src(f3, "B28", 0);
+    alloc_dst(f1, "DB8"_cs, 0);
+    alloc_src(f3, "B28"_cs, 0);
 
     ok();
 }
 
 TEST_F(Dark, test3) {
-    alloc_dst(f1, "B0", 0);
-    alloc_src(f3, "DB0", 0);
+    alloc_dst(f1, "B0"_cs, 0);
+    alloc_src(f3, "DB0"_cs, 0);
 
     ok();
 }
 
 TEST_F(Dark, test4) {
-    alloc_dst(f1, "B0", 0);
-    alloc_src(f2, "B0", 1);
-    alloc_src(f3, "DB0", 0);
+    alloc_dst(f1, "B0"_cs, 0);
+    alloc_src(f2, "B0"_cs, 1);
+    alloc_src(f3, "DB0"_cs, 0);
 
     ok();
 }
@@ -665,10 +667,10 @@ TEST_F(Dark, test4) {
 TEST_F(Dark, test5) {
     add_set(f2, f4);
 
-    alloc_dst(f1, "B0", 0);
-    alloc_src(f2, "B0", 1);
-    alloc_src(f3, "DB0", 0);
-    alloc_src(f4, "DB0", 1);
+    alloc_dst(f1, "B0"_cs, 0);
+    alloc_src(f2, "B0"_cs, 1);
+    alloc_src(f3, "DB0"_cs, 0);
+    alloc_src(f4, "DB0"_cs, 1);
 
     ok();
 }
@@ -686,37 +688,37 @@ class Darker : public Dark {
 
 // More basic tests -- diffrent field size, container size variations.
 TEST_F(Darker, test1) {
-    alloc_dst(f1, "DB0", 0);
-    alloc_src(f2, "B0", 0);
+    alloc_dst(f1, "DB0"_cs, 0);
+    alloc_src(f2, "B0"_cs, 0);
 
     ok();
 }
 
 TEST_F(Darker, test2) {
-    alloc_dst(f1, "B0", 0);
-    alloc_src(f2, "DB0", 0);
+    alloc_dst(f1, "B0"_cs, 0);
+    alloc_src(f2, "DB0"_cs, 0);
 
     ok();
 }
 
 TEST_F(Darker, test3) {
-    alloc_dst(f1, "DH0", 0);
-    alloc_src(f2, "H0", 0);
+    alloc_dst(f1, "DH0"_cs, 0);
+    alloc_src(f2, "H0"_cs, 0);
 
     ok();
 }
 
 TEST_F(Darker, test4) {
-    alloc_dst(f1, "DH0", 0);
-    alloc_src(f2, "H0", 0);
-    alloc_dst(f3, "DH0", 8);
+    alloc_dst(f1, "DH0"_cs, 0);
+    alloc_src(f2, "H0"_cs, 0);
+    alloc_dst(f3, "DH0"_cs, 8);
 
     nok();
 }
 
 TEST_F(Darker, test5) {
-    alloc_dst(f1, "H0", 2);
-    alloc_src(f2, "DH0", 0);
+    alloc_dst(f1, "H0"_cs, 2);
+    alloc_src(f2, "DH0"_cs, 0);
 
     ok();
 }
@@ -729,22 +731,22 @@ class DarkSource : public Dark {
         FIELD(f2, 8);
         FIELD(f3, 8);
 
-        add_op(f1, "add", f2, f3);
+        add_op(f1, "add"_cs, f2, f3);
     }
 };
 
 TEST_F(DarkSource, test1) {
-    alloc_dst(f1, "B0", 0);
-    alloc_src(f2, "DB0", 0);
-    alloc_src(f3, "DB1", 0);
+    alloc_dst(f1, "B0"_cs, 0);
+    alloc_src(f2, "DB0"_cs, 0);
+    alloc_src(f3, "DB1"_cs, 0);
 
     ok();
 }
 
 TEST_F(DarkSource, test2) {
-    alloc_dst(f1, "H0", 0);
-    alloc_src(f2, "DH0", 0);
-    alloc_src(f3, "DH1", 0);
+    alloc_dst(f1, "H0"_cs, 0);
+    alloc_src(f2, "DH0"_cs, 0);
+    alloc_src(f3, "DH1"_cs, 0);
 
     ok();
 }
@@ -761,15 +763,15 @@ class DarkCannotSourceActionRAM : public JBayContainerAction {
 TEST_F(DarkCannotSourceActionRAM, test1) {
     add_set(f1, 0xbabe);
 
-    alloc_dst(f1, "DB0", 0);
+    alloc_dst(f1, "DB0"_cs, 0);
 
     nok();
 }
 
 TEST_F(DarkCannotSourceActionRAM, test2) {
-    add_set(f1, "param");
+    add_set(f1, "param"_cs);
 
-    alloc_dst(f1, "DB0", 0);
+    alloc_dst(f1, "DB0"_cs, 0);
 
     nok();
 }
@@ -777,15 +779,15 @@ TEST_F(DarkCannotSourceActionRAM, test2) {
 TEST_F(DarkCannotSourceActionRAM, test3) {
     add_set(f1, 0xbabe);
 
-    alloc_dst(f1, "MB0", 0);
+    alloc_dst(f1, "MB0"_cs, 0);
 
     ok();
 }
 
 TEST_F(DarkCannotSourceActionRAM, test4) {
-    add_set(f1, "param");
+    add_set(f1, "param"_cs);
 
-    alloc_dst(f1, "MB0", 0);
+    alloc_dst(f1, "MB0"_cs, 0);
 
     ok();
 }

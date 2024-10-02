@@ -168,7 +168,7 @@ cstring HeaderNameMauInspector::header_name(const IR::Member* member) {
         auto* alias_slice = expression->to<IR::BFN::AliasSlice>();
         field = phv.field(alias_slice->source);
     }
-    cstring hdr_name = (field) ? field->header() : "";
+    cstring hdr_name = (field) ? field->header() : ""_cs;
     return hdr_name;
 }
 
@@ -938,7 +938,7 @@ std::string ExcludeMAUNotMutexHeaders::get_active_headers_change_table(
             it == mutexes_removed.end())
             continue;
 
-        if (!const_entries || begin_state == mid_state) mid_state = "-";
+        if (!const_entries || begin_state == mid_state) mid_state = "-"_cs;
         table_printer.addRow({std::string(header_name),
                               std::string(begin_state),
                               std::string(mid_state),

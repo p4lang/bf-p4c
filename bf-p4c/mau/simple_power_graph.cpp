@@ -30,7 +30,7 @@ bool Edge::is_equivalent(const Edge *other) const {
     return true;
 }
 
-cstring Edge::get_edge_color() const {
+std::string Edge::get_edge_color() const {
     constexpr std::array<const char *, 8> LUT = {"red",    "blue",   "green", "orange",
                                                  "purple", "yellow", "brown", "cyan"};
     if (child_nodes_.size() > 1) {

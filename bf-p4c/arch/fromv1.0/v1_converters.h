@@ -213,14 +213,14 @@ class RegisterConverter : public ExternConverter {
 class TypeNameExpressionConverter : public ExpressionConverter {
     // mapping enum name from v1model to tofino
     ordered_map<cstring, cstring> enumsToTranslate = {
-            {"HashAlgorithm", "HashAlgorithm_t"}, {"CounterType", "CounterType_t"},
-            {"MeterType", "MeterType_t"},
-            {"CloneType", nullptr},  // tofino has no mapping for CloneType
+            {"HashAlgorithm"_cs, "HashAlgorithm_t"_cs}, {"CounterType"_cs, "CounterType_t"_cs},
+            {"MeterType"_cs, "MeterType_t"_cs},
+            {"CloneType"_cs, nullptr},  // tofino has no mapping for CloneType
     };
     ordered_map<cstring, cstring> fieldsToTranslate = {
-            {"crc16", "CRC16"}, {"csum16", "CSUM16"}, {"packets", "PACKETS"},
-            {"bytes", "BYTES"}, {"packets_and_bytes", "PACKETS_AND_BYTES"},
-            {"crc32", "CRC32"}, {"identity", "IDENTITY"}, {"random", "RANDOM"}};
+            {"crc16"_cs, "CRC16"_cs}, {"csum16"_cs, "CSUM16"_cs}, {"packets"_cs, "PACKETS"_cs},
+            {"bytes"_cs, "BYTES"_cs}, {"packets_and_bytes"_cs, "PACKETS_AND_BYTES"_cs},
+            {"crc32"_cs, "CRC32"_cs}, {"identity"_cs, "IDENTITY"_cs}, {"random"_cs, "RANDOM"_cs}};
  public:
     explicit TypeNameExpressionConverter(ProgramStructure* structure)
     : ExpressionConverter(structure) { CHECK_NULL(structure); }

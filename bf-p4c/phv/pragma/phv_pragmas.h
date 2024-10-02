@@ -36,7 +36,7 @@ class Pragmas : public PassManager {
     static bool checkPipeApplication(const IR::Annotation *annotation,
         const IR::BFN::Pipe* pipe, const IR::StringLiteral *pipe_arg);
     static void reportNoMatchingPHV(const IR::BFN::Pipe* pipe,
-        const IR::Expression* expr, cstring field_name = "");
+        const IR::Expression* expr, cstring field_name = ""_cs);
 
  private:
     PragmaContainerSize         pa_container_sizes_i;

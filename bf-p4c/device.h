@@ -163,9 +163,9 @@ class TofinoDevice : public Device {
     const TofinoArchSpec arch_;
 
  public:
-    TofinoDevice() : Device("Tofino"), parde_() {}
+    TofinoDevice() : Device("Tofino"_cs), parde_() {}
     Device::Device_t device_type() const override { return Device::TOFINO; }
-    cstring get_name() const override { return "Tofino"; }
+    cstring get_name() const override { return "Tofino"_cs; }
     int getNumPipes() const override { return 4; }
     int getNumPortsPerPipe() const override { return 4; }
     int getNumChannelsPerPort() const override { return 18; }
@@ -233,9 +233,9 @@ class JBayDevice : public Device {
 #endif
 
  public:
-    JBayDevice() : Device("Tofino2"), parde_() {}
+    JBayDevice() : Device("Tofino2"_cs), parde_() {}
     Device::Device_t device_type() const override { return Device::JBAY; }
-    cstring get_name() const override { return "Tofino2"; }
+    cstring get_name() const override { return "Tofino2"_cs; }
     int getNumPipes() const override { return 4; }
     int getNumPortsPerPipe() const override { return 4; }
     int getNumChannelsPerPort() const override { return 18; }
@@ -288,27 +288,27 @@ class JBayDevice : public Device {
 class JBayHDevice : public JBayDevice {
  public:
     int getNumStages() const override { return 6; }
-    cstring get_name() const override { return "Tofino2H"; }
+    cstring get_name() const override { return "Tofino2H"_cs; }
 };
 #endif  /* BAREFOOT_INTERNAL */
 
 class JBayMDevice : public JBayDevice {
  public:
     int getNumStages() const override { return 12; }
-    cstring get_name() const override { return "Tofino2M"; }
+    cstring get_name() const override { return "Tofino2M"_cs; }
 };
 
 class JBayUDevice : public JBayDevice {
  public:
     int getNumStages() const override { return 20; }
-    cstring get_name() const override { return "Tofino2U"; }
+    cstring get_name() const override { return "Tofino2U"_cs; }
 };
 
 class JBayA0Device : public JBayDevice {
  public:
     const JBayA0PardeSpec parde_{};
     const PardeSpec& getPardeSpec() const override { return parde_; }
-    cstring get_name() const override { return "Tofino2A0"; }
+    cstring get_name() const override { return "Tofino2A0"_cs; }
 };
 
 #if HAVE_CLOUDBREAK
@@ -327,9 +327,9 @@ class CloudbreakDevice : public Device {
 #endif
 
  public:
-    CloudbreakDevice() : Device("Tofino3"), phv_(), parde_() {}
+    CloudbreakDevice() : Device("Tofino3"_cs), phv_(), parde_() {}
     Device::Device_t device_type() const override { return Device::CLOUDBREAK; }
-    cstring get_name() const override { return "Tofino3"; }
+    cstring get_name() const override { return "Tofino3"_cs; }
     int getNumPipes() const override { return 8; }
     int getNumPortsPerPipe() const override { return 4; }
     int getNumChannelsPerPort() const override { return 18; }
@@ -393,9 +393,9 @@ class FlatrockDevice : public Device {
 #endif
 
  public:
-    FlatrockDevice() : Device("Tofino5"), phv_(), parde_() {}
+    FlatrockDevice() : Device("Tofino5"_cs), phv_(), parde_() {}
     Device::Device_t device_type() const override { return Device::FLATROCK; }
-    cstring get_name() const override { return "Tofino5"; }
+    cstring get_name() const override { return "Tofino5"_cs; }
     int getNumPipes() const override { return 8; }
     int getNumPortsPerPipe() const override { return 4; }
     int getNumChannelsPerPort() const override { return 18; }

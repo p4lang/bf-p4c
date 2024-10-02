@@ -583,14 +583,14 @@ struct InsertParserClotChecksums : public PassManager {
 
         IR::BFN::ChecksumAdd*
         create_checksum_add(const Clot* clot, const IR::BFN::PacketRVal* rval, bool swap) {
-            cstring name = "$clot_" + cstring::to_cstring(clot->tag) + "_csum";
+            cstring name = "$clot_"_cs + cstring::to_cstring(clot->tag) + "_csum"_cs;
             auto add = new IR::BFN::ChecksumAdd(name, rval, swap, false);
             return add;
         }
 
         IR::BFN::ChecksumDepositToClot*
         create_checksum_deposit(const Clot* clot) {
-            cstring name = "$clot_" + cstring::to_cstring(clot->tag) + "_csum";
+            cstring name = "$clot_"_cs + cstring::to_cstring(clot->tag) + "_csum"_cs;
             auto deposit = new IR::BFN::ChecksumDepositToClot(name);
             deposit->clot = clot;
             deposit->declName = name;
@@ -864,7 +864,7 @@ struct DuplicateStates : public ParserTransform {
 /** @} */  // end of group AllocateParserChecksums
 
 AllocateParserChecksums::AllocateParserChecksums(const PhvInfo& phv, const ClotInfo& clot)
-        : Logging::PassManager("parser", Logging::Mode::AUTO),
+        : Logging::PassManager("parser"_cs, Logging::Mode::AUTO),
           checksum_info(parser_info) {
     auto collect_dead_checksums = new ComputeDeadParserChecksums(parser_info, checksum_info);
     auto elim_dead_checksums = new ElimDeadParserChecksums(collect_dead_checksums->to_elim);

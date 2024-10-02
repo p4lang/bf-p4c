@@ -47,11 +47,11 @@ IR::MAU::Table* create_pov_encoder(gress_t gress,
     std::string table_name = toString(gress) + tableName+ std::to_string(id++);
     LOG1("\ncreating a table " << table_name << " for match action:");
     LOG3(match_action.print());
-    auto encoder = new IR::MAU::Table(table_name.c_str(), gress);
+    auto encoder = new IR::MAU::Table(table_name, gress);
     encoder->is_compiler_generated = true;
 
     auto p4_name = table_name + "_" + cstring::to_cstring(gress);
-    encoder->match_table = new IR::P4Table(p4_name.c_str(), new IR::TableProperties());
+    encoder->match_table = new IR::P4Table(p4_name, new IR::TableProperties());
 
     int i = 0;
     for (auto in : match_action.keys) {
@@ -73,7 +73,7 @@ IR::MAU::Table* create_pov_encoder(gress_t gress,
 
         auto arg = new IR::MAU::ActionArg(IR::Type::Bits::get(1), generated_action->name,
                                              arg_name.c_str());
-        auto instr = new IR::MAU::Instruction("set", {o, arg});
+        auto instr = new IR::MAU::Instruction("set"_cs, {o, arg});
 
         generated_action->action.push_back(instr);
         generated_action->args.push_back(arg);
@@ -88,7 +88,7 @@ IR::MAU::Table* create_pov_encoder(gress_t gress,
         static_entries.push_back(static_entry);
     }
 
-    auto nop = new IR::MAU::Action("__nop_");
+    auto nop = new IR::MAU::Action("__nop_"_cs);
     encoder->actions[nop->name] = nop;
     nop->default_allowed = nop->init_default = true;
 

@@ -12,9 +12,9 @@
 namespace BFN {
 
 // CONSTANTS --------------------------------------------------------------------------------------
-const cstring PingPongGeneration::ID_PING_PONG_SUFFIX = "__gen_duplicate_ping_pong";
-const cstring PingPongGeneration::GMD_STRUCTURE_NAME = "ghost_intrinsic_metadata_t";
-const cstring PingPongGeneration::PING_PONG_FIELD_NAME = "ping_pong";
+const cstring PingPongGeneration::ID_PING_PONG_SUFFIX = "__gen_duplicate_ping_pong"_cs;
+const cstring PingPongGeneration::GMD_STRUCTURE_NAME = "ghost_intrinsic_metadata_t"_cs;
+const cstring PingPongGeneration::PING_PONG_FIELD_NAME = "ping_pong"_cs;
 
 // HELPER VISITORS --------------------------------------------------------------------------------
 /**

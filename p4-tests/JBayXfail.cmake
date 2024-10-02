@@ -291,3 +291,17 @@ p4c_add_xfail_reason("tofino2"
   "mismatch from expected(.*) at byte .*"
   extensions/p4_tests/p4_16/stf/varbit_constant.p4
 )
+
+# V1 model tests: inconsistent srcInfo data when processing RegisterAction in ResolutionContext::lookup
+p4c_add_xfail_reason("tofino2"
+  "error: RegisterAction: declaration not found"
+  extensions/p4_tests/p4_16/stf/stateful3.p4
+  extensions/p4_tests/p4_16/stf/stateful_log1.p4
+  extensions/p4_tests/p4_16/stf/stateful2x16phv.p4
+)
+
+p4c_add_xfail_reason("tofino2"
+  "error: DirectRegisterAction: declaration not found"
+  extensions/p4_tests/p4_16/stf/stateful2.p4
+)
+

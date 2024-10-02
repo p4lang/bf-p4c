@@ -3,7 +3,8 @@
 #include "field_list.h"
 
 P4V1::FieldListConverter::FieldListConverter() {
-    ExpressionConverter::addConverter(std::type_index(typeid(IR::FieldList)).name(),
+    ExpressionConverter::addConverter(
+            cstring(std::type_index(typeid(IR::FieldList)).name()),
             convertFieldList);
 }
 
@@ -11,7 +12,7 @@ const IR::Node *P4V1::FieldListConverter::convertFieldList(const IR::Node *node)
     auto fl = node->to<IR::FieldList>();
     BUG_CHECK(fl != nullptr, "Invalid node type %1%", node);
 
-    cstring pragma_string = "field_list_field_slice";
+    cstring pragma_string = "field_list_field_slice"_cs;
 
     std::set<cstring> sliced_fields;
     std::map<cstring, std::pair<int, int>> field_slices;
@@ -51,7 +52,7 @@ const IR::Node *P4V1::FieldListConverter::convertFieldList(const IR::Node *node)
 
         IR::Slice* f_slice = nullptr;
         for (auto slice : field_slices) {
-            if (field_string.endsWith(slice.first)) {
+            if (field_string.endsWith(slice.first.string())) {
                 auto hi = slice.second.first;
                 auto lo = slice.second.second;
 

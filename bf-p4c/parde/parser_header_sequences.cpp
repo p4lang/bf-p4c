@@ -130,7 +130,7 @@ void ParserHeaderSequences::end_apply() {
         for (auto gress : {INGRESS, EGRESS}) {
             std::stringstream ss;
             ss << "    " << gress << ": ";
-            cstring sep = "";
+            std::string sep = "";
             for (auto& hdr : headers[gress]) {
                 ss << sep << hdr;
                 sep = " ";
@@ -144,7 +144,7 @@ void ParserHeaderSequences::end_apply() {
             for (const auto& seq : sequences[gress]) {
                 std::stringstream ss;
                 ss << "    - [";
-                cstring sep = "";
+                std::string sep = "";
                 for (const auto hdr : seq) {
                     ss << sep << hdr;
                     sep = ", ";

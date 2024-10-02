@@ -21,9 +21,9 @@ void AddParserMetadata::addTofinoIngressParserEntryPoint(IR::BFN::Parser* parser
     // This state initializes some special metadata and serves as an entry
     // point.
     auto *igParserMeta =
-            getMetadataType(pipe, "ingress_intrinsic_metadata_from_parser");
+            getMetadataType(pipe, "ingress_intrinsic_metadata_from_parser"_cs);
     auto *alwaysDeparseBit =
-            new IR::TempVar(IR::Type::Bits::get(1), true, "ingress$always_deparse");
+            new IR::TempVar(IR::Type::Bits::get(1), true, "ingress$always_deparse"_cs);
     auto *bridgedMetadataIndicator =
             new IR::TempVar(IR::Type::Bits::get(8), false, BFN::BRIDGED_MD_INDICATOR);
 
@@ -36,8 +36,8 @@ void AddParserMetadata::addTofinoIngressParserEntryPoint(IR::BFN::Parser* parser
     }
 
     if (igParserMeta) {
-        auto *globalTimestamp = gen_fieldref(igParserMeta, "global_tstamp");
-        auto *globalVersion = gen_fieldref(igParserMeta, "global_ver");
+        auto *globalTimestamp = gen_fieldref(igParserMeta, "global_tstamp"_cs);
+        auto *globalVersion = gen_fieldref(igParserMeta, "global_ver"_cs);
         prim->push_back(
             new IR::BFN::Extract(globalTimestamp,
                 new IR::BFN::MetadataRVal(
@@ -63,10 +63,10 @@ void AddParserMetadata::addTofinoIngressParserEntryPoint(IR::BFN::Parser* parser
         // can be disabled with a pragma
         if (!pipe->has_pragma(PragmaDisableI2EReservedDropImplementation::name)) {
             auto *igDeparserMeta =
-                    getMetadataType(pipe, "ingress_intrinsic_metadata_for_deparser");
+                    getMetadataType(pipe, "ingress_intrinsic_metadata_for_deparser"_cs);
             if (igDeparserMeta) {
                 auto *mirrorType =
-                        gen_fieldref(igDeparserMeta, "mirror_type");
+                        gen_fieldref(igDeparserMeta, "mirror_type"_cs);
                 auto povBit =
                         new IR::BFN::FieldLVal(new IR::TempVar(
                             IR::Type::Bits::get(1), true, mirrorType->toString() + ".$valid"));
@@ -80,7 +80,7 @@ void AddParserMetadata::addTofinoIngressParserEntryPoint(IR::BFN::Parser* parser
     }
 
     parser->start =
-      new IR::BFN::ParserState(createThreadName(parser->gress, "$entry_point"), parser->gress,
+      new IR::BFN::ParserState(createThreadName(parser->gress, "$entry_point"_cs), parser->gress,
         *prim, { },
         { new IR::BFN::Transition(match_t(), 0, parser->start) });
 }
@@ -95,7 +95,7 @@ void AddParserMetadata::addFlatrockIngressParserEntryPoint(IR::BFN::Parser* pars
     auto prim = new IR::Vector<IR::BFN::ParserPrimitive>(
         { new IR::BFN::Extract(zeroVar, new IR::BFN::ConstantRVal(0)) });
 
-    parser->start = new IR::BFN::ParserState(createThreadName(parser->gress, "$entry_point"),
+    parser->start = new IR::BFN::ParserState(createThreadName(parser->gress, "$entry_point"_cs),
         parser->gress, *prim, { }, { new IR::BFN::Transition(match_t(), 0, parser->start) });
 }
 #endif  // HAVE_FLATROCK
@@ -117,18 +117,18 @@ void AddParserMetadata::addIngressMetadata(IR::BFN::Parser *parser) {
 
 void AddParserMetadata::addTofinoEgressParserEntryPoint(IR::BFN::Parser* parser) {
     auto* egParserMeta =
-      getMetadataType(pipe, "egress_intrinsic_metadata_from_parser");
+      getMetadataType(pipe, "egress_intrinsic_metadata_from_parser"_cs);
 
     auto* alwaysDeparseBit =
-        new IR::TempVar(IR::Type::Bits::get(1), true, "egress$always_deparse");
+        new IR::TempVar(IR::Type::Bits::get(1), true, "egress$always_deparse"_cs);
 
     auto prim = new IR::Vector<IR::BFN::ParserPrimitive>();
     if (isV1)
         prim->push_back(new IR::BFN::Extract(alwaysDeparseBit, new IR::BFN::ConstantRVal(1)));
 
     if (egParserMeta) {
-        auto* globalTimestamp = gen_fieldref(egParserMeta, "global_tstamp");
-        auto* globalVersion = gen_fieldref(egParserMeta, "global_ver");
+        auto* globalTimestamp = gen_fieldref(egParserMeta, "global_tstamp"_cs);
+        auto* globalVersion = gen_fieldref(egParserMeta, "global_ver"_cs);
         prim->push_back(
             new IR::BFN::Extract(globalTimestamp,
                 new IR::BFN::MetadataRVal(
@@ -145,7 +145,7 @@ void AddParserMetadata::addTofinoEgressParserEntryPoint(IR::BFN::Parser* parser)
     }
 
     parser->start =
-      new IR::BFN::ParserState(createThreadName(parser->gress, "$entry_point"), parser->gress,
+      new IR::BFN::ParserState(createThreadName(parser->gress, "$entry_point"_cs), parser->gress,
         *prim, { },
         { new IR::BFN::Transition(match_t(), 0, parser->start) });
 }
@@ -185,7 +185,7 @@ void addDeparserParamRename(IR::BFN::Deparser* deparser,
 
 void AddDeparserMetadata::addIngressMetadata(IR::BFN::Deparser *d) {
     for (auto f : Device::archSpec().getIngressInstrinicMetadataForTM()) {
-        auto* tmMeta = getMetadataType(pipe, "ingress_intrinsic_metadata_for_tm");
+        auto* tmMeta = getMetadataType(pipe, "ingress_intrinsic_metadata_for_tm"_cs);
         if (!tmMeta) {
             ::warning("ig_intr_md_for_tm not defined in ingress control block");
             continue; }
@@ -193,7 +193,7 @@ void AddDeparserMetadata::addIngressMetadata(IR::BFN::Deparser *d) {
     }
 
     for (auto f : Device::archSpec().getIngressInstrinicMetadataForDeparser()) {
-        auto* dpMeta = getMetadataType(pipe, "ingress_intrinsic_metadata_for_deparser");
+        auto* dpMeta = getMetadataType(pipe, "ingress_intrinsic_metadata_for_deparser"_cs);
         if (!dpMeta) {
             ::warning("ig_intr_md_for_dprsr not defined in ingress control block");
             continue; }
@@ -203,12 +203,12 @@ void AddDeparserMetadata::addIngressMetadata(IR::BFN::Deparser *d) {
 #if HAVE_FLATROCK
     // Create a zero-field to ensure that there's a zero container available to the metadata packer
     if (Device::currentDevice() == Device::FLATROCK) {
-        auto* tmMeta = getMetadataType(pipe, "ingress_intrinsic_metadata_for_tm");
+        auto* tmMeta = getMetadataType(pipe, "ingress_intrinsic_metadata_for_tm"_cs);
         if (!tmMeta) {
             ::warning("ig_intr_md_for_tm not defined in ingress control block");
         } else {
             auto* zeroVar = new IR::TempVar(IR::Type::Bits::get(8), true, tmMeta->name + ".$zero");
-            auto* param = new IR::BFN::DeparserParameter("zero", zeroVar);
+            auto* param = new IR::BFN::DeparserParameter("zero"_cs, zeroVar);
             d->params.push_back(param);
         }
     }
@@ -217,7 +217,7 @@ void AddDeparserMetadata::addIngressMetadata(IR::BFN::Deparser *d) {
 
 void AddDeparserMetadata::addEgressMetadata(IR::BFN::Deparser *d) {
     for (auto f : Device::archSpec().getEgressIntrinsicMetadataForOutputPort()) {
-        auto* outputMeta = getMetadataType(pipe, "egress_intrinsic_metadata_for_output_port");
+        auto* outputMeta = getMetadataType(pipe, "egress_intrinsic_metadata_for_output_port"_cs);
         if (!outputMeta) {
             ::warning("eg_intr_md_for_oport not defined in egress control block");
             continue; }
@@ -225,7 +225,7 @@ void AddDeparserMetadata::addEgressMetadata(IR::BFN::Deparser *d) {
     }
 
     for (auto f : Device::archSpec().getEgressIntrinsicMetadataForDeparser()) {
-        auto* dpMeta = getMetadataType(pipe, "egress_intrinsic_metadata_for_deparser");
+        auto* dpMeta = getMetadataType(pipe, "egress_intrinsic_metadata_for_deparser"_cs);
         if (!dpMeta) {
             ::warning("eg_intr_md_for_dprsr not defined in egress control block");
             continue; }
@@ -235,7 +235,7 @@ void AddDeparserMetadata::addEgressMetadata(IR::BFN::Deparser *d) {
      * the reassembled header and is absolutely necessary
      */
     for (auto f : Device::archSpec().getEgressIntrinsicMetadata()) {
-        auto* egMeta = getMetadataType(pipe, "egress_intrinsic_metadata");
+        auto* egMeta = getMetadataType(pipe, "egress_intrinsic_metadata"_cs);
         if (!egMeta) {
             ::warning("eg_intr_md not defined in egress control block");
             continue; }

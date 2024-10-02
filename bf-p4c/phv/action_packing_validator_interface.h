@@ -17,7 +17,7 @@ class ActionPackingValidatorInterface {
     struct Result {
         enum class Code { OK, BAD, UNKNOWN };
         Code code = Code::UNKNOWN;
-        cstring err = "";
+        cstring err = cstring::empty;
         /// When the instruction to the destination container of an action cannot be found,
         /// all slice lists involved are included in this set: including all sources
         /// and the destination. If it is an intrinsic conflict of constraint, then either
@@ -27,7 +27,7 @@ class ActionPackingValidatorInterface {
             new ordered_set<const SuperCluster::SliceList*>();
         std::optional<const IR::MAU::Action*> invalid_action = std::nullopt;
         Result() = default;
-        explicit Result(Code code, cstring err = "") : code(code), err(err) {}
+        explicit Result(Code code, cstring err = cstring::empty) : code(code), err(err) {}
     };
 
     /// can_pack returns Result with code::OK if @p slice_lists can be allocated to containers

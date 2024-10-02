@@ -149,7 +149,7 @@ class GenerateOutputs : public PassManager {
     /// Output a skeleton context.json in case compilation fails.
     /// It is required by all our tools. If the assembler can get far enough, it will overwrite it.
     void outputContext() {
-        cstring ctxtFileName = _outputDir + "/context.json";
+        cstring ctxtFileName = _outputDir + "/context.json"_cs;
         std::ofstream ctxtFile(ctxtFileName);
         rapidjson::StringBuffer sb;
         rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(sb);
@@ -183,19 +183,19 @@ class GenerateOutputs : public PassManager {
         ctxtFile << sb.GetString();
         ctxtFile.flush();
         ctxtFile.close();
-        auto contextDir = BFNContext::get().getOutputDirectory("", _pipeId)
+        auto contextDir = BFNContext::get().getOutputDirectory(""_cs, _pipeId)
             .substr(_options.outputDir.size()+1);
-        Logging::Manifest::getManifest().addContext(_pipeId, contextDir + "context.json");
+        Logging::Manifest::getManifest().addContext(_pipeId, contextDir + "context.json"_cs);
     }
 
     void end_apply() override {
-        cstring outputFile = _outputDir + "/" + _options.programName + ".bfa";
+        cstring outputFile = _outputDir + "/"_cs + _options.programName + ".bfa"_cs;
         std::ofstream ctxt_stream(outputFile, std::ios_base::app);
 
         Logging::Manifest &manifest = Logging::Manifest::getManifest();
         if (_success) {
             // Always output primitives json file (info used by model for logging actions)
-            cstring primitivesFile = _outputDir + "/" + _options.programName + ".prim.json";
+            cstring primitivesFile = _outputDir + "/"_cs + _options.programName + ".prim.json"_cs;
             LOG2("ASM generation for primitives: " << primitivesFile);
             ctxt_stream << "primitives: \"" << _options.programName << ".prim.json\"" << std::endl;
             std::ofstream prim(primitivesFile);
@@ -203,18 +203,18 @@ class GenerateOutputs : public PassManager {
             prim << std::endl << std::flush;
 
             // Output dynamic hash json file
-            cstring dynHashFile = _outputDir + "/" + _options.programName + ".dynhash.json";
+            cstring dynHashFile = _outputDir + "/"_cs + _options.programName + ".dynhash.json"_cs;
             LOG2("ASM generation for dynamic hash: " << dynHashFile);
             ctxt_stream << "dynhash: \"" << _options.programName << ".dynhash.json\"" << std::endl;
             std::ofstream dynhash(dynHashFile);
             dynhash << _dynhash << std::endl << std::flush;
         }
         if (_options.debugInfo) {  // Generate graphs only if invoked with -g
-            auto graphsDir = BFNContext::get().getOutputDirectory("graphs", _pipeId);
+            auto graphsDir = BFNContext::get().getOutputDirectory("graphs"_cs, _pipeId);
             // Output dependency graph json file
             if (_depgraph.size() > 0) {
-                cstring depFileName = "dep";
-                cstring depFile = graphsDir + "/" + depFileName + ".json";
+                cstring depFileName = "dep"_cs;
+                cstring depFile = graphsDir + "/"_cs + depFileName + ".json"_cs;
                 LOG2("Dependency graph json generation for P4i: " << depFile);
                 std::ofstream dep(depFile);
                 _depgraph.serialize(dep);
@@ -224,7 +224,7 @@ class GenerateOutputs : public PassManager {
                 // in manifest only accepts one gress since the dot graphs are
                 // generated per gress. To satisfy schema we use INGRESS, this does
                 // not have any affect on p4i interpretation.
-                manifest.addGraph(_pipeId, "table", depFileName, INGRESS, ".json");
+                manifest.addGraph(_pipeId, "table"_cs, depFileName, INGRESS, ".json"_cs);
             }
         }
 
@@ -244,9 +244,9 @@ class GenerateOutputs : public PassManager {
         _options(o), _pipeId(pipeId), _success(success),
         _dynhash(b.get_phv()), _primitives(p), _depgraph(d) {
         setStopOnError(false);
-        _outputDir = BFNContext::get().getOutputDirectory("", pipeId);
+        _outputDir = BFNContext::get().getOutputDirectory(""_cs, pipeId);
         if (_outputDir == "") exit(1);
-        auto logsDir = BFNContext::get().getOutputDirectory("logs", pipeId);
+        auto logsDir = BFNContext::get().getOutputDirectory("logs"_cs, pipeId);
         std::string phvLogFile(logsDir + "/phv.json");
         std::string resourcesLogFile(logsDir + "/resources.json");
         addPasses({ &_dynhash,  // Verifies that the hash is valid before the dump of
@@ -425,18 +425,20 @@ int main(int ac, char **av) {
         return handle_return(PROGRAM_ERROR, options);
 
     // If we just want to prettyprint to p4_16, running the frontend is sufficient.
-    if (!options.prettyPrintFile.isNullOrEmpty())
+    if (!options.prettyPrintFile.empty())
         return handle_return(::errorCount() > 0 ? PROGRAM_ERROR : SUCCESS, options);
 
     log_dump(program, "Initial program");
 
     // Dump frontend IR for p4i if debug (-g) was selected
     // Or if the --toJson was used
-    if (BackendOptions().debugInfo || options.dumpJsonFile) {
+    if (BackendOptions().debugInfo || !options.dumpJsonFile.empty()) {
         // Dump file is either whatever --toJson specifies or a default one for p4i
-        cstring irFilePath = options.dumpJsonFile ?
-                            options.dumpJsonFile :
-                            BFNContext::get().getOutputDirectory() + "/frontend-ir.json";
+        std::filesystem::path irFilePath =
+            !options.dumpJsonFile.empty()
+                ? options.dumpJsonFile
+                : std::filesystem::path(BFNContext::get().getOutputDirectory() +
+                                        "/frontend-ir.json");
         // Print out the IR for p4i after frontend (--toJson "-" signifies stdout)
         auto &irFile = irFilePath != "-" ?
                         *openFile(irFilePath, false) :
@@ -492,7 +494,7 @@ int main(int ac, char **av) {
         return handle_return(PROGRAM_ERROR, options);
 
     if (options.debugInfo) {
-        program->apply(SourceInfoLogging(BFNContext::get().getOutputDirectory().c_str(),
+        program->apply(SourceInfoLogging(BFNContext::get().getOutputDirectory().string(),
                                          "source.json", *midend.sourceInfoLogging));
     }
 
@@ -507,8 +509,8 @@ int main(int ac, char **av) {
     // Register event logger in manifest
     // Also register frontend IR dump
     if (BackendOptions().debugInfo) {
-        manifest.setEventLog("events.json");
-        manifest.setFrontendIrLog("frontend-ir.json");
+        manifest.setEventLog("events.json"_cs);
+        manifest.setFrontendIrLog("frontend-ir.json"_cs);
     }
 
     // setup the pipes and the architecture config early, so that the manifest is
@@ -549,7 +551,8 @@ int main(int ac, char **av) {
                 LOG3("Creating graphs for pipe " << pipe_id);
                 EventLogger::get().pipeChange(pipe_id);
                 manifest.setPipe(pipe_id, pipe_name);
-                auto graphsDir = BFNContext::get().getOutputDirectory("graphs", pipe_id);
+                auto outputDir = BFNContext::get().getOutputDirectory("graphs"_cs, pipe_id);
+                const auto graphsDir = std::filesystem::path(outputDir.string_view());
                 // set the pipe for the visitors to compute the output dir
                 manifest.setRefMap(&substitute.refMap);
                 auto toplevel = substitute.getToplevelBlock();
@@ -563,7 +566,7 @@ int main(int ac, char **av) {
                     // Therefore we just create empty parser graphs
                     std::vector<graphs::Graphs::Graph *> emptyParser;
                     // And call graph visitor that actually outputs the graphs from the arrays
-                    cstring filePath("");
+                    std::filesystem::path filePath = "";
                     graphs::Graph_visitor gvs(graphsDir, true, false, false, filePath);
                     gvs.process(cgen.controlGraphsArray, emptyParser);
                     // generate entries for controls in manifest

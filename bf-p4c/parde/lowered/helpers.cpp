@@ -57,7 +57,7 @@ cstring debugInfoFor(const IR::BFN::ParserLVal* lval,
                      const PHV::AllocSlice& slice,
                      bool includeContainerInfo) {
     auto fieldRef = lval->to<IR::BFN::FieldLVal>();
-    if (!fieldRef) return "";
+    if (!fieldRef) return ""_cs;
 
     return debugInfoFor(fieldRef->field->toString(), slice, includeContainerInfo);
 }

@@ -484,7 +484,7 @@ void JbayNextTable::Prop::local_prop(const NTInfo &nti, std::map<int, bitvec> &e
         bitvec local_exec_tables;
         for (size_t j = 0; j < tables.size(); j++) {
             auto rep = tables.at(j);
-            auto& r_i_r = self.props[get_uid(rep)]["$run_if_ran"];
+            auto& r_i_r = self.props[get_uid(rep)]["$run_if_ran"_cs];
             for (size_t k = j + 1; k < tables.size(); k++) {
                 auto nt = tables.at(k);
                 BUG_CHECK(rep->global_id(), "Unplaced table %s", rep->name);
@@ -512,7 +512,7 @@ void JbayNextTable::Prop::cross_prop(const NTInfo &nti, std::map<int, bitvec> &e
         if (stages[i].empty()) continue;
         for (auto rep : stages.at(i)) {
             if (executed_paths[i].getbit(*rep->global_id())) continue;
-            cstring branch = "$run_if_ran";
+            cstring branch = "$run_if_ran"_cs;
             int prev_st = 0;
             const IR::MAU::Table *prev_t = nullptr;
             for (int j = i - 1; j >= nti.first_stage; j--) {
@@ -979,10 +979,10 @@ bool JbayNextTable::TagReduce::merge_tags() {
         LOG2("  Merging tags " << fst << " and " << snd);
         for (auto kv : mrg.dum) {  // Associate all of the dummy tables with the table sequence
             auto dtbls =
-                std::accumulate(kv.second.begin(), kv.second.end(), std::vector<IR::MAU::Table*>(),
-                                [&](std::vector<IR::MAU::Table*> a, int st) {
-                                    cstring tname = "$next-table-forward-to-" + kv.first.dest->name
-                                        + "-" + std::to_string(st);
+                std::accumulate(kv.second.begin(), kv.second.end(), std::vector<IR::MAU::Table *>(),
+                                [&](std::vector<IR::MAU::Table *> a, int st) {
+                                    cstring tname = "$next-table-forward-to-"_cs +
+                                                    kv.first.dest->name + "-" + std::to_string(st);
                                     LOG3("    - " << tname << " in stage " << st
                                          << ", targeting dest " << kv.first.dest->name);
                                     auto* dt = new IR::MAU::Table(tname, kv.first.thread());
@@ -1038,15 +1038,15 @@ JbayNextTable::JbayNextTable(bool disableNextTableUse) {
 }
 
 ordered_set<UniqueId> JbayNextTable::next_for(const IR::MAU::Table *tbl, cstring what) const {
-    if (what == "$miss" && tbl->next.count("$try_next_stage"))
-        what = "$try_next_stage";
+    if (what == "$miss" && tbl->next.count("$try_next_stage"_cs))
+        what = "$try_next_stage"_cs;
 
     if (tbl->actions.count(what) && tbl->actions.at(what)->exitAction) {
         BUG("long branch incompatible with exit action");
         return {};
     }
     if (!tbl->next.count(what))
-        what = "$default";
+        what = "$default"_cs;
     ordered_set<UniqueId> rv;
     if (props.count(tbl->unique_id())) {
         auto prop = props.at(tbl->unique_id());
@@ -1055,7 +1055,7 @@ ordered_set<UniqueId> JbayNextTable::next_for(const IR::MAU::Table *tbl, cstring
         for (auto id : prop[what])
             rv.insert(id);
         // Always add run_if_ran set
-        for (auto always : prop["$run_if_ran"])
+        for (auto always : prop["$run_if_ran"_cs])
             rv.insert(always);
     }
     return rv;

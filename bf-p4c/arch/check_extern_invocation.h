@@ -22,7 +22,7 @@ class CheckExternInvocationCommon : public P4::CheckExternInvocationCommon {
     cstring getBlockName(int bit) override {
         static const char* lookup[] = {"parser", "control (MAU)", "deparser"};
         BUG_CHECK(sizeof(lookup)/sizeof(lookup[0]) == ArchBlock_t::BLOCK_TYPE, "Bad lookup table");
-        return lookup[bit % ArchBlock_t::BLOCK_TYPE];
+        return cstring(lookup[bit % ArchBlock_t::BLOCK_TYPE]);
     }
     void initCommonPipeConstraints();
     void checkExtern(const P4::ExternMethod *extMethod,

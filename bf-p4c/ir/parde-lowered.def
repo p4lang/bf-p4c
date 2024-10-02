@@ -293,7 +293,7 @@ class BaseLoweredParser : AbstractParser {
 #apply
 
     toString {
-        return gress ? "lowered egress parser" : "lowered ingress parser";
+        return gress ? "lowered egress parser"_cs : "lowered ingress parser"_cs;
     }
 #nodbprint
 }
@@ -550,7 +550,7 @@ class LoweredDeparser : AbstractDeparser {
 #noconstructor
     LoweredDeparser(gress_t gress) : AbstractDeparser(gress) { }
 #apply
-    toString { return gress ? "lowered egress deparser" : "lowered ingress deparser"; }
+    toString { return gress ? "lowered egress deparser"_cs : "lowered ingress deparser"_cs; }
 
     inline Vector<LoweredEmit> emits;
     inline Vector<LoweredDeparserParameter> params;

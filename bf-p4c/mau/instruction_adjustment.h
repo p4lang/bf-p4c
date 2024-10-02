@@ -284,10 +284,10 @@ class EliminateNoopInstructions: public MauTransform {
     const IR::MAU::Instruction *preorder(IR::MAU::Instruction *) override;
     const IR::MAU::Synth2Port *preorder(IR::MAU::Synth2Port *s) override;
     cstring toString(OP_TYPE ot) const {
-        if (ot == DST) return "DST";
-        else if (ot == SRC1) return "SRC1";
-        else if (ot == SRC2) return "SRC2";
-        return "-";
+        if (ot == DST) return "DST"_cs;
+        else if (ot == SRC1) return "SRC1"_cs;
+        else if (ot == SRC2) return "SRC2"_cs;
+        return "-"_cs;
     }
 
  public:

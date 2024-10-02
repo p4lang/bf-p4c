@@ -42,7 +42,7 @@ class PacketLengthEgressUseEval : public Inspector {
             return false;
         auto* decl = refMap->getDeclaration(member->expr->to<IR::PathExpression>()->path);
         auto* control = findContext<IR::BFN::TnaControl>();
-        if (decl && control && decl->getName().name == control->tnaParams.at("eg_intr_md")) {
+        if (decl && control && decl->getName().name == control->tnaParams.at("eg_intr_md"_cs)) {
             egressUsesPacketLength = true;
         }
         return false;
@@ -93,13 +93,13 @@ class EgressPacketLengthAdjust : public Transform {
             if (!member || member->member.name != "extract")
                 continue;
             auto* pathExpr = member->expr->to<IR::PathExpression>();
-            if (!pathExpr || pathExpr->path->name.name != parser->tnaParams.at("pkt"))
+            if (!pathExpr || pathExpr->path->name.name != parser->tnaParams.at("pkt"_cs))
                 continue;
 
             // Extracted mirror header
             auto* argument = methodCallStatement->methodCall->arguments->at(0)->expression;
             // Add "egress_pkt_len_adjust" assignment to parse state
-            auto& compGenMeta = parser->tnaParams.at("__bfp4c_compiler_generated_meta");
+            auto& compGenMeta = parser->tnaParams.at("__bfp4c_compiler_generated_meta"_cs);
             auto* egPktLenAdjust = new IR::Member(new IR::PathExpression(compGenMeta),
                                                   IR::ID("egress_pkt_len_adjust"));
             auto* method = new IR::PathExpression("sizeInBytes");
@@ -125,10 +125,10 @@ class EgressPacketLengthAdjust : public Transform {
 
         // Add packet length adjustment action/assignment to control block
         auto* newEgressControlBlock = blockStatement->clone();
-        auto& compGenMeta = control->tnaParams.at("__bfp4c_compiler_generated_meta");
+        auto& compGenMeta = control->tnaParams.at("__bfp4c_compiler_generated_meta"_cs);
         auto* egPktLenAdjust = new IR::Member(new IR::PathExpression(compGenMeta),
                                                 IR::ID("egress_pkt_len_adjust"));
-        auto& egIntMeta = control->tnaParams.at("eg_intr_md");
+        auto& egIntMeta = control->tnaParams.at("eg_intr_md"_cs);
         auto* egPktLen = new IR::Member(new IR::PathExpression(egIntMeta),
                                         IR::ID("pkt_length"));
         auto* egPktLenAdjustAction = new IR::AssignmentStatement(egPktLen,
@@ -149,7 +149,7 @@ AdjustEgressPacketLength::AdjustEgressPacketLength(P4::ReferenceMap* refMap, P4:
             new P4::ClearTypeMap(typeMap),
             // BFN::TypeChecking with read-write BFN::TypeInference:
             new P4::ResolveReferences(refMap),
-            new BFN::TypeInference(refMap, typeMap, false),
+            new BFN::TypeInference(typeMap, false),
             new P4::ApplyTypesToExpressions(typeMap),
             new P4::ResolveReferences(refMap) })
     });

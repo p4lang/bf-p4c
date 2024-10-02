@@ -132,27 +132,27 @@ class BFN::Pipe {
     visit_children {
         if (auto *th = dynamic_cast<ThreadVisitor *>(&v)) {
             if (th->thread == GHOST) {
-                v.visit(ghost_thread.ghost_parser, "ghost_parser");
-                v.visit(ghost_thread.ghost_mau, "ghost_mau");
+                v.visit(ghost_thread.ghost_parser, "ghost_parser"_cs);
+                v.visit(ghost_thread.ghost_mau, "ghost_mau"_cs);
             } else {
                 thread[th->thread].parsers.parallel_visit_children(v);
-                ControlFlowVisitor::GuardGlobal guard_except(v, "-EXIT-");
-                v.visit(thread[th->thread].mau, "mau");
-                v.flow_merge_global_from("-EXIT-");
-                v.visit(ghost_thread.ghost_parser, "ghost_parser");
-                v.visit(ghost_thread.ghost_mau, "ghost_mau");
-                v.visit(thread[th->thread].deparser, "deparser"); }
+                ControlFlowVisitor::GuardGlobal guard_except(v, "-EXIT-"_cs);
+                v.visit(thread[th->thread].mau, "mau"_cs);
+                v.flow_merge_global_from("-EXIT-"_cs);
+                v.visit(ghost_thread.ghost_parser, "ghost_parser"_cs);
+                v.visit(ghost_thread.ghost_mau, "ghost_mau"_cs);
+                v.visit(thread[th->thread].deparser, "deparser"_cs); }
         } else {
             // FIXME -- doesn't do flow_clone/merge properly, but fixing will
             // break ParserGraph (at least) as it doesn't do merge properly
             for (auto &th : thread) {
                 th.parsers.parallel_visit_children(v);
-                ControlFlowVisitor::GuardGlobal guard_except(v, "-EXIT-");
-                v.visit(th.mau, "mau");
-                v.flow_merge_global_from("-EXIT-");
-                v.visit(th.deparser, "deparser"); }
-            v.visit(ghost_thread.ghost_parser, "ghost_parser");
-            v.visit(ghost_thread.ghost_mau, "ghost_mau"); } }
+                ControlFlowVisitor::GuardGlobal guard_except(v, "-EXIT-"_cs);
+                v.visit(th.mau, "mau"_cs);
+                v.flow_merge_global_from("-EXIT-"_cs);
+                v.visit(th.deparser, "deparser"_cs); }
+            v.visit(ghost_thread.ghost_parser, "ghost_parser"_cs);
+            v.visit(ghost_thread.ghost_mau, "ghost_mau"_cs); } }
 }
 
 // A path that may span more than two pipeline gresses, depending on how the
@@ -172,16 +172,16 @@ class BFN::BridgePath : BFN::Pipe {
         // does not have support for ghost thread yet.
         for (auto &th : threads.at(INGRESS)) {
             th.parsers.parallel_visit_children(v);
-            ControlFlowVisitor::GuardGlobal guard_except(v, "-EXIT-");
-            v.visit(th.mau, "mau");
-            v.flow_merge_global_from("-EXIT-");
-            v.visit(th.deparser, "deparser"); }
+            ControlFlowVisitor::GuardGlobal guard_except(v, "-EXIT-"_cs);
+            v.visit(th.mau, "mau"_cs);
+            v.flow_merge_global_from("-EXIT-"_cs);
+            v.visit(th.deparser, "deparser"_cs); }
         for (auto &th : threads.at(EGRESS)) {
             th.parsers.parallel_visit_children(v);
-            ControlFlowVisitor::GuardGlobal guard_except(v, "-EXIT-");
-            v.visit(th.mau, "mau");
-            v.flow_merge_global_from("-EXIT-");
-            v.visit(th.deparser, "deparser"); } }
+            ControlFlowVisitor::GuardGlobal guard_except(v, "-EXIT-"_cs);
+            v.visit(th.mau, "mau"_cs);
+            v.flow_merge_global_from("-EXIT-"_cs);
+            v.visit(th.deparser, "deparser"_cs); } }
 }
 
 // BFN::Toplevel stores the midend and backend representation of a P4Program.
@@ -520,7 +520,7 @@ class HashStructExpression : IR::StructExpression {
  * types of cast are eliminated in the midend. */
 class BFN::ReinterpretCast : Cast {
     stringOp = "(reinterpret_cast)";
-    toString{ return "reinterpret_cast"; }
+    toString{ return "reinterpret_cast"_cs; }
     validate{ BUG_CHECK(!destType->is<Type_Unknown>(), "%1%: Cannot cast to unknown type", this); }
 }
 
@@ -528,6 +528,6 @@ class BFN::ReinterpretCast : Cast {
  * class. Sign_extend is handled in the backend. */
 class BFN::SignExtend : Cast {
     stringOp = "(sign_extend)";
-    toString{ return "sign_extend"; }
+    toString{ return "sign_extend"_cs; }
     validate{ BUG_CHECK(!destType->is<Type_Unknown>(), "%1%: Cannot cast to unknown type", this); }
 }

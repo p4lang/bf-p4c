@@ -187,7 +187,7 @@ bool ResourcesLogging::preorder(const IR::BFN::Pipe *p) {
 }
 
 bool ResourcesLogging::preorder(const IR::MAU::Table *tbl) {
-    cstring tblName = "";
+    cstring tblName = ""_cs;
     if (!tbl->match_table) {
         if (!tbl->conditional_gateway_only()) {
             LOG1("Can't find name for table" << *tbl);

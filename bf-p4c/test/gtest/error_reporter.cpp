@@ -45,7 +45,7 @@ class ErrorReporterTest : public ::testing::Test {
         auto* sources = new Util::InputSources();
         sources->appendText(code.c_str());
 
-        return new IR::StringLiteral(Util::SourceInfo(sources, pos), "");
+        return new IR::StringLiteral(Util::SourceInfo(sources, pos), ""_cs);
     }
 
     void ReportError(const std::string& code, std::string msg, int line, int column = 1) {
@@ -146,7 +146,7 @@ TestCode(44): [--Wwarn=uninitialized_use] warning: val_undefined may be uninitia
     auto backupStream = BaseCompileContext::get().errorReporter().getOutputStream();
     BaseCompileContext::get().errorReporter().setOutputStream(&customStream);
     // Non-standard architecture, default to TNA
-    BFN::Architecture::init("TNA");
+    BFN::Architecture::init("TNA"_cs);
     // Compile and emit warnings 1 and 2
     EXPECT_TRUE(testCode.apply_pass(TestCode::Pass::FullFrontend));
 
@@ -353,7 +353,7 @@ line error message" */
     )";
     const std::string ERROR =
         "[--Werror=unexpected] error: The following errors were not expected:\n"
-        "(null)(5): [--Werror=expected] error: Unexpected error!";
+        "(5): [--Werror=expected] error: Unexpected error!";
 
     auto* backup = DiagnosticTestSetup(reporter, CODE);
 

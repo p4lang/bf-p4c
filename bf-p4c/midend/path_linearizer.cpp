@@ -4,7 +4,7 @@ namespace BFN {
 
 cstring LinearPath::to_cstring(cstring delimiter,
         bool skip_path_expression) {
-    cstring ret = "";
+    cstring ret = ""_cs;
     for (auto c : components) {
         if (auto pathexpr = c->to<IR::PathExpression>()) {
             if (skip_path_expression)
@@ -22,7 +22,7 @@ cstring LinearPath::to_cstring(cstring delimiter,
 }
 
 cstring LinearPath::to_cstring() {
-    return to_cstring(".", false);
+    return to_cstring("."_cs, false);
 }
 
 Visitor::profile_t PathLinearizer::init_apply(const IR::Node* root) {

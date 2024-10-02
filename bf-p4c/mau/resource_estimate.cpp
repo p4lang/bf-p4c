@@ -264,7 +264,7 @@ int SelectorLengthBits(const IR::MAU::Selector *sel) {
 
 static int ways_pragma(const IR::MAU::Table *tbl, int min, int max) {
     auto annot = tbl->match_table->getAnnotations();
-    if (auto s = annot->getSingle("ways")) {
+    if (auto s = annot->getSingle("ways"_cs)) {
         ERROR_CHECK(s->expr.size() >= 1, "%s: The ways pragma on table %s does not have a "
                     "value", tbl->srcInfo, tbl->name);
         auto pragma_val =  s->expr.at(0)->to<IR::Constant>();
@@ -283,7 +283,7 @@ static int ways_pragma(const IR::MAU::Table *tbl, int min, int max) {
 
 static int simul_lookups_pragma(const IR::MAU::Table *tbl, int min, int max) {
     auto annot = tbl->match_table->getAnnotations();
-    if (auto s = annot->getSingle("simul_lookups")) {
+    if (auto s = annot->getSingle("simul_lookups"_cs)) {
         ERROR_CHECK(s->expr.size() >= 1, "%s: The simul_lookups pragma on table %s does not "
                     "have a value", tbl->srcInfo, tbl->name);
         auto pragma_val =  s->expr.at(0)->to<IR::Constant>();
@@ -302,11 +302,11 @@ static int simul_lookups_pragma(const IR::MAU::Table *tbl, int min, int max) {
 
 // for logging messages -- which resource ran out
 cstring StageUseEstimate::ran_out() const {
-    if (logical_ids > StageUse::MAX_LOGICAL_IDS) return "logical_ids";
-    if (srams > StageUse::MAX_SRAMS) return "srams";
-    if (tcams > StageUse::MAX_TCAMS) return "tcams";
-    if (local_tinds > MAX_LOCAL_TINDS) return "local_tinds";
-    if (maprams > StageUse::MAX_MAPRAMS) return "maprams";
+    if (logical_ids > StageUse::MAX_LOGICAL_IDS) return "logical_ids"_cs;
+    if (srams > StageUse::MAX_SRAMS) return "srams"_cs;
+    if (tcams > StageUse::MAX_TCAMS) return "tcams"_cs;
+    if (local_tinds > MAX_LOCAL_TINDS) return "local_tinds"_cs;
+    if (maprams > StageUse::MAX_MAPRAMS) return "maprams"_cs;
     // For exact and ternary ixbar allocation, tables can share ixbar bytes.
     // However stage use estimate simply adds the ixbar bytes on the tables and
     // does not account for any sharing (see StageUseEstimate operator+=).
@@ -322,8 +322,8 @@ cstring StageUseEstimate::ran_out() const {
     // bytes and calculate the correct ixbar bytes and re-enable this check.
     // if (exact_ixbar_bytes > StageUse::MAX_IXBAR_BYTES) return "exact ixbar";
     // if (ternary_ixbar_groups > StageUse::MAX_TERNARY_GROUPS) return "ternary ixbar";
-    if (meter_alus > MAX_METER_ALUS) return "meter_alus";
-    if (stats_alus > MAX_STATS_ALUS) return "stats_alus";
+    if (meter_alus > MAX_METER_ALUS) return "meter_alus"_cs;
+    if (stats_alus > MAX_STATS_ALUS) return "stats_alus"_cs;
     return cstring();
 }
 
@@ -955,7 +955,7 @@ void StageUseEstimate::options_to_rams(const IR::MAU::Table *tbl,
 void StageUseEstimate::select_best_option(const IR::MAU::Table *tbl) {
     bool small_table_allocation = true;
     int table_size = 0;
-    if (auto k = tbl->match_table->getConstantProperty("size"))
+    if (auto k = tbl->match_table->getConstantProperty("size"_cs))
         table_size = k->asInt();
     for (auto lo : layout_options) {
         if (lo.entries < table_size) {
@@ -1705,7 +1705,7 @@ bool RangeEntries::preorder(const IR::MAU::TableKey *ixbar_read) {
 void RangeEntries::postorder(const IR::MAU::Table *tbl) {
     auto annot = tbl->match_table->getAnnotations();
     int range_entries = -1;
-    if (auto s = annot->getSingle("entries_with_ranges")) {
+    if (auto s = annot->getSingle("entries_with_ranges"_cs)) {
         const IR::Constant *pragma_val = nullptr;
         if (s->expr.size() == 0) {
             ::error("%s: entries_with_ranges pragma on table %s has no value", s->srcInfo,

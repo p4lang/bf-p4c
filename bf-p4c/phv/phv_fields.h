@@ -83,10 +83,10 @@ class AllocContext {
     bool is_deparser() const { return type == Type::DEPARSER; }
     bool is_table() const { return type == Type::TABLE; }
     cstring typeStr() const {
-        if (is_parser()) return "PARSER";
-        else if (is_deparser()) return "DEPARSER";
-        else if (is_table()) return "TABLE";
-        return "NONE";
+        if (is_parser()) return "PARSER"_cs;
+        else if (is_deparser()) return "DEPARSER"_cs;
+        else if (is_table()) return "TABLE"_cs;
+        return "NONE"_cs;
     }
 
     static const AllocContext* PARSER;

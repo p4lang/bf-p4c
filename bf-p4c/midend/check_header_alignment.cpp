@@ -17,7 +17,7 @@ bool CheckPadAssignment::preorder(const IR::AssignmentStatement* statement) {
     if (!header_type)
         return false;
     auto field = header_type->getField(member->member.name);
-    if (field && field->getAnnotation("padding")) {
+    if (field && field->getAnnotation("padding"_cs)) {
         if (statement->srcInfo.isValid())
             ::warning(ErrorType::WARN_UNUSED, "%1%: Padding fields do not need to be explicitly "
                       "set. Also, setting these fields can introduce PHV constraints the compiler "
@@ -141,14 +141,14 @@ const IR::Node* AddPaddingFields::preorder(IR::Type_Header* header) {
         // to the position. this pass will not attempt to insert padding.  user
         // is responsible to ensure @packed fields does not incur phv
         // constraint.
-        auto packed = field->getAnnotation("packed");
+        auto packed = field->getAnnotation("packed"_cs);
         if (packed != nullptr) {
             structFields.push_back(field);
             continue; }
         // If field has @padding annotation, it is treated as a padding field.
         // remove all other annotations on the field, especially the @flexible
         // annotation which could be introduced by header flattening.
-        auto hidden = field->getAnnotation("padding");
+        auto hidden = field->getAnnotation("padding"_cs);
         if (hidden != nullptr) {
             auto *fieldAnnotations = new IR::Annotations({
                 new IR::Annotation(IR::ID("padding"), {})});
@@ -160,7 +160,7 @@ const IR::Node* AddPaddingFields::preorder(IR::Type_Header* header) {
         auto total_bit_size = canonicalType->width_bits() + programmer_inserted_padding;
         const int alignment = getAlignment(total_bit_size);
         if (alignment != 0) {
-            cstring padFieldName = "__pad_";
+            cstring padFieldName = "__pad_"_cs;
             padFieldName += cstring::to_cstring(padFieldId++);
             auto *fieldAnnotations = new IR::Annotations({
                     new IR::Annotation(IR::ID("padding"), {})});
@@ -212,7 +212,7 @@ const IR::Node* AddPaddingFields::preorder(IR::StructExpression *st) {
         // Add padding field for every bridged metadata field to ensure that the resulting
         // header is byte aligned.
         LOG3(" canno type " << canonicalType);
-        auto hidden = field->getAnnotation("padding");
+        auto hidden = field->getAnnotation("padding"_cs);
         if (hidden != nullptr) {
             programmer_inserted_padding += canonicalType->width_bits();
         } else {
@@ -220,7 +220,7 @@ const IR::Node* AddPaddingFields::preorder(IR::StructExpression *st) {
             const int alignment = getAlignment(total_bit_size);
             LOG3("..." << total_bit_size);
             if (alignment != 0) {
-                cstring padFieldName = "__pad_";
+                cstring padFieldName = "__pad_"_cs;
                 padFieldName += cstring::to_cstring(padFieldId++);
                 components.push_back(new IR::NamedExpression(padFieldName,
                             new IR::Constant(IR::Type::Bits::get(alignment), 0)));

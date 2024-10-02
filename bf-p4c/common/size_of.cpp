@@ -100,7 +100,7 @@ const IR::Node* BackendStrengthReduction::sub(IR::MAU::Instruction* inst) {
     if (inst->operands.at(2)->is<IR::Constant>()) {
         auto cst = inst->operands.at(2)->to<IR::Constant>();
         auto neg = new IR::Constant(cst->srcInfo, cst->type, -cst->value, cst->base, true);
-        auto result = new IR::MAU::Instruction(inst->srcInfo, "add",
+        auto result = new IR::MAU::Instruction(inst->srcInfo, "add"_cs,
                 {inst->operands.at(0), inst->operands.at(1), neg});
         return result;
     }

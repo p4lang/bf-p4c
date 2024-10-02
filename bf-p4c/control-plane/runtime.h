@@ -18,7 +18,7 @@ namespace BFN {
  * to the list as required.
  */
 class CheckReservedNames : public Inspector {
-    std::set<cstring> reservedNames = { "snapshot" };
+    std::set<cstring> reservedNames = { "snapshot"_cs };
     bool preorder(const IR::Type_ArchBlock* b) override;
 
  public:

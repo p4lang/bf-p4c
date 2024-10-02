@@ -132,7 +132,7 @@ class PadFlexibleField : public PassManager {
             // change new ListExpressions to StructExpressions
             new P4::ClearTypeMap(typeMap),
             new P4::ResolveReferences(refMap),
-            new BFN::TypeInference(refMap, typeMap, false),
+            new BFN::TypeInference(typeMap, false),
             new P4::ClearTypeMap(typeMap),
             new BFN::TypeChecking(refMap, typeMap, true),
             new CheckHeaderAlignment(refMap, typeMap),

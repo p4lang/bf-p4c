@@ -23,7 +23,7 @@ void AdjustExtract::postorder(IR::BFN::ParserState* state) {
                 size_t  pre_padding = marshaled_from.pre_padding;
                 LOG3("Found Marshaled, marshaled_from = " << marshaled_from);
 
-                cstring full_name = cstring::to_cstring(gress) + "::" + field_name;
+                cstring full_name = cstring::to_cstring(gress) + "::"_cs + field_name;
                 auto* field = phv.field(full_name);
                 BUG_CHECK(field, "Can not find field that is marshaled: %1%", full_name);
 

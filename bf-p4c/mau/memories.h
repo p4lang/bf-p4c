@@ -212,7 +212,7 @@ struct Memories {
     virtual void shrink_allowed_lts() = 0;
     virtual void fill_placed_scm_table(const IR::MAU::Table *, const TableResourceAlloc *) = 0;
     virtual void printOn(std::ostream &) const = 0;
-    cstring last_failure() const { return failure_reason ? failure_reason : ""; }
+    cstring last_failure() const { return failure_reason ? failure_reason : ""_cs; }
     virtual void init_shared(int stage) { local_stage = stage; }
     virtual const ordered_map<cstring, int> collect_sram_block_alloc_info() = 0;
 
@@ -235,7 +235,7 @@ std::ostream &operator<<(std::ostream& out, const BFN::Alloc2D<cstring, R, C>& a
     for (int i = 0; i < R; i++) {
         for (int j = 0; j < C; j++) {
             cstring val = alloc2d[i][j];
-            if (!val) val = "-";
+            if (!val) val = "-"_cs;
             out << std::setw(10) << val << " ";
         }
         out << Log::endl;

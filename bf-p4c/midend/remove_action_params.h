@@ -170,7 +170,7 @@ class RemoveActionParameters : public PassManager {
         if (!tc)
             tc = new P4::TypeChecking(refMap, typeMap);
         passes.emplace_back(tc);
-        passes.emplace_back(new P4::FindActionParameters(refMap, typeMap, ai));
+        passes.emplace_back(new P4::FindActionParameters(typeMap, ai));
         passes.emplace_back(new DoRemoveActionParametersTofino(ai));
         passes.emplace_back(new P4::ClearTypeMap(typeMap));
     }

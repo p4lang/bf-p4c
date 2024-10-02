@@ -85,7 +85,7 @@ struct AllocError {
     /// sliced more, or source slice list needs to be sliced less (packed together). Both
     /// sources and destination slice lists will be saved here.
     const ordered_set<const SuperCluster::SliceList*>* reslice_required = nullptr;
-    explicit AllocError(ErrorCode code) : code(code), msg("") {}
+    explicit AllocError(ErrorCode code) : code(code), msg(cstring::empty) {}
     AllocError(ErrorCode code, cstring msg) : code(code), msg(msg) {}
     std::string str() const;
 };
@@ -109,8 +109,8 @@ struct AllocResult {
     explicit AllocResult(const Transaction& tx): tx(tx) {}
     bool ok() const { return err == nullptr; }
     std::string err_str() const;
-    std::string tx_str(cstring prefix = "") const;
-    static std::string pretty_print_tx(const PHV::Transaction& tx, cstring prefix = "");
+    std::string tx_str(cstring prefix = ""_cs) const;
+    static std::string pretty_print_tx(const PHV::Transaction& tx, cstring prefix = cstring::empty);
     bool operator==(const AllocResult& other) const;
 };
 
@@ -246,7 +246,7 @@ class ScoreContext {
     }
 
     int t() const { return t_i; }
-    cstring t_tabs() const {
+    std::string t_tabs() const {
         return tab_table[t_i];
     }
     ScoreContext with_t(int t) const {

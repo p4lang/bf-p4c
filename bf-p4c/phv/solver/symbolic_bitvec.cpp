@@ -159,7 +159,7 @@ BitVec BitVec::bin_op(const BitVec& other, ExprNodeType type) const {
 cstring BitVec::to_cstring() const {
     std::stringstream ss;
     ss << "[";
-    cstring sep = "";
+    std::string sep = "";
     for (size_t i = 0; i < bits.size(); i++) {
         ss << sep;
         sep = ", ";

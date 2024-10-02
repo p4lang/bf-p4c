@@ -205,7 +205,7 @@ struct SimplifyHeaderValidMethods : public Transform {
 
         // On Tofino, calling a header's `isValid()` method is implemented by
         // reading the header's POV bit, which is a simple bit<1> value.
-        const cstring validField = "$valid";
+        const cstring validField = "$valid"_cs;
         auto* member = new IR::Member(call->srcInfo, target, validField);
         member->type = IR::Type::Bits::get(1);
 
@@ -234,7 +234,7 @@ struct SimplifyHeaderValidMethods : public Transform {
         // On Barefoot architectures, calling a header's `setValid()` and
         // `setInvalid()` methods is implemented by write the header's POV bit,
         // which is a simple bit<1> value.
-        const cstring validField = "$valid";
+        const cstring validField = "$valid"_cs;
         auto* member = new IR::Member(statement->srcInfo, target, validField);
         member->type = IR::Type::Bits::get(1);
 

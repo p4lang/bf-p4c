@@ -60,8 +60,8 @@ createParserCriticalPathTestCase(const std::string& parserSource) {
 
     auto& options = BackendOptions();
     options.langVersion = CompilerOptions::FrontendVersion::P4_16;
-    options.target = "tofino";
-    options.arch = "v1model";
+    options.target = "tofino"_cs;
+    options.arch = "v1model"_cs;
     options.disable_parse_min_depth_limit = true;
 
     return TofinoPipeTestCase::createWithThreadLocalInstances(source);
@@ -100,10 +100,10 @@ state start {
     test->pipe->apply(*run);
 
     std::vector<std::pair<cstring, int>> expectedIngressPath({
-            {"ingress::start", 41}
+            {"ingress::start"_cs, 41}
         });
     std::vector<std::pair<cstring, int>> expectedEgressPath({
-            {"egress::start", 41}
+            {"egress::start"_cs, 41}
         });
 
     EXPECT_EQ(transformToComparable(run->get_ingress_result().path), expectedIngressPath);
@@ -140,12 +140,12 @@ state parseH2AndMeta {
     test->pipe->apply(*run);
 
     std::vector<std::pair<cstring, int>> expectedIngressPath({
-            {"ingress::start", 41},
-            {"ingress::parseH2AndMeta", 65 + 8}
+            {"ingress::start"_cs, 41},
+            {"ingress::parseH2AndMeta"_cs, 65 + 8}
         });
     std::vector<std::pair<cstring, int>> expectedEgressPath({
-            {"egress::start", 41},
-            {"egress::parseH2", 65}  // Egress does not extract metadata
+            {"egress::start"_cs, 41},
+            {"egress::parseH2"_cs, 65}  // Egress does not extract metadata
         });
 
     EXPECT_EQ(transformToComparable(run->get_ingress_result().path), expectedIngressPath);

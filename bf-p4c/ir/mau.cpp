@@ -286,20 +286,20 @@ void Table::visit_match_table(THIS* self, Visitor& v, payload_info_t &payload_in
         auto exit_visitor = &saved->flow_clone();
         if (payload_info.action_info.count(action_name))
             exit_visitor->flow_merge(*payload_info.action_info.at(action_name).flow_state);
-        exit_visitor->visit(action, "actions");
-        exit_visitor->flow_merge_global_to("-EXIT-");
+        exit_visitor->visit(action, "actions"_cs);
+        exit_visitor->flow_merge_global_to("-EXIT-"_cs);
     }
 
     // Handle non-exiting actions, while being careful to avoid visiting "next" entries multiple
     // times.
 
     SplitFlowVisitTableNext<THIS> next_visitors(self, v, saved);
-    bool have_hit_miss = self->next.count("$hit") || self->next.count("$miss");
+    bool have_hit_miss = self->next.count("$hit"_cs) || self->next.count("$miss"_cs);
     if (have_hit_miss) {
-        next_visitors["$hit"] = nullptr;
-        next_visitors["$miss"] = nullptr;
+        next_visitors["$hit"_cs] = nullptr;
+        next_visitors["$miss"_cs] = nullptr;
     } else {
-        next_visitors["$default"] = nullptr;
+        next_visitors["$default"_cs] = nullptr;
     }
 
     // Visit all actions to populate next_visitors with visitors to visit "next".
@@ -322,7 +322,7 @@ void Table::visit_match_table(THIS* self, Visitor& v, payload_info_t &payload_in
                 current->flow_merge(*pinfo->flow_state); }
 
         // Visit the action.
-        current->visit(action, "actions");
+        current->visit(action, "actions"_cs);
 
         // Figure out which keys in the next_visitors table need updating.
         if (pinfo) {
@@ -337,8 +337,8 @@ void Table::visit_match_table(THIS* self, Visitor& v, payload_info_t &payload_in
         std::vector<cstring> keys;
         if (have_hit_miss) {
             // Table uses hit/miss chaining.
-            if (!action->miss_only()) keys.push_back("$hit");
-            if (!action->hit_only()) keys.push_back("$miss");
+            if (!action->miss_only()) keys.push_back("$hit"_cs);
+            if (!action->hit_only()) keys.push_back("$miss"_cs);
         } else {
             // Table uses action chaining.
             if (self->next.count(action_name)) {
@@ -347,7 +347,7 @@ void Table::visit_match_table(THIS* self, Visitor& v, payload_info_t &payload_in
                 next_visitors[action_name] = nullptr;
             } else {
                 // The action has no "next" entry. It chains to the entry for "$default".
-                keys.push_back("$default");
+                keys.push_back("$default"_cs);
             }
         }
 
@@ -370,10 +370,10 @@ void Table::visit_match_table(THIS* self, Visitor& v, payload_info_t &payload_in
     }
 
     // Visit $try_next_stage, if it exists.
-    if (self->next.count("$try_next_stage")) {
-        BUG_CHECK(next_visitors.count("$try_next_stage") == 0, "invalid");
+    if (self->next.count("$try_next_stage"_cs)) {
+        BUG_CHECK(next_visitors.count("$try_next_stage"_cs) == 0, "invalid");
         if (!current) current = &saved->flow_clone();
-        next_visitors["$try_next_stage"] = current;
+        next_visitors["$try_next_stage"_cs] = current;
         current = nullptr;
     }
 
@@ -411,7 +411,7 @@ bool IR::MAU::Table::operator==(const IR::MAU::Table &a) const {
 }
 
 cstring IR::MAU::Table::get_table_type_string() const {
-    cstring tbl_type = "gateway";
+    cstring tbl_type = "gateway"_cs;
     bool no_match_hit = layout.no_match_hit_path() && !conditional_gateway_only();
     // FIXME -- "no_match_hit" is a bit of a misnomer -- it includes "direct" lookup
     // match tables where the match has been changed to an identity hash used to index
@@ -419,13 +419,13 @@ cstring IR::MAU::Table::get_table_type_string() const {
     // using a gateway to supply a hit signal
     if (!conditional_gateway_only())
         tbl_type = layout.ternary || layout.no_match_miss_path()
-                   ? "ternary_match" : "exact_match";
+                   ? "ternary_match"_cs : "exact_match"_cs;
     if (layout.proxy_hash)
-        tbl_type = "proxy_hash";
+        tbl_type = "proxy_hash"_cs;
     if (no_match_hit)
-        tbl_type = "hash_action";
+        tbl_type = "hash_action"_cs;
     if (layout.atcam)
-        tbl_type = "atcam_match";
+        tbl_type = "atcam_match"_cs;
     return tbl_type;
 }
 
@@ -874,7 +874,7 @@ int IR::MAU::Table::get_provided_stage(int geq_stage, int *req_entries, int *fla
 
 int IR::MAU::Table::get_random_seed() const {
     int val = -1;
-    if (getAnnotation("random_seed", val))
+    if (getAnnotation("random_seed"_cs, val))
         ERROR_CHECK(val >= 0, "%s: random_seem pragma provided to table %s must be >= 0",
                     srcInfo, externalName());
     return val;
@@ -882,7 +882,7 @@ int IR::MAU::Table::get_random_seed() const {
 
 int IR::MAU::Table::get_pragma_max_actions() const {
     int pragma_val;
-    if (getAnnotation("max_actions", pragma_val)) {
+    if (getAnnotation("max_actions"_cs, pragma_val)) {
         int num_actions = actions.size();
         int max_limit = Device::imemSpec().rows() * Device::imemSpec().colors();
         if (pragma_val < num_actions) {
@@ -916,12 +916,12 @@ unsigned IR::MAU::Table::get_match_key_width() const {
 IR::MAU::Table::ImmediateControl_t IR::MAU::Table::get_immediate_ctrl() const {
     int force_pragma_val = 0;
     int imm_pragma_val = 1;
-    if (getAnnotation("force_immediate", force_pragma_val)) {
+    if (getAnnotation("force_immediate"_cs, force_pragma_val)) {
             if (force_pragma_val != 0 && force_pragma_val != 1) {
               error(ErrorType::ERR_INVALID, "%1%Invalid force_immediate pragma usage on "
                     "table %2%.  Only 0 and 1 are allowed.", srcInfo, externalName());
               return IR::MAU::Table::COMPILER; } }
-    if (getAnnotation("immediate", imm_pragma_val)) {
+    if (getAnnotation("immediate"_cs, imm_pragma_val)) {
             if (imm_pragma_val != 0 && imm_pragma_val != 1) {
               error(ErrorType::ERR_INVALID, "%1%Invalid immediate pragma usage on "
                     "table %2%.  Only 0 and 1 are allowed.", srcInfo, externalName());
@@ -976,7 +976,7 @@ void IR::MAU::Table::remove_gateway() {
 int IR::MAU::TableSeq::uid_ctr = 0;
 
 cstring IR::MAU::Action::externalName() const {
-    if (auto *name_annot = annotations->getSingle("name"))
+    if (auto *name_annot = annotations->getSingle("name"_cs))
         return name_annot->getName();
     return name.toString();
 }

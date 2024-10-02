@@ -1054,10 +1054,10 @@ struct FixupMirroredIntrinsicMetadata : public PassManager {
             new_start->selects = *(new_start->selects.apply(ShiftPacketRVal(-shift * 8)));
 
             bridge_entry = mim.egress_entry_point->clone();
-            bridge_entry->name = "$bridge_entry_point";
+            bridge_entry->name = "$bridge_entry_point"_cs;
 
             mirror_entry = mim.egress_entry_point->clone();
-            mirror_entry->name = "$mirror_entry_point";
+            mirror_entry->name = "$mirror_entry_point"_cs;
 
             RemoveExtracts re(phv, mim);
             mirror_entry = mirror_entry->apply(re)->to<IR::BFN::ParserState>()->clone();

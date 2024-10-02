@@ -87,11 +87,11 @@ class TableTree {
         tt.done.clear();
         if (tt.pipe) {
             if (tt.pipe->thread[INGRESS].mau)
-                tt.print(out, {"ingress"}, tt.pipe->thread[INGRESS].mau);
+                tt.print(out, {"ingress"_cs}, tt.pipe->thread[INGRESS].mau);
             if (tt.pipe->thread[EGRESS].mau)
-                tt.print(out, {"egress"}, tt.pipe->thread[EGRESS].mau);
+                tt.print(out, {"egress"_cs}, tt.pipe->thread[EGRESS].mau);
             if (tt.pipe->ghost_thread.ghost_mau)
-                tt.print(out, {"ghost mau"}, tt.pipe->ghost_thread.ghost_mau);
+                tt.print(out, {"ghost mau"_cs}, tt.pipe->ghost_thread.ghost_mau);
         } else if (tt.seq) {
             tt.print(out, tt.name, tt.seq); }
         return out; }

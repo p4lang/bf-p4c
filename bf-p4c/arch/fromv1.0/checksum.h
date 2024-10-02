@@ -5,6 +5,7 @@
 #include "bf-p4c/midend/parser_graph.h"
 #include "bf-p4c/arch/intrinsic_metadata.h"
 #include "bf-p4c/lib/assoc.h"
+#include "frontends/p4/methodInstance.h"
 
 using DeclToStates = ordered_map<const IR::Declaration*, ordered_set<cstring>>;
 
@@ -86,7 +87,7 @@ createChecksumDeclaration(ProgramStructure *structure,
     // auto typeArgs = new IR::Vector<IR::Type>();
     auto inst = new IR::Type_Name("Checksum");
 
-    auto csum_name = cstring::make_unique(structure->unique_names, "checksum", '_');
+    auto csum_name = cstring::make_unique(structure->unique_names, "checksum"_cs, '_');
     structure->unique_names.insert(csum_name);
     auto args = new IR::Vector<IR::Argument>();
     auto decl = new IR::Declaration_Instance(csum_name, inst, args);
@@ -103,9 +104,9 @@ createChecksumError(const IR::Declaration* decl, gress_t gress) {
      cstring intr_md;
 
      if (gress == INGRESS)
-         intr_md = "ig_intr_md_from_prsr";
+         intr_md = "ig_intr_md_from_prsr"_cs;
      else if (gress == EGRESS)
-         intr_md = "eg_intr_md_from_prsr";
+         intr_md = "eg_intr_md_from_prsr"_cs;
      else
          BUG("Unhandled gress: %1%.", gress);
 
@@ -171,20 +172,20 @@ class CollectParserChecksums : public Inspector {
         auto mi = P4::MethodInstance::resolve(node, refMap, typeMap);
         if (auto ef = mi->to<P4::ExternFunction>()) {
             if (ef->method->name == "verify_checksum" &&
-                analyzeChecksumCall(node, "verify_checksum")) {
+                analyzeChecksumCall(node, "verify_checksum"_cs)) {
                 verifyChecksums.push_back(node);
             } else if (ef->method->name == "update_checksum_with_payload" &&
-                analyzeChecksumCall(node, "update_checksum_with_payload")) {
+                analyzeChecksumCall(node, "update_checksum_with_payload"_cs)) {
                 residualChecksums.push_back(node);
 
                 auto block = findContext<IR::BlockStatement>();
                 CHECK_NULL(block);
                 parserUpdateLocations[node] =
                     getChecksumUpdateLocations(mce, block,
-                                       "residual_checksum_parser_update_location");
+                                       "residual_checksum_parser_update_location"_cs);
                 deparserUpdateLocations[node] =
                     getChecksumUpdateLocations(mce, block,
-                                         "calculated_field_update_location");
+                                         "calculated_field_update_location"_cs);
             }
         }
     }
@@ -276,6 +277,47 @@ class InsertParserChecksums : public Inspector {
         return false;
     }
 
+    // FIXME: Replacing the source info should not be necessary, but it currently required
+    // to work around an issue with ResolutionContext. ResolutionContext looks at the location
+    // of a name and a potential declaration to see if the declaration applies. The issue
+    // is that the source address of the substituted checksum add calls will use the source
+    // location of the checksum parser declaration.
+    const IR::Path *replaceSrcInfo(const IR::Path *path, const Util::SourceInfo &srcInfo) {
+        if (!srcInfo.isValid()) return path;
+
+        auto *newPath = path->clone();
+        newPath->srcInfo = srcInfo;
+        newPath->name = IR::ID(srcInfo, newPath->name.name, newPath->name.originalName);
+
+        return newPath;
+    }
+
+    const IR::PathExpression *replaceSrcInfo(const IR::PathExpression *pe,
+                                             const Util::SourceInfo &srcInfo) {
+        if (!srcInfo.isValid()) return pe;
+
+        auto *newPE = pe->clone();
+        newPE->srcInfo = srcInfo;
+        newPE->path = replaceSrcInfo(newPE->path, srcInfo);
+
+        return newPE;
+    }
+
+    const IR::Member *replaceSrcInfo(const IR::Member *member, const Util::SourceInfo &srcInfo) {
+        if (!srcInfo.isValid()) return member;
+
+        auto *newMember = member->clone();
+        newMember->srcInfo = srcInfo;
+
+        if (const auto *exprMember = newMember->expr->to<IR::Member>()) {
+            newMember->expr = replaceSrcInfo(exprMember, srcInfo);
+        } else if (const auto *exprPathExpression = newMember->expr->to<IR::PathExpression>()) {
+            newMember->expr = replaceSrcInfo(exprPathExpression, srcInfo);
+        }
+
+        return newMember;
+    }
+
     void implementVerifyChecksum(const IR::MethodCallStatement* vc,
                                  const IR::ParserState* state) {
         cstring stateName = state->name;
@@ -303,6 +345,9 @@ class InsertParserChecksums : public Inspector {
             for (auto f : fieldlist->to<IR::ListExpression>()->components) {
                 for (auto extract : extracts) {
                     if (belongsTo(f->to<IR::Member>(), extract->to<IR::Member>())) {
+                        if (const auto *member = f->to<IR::Member>()) {
+                            f = replaceSrcInfo(member, state->srcInfo);
+                        }
                         auto addCall = new IR::MethodCallStatement(mc->srcInfo,
                             new IR::MethodCallExpression(mc->srcInfo,
                                 new IR::Member(new IR::PathExpression(decl->name), "add"),
@@ -319,6 +364,9 @@ class InsertParserChecksums : public Inspector {
                 auto f = fld->expression;
                 for (auto extract : extracts) {
                     if (belongsTo(f->to<IR::Member>(), extract->to<IR::Member>())) {
+                        if (const auto *member = f->to<IR::Member>()) {
+                            f = replaceSrcInfo(member, state->srcInfo);
+                        }
                         auto addCall = new IR::MethodCallStatement(mc->srcInfo,
                             new IR::MethodCallExpression(mc->srcInfo,
                                 new IR::Member(new IR::PathExpression(decl->name), "add"),
@@ -327,20 +375,25 @@ class InsertParserChecksums : public Inspector {
 
                         structure->ingressParserStatements[stateName].push_back(addCall);
                         translate->ingressVerifyDeclToStates[decl].insert(state->name);
+                        LOG1("B: Adding add call: " << addCall);
                     }
                 }
             }
         }
 
+        auto *destfieldAdj = destfield;
+        if (const auto *member = destfield->to<IR::Member>()) {
+            destfieldAdj = replaceSrcInfo(member, state->srcInfo);
+        }
         for (auto extract : extracts) {
-            if (belongsTo(destfield->to<IR::Member>(), extract->to<IR::Member>())) {
+            if (belongsTo(destfieldAdj->to<IR::Member>(), extract->to<IR::Member>())) {
                 BUG_CHECK(decl, "No fields have been added before verify?");
 
                 auto addCall = new IR::MethodCallStatement(mc->srcInfo,
                     new IR::MethodCallExpression(mc->srcInfo,
                         new IR::Member(new IR::PathExpression(decl->name), "add"),
-                        new IR::Vector<IR::Type>({ destfield->type }),
-                        new IR::Vector<IR::Argument>({ new IR::Argument(destfield) })));
+                        new IR::Vector<IR::Type>({ destfieldAdj->type }),
+                        new IR::Vector<IR::Argument>({ new IR::Argument(destfieldAdj) })));
 
                 structure->ingressParserStatements[stateName].push_back(addCall);
                 translate->ingressVerifyDeclToStates[decl].insert(state->name);
@@ -389,7 +442,7 @@ class InsertParserChecksums : public Inspector {
                        new IR::Annotation(IR::ID("__compiler_generated"), { })});
 
             auto *compilerMetadataDecl = const_cast<IR::Type_Struct*>(
-                structure->type_declarations.at("compiler_generated_metadata_t")
+                structure->type_declarations.at("compiler_generated_metadata_t"_cs)
                          ->to<IR::Type_Struct>());
             compilerMetadataDecl->annotations = cgAnnotation;
 
@@ -658,14 +711,14 @@ class InsertChecksumError : public PassManager {
     struct InsertBeforeAccept : public Transform {
         const IR::Node* preorder(IR::BFN::TnaParser* parser) override {
             for (auto& kv : self->endStates[parser->name]) {
-                if (kv.second.count("accept")) {
+                if (kv.second.count("accept"_cs)) {
                     if (!dummy) {
                         dummy = createGeneratedParserState(
-                            "before_accept", {}, "accept");
+                            "before_accept"_cs, {}, "accept"_cs);
                         parser->states.push_back(dummy);
                     }
-                    kv.second.erase("accept");
-                    kv.second.insert("__before_accept");
+                    kv.second.erase("accept"_cs);
+                    kv.second.insert("__before_accept"_cs);
                     LOG3("add dummy state before \"accept\"");
                 }
             }
@@ -694,7 +747,7 @@ class InsertChecksumError : public PassManager {
                     return path;
 
                 for (auto& kv : self->endStates[parser->name]) {
-                    if (path->path->name == "accept" && kv.second.count("__before_accept")) {
+                    if (path->path->name == "accept" && kv.second.count("__before_accept"_cs)) {
                         path = new IR::PathExpression("__before_accept");
                         LOG3("modify transition to \"before_accept\"");
                     }

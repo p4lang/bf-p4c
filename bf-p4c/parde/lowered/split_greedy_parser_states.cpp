@@ -259,7 +259,7 @@ IR::BFN::ParserState* SplitGreedyParserStates::postorder(IR::BFN::ParserState* s
                     "Mixing non-greedy and greedy extracted fields in select "
                     "statement is unsupported.");
         } else {
-            cstring new_name = state->name + ".$greedy_" + cstring::to_cstring(cnt++);
+            cstring new_name = state->name + ".$greedy_"_cs + cstring::to_cstring(cnt++);
             state = split_state(state, new_name);
         }
     }

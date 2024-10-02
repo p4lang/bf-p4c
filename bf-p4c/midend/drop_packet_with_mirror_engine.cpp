@@ -68,12 +68,12 @@ const IR::Node* DropPacketWithMirrorEngine_::postorder(IR::BFN::TnaDeparser *dp)
         prune();
         return dp; }
     // If available, use existing eg_intr_md_for_dprsr metadata parameter
-    if (dp->tnaParams.find("ig_intr_md_for_dprsr") != dp->tnaParams.end()) {
+    if (dp->tnaParams.find("ig_intr_md_for_dprsr"_cs) != dp->tnaParams.end()) {
         // Save existing eg_intr_md_for_dprsr parameter name for later use
-        igIntrMdForDprsrName = dp->tnaParams.at("ig_intr_md_for_dprsr");
+        igIntrMdForDprsrName = dp->tnaParams.at("ig_intr_md_for_dprsr"_cs);
     }
     // create `Mirror() mirror` constructor call
-    auto name = cstring::make_unique(unique_names, "mirror", '_');
+    auto name = cstring::make_unique(unique_names, "mirror"_cs, '_');
     auto args = new IR::Vector<IR::Argument>();
 #if 0
     // JIRA-DOC: P4C-1471:

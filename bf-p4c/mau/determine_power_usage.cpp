@@ -74,7 +74,7 @@ void DeterminePowerUsage::find_stage_dependencies() {
           } }
           // Force a match dependency on stage with separate_gateway annotation because we want
           // to lower down the power usage even if predication would resolve it properly.
-          if (t1->getAnnotation("separate_gateway")) {
+          if (t1->getAnnotation("separate_gateway"_cs)) {
             worst_dep = DEP_MATCH;
             LOG4("  Table " << t1->externalName() << " (stage " << stage
               << ") uses separate_gateway annotation");

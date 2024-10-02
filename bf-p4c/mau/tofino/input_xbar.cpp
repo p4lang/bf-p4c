@@ -1824,7 +1824,7 @@ void IXBar::determine_proxy_hash_alg(const PhvInfo &phv, const IR::MAU::Table *t
                                      Use &alloc, int group) {
     bool hash_function_found = false;
     auto annot = tbl->match_table->getAnnotations();
-    if (auto s = annot->getSingle("proxy_hash_algorithm")) {
+    if (auto s = annot->getSingle("proxy_hash_algorithm"_cs)) {
         auto pragma_val = s->expr.at(0)->to<IR::StringLiteral>();
         if (pragma_val == nullptr) {
             ::error(ErrorType::ERR_INVALID,
@@ -2243,9 +2243,9 @@ bool IXBar::allocHashWay(const IR::MAU::Table *tbl, const LayoutOption *layout_o
         }
     }
     for (auto ht : bitvec(hf_hash_table_input & ~local_hash_table_input)) {
-        hash_index_use[ht][group] = "$collision";
+        hash_index_use[ht][group] = "$collision"_cs;
         for (auto bit : bitvec(way_mask)) {
-            hash_single_bit_use[ht][bit] = "$collision";
+            hash_single_bit_use[ht][bit] = "$collision"_cs;
         }
     }
 
@@ -2489,7 +2489,7 @@ bool IXBar::allocGateway(const IR::MAU::Table *tbl, const PhvInfo &phv, Use &all
                 hash_single_bit_use[ht][shift + i] = tbl->name + "$gw";
         for (auto ht : bitvec(hf_hash_table_input & ~local_hash_table_input))
             for (int i = 0; i < collect->bits; ++i)
-                hash_single_bit_use[ht][shift + i] = "$collision";
+                hash_single_bit_use[ht][shift + i] = "$collision"_cs;
         for (int i = 0; i < collect->bits; ++i)
             hash_single_bit_inuse[shift + i] |= hf_hash_table_input;
         alloc.hash_table_inputs[hash_group] = local_hash_table_input;
@@ -2677,7 +2677,7 @@ bool IXBar::allocSelector(const IR::MAU::Selector *as, const IR::MAU::Table *tbl
               "the hash matrix should be completely free at this point");
     write_hash_use(max_group, max_single_bit, local_hash_table_input, alloc.used_by);
     write_hash_use(max_group, max_single_bit, hf_hash_table_input & ~local_hash_table_input,
-                   "$collision");
+                   "$collision"_cs);
     fill_out_use(alloced, false);
     hash_group_print_use[hash_group] = name;
     hash_group_use[hash_group] |= local_hash_table_input;
@@ -2817,7 +2817,7 @@ bool IXBar::allocMeter(const IR::MAU::Meter *mtr, const IR::MAU::Table *tbl, con
                   "for the hash matrix should be completely free at this point");
         write_hash_use(max_group, max_single_bit, local_hash_table_input, alloc.used_by);
         write_hash_use(max_group, max_single_bit, hf_hash_table_input & ~local_hash_table_input,
-                       "$collision");
+                       "$collision"_cs);
         alloc.hash_table_inputs[mah.group] = local_hash_table_input;
         hash_group_print_use[hash_group] = alloc.used_by;
         hash_group_use[hash_group] |= local_hash_table_input;
@@ -3067,7 +3067,7 @@ bool IXBar::setup_stateful_hash_bus(const PhvInfo &, const IR::MAU::StatefulAlu 
               "for the hash matrix should be completely free at this point");
     write_hash_use(max_group, max_single_bit, local_hash_table_input, alloc.used_by);
     write_hash_use(max_group, max_single_bit, hf_hash_table_input & ~local_hash_table_input,
-                   "$collision");
+                   "$collision"_cs);
     alloc.hash_table_inputs[mah.group] = local_hash_table_input;
     hash_group_print_use[hash_group] = alloc.used_by;
     hash_group_use[hash_group] |= local_hash_table_input;
@@ -3642,7 +3642,7 @@ bool IXBar::allocHashDist(safe_vector<HashDistAllocPostExpand> &alloc_reqs, Hash
         use.shift += (hash_bits_used.min().index() % HASH_DIST_BITS) - bits_in_use.min().index();
         use.mask = bits_in_use.getslice(0, HASH_DIST_MAX_MASK_BITS);
         if (chained_addr)
-            use.outputs.insert("lo");
+            use.outputs.insert("lo"_cs);
     }
 
 
@@ -3693,7 +3693,7 @@ void IXBar::createChainedHashDist(const HashDistUse &hd_alloc, HashDistUse &chai
     chained_hd_alloc.unit = (hd_alloc.unit / HASH_DIST_SLICES) * HASH_DIST_SLICES + 2;
     chained_hd_alloc.shift = hd_alloc.expand;
     chained_hd_alloc.mask = bitvec(chained_hd_alloc.shift, HASH_DIST_EXPAND_BITS);
-    chained_hd_alloc.outputs.insert("hi");
+    chained_hd_alloc.outputs.insert("hi"_cs);
 
     unsigned ht_inputs = hash_table_inputs(chained_hd_alloc);
     for (int ht = 0; ht < HASH_TABLES; ht++) {
@@ -4279,7 +4279,7 @@ void IXBar::update(cstring name, const ::IXBar::Use &alloc_) {
     auto &alloc = dynamic_cast<const Use &>(alloc_);
     auto &use = alloc.type == Use::TERNARY_MATCH ? ternary_use.base() : exact_use.base();
     auto &fields = alloc.type == Use::TERNARY_MATCH ? ternary_fields : exact_fields;
-    cstring xbar_type = alloc.type == Use::TERNARY_MATCH ? "TCAM" : "SRAM";
+    cstring xbar_type = alloc.type == Use::TERNARY_MATCH ? "TCAM"_cs : "SRAM"_cs;
     for (auto &byte : alloc.use) {
         if (!byte.loc) continue;
         field_users[byte.container].insert(name);
@@ -4468,7 +4468,7 @@ void IXBar::add_collisions() {
             if ((hash_group_use[hg] & hash_index_inuse[idx]) != 0) {
                 for (auto ht : bitvec(hash_group_use[hg])) {
                     if (hash_index_use[ht][idx].isNull())
-                        hash_index_use[ht][idx] = "$collision";
+                        hash_index_use[ht][idx] = "$collision"_cs;
                 }
                 hash_index_inuse[idx] |= hash_group_use[hg];
             }
@@ -4478,7 +4478,7 @@ void IXBar::add_collisions() {
             if ((hash_group_use[hg] & hash_single_bit_inuse[bit]) != 0) {
                 for (auto ht : bitvec(hash_group_use[hg])) {
                     if (hash_single_bit_use[ht][bit].isNull())
-                        hash_single_bit_use[ht][bit] = "$collision";
+                        hash_single_bit_use[ht][bit] = "$collision"_cs;
                 }
                 hash_single_bit_inuse[bit] |= hash_group_use[hg];
             }

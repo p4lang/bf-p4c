@@ -1,6 +1,7 @@
 #include <libgen.h>
 #include <cstdlib>
 #include <string>
+#include <filesystem>
 
 #include "../git_sha_version.h"  // for BF_P4C_GIT_SHA
 #include "backends/graphs/controls.h"
@@ -17,7 +18,9 @@ void Manifest::postorder(const IR::BFN::TnaParser* const parser) {
     const auto pipeName = m_pipes.at(m_pipeId);
     if (parser && (m_pipes.size() == 1 || parser->pipeName == pipeName) && parser->name) {
         CHECK_NULL(m_refMap);
-        const auto graphsDir = BFNContext::get().getOutputDirectory("graphs", m_pipeId);
+        auto outputDir = BFNContext::get().getOutputDirectory(cstring("graphs"), m_pipeId);
+        const auto graphsDir = std::filesystem::path(outputDir.string_view());
+
         graphs::ParserGraphs pgen(m_refMap, graphsDir);
         parser->apply(pgen);
         // p4c frontend only saves the parser graphs into parserGraphsArray
@@ -25,15 +28,15 @@ void Manifest::postorder(const IR::BFN::TnaParser* const parser) {
         // Therefore we just create empty control graphs
         std::vector<graphs::Graphs::Graph *> emptyControl;
         // And call graph visitor that actually outputs the graphs from the arrays
-        cstring filePath("");
+        std::filesystem::path filePath;
         graphs::Graph_visitor gvs{graphsDir, true, false, false, filePath};
         gvs.process(emptyControl, pgen.parserGraphsArray);
-        addGraph(m_pipeId, "parser", parser->name, parser->thread);
+        addGraph(m_pipeId, "parser"_cs, parser->name, parser->thread);
     }
 }
 
 void Manifest::postorder(const IR::BFN::TnaControl* const control) {
-    const auto controlName = (control ? control->name.name : "");
+    const auto controlName = (control ? control->name.name : ""_cs);
     const auto pipeName = m_pipes.at(m_pipeId);
     if (control && control->pipeName == pipeName && controlName) {
         // FIXME(cc): not yet sure why we can't generate control graphs unless invoked at
@@ -50,17 +53,16 @@ void Manifest::postorder(const IR::BFN::TnaControl* const control) {
         // cstring filePath("");
         // graphs::Graph_visitor gvs(graphsDir, true, false, false, filePath);
         // gvs.process(cgen.controlGraphsArray, emptyParser);
-        addGraph(m_pipeId, "control", controlName, control->thread);
+        addGraph(m_pipeId, "control"_cs, controlName, control->thread);
     }
 }
 
 Manifest::InputFiles::InputFiles(const BFN_Options& options) {
-    {  // an unpredicated inner scope,
-       //   to prevent "filePath" from being re-used after its pointee has been "free"d
-        char* const filePath = strndup(options.file.c_str(), options.file.size());
-        m_rootPath = cstring(dirname(filePath));
-        free(filePath);
-    }
+    std::filesystem::path filePath(options.file);
+    std::filesystem::path rootPath = filePath.parent_path();
+
+    // Assign to m_rootPath, converting to the appropriate string type if necessary
+    m_rootPath = rootPath.string();
 
     // walk the command line arguments and collect includes
     char* const ppFlags = strndup(options.preprocessor_options.c_str(),
@@ -130,7 +132,7 @@ void Manifest::serialize() {
     writer.StartArray();   // start programs
     writer.StartObject();  // start CompiledProgram
     writer.Key("program_name");
-    cstring program_name = m_options.programName + ".p4";
+    cstring program_name = m_options.programName + ".p4"_cs;
     writer.String(program_name.c_str());
     writer.Key("p4_version");
     writer.String((m_options.langVersion == BFN_Options::FrontendVersion::P4_14) ?
@@ -336,10 +338,11 @@ bool Manifest::PathCmp::operator()(const PathAndType& LHS, const PathAndType& RH
 }
 
 Manifest::Manifest() : m_options(BackendOptions()), m_programInputs(BackendOptions()) {  //  ctor
-    const auto path = Util::PathName(m_options.outputDir).join("manifest.json");
-    m_manifestStream.open(path.toString().c_str(), std::ofstream::out);
+    std::filesystem::path path = m_options.outputDir.string_view();
+    path /= "manifest.json";
+    m_manifestStream.open(path, std::ofstream::out);
     if (! m_manifestStream)
-        std::cerr << "Failed to open manifest file ''" << path.toString() << "'' for writing."
+        std::cerr << "Failed to open manifest file ''" << path.string() << "'' for writing."
                   << std::endl;
 }
 
@@ -369,13 +372,13 @@ void Manifest::setPipe(const int pipeID_in, const cstring pipe_name) {
 
 void Manifest::addGraph(const int pipe, const cstring graphType, const cstring graphName,
                         const gress_t gress, const cstring ext) {
-    const auto path = BFNContext::get().getOutputDirectory("graphs", pipe)
+    const auto path = BFNContext::get().getOutputDirectory("graphs"_cs, pipe)
         .substr(m_options.outputDir.size()+1) + "/" + graphName + ext;
     getPipeOutputs(pipe) -> m_graphs.insert(GraphOutput(path, gress, graphType, ext));
 }
 
 void Manifest::addLog(const int pipe, const cstring logType, const cstring logName) {
-    const auto path = BFNContext::get().getOutputDirectory("logs", pipe)
+    const auto path = BFNContext::get().getOutputDirectory("logs"_cs, pipe)
         .substr(m_options.outputDir.size()+1) + "/" + logName;
     getPipeOutputs(pipe) -> m_logs.insert(PathAndType(path, logType));
 }

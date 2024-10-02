@@ -5,7 +5,7 @@
 
 class DumpSplitStates : public DotDumper {
  public:
-    explicit DumpSplitStates(cstring filename) : DotDumper(filename, true) {
+    explicit DumpSplitStates(std::string filename) : DotDumper(filename, true) {
         out.str(std::string());
         out << "digraph states { " << std::endl;
     }
@@ -17,7 +17,7 @@ class DumpSplitStates : public DotDumper {
         out << "}" << std::endl;
 
         if (cid > 1 && LOGGING(4)) {  // only dump if state gets split
-            if (auto fs = open_file(INGRESS, 0, "debug/split_parser_state"))
+            if (auto fs = open_file(INGRESS, 0, "debug/split_parser_state"_cs))
                 write_to_file(fs);
         }
     }
@@ -1309,7 +1309,7 @@ struct AllocateParserState : public ParserTransform {
      public:
         ParserStateSplitter(const PhvInfo& phv, ClotInfo& clot,
                             IR::BFN::ParserState* state) :
-                phv(phv), clot(clot), dbg(state->name) {
+                phv(phv), clot(clot), dbg(state->name.string()) {
             dbg.add_cluster({state});
 
             auto splits = split_parser_state(state, state->name, 0);
@@ -1338,7 +1338,7 @@ struct AllocateParserState : public ParserTransform {
 
         IR::BFN::ParserState*
         create_split_state(const IR::BFN::ParserState* state, cstring prefix, unsigned iteration) {
-            cstring split_name = prefix + ".$split_" + cstring::to_cstring(iteration);
+            cstring split_name = prefix + ".$split_"_cs + cstring::to_cstring(iteration);
             auto split = new IR::BFN::ParserState(state->p4States, split_name, state->gress);
 
             LOG2("created split state " << split);
@@ -1406,7 +1406,7 @@ struct AllocateParserState : public ParserTransform {
             if (int(shift) <= Device::pardeSpec().byteInputBufferSize())
                 return nullptr;
 
-            cstring name = prefix + ".$stall_" + cstring::to_cstring(idx);
+            cstring name = prefix + ".$stall_"_cs + cstring::to_cstring(idx);
             auto stall = new IR::BFN::ParserState(state->p4States, name, state->gress);
 
             auto stall_amt = Device::pardeSpec().byteInputBufferSize();
@@ -1583,7 +1583,7 @@ struct InsertParserCounterStall : public ParserTransform {
         auto src = findContext<IR::BFN::ParserState>();
 
         int suffix = stall_counts[src->name]++;
-        cstring name = src->name + ".$ctr_stall" + std::to_string(suffix).c_str();
+        cstring name = src->name + ".$ctr_stall"_cs + std::to_string(suffix).c_str();
         auto stall = new IR::BFN::ParserState(src->p4States, name, src->gress);
 
         LOG2("created stall state for counter select on "

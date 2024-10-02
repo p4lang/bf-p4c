@@ -108,7 +108,7 @@ class HeaderPushPop : public MauTransform {
         for (auto field : hdr->fields) {
             auto dst = new IR::Member(field->type, to, field->name);
             auto src = new IR::Member(field->type, from, field->name);
-            rv->push_back(new IR::MAU::Primitive("modify_field", dst, src)); } }
+            rv->push_back(new IR::MAU::Primitive("modify_field"_cs, dst, src)); } }
     IR::Node *do_push(const IR::HeaderRef *stack, int count) {
         auto &info = stacks->at(stack->toString());
         auto *rv = new IR::Vector<IR::MAU::Primitive>;
@@ -118,7 +118,7 @@ class HeaderPushPop : public MauTransform {
                      new IR::HeaderStackItemRef(stack, new IR::Constant(i - count)));
         auto *valid = new IR::Member(IR::Type::Bits::get(info.size + info.maxpop + info.maxpush),
                                      stack, "$stkvalid");
-        rv->push_back(new IR::MAU::Primitive("modify_field",
+        rv->push_back(new IR::MAU::Primitive("modify_field"_cs,
             MakeSlice(valid, info.maxpop, info.maxpop + info.size - 1),
             MakeSlice(valid, info.maxpop + count, info.maxpop + info.size + count - 1)));
         return rv; }
@@ -131,7 +131,7 @@ class HeaderPushPop : public MauTransform {
                      new IR::HeaderStackItemRef(stack, new IR::Constant(i)));
         auto *valid = new IR::Member(IR::Type::Bits::get(info.size + info.maxpop + info.maxpush),
                                      stack, "$stkvalid");
-        rv->push_back(new IR::MAU::Primitive("modify_field",
+        rv->push_back(new IR::MAU::Primitive("modify_field"_cs,
             MakeSlice(valid, info.maxpop, info.maxpop + info.size - 1),
             MakeSlice(valid, info.maxpop - count, info.maxpop + info.size - count - 1)));
         return rv; }

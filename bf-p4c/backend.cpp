@@ -143,7 +143,7 @@ static void debug_hook(const char *parent, unsigned idx, const char *pass, const
 
     if (LOGGING(5)) {
         const int pipeId = n->to<IR::BFN::Pipe>()->canon_id();
-        Logging::FileLog fileLog(pipeId, "backend_passes.log");
+        Logging::FileLog fileLog(pipeId, "backend_passes.log"_cs);
         LOG5("PASS: " << pass << " [" << parent << " (" << idx << ")]:");
         ::dump(std::clog, n);
     } else {
@@ -242,9 +242,9 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
         new CollectPhvInfo(phv),
         new GatherReductionOrReqs(deps.red_info),
         new InstructionSelection(options, phv, deps.red_info),
-        new DumpPipe("After InstructionSelection"),
-        new FindDependencyGraph(phv, deps, &options, "program_graph",
-                                "After Instruction Selection"),
+        new DumpPipe("After InstructionSelection"_cs),
+        new FindDependencyGraph(phv, deps, &options, "program_graph"_cs,
+                                "After Instruction Selection"_cs),
         options.decaf ? &decaf : nullptr,
         new CollectPhvInfo(phv),
         // Collect pa_no_overlay pragmas to find conflicts with PragmaAlias and AutoAlias.
@@ -258,7 +258,7 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
         new AutoAlias(phv, *pragmaAlias, *noOverlay),
         new Alias(phv, *pragmaAlias),
         new CollectPhvInfo(phv),
-        new DumpPipe("After Alias"),
+        new DumpPipe("After Alias"_cs),
         // This is the backtracking point from table placement to PHV allocation. Based on a
         // container conflict-free PHV allocation, we generate a number of no-pack conflicts between
         // fields (these are fields written in different nonmutually exclusive actions in the same
@@ -267,7 +267,7 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
         // metadata packing.
         &mau_backtracker,
         new ResolveSizeOfOperator(),
-        new DumpPipe("After ResolveSizeOfOperator"),
+        new DumpPipe("After ResolveSizeOfOperator"_cs),
         // Run after bridged metadata packing as bridged packing updates the parser state.
         new CollectPhvInfo(phv),
         new ParserCopyProp(phv),
@@ -338,7 +338,7 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
         //                                        with table info
         //     Trivial PHV alloc => table alloc ==================> PHV alloc ===> redo table.
         new AddInitsInMAU(phv, mauInitFields, false),
-        new DumpPipe("Before phv_analysis"),
+        new DumpPipe("Before phv_analysis"_cs),
         new DumpTableFlowGraph(phv),
         options.alt_phv_alloc ? new PassManager({
             // run trivial alloc for the first time
@@ -429,7 +429,7 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
         // tables to be split across stages.
         new GeneratePrimitiveInfo(phv, primNode),
         &table_alloc,
-        new DumpPipe("After TableAlloc"),
+        new DumpPipe("After TableAlloc"_cs),
         &table_summary,
         // Rerun defuse analysis here so that table placements are used to correctly calculate live
         // ranges output in the assembly.
@@ -445,7 +445,7 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
             ? new CheckForUnallocatedTemps(phv, uses, clot, PHV_Analysis) : nullptr,
         new InstructionAdjustment(phv, deps.red_info),
         &nextTblProp,  // Must be run after all modifications to the table graph have finished!
-        new DumpPipe("Final table graph"),
+        new DumpPipe("Final table graph"_cs),
         new CheckFieldCorruption(defuse, phv, PHV_Analysis->get_pragmas()),
         new AdjustExtract(phv),
         phvLoggingDefUseInfo,
@@ -457,9 +457,9 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
         new CheckTableNameDuplicate,
         new CheckUnimplementedFeatures(options.allowUnimplemented),
         // must be called right before characterize power
-        new FindDependencyGraph(phv, deps, &options, "placement_graph",
-                "After Table Placement"),
-        new DumpJsonGraph(deps, &jsonGraph, "After Table Placement", true),
+        new FindDependencyGraph(phv, deps, &options, "placement_graph"_cs,
+                "After Table Placement"_cs),
+        new DumpJsonGraph(deps, &jsonGraph, "After Table Placement"_cs, true),
 
         // Call this at the end of the backend. This changes the logical stages used for PHV
         // allocation to physical stages based on actual table placement.

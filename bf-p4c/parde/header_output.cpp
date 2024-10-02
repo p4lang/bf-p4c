@@ -39,7 +39,7 @@ std::ostream& operator<<(std::ostream& out, const HeaderAsmOutput& headerOut) {
         unsigned int id = 0;
         for (const auto& seq : seqs.sequences.at(INGRESS)) {
             if (seq.size() > 0) {
-                cstring sep = "";
+                std::string sep = "";
                 std::stringstream ss;
                 ss << "[";
                 for (const auto& hdr : seq) {

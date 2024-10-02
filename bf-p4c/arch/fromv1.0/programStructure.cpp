@@ -21,7 +21,7 @@ namespace P4V1 {
 
 const IR::Expression *
 P4V1::TNA_ProgramStructure::convertHashAlgorithm(Util::SourceInfo srcInfo, IR::ID algorithm) {
-    include("tofino/p4_14_prim.p4", "-D_TRANSLATE_TO_V1MODEL");
+    include("tofino/p4_14_prim.p4"_cs, "-D_TRANSLATE_TO_V1MODEL"_cs);
     return IR::MAU::HashFunction::convertHashAlgorithmBFN(srcInfo, algorithm);
 }
 
@@ -49,14 +49,14 @@ P4V1::TNA_ProgramStructure::convertTable(const IR::V1Table* table, cstring newNa
         auto flc = field_list_calculations.get(action_selector->key.name);
         if (flc) {
             auto annos = p4Table->getAnnotations();
-            annos = annos->addAnnotation("action_selector_hash_field_calc_name",
+            annos = annos->addAnnotation("action_selector_hash_field_calc_name"_cs,
                                                 new IR::StringLiteral(flc->name));
-            annos = annos->addAnnotation("action_selector_hash_field_list_name",
+            annos = annos->addAnnotation("action_selector_hash_field_list_name"_cs,
                                                 new IR::StringLiteral(flc->input->names[0]));
             for (auto a : flc->algorithm->names) {
-                annos = annos->addAnnotation("algorithm", new IR::StringLiteral(a));
+                annos = annos->addAnnotation("algorithm"_cs, new IR::StringLiteral(a));
             }
-            annos = annos->addAnnotation("action_selector_hash_field_calc_output_width",
+            annos = annos->addAnnotation("action_selector_hash_field_calc_output_width"_cs,
                                                 new IR::Constant(flc->output_width));
             auto newP4Table = new IR::P4Table(p4Table->srcInfo, newName,
                                     annos, p4Table->properties);
@@ -85,45 +85,45 @@ P4V1::TNA_ProgramStructure::convertActionProfile(const IR::ActionProfile* action
 // ** END **
 
 const std::map<cstring, int> intrinsic_metadata = {
-        { "ig_prsr_ctrl", 0 },
-        { "ig_intr_md", 1 },
-        { "ig_pg_md", 2 },
-        { "ig_intr_md_for_tm", 3 },
-        { "ig_intr_md_from_parser_aux", 4 },
-        { "ig_intr_md_for_mb", 5 },
-        { "ig_intr_md_for_dprsr", 6 },
-        { "eg_intr_md", 7 },
-        { "eg_intr_md_from_parser_aux", 8 },
-        { "eg_intr_md_for_mb", 9 },
-        { "eg_intr_md_for_oport", 10 },
-        { "eg_intr_md_for_dprsr", 11 }};
+        { "ig_prsr_ctrl"_cs, 0 },
+        { "ig_intr_md"_cs, 1 },
+        { "ig_pg_md"_cs, 2 },
+        { "ig_intr_md_for_tm"_cs, 3 },
+        { "ig_intr_md_from_parser_aux"_cs, 4 },
+        { "ig_intr_md_for_mb"_cs, 5 },
+        { "ig_intr_md_for_dprsr"_cs, 6 },
+        { "eg_intr_md"_cs, 7 },
+        { "eg_intr_md_from_parser_aux"_cs, 8 },
+        { "eg_intr_md_for_mb"_cs, 9 },
+        { "eg_intr_md_for_oport"_cs, 10 },
+        { "eg_intr_md_for_dprsr"_cs, 11 }};
 
 const std::vector<std::tuple<cstring, cstring, IR::Direction>> intrinsic_metadata_type = {
-        std::make_tuple("ingress_parser_control_signals",
-            "ig_prsr_ctrl", IR::Direction::In),
-        std::make_tuple("ingress_intrinsic_metadata_t",
-            "ig_intr_md", IR::Direction::In),
-        std::make_tuple("generator_metadata_t",
-            "ig_pg_md", IR::Direction::In),
-        std::make_tuple("ingress_intrinsic_metadata_for_tm_t",
-            "ig_intr_md_for_tm", IR::Direction::InOut),
-        std::make_tuple("ingress_intrinsic_metadata_from_parser_aux_t",
-            "ig_intr_md_from_parser_aux", IR::Direction::In),
-        std::make_tuple("ingress_intrinsic_metadata_for_mirror_buffer_t",
-            "ig_intr_md_for_mb", IR::Direction::In),
-        std::make_tuple("ingress_intrinsic_metadata_for_deparser_t",
-            "ig_intr_md_for_dprsr", IR::Direction::InOut),
-        std::make_tuple("egress_intrinsic_metadata_t",
-            "eg_intr_md", IR::Direction::In),
-        std::make_tuple("egress_intrinsic_metadata_from_parser_aux_t",
-            "eg_intr_md_from_parser_aux", IR::Direction::In),
-        std::make_tuple("egress_intrinsic_metadata_for_mirror_buffer_t",
-            "eg_intr_md_for_mb", IR::Direction::In),
-        std::make_tuple("egress_intrinsic_metadata_for_output_port_t",
-            "eg_intr_md_for_oport", IR::Direction::InOut),
+        std::make_tuple("ingress_parser_control_signals"_cs,
+            "ig_prsr_ctrl"_cs, IR::Direction::In),
+        std::make_tuple("ingress_intrinsic_metadata_t"_cs,
+            "ig_intr_md"_cs, IR::Direction::In),
+        std::make_tuple("generator_metadata_t"_cs,
+            "ig_pg_md"_cs, IR::Direction::In),
+        std::make_tuple("ingress_intrinsic_metadata_for_tm_t"_cs,
+            "ig_intr_md_for_tm"_cs, IR::Direction::InOut),
+        std::make_tuple("ingress_intrinsic_metadata_from_parser_aux_t"_cs,
+            "ig_intr_md_from_parser_aux"_cs, IR::Direction::In),
+        std::make_tuple("ingress_intrinsic_metadata_for_mirror_buffer_t"_cs,
+            "ig_intr_md_for_mb"_cs, IR::Direction::In),
+        std::make_tuple("ingress_intrinsic_metadata_for_deparser_t"_cs,
+            "ig_intr_md_for_dprsr"_cs, IR::Direction::InOut),
+        std::make_tuple("egress_intrinsic_metadata_t"_cs,
+            "eg_intr_md"_cs, IR::Direction::In),
+        std::make_tuple("egress_intrinsic_metadata_from_parser_aux_t"_cs,
+            "eg_intr_md_from_parser_aux"_cs, IR::Direction::In),
+        std::make_tuple("egress_intrinsic_metadata_for_mirror_buffer_t"_cs,
+            "eg_intr_md_for_mb"_cs, IR::Direction::In),
+        std::make_tuple("egress_intrinsic_metadata_for_output_port_t"_cs,
+            "eg_intr_md_for_oport"_cs, IR::Direction::InOut),
         // these metadata are new in tna
-        std::make_tuple("egress_intrinsic_metadata_for_deparser_t",
-            "eg_intr_md_for_dprsr", IR::Direction::InOut),
+        std::make_tuple("egress_intrinsic_metadata_for_deparser_t"_cs,
+            "eg_intr_md_for_dprsr"_cs, IR::Direction::InOut),
         };
 
 const IR::Expression *
@@ -193,7 +193,7 @@ TnaProgramStructure::convertDirectCounter(const IR::Counter* c, cstring newName)
 
     // keep max_width as annotation
     if (c->max_width >= 0) {
-        annos = annos->addAnnotation("max_width", new IR::Constant(c->max_width)); }
+        annos = annos->addAnnotation("max_width"_cs, new IR::Constant(c->max_width)); }
 
     auto args = new IR::Vector<IR::Argument>();
     auto kindarg = counterType(c);
@@ -404,7 +404,7 @@ generate_tna_hash_block_statement(P4V1::TnaProgramStructure* structure,
         list->algorithms = flc->algorithm;
 
     // Hash() hash_0;
-    cstring hash_inst = structure->makeUniqueName("hash");
+    cstring hash_inst = structure->makeUniqueName("hash"_cs);
     auto declArgs = new IR::Vector<IR::Argument>();
     auto algo = structure->convertHashAlgorithms(flc->algorithm);
     add_custom_enum_if_crc_poly(algo, declArgs);
@@ -412,12 +412,12 @@ generate_tna_hash_block_statement(P4V1::TnaProgramStructure* structure,
     auto declType = new IR::Type_Specialized(new IR::Type_Name("Hash"),
             new IR::Vector<IR::Type>({ ttype }));
     const IR::Annotations* annos = IR::Annotations::empty;
-    auto symmetricAnnotation = fl->annotations->getSingle("symmetric");
+    auto symmetricAnnotation = fl->annotations->getSingle("symmetric"_cs);
     if (symmetricAnnotation) {
         if (symmetricAnnotation->expr.size() == 2) {
             // auto name1 = symmetricAnnotation->expr[0];
             // auto name2 = symmetricAnnotation->expr[1];
-            annos->addAnnotation("symmetric", new IR::ListExpression(symmetricAnnotation->expr));
+            annos->addAnnotation("symmetric"_cs, new IR::ListExpression(symmetricAnnotation->expr));
         } else {
             ::error("Invalid pragma usage: symmetric");
         }
@@ -489,14 +489,14 @@ TnaProgramStructure::convertTable(const IR::V1Table* table, cstring newName,
         auto flc = field_list_calculations.get(action_selector->key.name);
         if (flc) {
             auto annos = p4Table->getAnnotations();
-            annos = annos->addAnnotation("action_selector_hash_field_calc_name",
+            annos = annos->addAnnotation("action_selector_hash_field_calc_name"_cs,
                                                 new IR::StringLiteral(flc->name));
-            annos = annos->addAnnotation("action_selector_hash_field_list_name",
+            annos = annos->addAnnotation("action_selector_hash_field_list_name"_cs,
                                                 new IR::StringLiteral(flc->input->names[0]));
             for (auto a : flc->algorithm->names) {
-                annos = annos->addAnnotation("algorithm", new IR::StringLiteral(a));
+                annos = annos->addAnnotation("algorithm"_cs, new IR::StringLiteral(a));
             }
-            annos = annos->addAnnotation("action_selector_hash_field_calc_output_width",
+            annos = annos->addAnnotation("action_selector_hash_field_calc_output_width"_cs,
                                                 new IR::Constant(flc->output_width));
             auto newP4Table = new IR::P4Table(p4Table->srcInfo, newName,
                                     annos, p4Table->properties);
@@ -593,25 +593,25 @@ void TnaProgramStructure::addIngressParams(IR::ParameterList* paramList) {
     // add ig_intr_md
     auto path = new IR::Path("ingress_intrinsic_metadata_t");
     auto type = new IR::Type_Name(path);
-    auto param = new IR::Parameter("ig_intr_md", IR::Direction::In, type);
+    auto param = new IR::Parameter("ig_intr_md"_cs, IR::Direction::In, type);
     paramList->push_back(param);
 
     // add ig_intr_md_from_prsr
     path = new IR::Path("ingress_intrinsic_metadata_from_parser_t");
     type = new IR::Type_Name(path);
-    param = new IR::Parameter("ig_intr_md_from_parser_aux", IR::Direction::In, type);
+    param = new IR::Parameter("ig_intr_md_from_parser_aux"_cs, IR::Direction::In, type);
     paramList->push_back(param);
 
     // add ig_intr_md_for_dprsr
     path = new IR::Path("ingress_intrinsic_metadata_for_deparser_t");
     type = new IR::Type_Name(path);
-    param = new IR::Parameter("ig_intr_md_for_dprsr", IR::Direction::InOut, type);
+    param = new IR::Parameter("ig_intr_md_for_dprsr"_cs, IR::Direction::InOut, type);
     paramList->push_back(param);
 
     // add ig_intr_md_for_tm
     path = new IR::Path("ingress_intrinsic_metadata_for_tm_t");
     type = new IR::Type_Name(path);
-    param = new IR::Parameter("ig_intr_md_for_tm", IR::Direction::InOut, type);
+    param = new IR::Parameter("ig_intr_md_for_tm"_cs, IR::Direction::InOut, type);
     paramList->push_back(param);
 }
 
@@ -620,27 +620,27 @@ void TnaProgramStructure::addEgressParams(IR::ParameterList* paramList) {
     auto type = new IR::Type_Name(path);
     IR::Parameter* param = nullptr;
     if (BackendOptions().backward_compatible)
-        param = new IR::Parameter("eg_intr_md", IR::Direction::In, type);
+        param = new IR::Parameter("eg_intr_md"_cs, IR::Direction::In, type);
     else
-        param = new IR::Parameter("eg_intr_md", IR::Direction::In, type);
+        param = new IR::Parameter("eg_intr_md"_cs, IR::Direction::In, type);
     paramList->push_back(param);
 
     // add eg_intr_md_from_prsr
     path = new IR::Path("egress_intrinsic_metadata_from_parser_t");
     type = new IR::Type_Name(path);
-    param = new IR::Parameter("eg_intr_md_from_parser_aux", IR::Direction::In, type);
+    param = new IR::Parameter("eg_intr_md_from_parser_aux"_cs, IR::Direction::In, type);
     paramList->push_back(param);
 
     // add eg_intr_md_for_dprsr
     path = new IR::Path("egress_intrinsic_metadata_for_deparser_t");
     type = new IR::Type_Name(path);
-    param = new IR::Parameter("eg_intr_md_for_dprsr", IR::Direction::InOut, type);
+    param = new IR::Parameter("eg_intr_md_for_dprsr"_cs, IR::Direction::InOut, type);
     paramList->push_back(param);
 
     // add eg_intr_md_for_oport
     path = new IR::Path("egress_intrinsic_metadata_for_output_port_t");
     type = new IR::Type_Name(path);
-    param = new IR::Parameter("eg_intr_md_for_oport", IR::Direction::InOut, type);
+    param = new IR::Parameter("eg_intr_md_for_oport"_cs, IR::Direction::InOut, type);
     paramList->push_back(param);
 }
 
@@ -649,7 +649,7 @@ void TnaProgramStructure::addEgressParams(IR::ParameterList* paramList) {
 const IR::Expression*
 TnaProgramStructure::stdMetaReference(const IR::Parameter* param) {
     auto result = new IR::Member(new IR::PathExpression(param->name), IR::ID("standard_metadata"));
-    auto type = types.get("standard_metadata_t");
+    auto type = types.get("standard_metadata_t"_cs);
     if (type != nullptr)
         result->type = type;
     return result;
@@ -743,13 +743,13 @@ TnaProgramStructure::convert(const IR::CounterOrMeter* cm, cstring newName) {
     auto annos = addGlobalNameAnnotation(cm->name, cm->annotations);
     if (auto *c = cm->to<IR::Counter>()) {
         if (c->min_width >= 0) {
-            annos = annos->addAnnotation("min_width", new IR::Constant(c->min_width));
+            annos = annos->addAnnotation("min_width"_cs, new IR::Constant(c->min_width));
             type_args->push_back(IR::Type_Bits::get(c->min_width));
         } else {
             type_args->push_back(IR::Type_Bits::get(64));  // by default, use 64
         }
         if (c->max_width >= 0)
-            annos = annos->addAnnotation("max_width", new IR::Constant(c->max_width));
+            annos = annos->addAnnotation("max_width"_cs, new IR::Constant(c->max_width));
     }
     type_args->push_back(IR::Type_Bits::get(cm->index_width()));
     auto type = new IR::Type_Specialized(type_name, type_args);
@@ -775,13 +775,13 @@ class FindHeaderReference : public Inspector {
         if (auto ref = mem->expr->to<IR::ConcreteHeaderRef>()) {
             auto path = ref->ref->name + "." + mem->member;
             if (path == "ig_intr_md_for_tm.drop_ctl") {
-                use.setbit(intrinsic_metadata.at("ig_intr_md_for_dprsr"));
+                use.setbit(intrinsic_metadata.at("ig_intr_md_for_dprsr"_cs));
             } else if (path == "standard_metadata.egress_spec") {
-                use.setbit(intrinsic_metadata.at("ig_intr_md_for_tm"));
+                use.setbit(intrinsic_metadata.at("ig_intr_md_for_tm"_cs));
             } else if (path == "standard_metadata.ingress_port") {
-                use.setbit(intrinsic_metadata.at("ig_intr_md"));
+                use.setbit(intrinsic_metadata.at("ig_intr_md"_cs));
             } else if (path == "ig_intr_md_for_tm.packet_color") {
-                use.setbit(intrinsic_metadata.at("ig_intr_md_for_tm"));
+                use.setbit(intrinsic_metadata.at("ig_intr_md_for_tm"_cs));
             }
         }
     }
@@ -813,19 +813,19 @@ class FindHeaderReference : public Inspector {
         } else if (p->name == "drop" || p->name == "mark_for_drop" ||
                    p->name == "mark_to_drop") {
             if (structure->getGress(control) == INGRESS)
-                use.setbit(intrinsic_metadata.at("ig_intr_md_for_dprsr"));
+                use.setbit(intrinsic_metadata.at("ig_intr_md_for_dprsr"_cs));
             else
-                use.setbit(intrinsic_metadata.at("eg_intr_md_for_dprsr"));
+                use.setbit(intrinsic_metadata.at("eg_intr_md_for_dprsr"_cs));
         } else if (p->name == "clone_ingress_pkt_to_egress") {
-            use.setbit(intrinsic_metadata.at("ig_intr_md_for_dprsr"));
+            use.setbit(intrinsic_metadata.at("ig_intr_md_for_dprsr"_cs));
         } else if (p->name == "clone_egress_pkt_to_egress") {
-            use.setbit(intrinsic_metadata.at("eg_intr_md_for_dprsr"));
+            use.setbit(intrinsic_metadata.at("eg_intr_md_for_dprsr"_cs));
         } else if (p->name == "generate_digest") {
-            use.setbit(intrinsic_metadata.at("ig_intr_md_for_dprsr"));
+            use.setbit(intrinsic_metadata.at("ig_intr_md_for_dprsr"_cs));
         } else if (p->name == "recirculate" || p->name == "recirculate_preserving_field_list") {
-            use.setbit(intrinsic_metadata.at("ig_intr_md_for_tm"));
+            use.setbit(intrinsic_metadata.at("ig_intr_md_for_tm"_cs));
         } else if (p->name == "resubmit" || p->name == "resubmit_preserving_field_list") {
-            use.setbit(intrinsic_metadata.at("ig_intr_md_for_dprsr"));
+            use.setbit(intrinsic_metadata.at("ig_intr_md_for_dprsr"_cs));
         }
     }
 
@@ -999,10 +999,10 @@ TnaProgramStructure::convertControl(const IR::V1Control* control, cstring newNam
 
 #if 1
         if (useBridgeMetadata()) {
-            body->components.push_back(BFN::createSetMetadata("meta",
-                        "bridged_header", "bridged_metadata_indicator", 8, 0));
+            body->components.push_back(BFN::createSetMetadata("meta"_cs,
+                        "bridged_header"_cs, "bridged_metadata_indicator"_cs, 8, 0));
             body->components.push_back(
-                    BFN::createSetValid(control->srcInfo, "meta", "bridged_header")); }
+                    BFN::createSetValid(control->srcInfo, "meta"_cs, "bridged_header"_cs)); }
 #endif
 
         for (auto f : bridgedFields) {
@@ -1073,7 +1073,7 @@ TnaProgramStructure::convertParser(const IR::V1Parser* parser,
                 }
 
                 auto type = ProgramStructure::explodeType(fieldTypes);
-                auto sizeAnnotation = value_set->annotations->getSingle("parser_value_set_size");
+                auto sizeAnnotation = value_set->annotations->getSingle("parser_value_set_size"_cs);
                 const IR::Constant* sizeConstant;
                 if (sizeAnnotation) {
                     if (sizeAnnotation->expr.size() != 1) {
@@ -1101,7 +1101,8 @@ TnaProgramStructure::convertParser(const IR::V1Parser* parser,
                 // parser to have the same name in context json to generate the
                 // correct pd.h api to be consistent with existing p4-14 pd
                 // tests.
-                annos = annos->addAnnotation("pd_pvs_name", new IR::StringLiteral(value_set->name));
+                annos =
+                    annos->addAnnotation("pd_pvs_name"_cs, new IR::StringLiteral(value_set->name));
                 auto decl = new IR::P4ValueSet(value_set->name, annos, type, sizeConstant);
                 stateful->push_back(decl);
             }
@@ -1137,50 +1138,50 @@ void TnaProgramStructure::createIngressParser() {
 
     auto pinpath = new IR::Path("packet_in");
     auto pintype = new IR::Type_Name(pinpath);
-    parserPacketIn = new IR::Parameter("pkt", IR::Direction::None, pintype);
-    tnaParams.emplace("pkt", "pkt");
+    parserPacketIn = new IR::Parameter("pkt"_cs, IR::Direction::None, pintype);
+    tnaParams.emplace("pkt"_cs, "pkt"_cs);
     paramList->push_back(parserPacketIn);
 
     auto headpath = new IR::Path("headers");
     auto headtype = new IR::Type_Name(headpath);
-    parserHeadersOut = new IR::Parameter("hdr",
+    parserHeadersOut = new IR::Parameter("hdr"_cs,
                                          IR::Direction::Out, headtype);
-    tnaParams.emplace("hdr", "hdr");
+    tnaParams.emplace("hdr"_cs, "hdr"_cs);
     paramList->push_back(parserHeadersOut);
     conversionContext->header = paramReference(parserHeadersOut);
 
     auto metapath = new IR::Path("metadata");
     auto metatype = new IR::Type_Name(metapath);
-    auto meta = new IR::Parameter("meta",
+    auto meta = new IR::Parameter("meta"_cs,
                                   IR::Direction::Out, metatype);
-    tnaParams.emplace("meta", "meta");
+    tnaParams.emplace("meta"_cs, "meta"_cs);
     paramList->push_back(meta);
     conversionContext->userMetadata = paramReference(meta);
 
     // add ig_intr_md
     auto md_intr_path = new IR::Path("ingress_intrinsic_metadata_t");
     auto md_intr_type = new IR::Type_Name(md_intr_path);
-    auto md_intr = new IR::Parameter("ig_intr_md", IR::Direction::Out, md_intr_type);
-    tnaParams.emplace("ig_intr_md", "ig_intr_md");
+    auto md_intr = new IR::Parameter("ig_intr_md"_cs, IR::Direction::Out, md_intr_type);
+    tnaParams.emplace("ig_intr_md"_cs, "ig_intr_md"_cs);
     paramList->push_back(md_intr);
 
     // add ig_intr_md_for_tm
     auto intr_md_for_tm_path = new IR::Path("ingress_intrinsic_metadata_for_tm_t");
     auto intr_md_for_tm_type = new IR::Type_Name(intr_md_for_tm_path);
-    auto intr_md_for_tm = new IR::Parameter("ig_intr_md_for_tm",
+    auto intr_md_for_tm = new IR::Parameter("ig_intr_md_for_tm"_cs,
             IR::Direction::Out, intr_md_for_tm_type);
-    tnaParams.emplace("ig_intr_md_for_tm", "ig_intr_md_for_tm");
+    tnaParams.emplace("ig_intr_md_for_tm"_cs, "ig_intr_md_for_tm"_cs);
     paramList->push_back(intr_md_for_tm);
 
     // add ig_intr_md_from_prsr
     auto intr_md_from_prsr_path = new IR::Path("ingress_intrinsic_metadata_from_parser_t");
     auto intr_md_from_prsr_type = new IR::Type_Name(intr_md_from_prsr_path);
-    auto intr_md_from_prsr = new IR::Parameter("ig_intr_md_from_prsr",
+    auto intr_md_from_prsr = new IR::Parameter("ig_intr_md_from_prsr"_cs,
             IR::Direction::Out, intr_md_from_prsr_type);
-    tnaParams.emplace("ig_intr_md_from_prsr", "ig_intr_md_from_prsr");
+    tnaParams.emplace("ig_intr_md_from_prsr"_cs, "ig_intr_md_from_prsr"_cs);
     paramList->push_back(intr_md_from_prsr);
 
-    auto parser_type = new IR::Type_Parser("IngressParserImpl", paramList);
+    auto parser_type = new IR::Type_Parser("IngressParserImpl"_cs, paramList);
 
     IR::IndexedVector<IR::Declaration> stateful;
     auto states = new IR::IndexedVector<IR::ParserState>();
@@ -1211,28 +1212,28 @@ void TnaProgramStructure::createIngressParser() {
         }
     };
 
-    compute_reachable_states("start");
-    compute_reachable_states("start_i2e_mirrored");
-    compute_reachable_states("start_e2e_mirrored");
+    compute_reachable_states("start"_cs);
+    compute_reachable_states("start_i2e_mirrored"_cs);
+    compute_reachable_states("start_e2e_mirrored"_cs);
 
     for (auto p : parserStates) {
         auto state = convertParser(p.first, &stateful);
         if (state == nullptr)
             return;
         if (state->name == "start") {
-            state = BFN::convertStartStateToNormalState(state, "ingress_p4_entry_point");
+            state = BFN::convertStartStateToNormalState(state, "ingress_p4_entry_point"_cs);
         }
         if (state->name == "start_i2e_mirrored" ||
             state->name == "start_e2e_mirrored")
             continue;
 
-        if (reachable_states["start_i2e_mirrored"].count(state->name) &&
-            !reachable_states["start"].count(state->name)) {
+        if (reachable_states["start_i2e_mirrored"_cs].count(state->name) &&
+            !reachable_states["start"_cs].count(state->name)) {
             continue;
         }
 
-        if (reachable_states["start_e2e_mirrored"].count(state->name) &&
-            !reachable_states["start"].count(state->name))
+        if (reachable_states["start_e2e_mirrored"_cs].count(state->name) &&
+            !reachable_states["start"_cs].count(state->name))
             continue;
 
         states->push_back(state);
@@ -1246,7 +1247,7 @@ void TnaProgramStructure::createIngressParser() {
     // create csum and csum.add statements
     createChecksumVerifyStatements(INGRESS);
 
-    auto ip = new IR::P4Parser("IngressParserImpl", parser_type, stateful, *states);
+    auto ip = new IR::P4Parser("IngressParserImpl"_cs, parser_type, stateful, *states);
     declarations->push_back(ip);
 
     if (ingressReference.name.isNullOrEmpty())
@@ -1259,42 +1260,42 @@ void TnaProgramStructure::createEgressParser() {
 
     auto pinpath = new IR::Path("packet_in");
     auto pintype = new IR::Type_Name(pinpath);
-    parserPacketIn = new IR::Parameter("pkt",
+    parserPacketIn = new IR::Parameter("pkt"_cs,
                                        IR::Direction::None, pintype);
-    tnaParams.emplace("pkt", "pkt");
+    tnaParams.emplace("pkt"_cs, "pkt"_cs);
     paramList->push_back(parserPacketIn);
 
     auto headpath = new IR::Path("headers");
     auto headtype = new IR::Type_Name(headpath);
-    parserHeadersOut = new IR::Parameter("hdr",
+    parserHeadersOut = new IR::Parameter("hdr"_cs,
                                          IR::Direction::Out, headtype);
-    tnaParams.emplace("hdr", "hdr");
+    tnaParams.emplace("hdr"_cs, "hdr"_cs);
     paramList->push_back(parserHeadersOut);
     conversionContext->header = paramReference(parserHeadersOut);
 
     auto metapath = new IR::Path("metadata");
     auto metatype = new IR::Type_Name(metapath);
-    auto meta = new IR::Parameter("meta",
+    auto meta = new IR::Parameter("meta"_cs,
                                   IR::Direction::Out, metatype);
-    tnaParams.emplace("meta", "meta");
+    tnaParams.emplace("meta"_cs, "meta"_cs);
     paramList->push_back(meta);
     conversionContext->userMetadata = paramReference(meta);
 
     // add eg_intr_md
     auto md_intr_path = new IR::Path("egress_intrinsic_metadata_t");
     auto md_intr_type = new IR::Type_Name(md_intr_path);
-    auto md_intr = new IR::Parameter("eg_intr_md", IR::Direction::Out, md_intr_type);
-    tnaParams.emplace("eg_intr_md", "eg_intr_md");
+    auto md_intr = new IR::Parameter("eg_intr_md"_cs, IR::Direction::Out, md_intr_type);
+    tnaParams.emplace("eg_intr_md"_cs, "eg_intr_md"_cs);
     paramList->push_back(md_intr);
 
     // add eg_intr_md_from_prsr
     auto md_path = new IR::Path("egress_intrinsic_metadata_from_parser_t");
     auto md_type = new IR::Type_Name(md_path);
-    auto md_param = new IR::Parameter("eg_intr_md_from_parser_aux", IR::Direction::Out, md_type);
-    tnaParams.emplace("eg_intr_md_from_parser_aux", md_param->name);
+    auto md_param = new IR::Parameter("eg_intr_md_from_parser_aux"_cs, IR::Direction::Out, md_type);
+    tnaParams.emplace("eg_intr_md_from_parser_aux"_cs, md_param->name);
     paramList->push_back(md_param);
 
-    auto parser_type = new IR::Type_Parser("EgressParserImpl", paramList);
+    auto parser_type = new IR::Type_Parser("EgressParserImpl"_cs, paramList);
 
     IR::IndexedVector<IR::Declaration> stateful;
     auto states = new IR::IndexedVector<IR::ParserState>();
@@ -1304,7 +1305,7 @@ void TnaProgramStructure::createEgressParser() {
         if (state == nullptr)
             return;
         if (state->name == "start")
-            state = BFN::convertStartStateToNormalState(state, "egress_p4_entry_point");
+            state = BFN::convertStartStateToNormalState(state, "egress_p4_entry_point"_cs);
         states->push_back(state);
     }
     if (states->empty())
@@ -1312,7 +1313,7 @@ void TnaProgramStructure::createEgressParser() {
 
     states->append(*createEgressParserStates());
 
-    auto ep = new IR::P4Parser("EgressParserImpl",
+    auto ep = new IR::P4Parser("EgressParserImpl"_cs,
             parser_type, stateful, *states);
     declarations->push_back(ep);
 
@@ -1327,20 +1328,20 @@ TnaProgramStructure::createIngressParserStates() {
     // beginning of the packet.
     const auto bitSkip = Device::pardeSpec().bitIngressPrePacketPaddingSize();
     auto *skipToPacketState =
-        BFN::createGeneratedParserState("skip_to_packet", {
-                BFN::createAdvanceCall("pkt", bitSkip)
-        }, "__ingress_p4_entry_point");
-    parsers.add("__skip_to_packet");
-    parsers.calls("__skip_to_packet", "__ingress_p4_entry_point");
+        BFN::createGeneratedParserState("skip_to_packet"_cs, {
+                BFN::createAdvanceCall("pkt"_cs, bitSkip)
+        }, "__ingress_p4_entry_point"_cs);
+    parsers.add("__skip_to_packet"_cs);
+    parsers.calls("__skip_to_packet"_cs, "__ingress_p4_entry_point"_cs);
     states->push_back(skipToPacketState);
 
     const auto bitPhase0Size = Device::pardeSpec().bitPhase0Size();
     auto *phase0State =
-        BFN::createGeneratedParserState("phase0", {
-                BFN::createAdvanceCall("pkt", bitPhase0Size)
+        BFN::createGeneratedParserState("phase0"_cs, {
+                BFN::createAdvanceCall("pkt"_cs, bitPhase0Size)
         }, skipToPacketState->name);
-    parsers.add("__phase0");
-    parsers.calls("__phase0", "__skip_to_packet");
+    parsers.add("__phase0"_cs);
+    parsers.calls("__phase0"_cs, "__skip_to_packet"_cs);
     states->push_back(phase0State);
 
     auto resubmitStates = createResubmitStates();
@@ -1351,35 +1352,35 @@ TnaProgramStructure::createIngressParserStates() {
     // data. This state checks the resubmit flag and branches accordingly.
     IR::Vector<IR::Expression> selectOn = {
                      new IR::Member(new IR::PathExpression("ig_intr_md"),
-                                    "resubmit_flag")
+                                    "resubmit_flag"_cs)
     };
     auto *checkResubmitState =
         BFN::createGeneratedParserState(
-            "check_resubmit", {},
+            "check_resubmit"_cs, {},
             new IR::SelectExpression(new IR::ListExpression(selectOn), {
                 BFN::createSelectCase(1, 0x0, 0x1, phase0State),
                 BFN::createSelectCase(1, 0x1, 0x1, resubmitStates->back())
             }));
-    parsers.add("__check_resubmit");
-    parsers.calls("__check_resubmit", "__phase0");
-    parsers.calls("__check_resubmit", "__resubmit");
+    parsers.add("__check_resubmit"_cs);
+    parsers.calls("__check_resubmit"_cs, "__phase0"_cs);
+    parsers.calls("__check_resubmit"_cs, "__resubmit"_cs);
     states->push_back(checkResubmitState);
 
     // This state handles the extraction of ingress intrinsic metadata.
     IR::IndexedVector<IR::StatOrDecl> statements;
-    statements.push_back(BFN::createExtractCall("pkt", "ingress_intrinsic_metadata_t",
-                                                "ig_intr_md"));
+    statements.push_back(BFN::createExtractCall("pkt"_cs, "ingress_intrinsic_metadata_t"_cs,
+                                                "ig_intr_md"_cs));
 
     auto *igMetadataState =
-        BFN::createGeneratedParserState("ingress_metadata", std::move(statements),
+        BFN::createGeneratedParserState("ingress_metadata"_cs, std::move(statements),
                 checkResubmitState->name);
-    parsers.add("__ingress_metadata");
-    parsers.calls("__ingress_metadata", "__check_resubmit");
+    parsers.add("__ingress_metadata"_cs);
+    parsers.calls("__ingress_metadata"_cs, "__check_resubmit"_cs);
     states->push_back(igMetadataState);
 
-    states->push_back(BFN::addNewStartState("ingress_tna_entry_point", "__ingress_metadata"));
-    parsers.add("start");
-    parsers.calls("start", "__ingress_metadata");
+    states->push_back(BFN::addNewStartState("ingress_tna_entry_point"_cs, "__ingress_metadata"_cs));
+    parsers.add("start"_cs);
+    parsers.calls("start"_cs, "__ingress_metadata"_cs);
     return states;
 }
 
@@ -1387,8 +1388,8 @@ const IR::ParserState*
 TnaProgramStructure::createEmptyMirrorState(cstring nextState) {
     // Add a state that skips over compiler generated byte
     auto *skipToPacketState =
-        BFN::createGeneratedParserState("mirrored", {
-                BFN::createAdvanceCall("pkt", 8)
+        BFN::createGeneratedParserState("mirrored"_cs, {
+                BFN::createAdvanceCall("pkt"_cs, 8)
                 }, new IR::PathExpression(IR::ID(nextState)));
     return skipToPacketState;
 }
@@ -1400,7 +1401,7 @@ TnaProgramStructure::createMirrorState(gress_t gress, unsigned index,
     auto tmp = cstring::to_cstring(gress) + "_mirror_" + std::to_string(index);
     auto decl = new IR::Declaration_Variable(IR::ID(tmp), new IR::Type_Name(headerType));
     statements->push_back(decl);
-    statements->push_back(BFN::createExtractCall("pkt", headerType, tmp));
+    statements->push_back(BFN::createExtractCall("pkt"_cs, headerType, tmp));
 
     // Construct a `clone_src` value. The first bit indicates that the
     // packet is mirrored; the second bit indicates whether it originates
@@ -1410,8 +1411,8 @@ TnaProgramStructure::createMirrorState(gress_t gress, unsigned index,
     if (gress == EGRESS)
         source |= 1 << 1;
 
-    statements->push_back(BFN::createSetMetadata("meta",
-                COMPILER_META, "clone_src", 4, source));
+    statements->push_back(BFN::createSetMetadata("meta"_cs,
+                COMPILER_META, "clone_src"_cs, 4, source));
 
     // Construct a value for `mirror_source`, which is
     // compiler-generated metadata that's prepended to the user field
@@ -1432,8 +1433,8 @@ TnaProgramStructure::createMirrorState(gress_t gress, unsigned index,
     const unsigned isMirroredTag = 1 << 3;
     const unsigned gressTag = (gress == INGRESS) ? 0 : 1 << 4;
     unsigned mirror_source = index | isMirroredTag | gressTag;
-    statements->push_back(BFN::createSetMetadata("meta",
-                COMPILER_META, "mirror_source", 8, mirror_source));
+    statements->push_back(BFN::createSetMetadata("meta"_cs,
+                COMPILER_META, "mirror_source"_cs, 8, mirror_source));
 
     P4::CloneExpressions cloner;
     for (auto e : expr->to<IR::ListExpression>()->components) {
@@ -1450,7 +1451,7 @@ TnaProgramStructure::createMirrorState(gress_t gress, unsigned index,
     }
 
     // Create a state that extracts the fields in this field list.
-    cstring name = "parse_" + cstring::to_cstring(gress) + "_mirror_header_" +
+    cstring name = "parse_"_cs + cstring::to_cstring(gress) + "_mirror_header_"_cs +
         cstring::to_cstring(index);
 
     auto select = new IR::PathExpression(IR::ID(nextState));
@@ -1479,33 +1480,33 @@ TnaProgramStructure::createMirrorStates() {
     auto selectCases = new IR::Vector<IR::SelectCase>();
 
     // if mirror metadata is needed
-    for (auto d : digestFieldLists["clone_ingress_pkt_to_egress"]) {
+    for (auto d : digestFieldLists["clone_ingress_pkt_to_egress"_cs]) {
         auto hdrName = "ig_mirror_header_" + cstring::to_cstring(d.first) + "_t";
         auto nextState = createMirrorState(INGRESS, d.first, d.second.second,
-                hdrName, "__egress_p4_entry_point");
+                hdrName, "__egress_p4_entry_point"_cs);
         states->push_back(nextState);
         auto selectCase = createSelectCase(INGRESS, d.first, nextState);
         selectCases->push_back(selectCase);
     }
 
-    for (auto d : digestFieldLists["clone_egress_pkt_to_egress"]) {
+    for (auto d : digestFieldLists["clone_egress_pkt_to_egress"_cs]) {
         auto hdrName = "eg_mirror_header_" + cstring::to_cstring(d.first) + "_t";
         auto nextState = createMirrorState(EGRESS, d.first, d.second.second,
-                hdrName, "__egress_p4_entry_point");
+                hdrName, "__egress_p4_entry_point"_cs);
         states->push_back(nextState);
         auto selectCase = createSelectCase(EGRESS, d.first, nextState);
         selectCases->push_back(selectCase);
     }
 
     if (!selectCases->empty()) {
-        auto selectOn = new IR::ListExpression({ BFN::createLookaheadExpr("pkt", 8) });
+        auto selectOn = new IR::ListExpression({ BFN::createLookaheadExpr("pkt"_cs, 8) });
         auto* mirroredState =
-            BFN::createGeneratedParserState("mirrored", { },
+            BFN::createGeneratedParserState("mirrored"_cs, { },
                     new IR::SelectExpression(selectOn, *selectCases));
         states->push_back(mirroredState);
     } else {
         auto* mirroredState =
-            BFN::createGeneratedParserState("mirrored", { }, "__egress_p4_entry_point");
+            BFN::createGeneratedParserState("mirrored"_cs, { }, "__egress_p4_entry_point"_cs);
         states->push_back(mirroredState);
     }
     return states;
@@ -1518,10 +1519,10 @@ TnaProgramStructure::createResubmitState(gress_t gress, unsigned index,
     auto tmp = cstring::to_cstring(gress) + "_resubmit_" + std::to_string(index);
     auto decl = new IR::Declaration_Variable(IR::ID(tmp), new IR::Type_Name(headerType));
     statements->push_back(decl);
-    statements->push_back(BFN::createExtractCall("pkt", headerType, tmp));
+    statements->push_back(BFN::createExtractCall("pkt"_cs, headerType, tmp));
 
     // Create a state that extracts the fields in this field list.
-    cstring name = "parse_" + cstring::to_cstring(gress) + "_resubmit_header_" +
+    cstring name = "parse_"_cs + cstring::to_cstring(gress) + "_resubmit_header_"_cs +
         cstring::to_cstring(index);
 
     // Construct a value for `resubmit_source`, which is
@@ -1533,8 +1534,8 @@ TnaProgramStructure::createResubmitState(gress_t gress, unsigned index,
     // TODO: PHV should be able to overlay this field
     // with resubmit_type.
     unsigned resubmit_source = index;
-    statements->push_back(BFN::createSetMetadata("meta",
-                COMPILER_META, "resubmit_source", 8, resubmit_source));
+    statements->push_back(BFN::createSetMetadata("meta"_cs,
+                COMPILER_META, "resubmit_source"_cs, 8, resubmit_source));
 
 
     P4::CloneExpressions cloner;
@@ -1565,24 +1566,24 @@ TnaProgramStructure::createResubmitStates() {
     auto states = new IR::IndexedVector<IR::ParserState>();
     auto selectCases = new IR::Vector<IR::SelectCase>();
 
-    for (auto d : digestFieldLists["resubmit"]) {
+    for (auto d : digestFieldLists["resubmit"_cs]) {
         auto hdrName = "resubmit_header_" + cstring::to_cstring(d.first) + "_t";
         auto nextState = createResubmitState(INGRESS, d.first, d.second.second,
-                hdrName, "__ingress_p4_entry_point");
+                hdrName, "__ingress_p4_entry_point"_cs);
         states->push_back(nextState);
         auto selectCase = BFN::createSelectCase(8, d.first, 0x07, nextState);
         selectCases->push_back(selectCase);
     }
 
     if (!selectCases->empty()) {
-        auto selectOn = new IR::ListExpression({ BFN::createLookaheadExpr("pkt", 8) });
+        auto selectOn = new IR::ListExpression({ BFN::createLookaheadExpr("pkt"_cs, 8) });
         auto* resubmitState =
-            BFN::createGeneratedParserState("resubmit", { },
+            BFN::createGeneratedParserState("resubmit"_cs, { },
                     new IR::SelectExpression(selectOn, *selectCases));
         states->push_back(resubmitState);
     } else {
         auto* resubmitState =
-            BFN::createGeneratedParserState("resubmit", { }, "__ingress_p4_entry_point");
+            BFN::createGeneratedParserState("resubmit"_cs, { }, "__ingress_p4_entry_point"_cs);
         states->push_back(resubmitState);
     }
 
@@ -1599,7 +1600,7 @@ TnaProgramStructure::createEgressParserStates() {
     if (useBridgeMetadata()) {
         auto member = new IR::Member(new IR::PathExpression("meta"),
                 IR::ID("bridged_header"));
-        bridgeStateStmts.push_back(BFN::createExtractCall("pkt", "bridged_header_t", member));
+        bridgeStateStmts.push_back(BFN::createExtractCall("pkt"_cs, "bridged_header_t"_cs, member));
 
         for (auto f : bridgedFields) {
             if (!bridgedFieldInfo.count(f))
@@ -1617,39 +1618,39 @@ TnaProgramStructure::createEgressParserStates() {
 
     auto *bridgedMetadataState =
         BFN::createGeneratedParserState(
-                "bridged_metadata", std::move(bridgeStateStmts),
-                "__egress_p4_entry_point");  // FIXME: start_egress
-    parsers.add("__bridged_metadata");
-    parsers.calls("__bridged_metadata", "__egress_p4_entry_point");
+                "bridged_metadata"_cs, std::move(bridgeStateStmts),
+                "__egress_p4_entry_point"_cs);  // FIXME: start_egress
+    parsers.add("__bridged_metadata"_cs);
+    parsers.calls("__bridged_metadata"_cs, "__egress_p4_entry_point"_cs);
     states->push_back(bridgedMetadataState);
 
     auto mirroredStates = createMirrorStates();
     states->append(*mirroredStates);
 
     // check_mirrored
-    auto selectOn = new IR::ListExpression({ BFN::createLookaheadExpr("pkt", 8) });
+    auto selectOn = new IR::ListExpression({ BFN::createLookaheadExpr("pkt"_cs, 8) });
     auto *checkMirroredState =
-        BFN::createGeneratedParserState("check_mirrored", {},
+        BFN::createGeneratedParserState("check_mirrored"_cs, {},
                 new IR::SelectExpression(selectOn, {
                     BFN::createSelectCase(8, 0, 1 << 3, bridgedMetadataState),
                     BFN::createSelectCase(8, 1 << 3, 1 << 3, mirroredStates->back())
                     }));
-    parsers.add("__check_mirrored");
-    parsers.calls("__check_mirrored", "__bridged_metadata");
-    parsers.calls("__check_mirrored", "__mirrored");
+    parsers.add("__check_mirrored"_cs);
+    parsers.calls("__check_mirrored"_cs, "__bridged_metadata"_cs);
+    parsers.calls("__check_mirrored"_cs, "__mirrored"_cs);
     states->push_back(checkMirroredState);
 
     auto *egMetadataState =
-        BFN::createGeneratedParserState("egress_metadata", {
-                BFN::createExtractCall("pkt", "egress_intrinsic_metadata_t", "eg_intr_md")
-                }, "__check_mirrored");
-    parsers.add("__egress_metadata");
-    parsers.calls("__egress_metadata", "__check_mirrored");
+        BFN::createGeneratedParserState("egress_metadata"_cs, {
+                BFN::createExtractCall("pkt"_cs, "egress_intrinsic_metadata_t"_cs, "eg_intr_md"_cs)
+                }, "__check_mirrored"_cs);
+    parsers.add("__egress_metadata"_cs);
+    parsers.calls("__egress_metadata"_cs, "__check_mirrored"_cs);
     states->push_back(egMetadataState);
 
-    states->push_back(BFN::addNewStartState("egress_tna_entry_point", "__egress_metadata"));
-    parsers.add("start");
-    parsers.calls("start", "__egress_metadata");
+    states->push_back(BFN::addNewStartState("egress_tna_entry_point"_cs, "__egress_metadata"_cs));
+    parsers.add("start"_cs);
+    parsers.calls("start"_cs, "__egress_metadata"_cs);
     return states;
 }
 
@@ -1687,10 +1688,10 @@ TnaProgramStructure::createDigestEmit(cstring headerType, unsigned index,
     auto components = new IR::Vector<IR::Expression>();
     if (ext_name == "mirror")
         components->push_back(new IR::Member(new IR::Member(new IR::PathExpression("meta"),
-                        COMPILER_META), "mirror_source"));
+                        COMPILER_META), "mirror_source"_cs));
     else if (ext_name == "resubmit")
         components->push_back(new IR::Member(new IR::Member(new IR::PathExpression("meta"),
-                        COMPILER_META), "resubmit_source"));
+                        COMPILER_META), "resubmit_source"_cs));
     components->append(list->components);
     auto fl = new IR::ListExpression(*components);
     args->push_back(new IR::Argument(fl));
@@ -1710,7 +1711,7 @@ TnaProgramStructure::createBridgeEmit() {
     auto member = new IR::Member(pathExpr, "emit");
     auto args = new IR::Vector<IR::Argument>();
     args->push_back(new IR::Argument(
-                new IR::Member(new IR::PathExpression("meta"), "bridged_header")));
+                new IR::Member(new IR::PathExpression("meta"), "bridged_header"_cs)));
     auto stmt = new IR::MethodCallStatement(
             new IR::MethodCallExpression(member, args));
     return stmt;
@@ -1721,17 +1722,17 @@ TnaProgramStructure::createBridgeEmit() {
 void TnaProgramStructure::createIngressDeparser() {
     auto poutpath = new IR::Path(p4lib.packetOut.Id());
     auto pouttype = new IR::Type_Name(poutpath);
-    auto packetOut = new IR::Parameter("pkt", IR::Direction::None, pouttype);
+    auto packetOut = new IR::Parameter("pkt"_cs, IR::Direction::None, pouttype);
 
     auto headpath = new IR::Path("headers");
     auto headtype = new IR::Type_Name(headpath);
-    auto headers = new IR::Parameter("hdr", IR::Direction::InOut, headtype);
+    auto headers = new IR::Parameter("hdr"_cs, IR::Direction::InOut, headtype);
     conversionContext->header = paramReference(headers);
 
     std::vector<IR::Parameter*> paramList;
     auto metapath = new IR::Path("metadata");
     auto metatype = new IR::Type_Name(metapath);
-    auto meta = new IR::Parameter("meta", IR::Direction::In, metatype);
+    auto meta = new IR::Parameter("meta"_cs, IR::Direction::In, metatype);
     paramList.push_back(meta);
 
     conversionContext->userMetadata = paramReference(meta);
@@ -1739,29 +1740,29 @@ void TnaProgramStructure::createIngressDeparser() {
     // add deparser intrinsic metadata
     auto path = new IR::Path("ingress_intrinsic_metadata_for_deparser_t");
     auto type = new IR::Type_Name(path);
-    auto param = new IR::Parameter("ig_intr_md_for_dprsr", IR::Direction::In, type);
+    auto param = new IR::Parameter("ig_intr_md_for_dprsr"_cs, IR::Direction::In, type);
     paramList.push_back(param);
 
     // add intrinsic metadata
     auto md_path = new IR::Path("ingress_intrinsic_metadata_t");
     auto md_type = new IR::Type_Name(md_path);
-    auto md_param = new IR::Parameter("ig_intr_md", IR::Direction::In, md_type);
+    auto md_param = new IR::Parameter("ig_intr_md"_cs, IR::Direction::In, md_type);
     paramList.push_back(md_param);
 
     IR::IndexedVector<IR::Declaration> controlLocals;
-    if (digestFieldLists["resubmit"].size() != 0) {
+    if (digestFieldLists["resubmit"_cs].size() != 0) {
         auto declArgs = new IR::Vector<IR::Argument>({});
         auto declType = new IR::Type_Name("Resubmit");
-        auto decl = new IR::Declaration_Instance("resubmit", declType, declArgs);
+        auto decl = new IR::Declaration_Instance("resubmit"_cs, declType, declArgs);
         controlLocals.push_back(decl);
     }
-    if (digestFieldLists["clone_ingress_pkt_to_egress"].size() != 0) {
+    if (digestFieldLists["clone_ingress_pkt_to_egress"_cs].size() != 0) {
         auto declArgs = new IR::Vector<IR::Argument>({});
         auto declType = new IR::Type_Name("Mirror");
-        auto decl = new IR::Declaration_Instance("mirror", declType, declArgs);
+        auto decl = new IR::Declaration_Instance("mirror"_cs, declType, declArgs);
         controlLocals.push_back(decl);
     }
-    for (auto digest : digestFieldLists["generate_digest"]) {
+    for (auto digest : digestFieldLists["generate_digest"_cs]) {
         auto declArgs = new IR::Vector<IR::Argument>({});
         auto typeName = "digest_header_" + cstring::to_cstring(digest.first) + "_t";
         auto typeArgs = new IR::Vector<IR::Type>();
@@ -1782,19 +1783,19 @@ void TnaProgramStructure::createIngressDeparser() {
     auto addAllEmits = [this, checksumUpdates](IR::BlockStatement* blk) {
         auto headerEmits = blk->components;
         auto allEmits = new IR::IndexedVector<IR::StatOrDecl>();
-        for (const auto &d : digestFieldLists["clone_ingress_pkt_to_egress"]) {
-            auto cond = createDigestEmit("ig_mirror_header_", d.first,
-                    d.second, "ig_intr_md_for_dprsr", "mirror", "mirror_type");
+        for (const auto &d : digestFieldLists["clone_ingress_pkt_to_egress"_cs]) {
+            auto cond = createDigestEmit("ig_mirror_header_"_cs, d.first,
+                    d.second, "ig_intr_md_for_dprsr"_cs, "mirror"_cs, "mirror_type"_cs);
             allEmits->push_back(cond);
         }
-        for (const auto &d : digestFieldLists["resubmit"]) {
-            auto cond = createDigestEmit("resubmit_header_", d.first,
-                    d.second, "ig_intr_md_for_dprsr", "resubmit", "resubmit_type");
+        for (const auto &d : digestFieldLists["resubmit"_cs]) {
+            auto cond = createDigestEmit("resubmit_header_"_cs, d.first,
+                    d.second, "ig_intr_md_for_dprsr"_cs, "resubmit"_cs, "resubmit_type"_cs);
             allEmits->push_back(cond);
         }
-        for (const auto &d : digestFieldLists["generate_digest"]) {
-            auto cond = createDigestEmit("digest_header_", d.first,
-                    d.second, "ig_intr_md_for_dprsr", "digest", "digest_type");
+        for (const auto &d : digestFieldLists["generate_digest"_cs]) {
+            auto cond = createDigestEmit("digest_header_"_cs, d.first,
+                    d.second, "ig_intr_md_for_dprsr"_cs, "digest"_cs, "digest_type"_cs);
             allEmits->push_back(cond);
         }
         // insert checksum update statement if deparserUpdateLocations contains ingress
@@ -1807,7 +1808,7 @@ void TnaProgramStructure::createIngressDeparser() {
         return new IR::BlockStatement(*allEmits);
     };
 
-    createDeparserInternal("IngressDeparserImpl", packetOut, headers,
+    createDeparserInternal("IngressDeparserImpl"_cs, packetOut, headers,
             paramList, controlLocals, addAllEmits);
 }
 
@@ -1841,7 +1842,7 @@ void TnaProgramStructure::createChecksumUpdateStatements(
         auto dest = conv.convert(cf->field);
         auto le = conv.convert(fl);
 
-        auto checksumInstName = makeUniqueName("checksum");
+        auto checksumInstName = makeUniqueName("checksum"_cs);
         auto checksumInst = new IR::Declaration_Instance(checksumInstName,
                 new IR::Type_Name("Checksum"), new IR::Vector<IR::Argument>());
         auto method = new IR::Member(
@@ -1872,15 +1873,15 @@ void TnaProgramStructure::createChecksumUpdateStatements(
         // annotation may override the default updateLocations
         for (auto annot : cf->annotations->annotations) {
             parseUpdateLocationAnnotation(cinfo.parserUpdateLocations,
-                    annot, "residual_checksum_parser_update_location");
+                    annot, "residual_checksum_parser_update_location"_cs);
             parseUpdateLocationAnnotation(cinfo.deparserUpdateLocations,
-                    annot, "calculated_field_update_location"); }
+                    annot, "calculated_field_update_location"_cs); }
 
             for (auto annot : flc->annotations->annotations) {
                 parseUpdateLocationAnnotation(cinfo.parserUpdateLocations,
-                        annot, "residual_checksum_parser_update_location");
+                        annot, "residual_checksum_parser_update_location"_cs);
                 parseUpdateLocationAnnotation(cinfo.deparserUpdateLocations,
-                        annot, "calculated_field_update_location"); }
+                        annot, "calculated_field_update_location"_cs); }
         if (fl->payload) {
             if (cinfo.parserUpdateLocations.count(gress)) {
                 cinfo.with_payload = fl->payload;
@@ -1924,15 +1925,15 @@ void TnaProgramStructure::createChecksumVerifyStatements(gress_t) {
             // annotation may override the default updateLocations
             for (auto annot : cf->annotations->annotations) {
                 parseUpdateLocationAnnotation(cinfo.parserUpdateLocations,
-                        annot, "residual_checksum_parser_update_location");
+                        annot, "residual_checksum_parser_update_location"_cs);
                 parseUpdateLocationAnnotation(cinfo.deparserUpdateLocations,
-                        annot, "calculated_field_update_location"); }
+                        annot, "calculated_field_update_location"_cs); }
 
             for (auto annot : flc->annotations->annotations) {
                 parseUpdateLocationAnnotation(cinfo.parserUpdateLocations,
-                        annot, "residual_checksum_parser_update_location");
+                        annot, "residual_checksum_parser_update_location"_cs);
                 parseUpdateLocationAnnotation(cinfo.deparserUpdateLocations,
-                        annot, "calculated_field_update_location"); }
+                        annot, "calculated_field_update_location"_cs); }
 
             verifyChecksums.push_back(cinfo);
         }
@@ -1943,17 +1944,17 @@ void TnaProgramStructure::createChecksumVerifyStatements(gress_t) {
 void TnaProgramStructure::createEgressDeparser() {
     auto poutpath = new IR::Path(p4lib.packetOut.Id());
     auto pouttype = new IR::Type_Name(poutpath);
-    auto packetOut = new IR::Parameter("pkt", IR::Direction::None, pouttype);
+    auto packetOut = new IR::Parameter("pkt"_cs, IR::Direction::None, pouttype);
 
     auto headpath = new IR::Path("headers");
     auto headtype = new IR::Type_Name(headpath);
-    auto headers = new IR::Parameter("hdr", IR::Direction::InOut, headtype);
+    auto headers = new IR::Parameter("hdr"_cs, IR::Direction::InOut, headtype);
     conversionContext->header = paramReference(headers);
 
     std::vector<IR::Parameter*> paramList;
     auto metapath = new IR::Path("metadata");
     auto metatype = new IR::Type_Name(metapath);
-    auto meta = new IR::Parameter("meta", IR::Direction::In, metatype);
+    auto meta = new IR::Parameter("meta"_cs, IR::Direction::In, metatype);
     paramList.push_back(meta);
 
     conversionContext->userMetadata = paramReference(meta);
@@ -1961,26 +1962,26 @@ void TnaProgramStructure::createEgressDeparser() {
     // add eg_intr_md_for_dprsr
     auto path = new IR::Path("egress_intrinsic_metadata_for_deparser_t");
     auto type = new IR::Type_Name(path);
-    auto param = new IR::Parameter("eg_intr_md_for_dprsr", IR::Direction::In, type);
+    auto param = new IR::Parameter("eg_intr_md_for_dprsr"_cs, IR::Direction::In, type);
     paramList.push_back(param);
 
     // add eg_intr_md
     path = new IR::Path("egress_intrinsic_metadata_t");
     type = new IR::Type_Name(path);
-    param = new IR::Parameter("eg_intr_md", IR::Direction::In, type);
+    param = new IR::Parameter("eg_intr_md"_cs, IR::Direction::In, type);
     paramList.push_back(param);
 
     // add eg_intr_md_from_prsr
     path = new IR::Path("egress_intrinsic_metadata_from_parser_t");
     type = new IR::Type_Name(path);
-    param = new IR::Parameter("eg_intr_md_from_parser_aux", IR::Direction::In, type);
+    param = new IR::Parameter("eg_intr_md_from_parser_aux"_cs, IR::Direction::In, type);
     paramList.push_back(param);
 
     IR::IndexedVector<IR::Declaration> controlLocals;
-    if (digestFieldLists["clone_egress_pkt_to_egress"].size() != 0) {
+    if (digestFieldLists["clone_egress_pkt_to_egress"_cs].size() != 0) {
         auto declArgs = new IR::Vector<IR::Argument>({});
         auto declType = new IR::Type_Name("Mirror");
-        auto decl = new IR::Declaration_Instance("mirror", declType, declArgs);
+        auto decl = new IR::Declaration_Instance("mirror"_cs, declType, declArgs);
         controlLocals.push_back(decl);
     }
 
@@ -1991,10 +1992,10 @@ void TnaProgramStructure::createEgressDeparser() {
     auto addAllEmits = [this, checksumUpdates](IR::BlockStatement* blk) {
         auto headerEmits = blk->components;
         auto allEmits = new IR::IndexedVector<IR::StatOrDecl>();
-        for (const auto &d : digestFieldLists["clone_egress_pkt_to_egress"]) {
+        for (const auto &d : digestFieldLists["clone_egress_pkt_to_egress"_cs]) {
             LOG3("digest field list " << d.first << d.second.second);
-            auto cond = createDigestEmit("eg_mirror_header_", d.first,
-                    d.second, "eg_intr_md_for_dprsr", "mirror", "mirror_type");
+            auto cond = createDigestEmit("eg_mirror_header_"_cs, d.first,
+                    d.second, "eg_intr_md_for_dprsr"_cs, "mirror"_cs, "mirror_type"_cs);
             allEmits->push_back(cond);
         }
         // insert checksum update statement if deparserUpdateLocations contains egress
@@ -2005,7 +2006,7 @@ void TnaProgramStructure::createEgressDeparser() {
         return new IR::BlockStatement(*allEmits);
     };
 
-    createDeparserInternal("EgressDeparserImpl", packetOut, headers,
+    createDeparserInternal("EgressDeparserImpl"_cs, packetOut, headers,
             paramList, controlLocals, addAllEmits);
 }
 
@@ -2016,13 +2017,13 @@ void TnaProgramStructure::createDeparser() {
 
 void TnaProgramStructure::collectControlGressMapping() {
     std::set<cstring> reachableFromIngress;
-    calledControls.reachable("ingress", reachableFromIngress);
+    calledControls.reachable("ingress"_cs, reachableFromIngress);
     for (cstring s : reachableFromIngress) {
         mapControlToGress.emplace(s, INGRESS);
         LOG5("\tcontrol " << s << " reachable in ingress");
     }
     std::set<cstring> reachableFromEgress;
-    calledControls.reachable("egress", reachableFromEgress);
+    calledControls.reachable("egress"_cs, reachableFromEgress);
     for (cstring s : reachableFromEgress) {
         mapControlToGress.emplace(s, EGRESS);
         LOG5("\tcontrol " << s << " reachable in egress");
@@ -2037,7 +2038,7 @@ cstring TnaProgramStructure::convertLinearPathToStructFieldName(BFN::LinearPath*
         if (hdr->path->name == "meta")
             skip_path_expression = true;
     }
-    auto fn = path->to_cstring("_", skip_path_expression);
+    auto fn = path->to_cstring("_"_cs, skip_path_expression);
     return fn;
 }
 
@@ -2047,7 +2048,7 @@ void TnaProgramStructure::collectBridgedFieldsInControls() {
     ordered_set<cstring> mayWrite[2];
 
     std::set<cstring> reachableFromIngress;
-    calledControls.reachable("ingress", reachableFromIngress);
+    calledControls.reachable("ingress"_cs, reachableFromIngress);
     for (auto s : reachableFromIngress) {
         if (auto v1ctrl = controls.get(s)) {
             // convert to p4-16 because the WriteContext used in
@@ -2064,7 +2065,7 @@ void TnaProgramStructure::collectBridgedFieldsInControls() {
     }
 
     std::set<cstring> reachableFromEgress;
-    calledControls.reachable("egress", reachableFromEgress);
+    calledControls.reachable("egress"_cs, reachableFromEgress);
     for (auto s : reachableFromEgress) {
         auto v1ctrl = controls.get(s);
         // p4-14 program may not have a 'egress' control
@@ -2115,7 +2116,7 @@ void TnaProgramStructure::collectBridgedFieldsInParsers() {
     ordered_set<cstring> mayRead[2];
     ordered_set<cstring> mayWrite[2];
     std::set<cstring> reachableFromStartState;
-    parsers.reachable("start", reachableFromStartState);
+    parsers.reachable("start"_cs, reachableFromStartState);
     IR::IndexedVector<IR::Declaration> stateful;
     for (auto s : reachableFromStartState) {
         auto v1parser = parserStates.get(s);
@@ -2190,7 +2191,7 @@ void TnaProgramStructure::collectBridgedFields() {
 
     // handle pa_do_not_bridge
     for (auto it : headers) {
-        auto do_not_bridge = it.first->type->annotations->getSingle("pa_do_not_bridge");
+        auto do_not_bridge = it.first->type->annotations->getSingle("pa_do_not_bridge"_cs);
         if (do_not_bridge) {
             if (do_not_bridge->expr.size() != 2)
                 continue;
@@ -2207,7 +2208,7 @@ void TnaProgramStructure::collectBridgedFields() {
         return;
 
     auto fields = new IR::IndexedVector<IR::StructField>();
-    fields->push_back(new IR::StructField("bridged_metadata_indicator", IR::Type::Bits::get(8)));
+    fields->push_back(new IR::StructField("bridged_metadata_indicator"_cs, IR::Type::Bits::get(8)));
 
     int count = 0;
     forAllResidualChecksums(calculated_fields, [&](const IR::FieldList* fl) {
@@ -2274,7 +2275,7 @@ void TnaProgramStructure::createDigestHeaderTypeAndInstance(unsigned index,
 // used in resubmit, clone primitives.
 void TnaProgramStructure::collectDigestFields() {
     std::set<cstring> reachableFromIngress;
-    calledControls.reachable("ingress", reachableFromIngress);
+    calledControls.reachable("ingress"_cs, reachableFromIngress);
     for (auto s : reachableFromIngress) {
         if (auto ctrl = controls.get(s)) {
             // needed by CollectDigestFields to initalize conversionContext
@@ -2288,7 +2289,7 @@ void TnaProgramStructure::collectDigestFields() {
     }
 
     std::set<cstring> reachableFromEgress;
-    calledControls.reachable("egress", reachableFromEgress);
+    calledControls.reachable("egress"_cs, reachableFromEgress);
     for (auto s : reachableFromEgress) {
         auto ctrl = controls.get(s);
         if (!ctrl)
@@ -2302,33 +2303,35 @@ void TnaProgramStructure::collectDigestFields() {
         }
     }
 
-    for (auto d : digestFieldLists["resubmit"]) {
+    for (auto d : digestFieldLists["resubmit"_cs]) {
         LOG3("generate resub " << d.first << " " << d.second.second);
         auto tagFields = new IR::IndexedVector<IR::StructField>();
         tagFields->push_back(new IR::StructField(IR::ID("resubmit_source"),
                     IR::Type::Bits::get(8)));
-        createDigestHeaderTypeAndInstance(d.first, d.second.second, "resubmit_header_", *tagFields);
+        createDigestHeaderTypeAndInstance(d.first, d.second.second, "resubmit_header_"_cs,
+                                          *tagFields);
     }
 
-    for (auto d : digestFieldLists["clone_ingress_pkt_to_egress"]) {
+    for (auto d : digestFieldLists["clone_ingress_pkt_to_egress"_cs]) {
         LOG3("generate i2e " << d.first << " " << d.second.second);
         auto tagFields = new IR::IndexedVector<IR::StructField>();
         tagFields->push_back(new IR::StructField(IR::ID("mirror_source"), IR::Type::Bits::get(8)));
         createDigestHeaderTypeAndInstance(
-                d.first, d.second.second, "ig_mirror_header_", *tagFields);
+                d.first, d.second.second, "ig_mirror_header_"_cs, *tagFields);
     }
 
-    for (auto d : digestFieldLists["clone_egress_pkt_to_egress"]) {
+    for (auto d : digestFieldLists["clone_egress_pkt_to_egress"_cs]) {
         LOG3("generate e2e " << d.first << " " << d.second.second);
         auto tagFields = new IR::IndexedVector<IR::StructField>();
         tagFields->push_back(new IR::StructField(IR::ID("mirror_source"), IR::Type::Bits::get(8)));
         createDigestHeaderTypeAndInstance(
-                d.first, d.second.second, "eg_mirror_header_", *tagFields);
+                d.first, d.second.second, "eg_mirror_header_"_cs, *tagFields);
     }
 
-    for (auto d : digestFieldLists["generate_digest"]) {
+    for (auto d : digestFieldLists["generate_digest"_cs]) {
         LOG3("generate digest " << d.first << " " << d.second.second);
-        createDigestHeaderTypeAndInstance(d.first, d.second.second, "digest_header_", std::nullopt);
+        createDigestHeaderTypeAndInstance(d.first, d.second.second, "digest_header_"_cs,
+                                          std::nullopt);
     }
 }
 
@@ -2398,22 +2401,22 @@ void TnaProgramStructure::createCompilerGeneratedTypes() {
 
     // Inject new fields for mirroring.
     cgm->fields.push_back(
-            new IR::StructField("mirror_id",
+            new IR::StructField("mirror_id"_cs,
                 IR::Type::Bits::get(Device::cloneSessionIdWidth())));
     cgm->fields.push_back(
-            new IR::StructField("mirror_source", IR::Type::Bits::get(8)));
+            new IR::StructField("mirror_source"_cs, IR::Type::Bits::get(8)));
 
     cgm->fields.push_back(
-            new IR::StructField("resubmit_source", IR::Type::Bits::get(8)));
+            new IR::StructField("resubmit_source"_cs, IR::Type::Bits::get(8)));
 
     // FIXME(hanw): we can probably remove these two fields.
     cgm->fields.push_back(
-            new IR::StructField("clone_src", IR::Type::Bits::get(4)));
+            new IR::StructField("clone_src"_cs, IR::Type::Bits::get(4)));
     cgm->fields.push_back(
-            new IR::StructField("clone_digest_id", IR::Type::Bits::get(4)));
+            new IR::StructField("clone_digest_id"_cs, IR::Type::Bits::get(4)));
     // Used to support separate egress_start parser state.
     cgm->fields.push_back(
-            new IR::StructField("instance_type", IR::Type::Bits::get(32)));
+            new IR::StructField("instance_type"_cs, IR::Type::Bits::get(32)));
 
     auto meta = new IR::Metadata(COMPILER_META, cgm);
     metadata.emplace(meta);
@@ -2452,20 +2455,20 @@ void TnaProgramStructure::createType(cstring typeName, cstring headerName) {
 // add some P4-16 tna types into 'metadata' or 'headers' to help with
 // bridging implementation
 void TnaProgramStructure::createIntrinsicMetadataTypes() {
-    createType("ingress_intrinsic_metadata_t", "ig_intr_md");
-    createType("ingress_intrinsic_metadata_for_tm_t", "ig_intr_md_for_tm");
-    createType("ingress_intrinsic_metadata_from_parser_t", "ig_intr_md_from_parser_aux");
-    createType("ingress_intrinsic_metadata_for_mirror_buffer_t", "ig_intr_md_for_mb");
+    createType("ingress_intrinsic_metadata_t"_cs, "ig_intr_md"_cs);
+    createType("ingress_intrinsic_metadata_for_tm_t"_cs, "ig_intr_md_for_tm"_cs);
+    createType("ingress_intrinsic_metadata_from_parser_t"_cs, "ig_intr_md_from_parser_aux"_cs);
+    createType("ingress_intrinsic_metadata_for_mirror_buffer_t"_cs, "ig_intr_md_for_mb"_cs);
 
-    createType("egress_intrinsic_metadata_t", "eg_intr_md");
-    createType("egress_intrinsic_metadata_from_parser_t", "eg_intr_md_from_parser_aux");
-    createType("egress_intrinsic_metadata_for_deparser_t", "eg_intr_md_for_dprsr");
-    createType("egress_intrinsic_metadata_for_output_port_t", "eg_intr_md_for_oport");
-    createType("egress_intrinsic_metadata_for_mirror_buffer_t", "eg_intr_md_for_mb");
+    createType("egress_intrinsic_metadata_t"_cs, "eg_intr_md"_cs);
+    createType("egress_intrinsic_metadata_from_parser_t"_cs, "eg_intr_md_from_parser_aux"_cs);
+    createType("egress_intrinsic_metadata_for_deparser_t"_cs, "eg_intr_md_for_dprsr"_cs);
+    createType("egress_intrinsic_metadata_for_output_port_t"_cs, "eg_intr_md_for_oport"_cs);
+    createType("egress_intrinsic_metadata_for_mirror_buffer_t"_cs, "eg_intr_md_for_mb"_cs);
 
-    auto stdmeta = types.get("standard_metadata_t");
+    auto stdmeta = types.get("standard_metadata_t"_cs);
     if (stdmeta) {
-        auto meta = new IR::Metadata("standard_metadata", stdmeta);
+        auto meta = new IR::Metadata("standard_metadata"_cs, stdmeta);
         metadata.emplace(meta);
     }
 }
@@ -2485,28 +2488,28 @@ void TnaProgramStructure::removeType(cstring name, cstring headerName) {
 
 // remove types from parsing p4-14 intrinsic_metadata.p4
 void TnaProgramStructure::removeP14IntrinsicMetadataTypes() {
-    removeType("ingress_intrinsic_metadata_t", "ig_intr_md");
-    removeType("ingress_intrinsic_metadata_for_tm_t", "ig_intr_md_for_tm");
-    removeType("ingress_intrinsic_metadata_from_parser_aux_t", "ig_intr_md_from_parser_aux");
-    removeType("ingress_intrinsic_metadata_for_mirror_buffer_t", "ig_intr_md_for_mb");
-    removeType("egress_intrinsic_metadata_t", "eg_intr_md");
-    removeType("egress_intrinsic_metadata_from_parser_aux_t", "eg_intr_md_from_parser_aux");
-    removeType("egress_intrinsic_metadata_for_mirror_buffer_t", "eg_intr_md_for_mb");
-    removeType("egress_intrinsic_metadata_for_output_port_t", "eg_intr_md_for_oport");
+    removeType("ingress_intrinsic_metadata_t"_cs, "ig_intr_md"_cs);
+    removeType("ingress_intrinsic_metadata_for_tm_t"_cs, "ig_intr_md_for_tm"_cs);
+    removeType("ingress_intrinsic_metadata_from_parser_aux_t"_cs, "ig_intr_md_from_parser_aux"_cs);
+    removeType("ingress_intrinsic_metadata_for_mirror_buffer_t"_cs, "ig_intr_md_for_mb"_cs);
+    removeType("egress_intrinsic_metadata_t"_cs, "eg_intr_md"_cs);
+    removeType("egress_intrinsic_metadata_from_parser_aux_t"_cs, "eg_intr_md_from_parser_aux"_cs);
+    removeType("egress_intrinsic_metadata_for_mirror_buffer_t"_cs, "eg_intr_md_for_mb"_cs);
+    removeType("egress_intrinsic_metadata_for_output_port_t"_cs, "eg_intr_md_for_oport"_cs);
 }
 
 void TnaProgramStructure::loadModel() {
     if (BackendOptions().arch == "tna")
-        include("tna.p4", "-D__TARGET_TOFINO__=1");
+        include("tna.p4"_cs, "-D__TARGET_TOFINO__=1"_cs);
     else if (BackendOptions().arch == "t2na")
-        include("t2na.p4", "-D__TARGET_TOFINO__=2");
+        include("t2na.p4"_cs, "-D__TARGET_TOFINO__=2"_cs);
 #if HAVE_CLOUDBREAK
     else if (BackendOptions().arch == "t3na")
-        include("t3na.p4", "-D__TARGET_TOFINO__=3");
+        include("t3na.p4"_cs, "-D__TARGET_TOFINO__=3"_cs);
 #endif
 #if HAVE_FLATROCK
-    else if (BackendOptions().arch == "t5na")
-        include("tna.p4", "-D__TARGET_TOFINO__=5");
+    else if (BackendOptions().arch == "t5na"_cs)
+        include("tna.p4"_cs, "-D__TARGET_TOFINO__=5"_cs);
 #endif
     else
         ::error("Must specify either --arch tna or --arch t2na"
@@ -2520,7 +2523,7 @@ void TnaProgramStructure::loadModel() {
 
     // iterate over tna declarations, find the type for intrinsic metadata
     for (auto decl : *declarations) {
-        if (decl->getAnnotation("__intrinsic_metadata")) {
+        if (decl->getAnnotation("__intrinsic_metadata"_cs)) {
             auto st = decl->to<IR::Type_StructLike>();
             tna_intr_md_types.emplace(st->name.toString(), st);
         }
@@ -2535,37 +2538,37 @@ void TnaProgramStructure::loadModel() {
     }
 
     // make sure the P4-16 types are not added again as declarations.
-    parameterTypes.insert("ingress_intrinsic_metadata_t");
-    parameterTypes.insert("egress_intrinsic_metadata_t");
-    parameterTypes.insert("ingress_intrinsic_metadata_for_tm_t");
-    parameterTypes.insert("ingress_intrinsic_metadata_from_parser_t");
-    parameterTypes.insert("ingress_intrinsic_metadata_for_mirror_buffer_t");
-    parameterTypes.insert("egress_intrinsic_metadata_from_parser_t");
-    parameterTypes.insert("egress_intrinsic_metadata_for_deparser_t");
-    parameterTypes.insert("egress_intrinsic_metadata_for_output_port_t");
-    parameterTypes.insert("egress_intrinsic_metadata_for_mirror_buffer_t");
-    parameterTypes.insert("ingress_intrinsic_metadata_t");
-    parameterTypes.insert("egress_intrinsic_metadata_t");
-    parameterTypes.insert("ingress_intrinsic_metadata_for_tm_t");
-    parameterTypes.insert("ingress_intrinsic_metadata_from_parser_t");
-    parameterTypes.insert("ingress_intrinsic_metadata_for_mirror_buffer_t");
-    parameterTypes.insert("egress_intrinsic_metadata_from_parser_t");
-    parameterTypes.insert("egress_intrinsic_metadata_for_deparser_t");
-    parameterTypes.insert("egress_intrinsic_metadata_for_output_port_t");
-    parameterTypes.insert("egress_intrinsic_metadata_for_mirror_buffer_t");
-    headerTypes.insert("pktgen_timer_header_t");
-    headerTypes.insert("pktgen_port_down_header_t");
-    headerTypes.insert("pktgen_recirc_header_t");
-    headerTypes.insert("ptp_metadata_t");
+    parameterTypes.insert("ingress_intrinsic_metadata_t"_cs);
+    parameterTypes.insert("egress_intrinsic_metadata_t"_cs);
+    parameterTypes.insert("ingress_intrinsic_metadata_for_tm_t"_cs);
+    parameterTypes.insert("ingress_intrinsic_metadata_from_parser_t"_cs);
+    parameterTypes.insert("ingress_intrinsic_metadata_for_mirror_buffer_t"_cs);
+    parameterTypes.insert("egress_intrinsic_metadata_from_parser_t"_cs);
+    parameterTypes.insert("egress_intrinsic_metadata_for_deparser_t"_cs);
+    parameterTypes.insert("egress_intrinsic_metadata_for_output_port_t"_cs);
+    parameterTypes.insert("egress_intrinsic_metadata_for_mirror_buffer_t"_cs);
+    parameterTypes.insert("ingress_intrinsic_metadata_t"_cs);
+    parameterTypes.insert("egress_intrinsic_metadata_t"_cs);
+    parameterTypes.insert("ingress_intrinsic_metadata_for_tm_t"_cs);
+    parameterTypes.insert("ingress_intrinsic_metadata_from_parser_t"_cs);
+    parameterTypes.insert("ingress_intrinsic_metadata_for_mirror_buffer_t"_cs);
+    parameterTypes.insert("egress_intrinsic_metadata_from_parser_t"_cs);
+    parameterTypes.insert("egress_intrinsic_metadata_for_deparser_t"_cs);
+    parameterTypes.insert("egress_intrinsic_metadata_for_output_port_t"_cs);
+    parameterTypes.insert("egress_intrinsic_metadata_for_mirror_buffer_t"_cs);
+    headerTypes.insert("pktgen_timer_header_t"_cs);
+    headerTypes.insert("pktgen_port_down_header_t"_cs);
+    headerTypes.insert("pktgen_recirc_header_t"_cs);
+    headerTypes.insert("ptp_metadata_t"_cs);
 
     // following type names are from p4-14/tofino/intrinsic_metadata.p4
     // we would like to filter them out of generated toplevel header type.
-    parameterTypes.insert("ingress_intrinsic_metadata_from_parser_aux_t");
-    parameterTypes.insert("ingress_parser_control_signals");
-    parameterTypes.insert("egress_intrinsic_metadata_from_parser_aux_t");
-    headerInstances.insert("ingress_parser_control_signals");
-    headerTypes.insert("generator_metadata_t_0");
-    headerInstances.insert("generator_metadata_t_0");
+    parameterTypes.insert("ingress_intrinsic_metadata_from_parser_aux_t"_cs);
+    parameterTypes.insert("ingress_parser_control_signals"_cs);
+    parameterTypes.insert("egress_intrinsic_metadata_from_parser_aux_t"_cs);
+    headerInstances.insert("ingress_parser_control_signals"_cs);
+    headerTypes.insert("generator_metadata_t_0"_cs);
+    headerInstances.insert("generator_metadata_t_0"_cs);
 }
 
 bool CollectBridgedFields::preorder(const IR::MethodCallExpression*) {
@@ -2741,7 +2744,7 @@ FixChecksum::FixChecksum(TnaProgramStructure* structure) {
             new P4::ResolveReferences(&refMap, true),  // check shadowing
             new P4::ConstantFolding(&refMap, nullptr),
             new P4::ResolveReferences(&refMap),
-            new P4::TypeInference(&refMap, &typeMap, false),
+            new P4::TypeInference(&typeMap, false),
             parserGraphs,
             new ModifyParserForChecksum(&refMap, &typeMap, structure, parserGraphs),
             new InsertChecksumError(structure, parserGraphs),

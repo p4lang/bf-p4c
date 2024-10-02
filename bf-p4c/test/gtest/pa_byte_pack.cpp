@@ -122,8 +122,8 @@ createPaBytePackPragmaTestCase(const std::string& pragmas) {
 
     auto& options = BackendOptions();
     options.langVersion = CompilerOptions::FrontendVersion::P4_16;
-    options.target = "tofino";
-    options.arch = "v1model";
+    options.target = "tofino"_cs;
+    options.arch = "v1model"_cs;
     options.disable_parse_min_depth_limit = true;
 
     return TofinoPipeTestCase::createWithThreadLocalInstances(source);

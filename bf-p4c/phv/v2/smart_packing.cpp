@@ -89,9 +89,9 @@ struct FsPacker {
     /// otherwise, return a string of pa_container_size pragma that can be directly
     /// applied on the program.
     cstring to_pa_byte_pack_pragma() const {
-        if (curr.empty()) return "";
+        if (curr.empty()) return cstring::empty;
         std::stringstream ss;
-        cstring sep = "";
+        std::string sep = "";
         std::optional<FieldSlice> last;
         ss << "@pa_byte_pack(\"" << curr.front().field()->gress << "\", ";
         for (const auto& fs : curr) {
@@ -102,12 +102,12 @@ struct FsPacker {
             if (last) {
                 // last was not a complete field.
                 if (last->range().hi != last->field()->size - 1) {
-                    return "";
+                    return cstring::empty;
                 }
             } else {
                 // new field slice was not starting from 0.
                 if (fs.range().lo != 0) {
-                    return "";
+                    return cstring::empty;
                 }
             }
             ss << sep << "\"" << fs.field()->name.findlast(':') + 1 << "\"";

@@ -12,7 +12,7 @@ bool isIntrinsicMetadataType(const IR::Type* type) {
               "you can avoid this problem by getting types from a TypeMap");
     auto* annotated = type->to<IR::IAnnotated>();
     if (!annotated) return false;
-    auto* intrinsicMetadata = annotated->getAnnotation("__intrinsic_metadata");
+    auto* intrinsicMetadata = annotated->getAnnotation("__intrinsic_metadata"_cs);
     return bool(intrinsicMetadata);
 }
 
@@ -21,7 +21,7 @@ bool isCompilerGeneratedType(const IR::Type* type) {
               "you can avoid this problem by getting types from a TypeMap");
     auto* annotated = type->to<IR::IAnnotated>();
     if (!annotated) return false;
-    auto* intrinsicMetadata = annotated->getAnnotation("__compiler_generated");
+    auto* intrinsicMetadata = annotated->getAnnotation("__compiler_generated"_cs);
     return bool(intrinsicMetadata);
 }
 

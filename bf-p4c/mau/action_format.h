@@ -214,7 +214,7 @@ class Constant : public Parameter {
     cstring name() const override {
         if (_alias)
             return  _alias;
-        return "$constant";
+        return "$constant"_cs;
     }
     cstring alias() const { return _alias; }
     void set_alias(cstring a) { _alias = a; }
@@ -297,7 +297,7 @@ class RandomNumber : public Parameter {
 
  public:
     int size() const override;
-    cstring name() const override { return "random"; }
+    cstring name() const override { return "random"_cs; }
     const Parameter *split(int lo, int hi) const override;
     bool from_p4_program() const override { return true; }
     bool only_one_overlap_solution() const override { return false; }
@@ -326,7 +326,7 @@ class RandomPadding : public Parameter {
 
  public:
     int size() const override { return _size; }
-    cstring name() const override { return "rand_padding"; }
+    cstring name() const override { return "rand_padding"_cs; }
     const Parameter *split(int lo, int hi) const override;
     bool from_p4_program() const override { return false; }
     bool only_one_overlap_solution() const override { return false; }

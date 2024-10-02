@@ -412,7 +412,7 @@ void RegisterReadWrite::AnalyzeActionWithRegisterCalls::createRegisterAction(
     }
     if (assign_lhs) {
         auto rv = new IR::PathExpression("rv");
-        if (!info.apply_params->getParameter("rv"))
+        if (!info.apply_params->getParameter("rv"_cs))
             info.apply_params->push_back(new IR::Parameter("rv", IR::Direction::Out, utype));
         info.apply_body->push_back(new IR::AssignmentStatement(rv, value));
     }
@@ -423,7 +423,7 @@ void RegisterReadWrite::AnalyzeActionWithRegisterCalls::createRegisterAction(
     annots->addAnnotation(IR::ID("name"), externalName);
 
     if (!info.reg_action) {
-        auto apply_type = new IR::Type_Method(IR::Type_Void::get(), info.apply_params, "apply");
+        auto apply_type = new IR::Type_Method(IR::Type_Void::get(), info.apply_params, "apply"_cs);
         auto apply = new IR::Function("apply", apply_type, info.apply_body);
         auto *apply_block = new IR::BlockStatement({ apply });
         info.reg_action = new IR::Declaration_Instance(IR::ID(apply_name),

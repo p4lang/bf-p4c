@@ -25,7 +25,7 @@
 
 namespace P4V1 {
 
-static const cstring COMPILER_META = "__bfp4c_compiler_generated_meta";
+static const cstring COMPILER_META = "__bfp4c_compiler_generated_meta"_cs;
 
 // TODO older definition of ProgramStructure used by 14-to-v1model conversion path
 // to be removed
@@ -283,68 +283,68 @@ class ConvertMetadata : public Transform {
     explicit ConvertMetadata(TnaProgramStructure* s) : structure(s) {
         int portWidth = Device::portBitWidth();
         // metadata to translate in ingress
-        cvt(INGRESS, "ig_intr_md_from_parser_aux.ingress_parser_err", 16,
-                     mkMember("ig_intr_md_from_parser_aux", "parser_err", 16));
-        cvt(INGRESS, "meta.standard_metadata.egress_spec", 9,
-                     mkMember("ig_intr_md_for_tm", "ucast_egress_port", portWidth));
-        cvt(INGRESS, "meta.standard_metadata.ingress_port", 9,
-                     mkMember("ig_intr_md", "ingress_port", portWidth));
-        cvt(INGRESS, "ig_intr_md_for_tm.drop_ctl", 1,
-                     mkMember("ig_intr_md_for_dprsr", "drop_ctl", 1));
-        cvt(INGRESS, "ig_intr_md_from_parser_aux.ingress_global_tstamp", 48,
-                     mkMember("ig_intr_md_from_parser_aux", "global_tstamp", 48));
-        cvt(INGRESS, "ig_intr_md_for_mb.mirror_hash", 13,
-                    mkMember("ig_intr_md_for_dprsr", "mirror_hash", 13));
-        cvt(INGRESS, "ig_intr_md_for_mb.mirror_io_select", 1,
-                    mkMember("ig_intr_md_for_dprsr", "mirror_io_select", 1));
-        cvt(INGRESS, "ig_intr_md_for_mb.mirror_multicast_ctrl", 1,
-                    mkMember("ig_intr_md_for_dprsr", "mirror_multicast_ctrl", 1));
-        cvt(INGRESS, "ig_intr_md_for_mb.mirror_ingress_cos", 3,
-                    mkMember("ig_intr_md_for_dprsr", "mirror_ingress_cos", 3));
-        cvt(INGRESS, "ig_intr_md_for_mb.mirror_deflect_on_drop", 1,
-                    mkMember("ig_intr_md_for_dprsr", "mirror_deflect_on_drop", 1));
-        cvt(INGRESS, "ig_intr_md_for_mb.mirror_copy_to_cpu_ctrl", 1,
-                    mkMember("ig_intr_md_for_dprsr", "mirror_copy_to_cpu_ctrl", 1));
-        cvt(INGRESS, "ig_intr_md_for_mb.mirror_copy_to_cpu_ctrl", 1,
-                    mkMember("ig_intr_md_for_dprsr", "mirror_copy_to_cpu_ctrl", 1));
-        cvt(INGRESS, "ig_intr_md_for_mb.mirror_egress_port", portWidth,
-                    mkMember("ig_intr_md_for_dprsr", "mirror_egress_port", portWidth));
-        cvt(INGRESS, "standard_metadata.ingress_port", 9,
-                    mkMember("ig_intr_md", "ingress_port", portWidth));
+        cvt(INGRESS, "ig_intr_md_from_parser_aux.ingress_parser_err"_cs, 16,
+                     mkMember("ig_intr_md_from_parser_aux"_cs, "parser_err"_cs, 16));
+        cvt(INGRESS, "meta.standard_metadata.egress_spec"_cs, 9,
+                     mkMember("ig_intr_md_for_tm"_cs, "ucast_egress_port"_cs, portWidth));
+        cvt(INGRESS, "meta.standard_metadata.ingress_port"_cs, 9,
+                     mkMember("ig_intr_md"_cs, "ingress_port"_cs, portWidth));
+        cvt(INGRESS, "ig_intr_md_for_tm.drop_ctl"_cs, 1,
+                     mkMember("ig_intr_md_for_dprsr"_cs, "drop_ctl"_cs, 1));
+        cvt(INGRESS, "ig_intr_md_from_parser_aux.ingress_global_tstamp"_cs, 48,
+                     mkMember("ig_intr_md_from_parser_aux"_cs, "global_tstamp"_cs, 48));
+        cvt(INGRESS, "ig_intr_md_for_mb.mirror_hash"_cs, 13,
+                    mkMember("ig_intr_md_for_dprsr"_cs, "mirror_hash"_cs, 13));
+        cvt(INGRESS, "ig_intr_md_for_mb.mirror_io_select"_cs, 1,
+                    mkMember("ig_intr_md_for_dprsr"_cs, "mirror_io_select"_cs, 1));
+        cvt(INGRESS, "ig_intr_md_for_mb.mirror_multicast_ctrl"_cs, 1,
+                    mkMember("ig_intr_md_for_dprsr"_cs, "mirror_multicast_ctrl"_cs, 1));
+        cvt(INGRESS, "ig_intr_md_for_mb.mirror_ingress_cos"_cs, 3,
+                    mkMember("ig_intr_md_for_dprsr"_cs, "mirror_ingress_cos"_cs, 3));
+        cvt(INGRESS, "ig_intr_md_for_mb.mirror_deflect_on_drop"_cs, 1,
+                    mkMember("ig_intr_md_for_dprsr"_cs, "mirror_deflect_on_drop"_cs, 1));
+        cvt(INGRESS, "ig_intr_md_for_mb.mirror_copy_to_cpu_ctrl"_cs, 1,
+                    mkMember("ig_intr_md_for_dprsr"_cs, "mirror_copy_to_cpu_ctrl"_cs, 1));
+        cvt(INGRESS, "ig_intr_md_for_mb.mirror_copy_to_cpu_ctrl"_cs, 1,
+                    mkMember("ig_intr_md_for_dprsr"_cs, "mirror_copy_to_cpu_ctrl"_cs, 1));
+        cvt(INGRESS, "ig_intr_md_for_mb.mirror_egress_port"_cs, portWidth,
+                    mkMember("ig_intr_md_for_dprsr"_cs, "mirror_egress_port"_cs, portWidth));
+        cvt(INGRESS, "standard_metadata.ingress_port"_cs, 9,
+                    mkMember("ig_intr_md"_cs, "ingress_port"_cs, portWidth));
 
         // metadata to translate in egress
-        cvt(EGRESS, "eg_intr_md_from_parser_aux.egress_parser_err", 16,
-                     mkMember("eg_intr_md_from_parser_aux", "parser_err", 16));
-        cvt(EGRESS, "eg_intr_md_from_parser_aux.clone_src", 4,
-                    mkMember("meta", COMPILER_META, "clone_src", 4));
-        cvt(EGRESS, "eg_intr_md_from_parser_aux.egress_global_tstamp", 48,
-                    mkMember("eg_intr_md_from_parser_aux", "global_tstamp", 48));
-        cvt(EGRESS, "eg_intr_md_for_oport.drop_ctl", 3,
-                    mkMember("eg_intr_md_for_dprsr", "drop_ctl", 3));
-        cvt(EGRESS, "eg_intr_md_from_parser_aux.egress_global_ver", 32,
-                    mkMember("eg_intr_md_from_parser_aux", "global_ver", 32));
-        cvt(EGRESS, "eg_intr_md.deq_timedelta", 32,
-                    mkMember("eg_intr_md", "deq_timedelta", 18));
-        cvt(EGRESS, "eg_intr_md_for_mb.mirror_hash", 13,
-                    mkMember("eg_intr_md_for_dprsr", "mirror_hash", 13));
-        cvt(EGRESS, "eg_intr_md_for_mb.mirror_io_select", 1,
-                    mkMember("eg_intr_md_for_dprsr", "mirror_io_select", 1));
-        cvt(EGRESS, "eg_intr_md_for_mb.mirror_multicast_ctrl", 1,
-                    mkMember("eg_intr_md_for_dprsr", "mirror_multicast_ctrl", 1));
-        cvt(EGRESS, "eg_intr_md_for_mb.mirror_ingress_cos", 3,
-                    mkMember("eg_intr_md_for_dprsr", "mirror_ingress_cos", 3));
-        cvt(EGRESS, "eg_intr_md_for_mb.mirror_deflect_on_drop", 1,
-                    mkMember("eg_intr_md_for_dprsr", "mirror_deflect_on_drop", 1));
-        cvt(EGRESS, "eg_intr_md_for_mb.mirror_copy_to_cpu_ctrl", 1,
-                    mkMember("eg_intr_md_for_dprsr", "mirror_copy_to_cpu_ctrl", 1));
-        cvt(EGRESS, "eg_intr_md_for_mb.mirror_copy_to_cpu_ctrl", 1,
-                    mkMember("eg_intr_md_for_dprsr", "mirror_copy_to_cpu_ctrl", 1));
-        cvt(EGRESS, "eg_intr_md_for_mb.mirror_egress_port", portWidth,
-                    mkMember("eg_intr_md_for_dprsr", "mirror_egress_port", portWidth));
-        cvt(EGRESS, "meta.standard_metadata.ingress_port", 9,
-                    mkMember("meta", "ig_intr_md", "ingress_port", portWidth));
-        cvt(EGRESS, "standard_metadata.ingress_port", 9,
-                     mkMember("meta", "ig_intr_md", "ingress_port", portWidth));
+        cvt(EGRESS, "eg_intr_md_from_parser_aux.egress_parser_err"_cs, 16,
+                     mkMember("eg_intr_md_from_parser_aux"_cs, "parser_err"_cs, 16));
+        cvt(EGRESS, "eg_intr_md_from_parser_aux.clone_src"_cs, 4,
+                    mkMember("meta"_cs, COMPILER_META, "clone_src"_cs, 4));
+        cvt(EGRESS, "eg_intr_md_from_parser_aux.egress_global_tstamp"_cs, 48,
+                    mkMember("eg_intr_md_from_parser_aux"_cs, "global_tstamp"_cs, 48));
+        cvt(EGRESS, "eg_intr_md_for_oport.drop_ctl"_cs, 3,
+                    mkMember("eg_intr_md_for_dprsr"_cs, "drop_ctl"_cs, 3));
+        cvt(EGRESS, "eg_intr_md_from_parser_aux.egress_global_ver"_cs, 32,
+                    mkMember("eg_intr_md_from_parser_aux"_cs, "global_ver"_cs, 32));
+        cvt(EGRESS, "eg_intr_md.deq_timedelta"_cs, 32,
+                    mkMember("eg_intr_md"_cs, "deq_timedelta"_cs, 18));
+        cvt(EGRESS, "eg_intr_md_for_mb.mirror_hash"_cs, 13,
+                    mkMember("eg_intr_md_for_dprsr"_cs, "mirror_hash"_cs, 13));
+        cvt(EGRESS, "eg_intr_md_for_mb.mirror_io_select"_cs, 1,
+                    mkMember("eg_intr_md_for_dprsr"_cs, "mirror_io_select"_cs, 1));
+        cvt(EGRESS, "eg_intr_md_for_mb.mirror_multicast_ctrl"_cs, 1,
+                    mkMember("eg_intr_md_for_dprsr"_cs, "mirror_multicast_ctrl"_cs, 1));
+        cvt(EGRESS, "eg_intr_md_for_mb.mirror_ingress_cos"_cs, 3,
+                    mkMember("eg_intr_md_for_dprsr"_cs, "mirror_ingress_cos"_cs, 3));
+        cvt(EGRESS, "eg_intr_md_for_mb.mirror_deflect_on_drop"_cs, 1,
+                    mkMember("eg_intr_md_for_dprsr"_cs, "mirror_deflect_on_drop"_cs, 1));
+        cvt(EGRESS, "eg_intr_md_for_mb.mirror_copy_to_cpu_ctrl"_cs, 1,
+                    mkMember("eg_intr_md_for_dprsr"_cs, "mirror_copy_to_cpu_ctrl"_cs, 1));
+        cvt(EGRESS, "eg_intr_md_for_mb.mirror_copy_to_cpu_ctrl"_cs, 1,
+                    mkMember("eg_intr_md_for_dprsr"_cs, "mirror_copy_to_cpu_ctrl"_cs, 1));
+        cvt(EGRESS, "eg_intr_md_for_mb.mirror_egress_port"_cs, portWidth,
+                    mkMember("eg_intr_md_for_dprsr"_cs, "mirror_egress_port"_cs, portWidth));
+        cvt(EGRESS, "meta.standard_metadata.ingress_port"_cs, 9,
+                    mkMember("meta"_cs, "ig_intr_md"_cs, "ingress_port"_cs, portWidth));
+        cvt(EGRESS, "standard_metadata.ingress_port"_cs, 9,
+                     mkMember("meta"_cs, "ig_intr_md"_cs, "ingress_port"_cs, portWidth));
     }
 
     // convert P4-14 metadata to P4-16 tna metadata
@@ -378,7 +378,7 @@ class ConvertMetadata : public Transform {
         if (!linearizer->linearPath)
             return member;
         auto path = *linearizer->linearPath;
-        auto fn = path.to_cstring(".", false);
+        auto fn = path.to_cstring("."_cs, false);
         if (nameMap.count(fn)) {
             LOG3("Translating " << member << " to " << nameMap.at(fn));
             return nameMap.at(fn);
@@ -479,8 +479,8 @@ class FixBridgedIntrinsicMetadata : public RenameFieldPath {
 
  public:
     explicit FixBridgedIntrinsicMetadata(TnaProgramStructure* s) : structure(s) {
-        paths = {"ig_intr_md", "ig_intr_md_for_tm"};
-        prefix = "meta";
+        paths = {"ig_intr_md"_cs, "ig_intr_md_for_tm"_cs};
+        prefix = "meta"_cs;
     }
     IR::Node* preorder(IR::P4Parser* parser) override {
         if (parser->name == "IngressParserImpl") {
@@ -499,8 +499,8 @@ class FixBridgedIntrinsicMetadata : public RenameFieldPath {
 class FixPktgenHeaderPath : public RenameFieldPath {
  public:
     FixPktgenHeaderPath() {
-        paths = {"pktgen_port_down", "pktgen_recirc", "pktgen_generic", "pktgen_timer"};
-        prefix = "hdr";
+        paths = {"pktgen_port_down"_cs, "pktgen_recirc"_cs, "pktgen_generic"_cs, "pktgen_timer"_cs};
+        prefix = "hdr"_cs;
     }
 };
 
@@ -638,7 +638,7 @@ class ParserCounterSelectCaseConverter : public Transform {
     const IR::Node* preorder(IR::AssignmentStatement* assign) {
         prune();
         auto stmt = getOriginal<IR::AssignmentStatement>();
-        auto parserCounter = new IR::PathExpression("ig_prsr_ctrl_parser_counter");
+        auto parserCounter = new IR::PathExpression("ig_prsr_ctrl_parser_counter"_cs);
         auto right = stmt->right;
         auto left = stmt->left;
 
@@ -929,7 +929,7 @@ class ModifyParserForChecksum : public Modifier {
             if (auto em = inst->to<P4::ExternMethod>()) {
                 if (em->actualExternType->name == "packet_in" &&
                     em->method->name == "extract") {
-                    auto extracted = inst->substitution.lookupByName("hdr")->apply(cloner);
+                    auto extracted = inst->substitution.lookupByName("hdr"_cs)->apply(cloner);
                     if (extracted == nullptr ||
                         !extracted->to<IR::Argument>()->expression->is<IR::Member>())
                         continue;
@@ -1000,7 +1000,7 @@ class ModifyParserForChecksum : public Modifier {
             std::vector<const IR::Expression*> exprList;
             auto path = BFN::PathLinearizer::convert(csum.destField);
             if (!checksum.count(path))
-                checksum.emplace(path, structure->makeUniqueName("checksum"));
+                checksum.emplace(path, structure->makeUniqueName("checksum"_cs));
             auto fieldList = csum.fieldList;
             if (!fieldList->is<IR::ListExpression>())
                 continue;
@@ -1070,7 +1070,7 @@ class ModifyParserForChecksum : public Modifier {
                 continue;
             auto path = BFN::PathLinearizer::convert(csum.destField);
             if (!checksum.count(path))
-                checksum.emplace(path, structure->makeUniqueName("checksum"));
+                checksum.emplace(path, structure->makeUniqueName("checksum"_cs));
             auto csumInst = checksum.at(path);
             auto fieldList = csum.fieldList;
             if (!fieldList->is<IR::ListExpression>())
@@ -1166,7 +1166,7 @@ class ModifyParserForChecksum : public Modifier {
         auto path = BFN::PathLinearizer::convert(destField);
         if (!residualChecksumPayloadFields.count(path))
             return;
-        auto data = inst->substitution.lookupByName("data");
+        auto data = inst->substitution.lookupByName("data"_cs);
         P4::CloneExpressions cloner;
         if (auto expr = data->expression->to<IR::ListExpression>()) {
             // add checksum fields
@@ -1193,9 +1193,9 @@ createChecksumError(cstring decl, gress_t gress) {
      cstring intr_md;
 
      if (gress == INGRESS)
-         intr_md = "ig_intr_md_from_prsr";
+         intr_md = "ig_intr_md_from_prsr"_cs;
      else if (gress == EGRESS)
-         intr_md = "eg_intr_md_from_prsr";
+         intr_md = "eg_intr_md_from_prsr"_cs;
      else
          BUG("Unhandled gress: %1%.", gress);
 
@@ -1324,14 +1324,14 @@ class InsertChecksumError : public PassManager {
     struct InsertBeforeAccept : public Transform {
         const IR::Node* preorder(IR::P4Parser* parser) override {
             for (auto& kv : endStates[parser->name]) {
-                if (kv.second.count("accept")) {
+                if (kv.second.count("accept"_cs)) {
                     if (!dummy) {
                         dummy = BFN::createGeneratedParserState(
-                            "before_accept", {}, "accept");
+                            "before_accept"_cs, {}, "accept"_cs);
                         parser->states.push_back(dummy);
                     }
-                    kv.second.erase("accept");
-                    kv.second.insert("__before_accept");
+                    kv.second.erase("accept"_cs);
+                    kv.second.insert("__before_accept"_cs);
                     LOG3("add dummy state before \"accept\"");
                 }
             }
@@ -1359,7 +1359,7 @@ class InsertChecksumError : public PassManager {
                     return path;
 
                 for (auto& kv : endStates[parser->name]) {
-                    if (path->path->name == "accept" && kv.second.count("__before_accept")) {
+                    if (path->path->name == "accept" && kv.second.count("__before_accept"_cs)) {
                         path = new IR::PathExpression("__before_accept");
                         LOG3("modify transition to \"before_accept\"");
                     }

@@ -72,8 +72,8 @@ createActionTest() {
 
     auto& options = BackendOptions();
     options.langVersion = CompilerOptions::FrontendVersion::P4_16;
-    options.target = "tofino";
-    options.arch = "v1model";
+    options.target = "tofino"_cs;
+    options.arch = "v1model"_cs;
     options.disable_parse_min_depth_limit = true;
 
     return TofinoPipeTestCase::createWithThreadLocalInstances(source);
@@ -100,14 +100,14 @@ TEST_F(NoCoPack, Sanity) {
 
     NoCoPackTest::runInitialPassManager(test->pipe, &phv);
 
-    auto h1_f1 = phv.field("ingress::h1.f1");
-    auto h1_f2 = phv.field("ingress::h1.f2");
-    auto h1_f4 = phv.field("ingress::h1.f4");
-    auto h2_f1 = phv.field("ingress::h2.f1");
-    auto h2_f4 = phv.field("ingress::h2.f4");
-    auto h3_f1 = phv.field("ingress::h3.f1");
-    auto h3_f2 = phv.field("ingress::h3.f2");
-    auto h3_f4 = phv.field("ingress::h3.f4");
+    auto h1_f1 = phv.field("ingress::h1.f1"_cs);
+    auto h1_f2 = phv.field("ingress::h1.f2"_cs);
+    auto h1_f4 = phv.field("ingress::h1.f4"_cs);
+    auto h2_f1 = phv.field("ingress::h2.f1"_cs);
+    auto h2_f4 = phv.field("ingress::h2.f4"_cs);
+    auto h3_f1 = phv.field("ingress::h3.f1"_cs);
+    auto h3_f2 = phv.field("ingress::h3.f2"_cs);
+    auto h3_f4 = phv.field("ingress::h3.f4"_cs);
 
     EXPECT_FALSE(phv.isDeparserNoPack(h1_f1, h1_f1));
     EXPECT_FALSE(phv.isDeparserNoPack(h1_f4, h1_f4));

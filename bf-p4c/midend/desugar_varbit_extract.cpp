@@ -254,7 +254,7 @@ void check_compile_time_constant(const IR::Constant* c,
         cstring hint;
 
         if (BackendOptions().langVersion == CompilerOptions::FrontendVersion::P4_16)
-            hint = "Please make sure the encoding variable is cast to bit<32>.";
+            hint = "Please make sure the encoding variable is cast to bit<32>."_cs;
 
         ::fatal_error("Varbit field size expression evaluates to invalid value %1%: %2% \n%3%",
                       c->asInt(), call, hint);
@@ -522,7 +522,7 @@ bool CollectVarbitExtract::preorder(const IR::MethodCallExpression* call) {
 static cstring create_instance_name(cstring name) {
     std::string str(name.c_str());
     str = str.substr(0, str.length() - 2);
-    return str.c_str();
+    return cstring(str.c_str());
 }
 
 /**
@@ -620,7 +620,7 @@ create_extract_statement(const IR::BFN::TnaParser* parser,
                          const IR::Expression* path,
                          const IR::Type *type,
                          cstring header) {
-    auto packetInParam = parser->tnaParams.at("pkt");
+    auto packetInParam = parser->tnaParams.at("pkt"_cs);
     auto method = new IR::Member(new IR::PathExpression(packetInParam), IR::ID("extract"));
     auto typeArgs = new IR::Vector<IR::Type>({ type });
     auto args = new IR::Vector<IR::Argument>(
@@ -725,7 +725,7 @@ RewriteVarbitUses::create_end_state(const IR::BFN::TnaParser* parser,
     //   bit<16>  y;
     // }
 
-    cstring post_hdr_name = orig_hdr_name + "_" + varbit_field->name + "_post_t";
+    cstring post_hdr_name = orig_hdr_name + "_"_cs + varbit_field->name + "_post_t"_cs;
     auto post_hdr = new IR::Type_Header(post_hdr_name);
 
     bool seen_varbit = false;
@@ -782,8 +782,8 @@ void RewriteVarbitUses::create_varbit_header_type(const IR::Type_Header* orig_hd
     if (!varbit_hdr_instance_to_header_types_by_base.count(hdr_base) ||
         !varbit_hdr_instance_to_header_types_by_base.at(hdr_base)
              .count(varbit_field_size)) {
-        cstring name = orig_hdr->name + "_" + orig_hdr_inst + "_" + varbit_field->name + "_" +
-                       cstring::to_cstring(varbit_field_size) + "b_t";
+        cstring name = orig_hdr->name + "_"_cs + orig_hdr_inst + "_"_cs + varbit_field->name +
+                       "_"_cs + cstring::to_cstring(varbit_field_size) + "b_t";
         auto hdr = new IR::Type_Header(name);
         auto field_type = IR::Type::Bits::get(current_hdr_size);
         auto field = new IR::StructField("field", field_type);
@@ -806,8 +806,9 @@ void RewriteVarbitUses::create_branches(const IR::ParserState* state,
 
     auto& value_map = cve.state_to_length_to_match.at(state);
 
-    cstring no_option_state_name = "parse_" + orig_hdr_inst + "_" + varbit_field->name + "_end";
-    const IR::ParserState* no_option_state = nullptr;
+    cstring no_option_state_name =
+        "parse_"_cs + orig_hdr_inst + "_"_cs + varbit_field->name + "_end"_cs;
+    const IR::ParserState *no_option_state = nullptr;
     unsigned base_length = value_map.begin()->first;
     for (auto& kv : value_map) {
         auto length = kv.first;
@@ -827,7 +828,7 @@ void RewriteVarbitUses::create_branches(const IR::ParserState* state,
             else  // unconditional transition (varsize expr is constant)
                 select = state->selectExpression;
 
-            cstring name = "parse_" + orig_hdr_inst + "_" + varbit_field->name + "_" +
+            cstring name = "parse_"_cs + orig_hdr_inst + "_"_cs + varbit_field->name + "_"_cs +
                     cstring::to_cstring(length) + "b";
 
             auto branch_state = create_branch_state(parser, state, select,
@@ -1011,7 +1012,7 @@ bool RewriteVarbitUses::preorder(IR::ParserState* state) {
         }
 
         for (const auto &rej : merge_matches(cve.state_to_reject_matches.at(orig), var_mask)) {
-            auto select_case = create_select_case(var_bitwidth, rej.value, rej.mask, "reject");
+            auto select_case = create_select_case(var_bitwidth, rej.value, rej.mask, "reject"_cs);
             select_cases.push_back(select_case);
         }
 

@@ -261,7 +261,7 @@ void Tofino::IXBar::Use::emit_ixbar_asm(const PhvInfo &phv, std::ostream &out, i
     std::map<int, std::map<int, Slice>> midbytes;
     emit_ixbar_gather_bytes(phv, use, sort, midbytes, tbl,
                             type == IXBar::Use::TERNARY_MATCH);
-    cstring group_type = type == IXBar::Use::TERNARY_MATCH ? "ternary" : "exact";
+    cstring group_type = type == IXBar::Use::TERNARY_MATCH ? "ternary"_cs : "exact"_cs;
     for (auto &group : sort)
         out << indent << group_type << " group "
             << group.first << ": " << group.second << std::endl;
@@ -368,7 +368,7 @@ bool Tofino::ActionDataBus::Use::emit_adb_asm(std::ostream &out, const IR::MAU::
             // 16 bit hash dist in a 32 bit slot have to determine whether the hash distribution
             // unit goes in the lo section or the hi section
             if (slot_hash_dist_units.popcount() == 1) {
-                cstring lo_hi = slot_hash_dist_units.getbit(0) ? "lo" : "hi";
+                cstring lo_hi = slot_hash_dist_units.getbit(0) ? "lo"_cs : "hi"_cs;
                 out << ", " << lo_hi;
             }
             out << ")";

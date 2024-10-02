@@ -60,8 +60,8 @@ bool PragmaDoNotUseClot::preorder(const IR::BFN::Pipe* pipe) {
         }
 
         if (!PHV::Pragmas::checkNumberArgs(annotation, required_arguments,
-                min_required_arguments, true, PragmaDoNotUseClot::name,
-                "`gress', `node'")) {
+                min_required_arguments, true, cstring(PragmaDoNotUseClot::name),
+                "`gress', `node'"_cs)) {
             continue;
         }
 
@@ -76,7 +76,7 @@ bool PragmaDoNotUseClot::preorder(const IR::BFN::Pipe* pipe) {
              << gress_arg->value << ", "
              << node_ir->value);
 
-        cstring node_name = gress_arg->value + "::" + node_ir->value;
+        cstring node_name = gress_arg->value + "::"_cs + node_ir->value;
         const PHV::Field* field = phv_info.field(node_name);
         const PhvInfo::StructInfo* header = field ? nullptr : phv_info.hdr(node_name);
         ordered_set<const PHV::Field*> node_fields;

@@ -21,7 +21,7 @@ bool IgnoreTableDeps::preorder(const IR::MAU::Table *tbl) {
     external_name_to_table[tbl->externalName()] = tbl;
 
     std::vector<IR::ID> annotation;
-    tbl->getAnnotation("ignore_table_dependency", annotation);
+    tbl->getAnnotation("ignore_table_dependency"_cs, annotation);
     for (auto name : annotation) {
         // Due to P4_14 global name space, a dot is added to the initial table name
         table_to_pragmas[tbl].insert(name);
@@ -42,7 +42,7 @@ void IgnoreTableDeps::end_apply() {
                 // tables to fit, due to table_seqdeps not understanding the dependency
                 // is gone corresponding to bad chain lengths.  Fix this after 9.0
                 ign_tbl = external_name_to_table.at(pragma_val);
-            } else if (external_name_to_table.count("." + pragma_val)) {
+            } else if (external_name_to_table.count("."_cs + pragma_val)) {
                 ign_tbl = external_name_to_table.at("." + pragma_val);
             } else {
                 ::warning(BFN::ErrorType::WARN_PRAGMA_USE, "%1%: The ignore_table_dependency "
@@ -82,7 +82,7 @@ bool TablesMutuallyExclusive::miss_mutex_action_chain(const IR::MAU::Table *tbl,
     if (non_def_act_chains.size() != tbl->actions.size() - 1)
         return false;
     if (tbl->has_default_path())
-        name = "$default";
+        name = "$default"_cs;
     return true;
 }
 

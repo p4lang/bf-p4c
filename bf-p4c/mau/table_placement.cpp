@@ -349,11 +349,11 @@ Visitor::profile_t TablePlacement::init_apply(const IR::Node *root) {
     if (BackendOptions().create_graphs) {
         static unsigned invocation = 0;
         auto pipeId = root->to<IR::BFN::Pipe>()->canon_id();
-        auto graphsDir = BFNContext::get().getOutputDirectory("graphs", pipeId);
-        cstring fileName = "table_dep_graph_placement_" + std::to_string(invocation++);
+        auto graphsDir = BFNContext::get().getOutputDirectory("graphs"_cs, pipeId);
+        cstring fileName = "table_dep_graph_placement_"_cs + std::to_string(invocation++);
         std::ofstream dotStream(graphsDir + "/" + fileName + ".dot", std::ios_base::out);
         DependencyGraph::dump_viz(dotStream, deps);
-        Logging::Manifest::getManifest().addGraph(pipeId, "table", fileName,
+        Logging::Manifest::getManifest().addGraph(pipeId, cstring("table"), fileName,
                                                   INGRESS);  // this should be both really!
     }
     return rv;
@@ -1006,9 +1006,9 @@ class DecidePlacement::PlacementScore {
         // Number of entries that refer to incomplete tables in this downward dependency set
         int entries_incomplete_dep_chain = 0;
         // List of completed table names for this set
-        cstring tables_completed = "";
+        cstring tables_completed = ""_cs;
         // List of incomplete table names for this set
-        cstring tables_incomplete = "";
+        cstring tables_incomplete = ""_cs;
     };
     // Map of downward dependency table set metrics
     std::map<int, stage_metric_t> stage_metric;
@@ -1552,7 +1552,7 @@ TablePlacement::GatewayMergeChoices
                      "liveness check");
                 continue;
             }
-            if (t->getAnnotation("separate_gateway")) {
+            if (t->getAnnotation("separate_gateway"_cs)) {
                 LOG2("\tCannot merge " << table->name << " with " << t->name << " because of "
                      "separate_gateway annotation");
                 continue;
@@ -1678,7 +1678,7 @@ bool TablePlacement::pick_layout_option(Placed *next, std::vector<Placed *> allo
         LOG5("Trying table format : " << std::boolalpha << table_format);
         bool ixbar_fit = try_alloc_ixbar(next, allocated_layout);
         if (!ixbar_fit) {
-            next->stage_advance_log = "ran out of ixbar";
+            next->stage_advance_log = "ran out of ixbar"_cs;
             return false;
         } else if (!next->use.format_type.matchThisStage()) {
             // if post-split, there's no match in this stage (just a gateway running the
@@ -1694,7 +1694,7 @@ bool TablePlacement::pick_layout_option(Placed *next, std::vector<Placed *> allo
             bool adjust_possible = next->use.adjust_choices(next->table, in_out_entries,
                                                             next->attached_entries);
             if (!adjust_possible) {
-                next->stage_advance_log = "adjust_choices failed";
+                next->stage_advance_log = "adjust_choices failed"_cs;
                 return false; }
         }
     } while (!table_format);
@@ -1827,7 +1827,7 @@ bool TablePlacement::shrink_estimate(Placed *next, int &srams_left, int &tcams_l
     } else if (!t->layout.ternary) {
         if (!next->use.calculate_for_leftover_srams(t, srams_left, next->entries,
                                                     next->attached_entries)) {
-            next->stage_advance_log = "ran out of srams";
+            next->stage_advance_log = "ran out of srams"_cs;
             return false;
         }
     } else {
@@ -1837,9 +1837,9 @@ bool TablePlacement::shrink_estimate(Placed *next, int &srams_left, int &tcams_l
     if (next->entries < min_entries) {
         LOG5("Couldn't place minimum entries within table " << t->name);
         if (t->layout.ternary)
-            next->stage_advance_log = "ran out of tcams";
+            next->stage_advance_log = "ran out of tcams"_cs;
         else
-            next->stage_advance_log = "ran out of srams";
+            next->stage_advance_log = "ran out of srams"_cs;
         return false;
     }
 
@@ -1875,9 +1875,9 @@ bool TablePlacement::shrink_preferred_lo(Placed *next) {
     if (next->use.layout_options.size() == 0) {
         LOG5("Couldn't place minimum entries within table " << t->name);
         if (t->layout.ternary)
-            next->stage_advance_log = "ran out of tcams";
+            next->stage_advance_log = "ran out of tcams"_cs;
         else
-            next->stage_advance_log = "ran out of srams";
+            next->stage_advance_log = "ran out of srams"_cs;
         return false;
     }
 
@@ -2133,7 +2133,7 @@ bool TablePlacement::try_alloc_adb(const gress_t &gress,
                             "the action data bus";
             LOG3("    " << error_message);
             p->resources.action_data_xbar.reset();
-            p->stage_advance_log = "ran out of action data bus space";
+            p->stage_advance_log = "ran out of action data bus space"_cs;
             return false;
         }
 
@@ -2146,7 +2146,7 @@ bool TablePlacement::try_alloc_adb(const gress_t &gress,
                             " output in within the action data bus";
             LOG3(error_message);
             p->resources.meter_xbar.reset();
-            p->stage_advance_log = "ran out of action data bus space for meter output";
+            p->stage_advance_log = "ran out of action data bus space for meter output"_cs;
             return false;
         }
 
@@ -2191,7 +2191,7 @@ bool TablePlacement::try_alloc_imem(const gress_t &gress, std::vector<Placed *> 
                             "instruction memory";
             LOG3("    " << error_message);
             p->resources.instr_mem.clear();
-            p->stage_advance_log = "ran out of imem";
+            p->stage_advance_log = "ran out of imem"_cs;
             return false; }
     }
 
@@ -2360,9 +2360,9 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, int &furthest_stage) 
             rv->entries = 1;
         if (t->layout.pre_classifier)
             rv->entries = t->layout.pre_classifer_number_entries;
-        else if (auto k = t->match_table->getConstantProperty("size"))
+        else if (auto k = t->match_table->getConstantProperty("size"_cs))
             rv->entries = k->asInt();
-        else if (auto k = t->match_table->getConstantProperty("min_size"))
+        else if (auto k = t->match_table->getConstantProperty("min_size"_cs))
             rv->entries = k->asInt();
         if (t->layout.has_range) {
             RangeEntries re(phv, rv->entries);
@@ -2384,7 +2384,7 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, int &furthest_stage) 
             // not require additinal entries.
             // TOF3-DOC: Also Tofino3.
             bool disable_atomic_modify;
-            t->getAnnotation("disable_atomic_modify", disable_atomic_modify);
+            t->getAnnotation("disable_atomic_modify"_cs, disable_atomic_modify);
 
             // NOTE: Replace with commented code once driver support is in for
             // Tofino2+ archs
@@ -2477,7 +2477,7 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, int &furthest_stage) 
             prev_stage_tables++;
             if (p->stage == rv->stage) {
                 LOG2("  Cannot place multiple sections of an individual table in the same stage");
-                rv->stage_advance_log = "cannot split into same stage";
+                rv->stage_advance_log = "cannot split into same stage"_cs;
                 rv->stage++; }
         } else if (p->stage == rv->stage) {
             if (options.forced_placement)
@@ -2687,7 +2687,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
     }
     const Placed *done = rv->prev;
     std::vector<Placed *> whole_stage;
-    error_message = "";
+    error_message = ""_cs;
     // clone the already-placed tables in this stage so they can be re-placed
     // TOF5-DOC: TODO -- for Flatrock, memory allocation is global, so perhaps need all tables,
     // TOF5-DOC: not just those in this stage.  Or perhaps we defer memory alloc until after all
@@ -2796,8 +2796,8 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
         if (rv->table->has_dark_init) {
             LOG3("    Table with dark initialization cannot be split");
             if (!ignoreContainerConflicts) {
-                error_message = "PHV allocation doesn't want this table split, and it's "
-                                "too big for one stage";
+                error_message = cstring("PHV allocation doesn't want this table split, and it's "
+                                        "too big for one stage");
                 advance_to_next_stage = true;
             }
         }
@@ -2815,7 +2815,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
 
             if (min_allocated != TableSummary::SUCC) {
                 if (!(rv->stage_advance_log = min_placed->stage_advance_log))
-                    rv->stage_advance_log = "repacking previously placed failed";
+                    rv->stage_advance_log = "repacking previously placed failed"_cs;
                 advance_to_next_stage = true;
             }
         }
@@ -2832,8 +2832,8 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
             int tcams_left = avail.tcams;
             if (!shrink_estimate(rv, srams_left, tcams_left, min_placed->entries)) {
                 if (!error_message)
-                    error_message = "Can't split this table across stages and it's "
-                                    "too big for one stage";
+                    error_message = cstring("Can't split this table across stages and it's "
+                                            "too big for one stage");
                 advance_to_next_stage = true; }
             while (!advance_to_next_stage) {
                 rv->update_need_more(needed_entries);
@@ -2856,7 +2856,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
 
                 // Shrink preferred layout and sort them by prioritizing the number of entries
                 if (!shrink_preferred_lo(rv)) {
-                    error_message = "Can't shrink layout anymore";
+                    error_message = "Can't shrink layout anymore"_cs;
                     advance_to_next_stage = true;
                     break;
                 }
@@ -2886,7 +2886,7 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
     LOG3("  Selected stage: " << rv->stage << "    Furthest stage: " << furthest_stage);
     if (rv->stage > furthest_stage) {
         if (error_message == "")
-            error_message = "Unknown error for stage advancement?";
+            error_message = "Unknown error for stage advancement?"_cs;
         error("Could not place %s: %s", rv->table, error_message);
         summary.set_table_replay_result(allocated);
         return nullptr;
@@ -3024,7 +3024,7 @@ const TablePlacement::Placed *TablePlacement::add_starter_pistols(const Placed *
     for (int i = 0; i < 2; i++) {
         gress_t current_gress = static_cast<gress_t>(i);
         if (!placed_gress[i] && table_in_gress[i]) {
-            cstring t_name = "$" + toString(current_gress) + "_starter_pistol";
+            cstring t_name = "$"_cs + toString(current_gress) + "_starter_pistol"_cs;
             auto t = new IR::MAU::Table(t_name, current_gress);
             t->created_during_tp = true;
             LOG4("Adding starter pistol for " << current_gress);
@@ -4262,9 +4262,9 @@ DecidePlacement::default_table_placement(const IR::BFN::Pipe *pipe) {
     LOG1("Table placement starting on " << pipe->canon_name()
          << " with DEFAULT PLACEMENT approach");
 
-    LOG3(TableTree("ingress", pipe->thread[INGRESS].mau) <<
-         TableTree("egress", pipe->thread[EGRESS].mau) <<
-         TableTree("ghost", pipe->ghost_thread.ghost_mau) );
+    LOG3(TableTree("ingress"_cs, pipe->thread[INGRESS].mau) <<
+         TableTree("egress"_cs, pipe->thread[EGRESS].mau) <<
+         TableTree("ghost"_cs, pipe->ghost_thread.ghost_mau) );
 
     ordered_set<const GroupPlace *>     work;  // queue with random-access lookup
     const Placed *placed = nullptr;
@@ -4621,9 +4621,9 @@ bool DecidePlacement::preorder(const IR::BFN::Pipe *pipe) {
 std::pair<bool, const DecidePlacement::Placed*>
 DecidePlacement::alt_table_placement(const IR::BFN::Pipe *pipe) {
     LOG1("Table placement starting on " << pipe->canon_name() << " with ALT PLACEMENT approach");
-    LOG3(TableTree("ingress", pipe->thread[INGRESS].mau) <<
-         TableTree("egress", pipe->thread[EGRESS].mau) <<
-         TableTree("ghost", pipe->ghost_thread.ghost_mau) );
+    LOG3(TableTree("ingress"_cs, pipe->thread[INGRESS].mau) <<
+         TableTree("egress"_cs, pipe->thread[EGRESS].mau) <<
+         TableTree("ghost"_cs, pipe->ghost_thread.ghost_mau) );
     const Placed *placed = nullptr;
 
     LOG5("Table Summary Contents: " << self.summary.getActualStateStr());
@@ -4813,9 +4813,9 @@ IR::Node *TransformTables::postorder(IR::BFN::Pipe *pipe) {
     self.seqInfo.clear();
     self.table_placed.clear();
     LOG3("table placement completed " << pipe->canon_name());
-    LOG3(TableTree("ingress", pipe->thread[INGRESS].mau) <<
-         TableTree("egress", pipe->thread[EGRESS].mau) <<
-         TableTree("ghost", pipe->ghost_thread.ghost_mau));
+    LOG3(TableTree("ingress"_cs, pipe->thread[INGRESS].mau) <<
+         TableTree("egress"_cs, pipe->thread[EGRESS].mau) <<
+         TableTree("ghost"_cs, pipe->ghost_thread.ghost_mau));
     BUG_CHECK(always_run_actions.empty(), "Inconsistent always_run list");
     return pipe;
 }
@@ -4928,8 +4928,8 @@ IR::MAU::Table *TransformTables::break_up_atcam(IR::MAU::Table *tbl,
             rv = table_part;
             BUG_CHECK(!prev, "First logical table for %s is not first?", tbl->name);
         } else {
-            prev->next["$try_next_stage"] = new IR::MAU::TableSeq(table_part);
-            prev->next.erase("$miss");
+            prev->next["$try_next_stage"_cs] = new IR::MAU::TableSeq(table_part);
+            prev->next.erase("$miss"_cs);
         }
 
         if (last != nullptr)
@@ -5200,12 +5200,12 @@ void TransformTables::merge_match_and_gateway(IR::MAU::Table *tbl,
 
     // Create the missing $hit, $miss, or $default branch if the program does not have it
     if (match->hit_miss_p4()) {
-        if (match->next.count("$hit") == 0 && seq)
-            tbl->next["$hit"] = seq;
-        if (match->next.count("$miss") == 0 && seq)
-            tbl->next["$miss"] = seq;
+        if (match->next.count("$hit"_cs) == 0 && seq)
+            tbl->next["$hit"_cs] = seq;
+        if (match->next.count("$miss"_cs) == 0 && seq)
+            tbl->next["$miss"_cs] = seq;
     } else if (!match->has_default_path() && seq) {
-        tbl->next["$default"] = seq;
+        tbl->next["$default"_cs] = seq;
     }
 
     for (auto &gw : tbl->gateway_rows)
@@ -5557,8 +5557,8 @@ IR::Node *TransformTables::preorder(IR::MAU::Table *tbl) {
             if (gw_layout_used && !table_part->layout.atcam &&
                 Device::currentDevice() != Device::TOFINO) {
                 table_part->next = match_table_next; }
-            prev->next["$try_next_stage"] = try_next_stage_seq;
-            prev->next.erase("$miss");
+            prev->next["$try_next_stage"_cs] = try_next_stage_seq;
+            prev->next.erase("$miss"_cs);
         }
 
         // check for any attached tables not completely placed as of this stage and do any
@@ -5774,12 +5774,12 @@ void MergeAlwaysRunActions::Scan::end_apply() {
         IR::MAU::Table *merged_table = new IR::MAU::Table(cstring(), araKey.gress);
         merged_table->stage_ = araKey.stage;
         merged_table->always_run = IR::MAU::AlwaysRun::ACTION;
-        IR::MAU::Action *act = new IR::MAU::Action("$always_run_act");
+        IR::MAU::Action *act = new IR::MAU::Action("$always_run_act"_cs);
         TableResourceAlloc *resources = new TableResourceAlloc();
         int ar_row = Device::alwaysRunIMemAddr() / 2;
         int ar_color = Device::alwaysRunIMemAddr() % 2;
         InstructionMemory::Use::VLIW_Instruction single_instr(bitvec(), ar_row, ar_color);
-        resources->instr_mem.all_instrs.emplace("$always_run", single_instr);
+        resources->instr_mem.all_instrs.emplace("$always_run"_cs, single_instr);
         std::set<int> minDgStages;
         // Should really only be an Action and an instr_mem allocation
         for (auto tbl : tables) {
@@ -5794,7 +5794,7 @@ void MergeAlwaysRunActions::Scan::end_apply() {
 
         auto tbl_to_replace = self.ar_replacement(araKey.stage, araKey.gress);
         merged_table->name = tbl_to_replace->name;
-        merged_table->actions.emplace("$always_run_act", act);
+        merged_table->actions.emplace("$always_run_act"_cs, act);
         merged_table->resources = resources;
         self.merge_per_stage.emplace(araKey, merged_table);
         self.mergedARAwitNewStage = self.mergedARAwitNewStage || (minDgStages.size() > 1);

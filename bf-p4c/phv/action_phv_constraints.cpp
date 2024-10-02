@@ -1124,8 +1124,8 @@ bool ActionPhvConstraints::valid_container_operation_type(
                 fields_not_written.insert(slice);
         } else if (fw->flags & OperandInfo::MOVE) {
             type_of_operation |= OperandInfo::MOVE;
-            operations_to_fields["assignment"].insert(slice);
-            operation = "assignment";
+            operations_to_fields["assignment"_cs].insert(slice);
+            operation = "assignment"_cs;
         } else if (fw->flags & OperandInfo::BITWISE) {
             type_of_operation |= OperandInfo::BITWISE;
             operations_to_fields[fw->operation].insert(slice);
@@ -3391,11 +3391,12 @@ ActionPhvConstraints::ConstraintTracker::is_written(
 
         ActionPhvConstraints::OperandInfo rv = op;
         rv.phv_used = slice;
-        cstring operation = rv.flags & OperandInfo::WHOLE_CONTAINER ? "WHOLE_CONTAINER" :
-                            rv.flags & OperandInfo::BITWISE ? "BITWISE" :
-                            rv.flags & OperandInfo::PART_OF_CONTAINER ? "PART_CONTAINER" : "MOVE";
-        LOG5("\t\t\t\tSlice " << slice << " is written in action " << act->name << " by a " <<
-             operation << " operation.");
+        cstring operation = rv.flags & OperandInfo::WHOLE_CONTAINER     ? "WHOLE_CONTAINER"_cs
+                            : rv.flags & OperandInfo::BITWISE           ? "BITWISE"_cs
+                            : rv.flags & OperandInfo::PART_OF_CONTAINER ? "PART_CONTAINER"_cs
+                                                                        : "MOVE"_cs;
+        LOG5("\t\t\t\tSlice " << slice << " is written in action " << act->name << " by a "
+                              << operation << " operation.");
         return rv; }
 
     LOG5("\t\t\t\tSlice " << slice << " is not written in action " << act->name);
@@ -4495,53 +4496,53 @@ operator<<(std::ostream &out, const safe_vector<ActionPhvConstraints::OperandInf
 cstring can_pack_error_code_str(const CanPackErrorCode &code) {
     switch (code) {
         case CanPackErrorCode::NO_ERROR:
-            return "NO_ERROR";
+            return "NO_ERROR"_cs;
         case CanPackErrorCode::SLICE_EMPTY:
-            return "SLICE_EMPTY";
+            return "SLICE_EMPTY"_cs;
         case CanPackErrorCode::PACK_CONSTRAINT_PRESENT:
-            return "PACK_CONSTRAINT_PRESENT";
+            return "PACK_CONSTRAINT_PRESENT"_cs;
         case CanPackErrorCode::STATEFUL_DEST_CONSTRAINT:
-            return "STATEFUL_DEST_CONSTRAINT";
+            return "STATEFUL_DEST_CONSTRAINT"_cs;
         case CanPackErrorCode::BITMASK_CONSTRAINT:
-            return "BITMASK_CONSTRAINT";
+            return "BITMASK_CONSTRAINT"_cs;
         case CanPackErrorCode::SPECIALTY_DATA:
-            return "SPECIALTY_DATA";
+            return "SPECIALTY_DATA"_cs;
         case CanPackErrorCode::MIXED_OPERAND:
-            return "MIXED_OPERAND";
+            return "MIXED_OPERAND"_cs;
         case CanPackErrorCode::NONE_ADJACENT_FIELD:
-            return "NONE_ADJACENT_FIELD";
+            return "NONE_ADJACENT_FIELD"_cs;
         case CanPackErrorCode::COMPLEX_AD_PACKING:
-            return "COMPLEX_AD_PACKING";
+            return "COMPLEX_AD_PACKING"_cs;
         case CanPackErrorCode::BITWISE_MIXED_AD:
-            return "BITWISE_MIXED_AD";
+            return "BITWISE_MIXED_AD"_cs;
         case CanPackErrorCode::TF2_MORE_THAN_ONE_SOURCE:
-            return "TF2_MORE_THAN_ONE_SOURCE";
+            return "TF2_MORE_THAN_ONE_SOURCE"_cs;
         case CanPackErrorCode::TF2_ALL_WRITTEN_TOGETHER:
-            return "TF2_ALL_WRITTEN_TOGETHER";
+            return "TF2_ALL_WRITTEN_TOGETHER"_cs;
         case CanPackErrorCode::MORE_THAN_TWO_SOURCES:
-            return "MORE_THAN_TWO_SOURCES";
+            return "MORE_THAN_TWO_SOURCES"_cs;
         case CanPackErrorCode::TWO_SOURCES_AND_CONSTANT:
-            return "TWO_SOURCES_AND_CONSTANT";
+            return "TWO_SOURCES_AND_CONSTANT"_cs;
         case CanPackErrorCode::MOVE_AND_UNALLOCATED_SOURCE:
-            return "MOVE_AND_UNALLOCATED_SOURCE";
+            return "MOVE_AND_UNALLOCATED_SOURCE"_cs;
         case CanPackErrorCode::BITWISE_AND_UNALLOCATED_SOURCE:
-            return "BITWISE_AND_UNALLOCATED_SOURCE";
+            return "BITWISE_AND_UNALLOCATED_SOURCE"_cs;
         case CanPackErrorCode::SLICE_ALIGNMENT:
-            return "SLICE_ALIGNMENT";
+            return "SLICE_ALIGNMENT"_cs;
         case CanPackErrorCode::PACK_AND_ALIGNED:
-            return "PACK_AND_ALIGNED";
+            return "PACK_AND_ALIGNED"_cs;
         case CanPackErrorCode::INVALID_MASK:
-            return "INVALID_MASK";
+            return "INVALID_MASK"_cs;
         case CanPackErrorCode::SLICE_DIFF_OFFSET:
-            return "SLICE_DIFF_OFFSET";
+            return "SLICE_DIFF_OFFSET"_cs;
         case CanPackErrorCode::COPACK_UNSATISFIED:
-            return "COPACK_UNSATISFIED";
+            return "COPACK_UNSATISFIED"_cs;
         case CanPackErrorCode::MULTIPLE_ALIGNMENTS:
-            return "MULTIPLE_ALIGNMENTS";
+            return "MULTIPLE_ALIGNMENTS"_cs;
         case CanPackErrorCode::OVERLAPPING_SLICES:
-            return "OVERLAPPING_SLICES";
+            return "OVERLAPPING_SLICES"_cs;
         case CanPackErrorCode::CONSTRAINT_CHECKER_FAILED:
-            return "CONSTRAINT_CHECKER_FAILED";
+            return "CONSTRAINT_CHECKER_FAILED"_cs;
         default:
             BUG("Invalid packing error code");
     }

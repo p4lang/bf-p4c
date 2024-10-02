@@ -8,6 +8,8 @@
 #include "bf-p4c/ir/bitrange.h"
 #include "bf-p4c/parde/match_register.h"
 
+using namespace P4::literals;
+
 /**
  * \defgroup parde Parser & deparser
  * \brief Content related to parser and deparser
@@ -535,9 +537,9 @@ class TofinoPardeSpec : public PardeSpec {
         static std::vector<MatchRegister> spec;
 
         if (spec.empty()) {
-            spec = { MatchRegister("half"),
-                     MatchRegister("byte0"),
-                     MatchRegister("byte1") };
+            spec = { MatchRegister("half"_cs),
+                     MatchRegister("byte0"_cs),
+                     MatchRegister("byte1"_cs) };
         }
 
         return spec;
@@ -617,10 +619,10 @@ class JBayPardeSpec : public PardeSpec {
         static std::vector<MatchRegister> spec;
 
         if (spec.empty()) {
-            spec = { MatchRegister("byte0"),
-                     MatchRegister("byte1"),
-                     MatchRegister("byte2"),
-                     MatchRegister("byte3") };
+            spec = { MatchRegister("byte0"_cs),
+                     MatchRegister("byte1"_cs),
+                     MatchRegister("byte2"_cs),
+                     MatchRegister("byte3"_cs) };
         }
 
         return spec;
@@ -632,10 +634,10 @@ class JBayPardeSpec : public PardeSpec {
         if (spec.empty()) {
             matchRegisters();  // make sure the match registers are created first
 
-            spec = { MatchRegister("save_byte0"),
-                     MatchRegister("save_byte1"),
-                     MatchRegister("save_byte2"),
-                     MatchRegister("save_byte3") };
+            spec = { MatchRegister("save_byte0"_cs),
+                     MatchRegister("save_byte1"_cs),
+                     MatchRegister("save_byte2"_cs),
+                     MatchRegister("save_byte3"_cs) };
         }
 
         return spec;
@@ -749,8 +751,8 @@ class FlatrockPardeSpec : public TofinoPardeSpec {
         static std::vector<MatchRegister> spec;
 
         if (spec.empty()) {
-            spec = { MatchRegister("W0"),
-                     MatchRegister("W1") };
+            spec = { MatchRegister("W0"_cs),
+                     MatchRegister("W1"_cs) };
         }
 
         return spec;

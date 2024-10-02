@@ -18,7 +18,7 @@ int TableAllocPass::table_placement_round = 1;
 TableAllocPass::TableAllocPass(const BFN_Options& options, PhvInfo& phv, DependencyGraph &deps,
                                TableSummary &summary, Util::JsonObject* jsonGraph,
                                MauBacktracker &mau_backtracker)
-    : Logging::PassManager("table_placement_"), att_info(phv), options(options) {
+    : Logging::PassManager("table_placement_"_cs), att_info(phv), options(options) {
     lc = LayoutChoices::create(phv, deps.red_info, att_info);
     siaa = new SharedIndirectAttachedAnalysis(mutex, ignore, action_mutex, *lc);
     addPasses({
@@ -32,17 +32,17 @@ TableAllocPass::TableAllocPass(const BFN_Options& options, PhvInfo& phv, Depende
         new CheckTableNameDuplicate,
         new TableFindSeqDependencies(phv),
         new CheckTableNameDuplicate,
-        new FindDependencyGraph(phv, deps, &options, "", "Before Table Placement", &summary),
-        new DumpJsonGraph(deps, jsonGraph, "Before Table Placement", false),
+        new FindDependencyGraph(phv, deps, &options, ""_cs, "Before Table Placement"_cs, &summary),
+        new DumpJsonGraph(deps, jsonGraph, "Before Table Placement"_cs, false),
         &ignore,
         &mutex,
         &action_mutex,
         siaa,
-        new DumpPipe("Before TablePlacement"),
+        new DumpPipe("Before TablePlacement"_cs),
         new TablePlacement(options, deps, mutex, phv, *lc,
                             *siaa, att_info, summary, mau_backtracker),
-        new DumpPipe("After TablePlacement"),
-        new FindDependencyGraph(phv, deps, &options, "", "After Table Placement", &summary),
+        new DumpPipe("After TablePlacement"_cs),
+        new FindDependencyGraph(phv, deps, &options, ""_cs, "After Table Placement"_cs, &summary),
         new TableDependencyGraphSummary(deps),
         new CheckTableNameDuplicate,
         new TableFindSeqDependencies(phv),  // not needed?

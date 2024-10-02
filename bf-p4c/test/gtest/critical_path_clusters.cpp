@@ -94,8 +94,8 @@ V1Switch(parse(), verifyChecksum(), ingress(), egress(),
 
     auto& options = BackendOptions();
     options.langVersion = CompilerOptions::FrontendVersion::P4_16;
-    options.target = "tofino";
-    options.arch = "v1model";
+    options.target = "tofino"_cs;
+    options.arch = "v1model"_cs;
     options.disable_parse_min_depth_limit = true;
 
     return TofinoPipeTestCase::createWithThreadLocalInstances(source);
@@ -215,14 +215,14 @@ TEST_F(CriticalPathClustersTest, DISABLED_Basic) {
     ordered_set<PHV::SuperCluster *> result =
         cluster_cp->calc_critical_clusters(clustering.cluster_groups());
 
-    EXPECT_EQ(resultHas(result, {"ingress::eth.nxt"}), true);
-    EXPECT_EQ(resultHas(result, {"ingress::eth.$valid"}), true);
-    EXPECT_EQ(resultHas(result, {"ingress::h2.f1",
-                                 "ingress::h2.f2",
-                                 "ingress::h2.f3"}), true);
+    EXPECT_EQ(resultHas(result, {"ingress::eth.nxt"_cs}), true);
+    EXPECT_EQ(resultHas(result, {"ingress::eth.$valid"_cs}), true);
+    EXPECT_EQ(resultHas(result, {"ingress::h2.f1"_cs,
+                                 "ingress::h2.f2"_cs,
+                                 "ingress::h2.f3"_cs}), true);
 
-    EXPECT_EQ(resultHas(result, {"ingress::h1.f1",
-                                 "ingress::h1.f2"}), false);
+    EXPECT_EQ(resultHas(result, {"ingress::h1.f1"_cs,
+                                 "ingress::h1.f2"_cs}), false);
 }
 
 }  // namespace Test

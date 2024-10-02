@@ -154,7 +154,7 @@
  * and convert them if table placement wishes to do so.
  */
 void FindPayloadCandidates::add_option(const IR::MAU::Table *tbl, LayoutChoices &lc) {
-    if (tbl->getAnnotation("no_gateway_conversion")) return;
+    if (tbl->getAnnotation("no_gateway_conversion"_cs)) return;
 
     CollectMatchFieldsAsGateway collect(phv);
     tbl->apply(collect);
@@ -197,7 +197,7 @@ IR::MAU::Table *FindPayloadCandidates::convert_to_gateway(const IR::MAU::Table *
 
     // see FindPayloadCandidates::add_option()
     // for the check that ensures the conversion doesn't happen
-    BUG_CHECK(!tbl->match_table->getAnnotation("no_gateway_conversion"),
+    BUG_CHECK(!tbl->match_table->getAnnotation("no_gateway_conversion"_cs),
         "attempt to perform a disabled optimisation");
 
     IR::MAU::Table *gw_tbl = new IR::MAU::Table(*tbl);
@@ -232,7 +232,7 @@ IR::MAU::Table *FindPayloadCandidates::convert_to_gateway(const IR::MAU::Table *
                 gw_expr = new IR::LAnd(equ, gw_expr);
         }
 
-        cstring entry_name = "$entry" + std::to_string(entry_index++);
+        cstring entry_name = "$entry"_cs + std::to_string(entry_index++);
         gw_tbl->gateway_rows.push_back(std::make_pair(gw_expr, entry_name));
         cstring action_name;
 
@@ -265,23 +265,23 @@ IR::MAU::Table *FindPayloadCandidates::convert_to_gateway(const IR::MAU::Table *
      */
     gw_tbl->next.clear();
     if (tbl->hit_miss_p4()) {
-        const IR::MAU::TableSeq *hit_seq = tbl->next.count("$hit") == 0 ? new IR::MAU::TableSeq()
-                                                                        : tbl->next.at("$hit");
-        const IR::MAU::TableSeq *miss_seq = tbl->next.count("$miss") == 0 ? new IR::MAU::TableSeq()
-                                                                          : tbl->next.at("$miss");
+        const IR::MAU::TableSeq *hit_seq =
+            tbl->next.count("$hit"_cs) == 0 ? new IR::MAU::TableSeq() : tbl->next.at("$hit"_cs);
+        const IR::MAU::TableSeq *miss_seq =
+            tbl->next.count("$miss"_cs) == 0 ? new IR::MAU::TableSeq() : tbl->next.at("$miss"_cs);
         for (auto entry : gw_tbl->gateway_rows) {
             if (entry.second.isNull()) continue;
             gw_tbl->next[entry.second] = hit_seq;
         }
-        gw_tbl->next["$miss"] = miss_seq;
+        gw_tbl->next["$miss"_cs] = miss_seq;
     } else if (tbl->action_chain() || tbl->has_default_path()) {
         for (auto &entry : gw_tbl->gateway_payload) {
             const IR::MAU::TableSeq *act_seq = nullptr;
             auto act_name = entry.second.first;
             if (tbl->next.count(act_name))
                 act_seq = tbl->next.at(act_name);
-            else if (tbl->next.count("$default"))
-                act_seq = tbl->next.at("$default");
+            else if (tbl->next.count("$default"_cs))
+                act_seq = tbl->next.at("$default"_cs);
             else
                 act_seq = new IR::MAU::TableSeq();
             gw_tbl->next[entry.first] = act_seq;
@@ -293,18 +293,18 @@ IR::MAU::Table *FindPayloadCandidates::convert_to_gateway(const IR::MAU::Table *
             auto act_name = act.first;
             if (tbl->next.count(act_name))
                 act_seq = tbl->next.at(act_name);
-            else if (tbl->next.count("$default"))
-                act_seq = tbl->next.at("$default");
+            else if (tbl->next.count("$default"_cs))
+                act_seq = tbl->next.at("$default"_cs);
             else
                 act_seq = new IR::MAU::TableSeq();
-            gw_tbl->next["$miss"] = act_seq;
+            gw_tbl->next["$miss"_cs] = act_seq;
         }
     } else {
         auto next_seq = new IR::MAU::TableSeq();
         for (auto entry : gw_tbl->gateway_payload) {
             gw_tbl->next[entry.first] = next_seq;
         }
-        gw_tbl->next["$miss"] = next_seq;
+        gw_tbl->next["$miss"_cs] = next_seq;
     }
     // No static entries anymore, these are encoded into the gateway
     gw_tbl->entries_list = nullptr;

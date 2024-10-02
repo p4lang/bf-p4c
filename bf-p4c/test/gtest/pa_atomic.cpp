@@ -62,8 +62,8 @@ createPaAtomicPragmaTestCase(const std::string& pragmas) {
 
     auto& options = BackendOptions();
     options.langVersion = CompilerOptions::FrontendVersion::P4_16;
-    options.target = "tofino";
-    options.arch = "v1model";
+    options.target = "tofino"_cs;
+    options.arch = "v1model"_cs;
     options.disable_parse_min_depth_limit = true;
 
     return TofinoPipeTestCase::createWithThreadLocalInstances(source);
@@ -95,8 +95,8 @@ TEST_F(PaAtomicPragmaTest, Basic) {
     PragmaAtomic pa_atomic(phv);
     runMockPasses(test->pipe, phv, pa_atomic);
 
-    auto* h1_f4 = phv.field("ingress::h1.f4");
-    auto* h1_f3 = phv.field("ingress::h1.f3");
+    auto* h1_f4 = phv.field("ingress::h1.f4"_cs);
+    auto* h1_f3 = phv.field("ingress::h1.f3"_cs);
 
     EXPECT_EQ(h1_f3->no_split(), true);
     EXPECT_EQ(h1_f4->no_split(), false);  // skip if field greater than 32b

@@ -73,8 +73,8 @@ V1Switch(parse(), verifyChecksum(), mau(), mau(), computeChecksum(), deparse()) 
 
     auto& options = BackendOptions();
     options.langVersion = CompilerOptions::FrontendVersion::P4_16;
-    options.target = "tofino";
-    options.arch = "v1model";
+    options.target = "tofino"_cs;
+    options.arch = "v1model"_cs;
     options.disable_parse_min_depth_limit = true;
 
     return TofinoPipeTestCase::createWithThreadLocalInstances(source);
@@ -219,7 +219,7 @@ void runClotTest(std::optional<TofinoPipeTestCase> test,
         for (auto& aliasGrp : expectedAliases) {
             EXPECT_NE(aliasGrp.size(), 0UL);
             for (auto gress : {INGRESS, EGRESS}) {
-                cstring dst = "";
+                cstring dst = ""_cs;
                 for (auto &slice : aliasGrp) {
                     auto fieldName = toString(gress) + "::hdr." + slice.fieldName;
 

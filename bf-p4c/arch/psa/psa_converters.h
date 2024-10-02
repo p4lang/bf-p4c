@@ -170,12 +170,12 @@ class EgressDeparserConverter : public ControlConverter {
 class TypeNameExpressionConverter : public ExpressionConverter {
     // mapping enum name from psa to tofino
     ordered_map<cstring, std::pair<cstring, bool /* isSerEnums */>> enumsToTranslate =
-            {{"PSA_HashAlgorithm_t", std::make_pair("HashAlgorithm_t", false)},
-             {"PSA_CounterType_t", std::make_pair("CounterType_t", false)},
-             {"PSA_MeterType_t", std::make_pair("MeterType_t", false)},
-             {"PSA_MeterColor_t", std::make_pair("MeterColor_t", true)}};
+            {{"PSA_HashAlgorithm_t"_cs, std::make_pair("HashAlgorithm_t"_cs, false)},
+             {"PSA_CounterType_t"_cs, std::make_pair("CounterType_t"_cs, false)},
+             {"PSA_MeterType_t"_cs, std::make_pair("MeterType_t"_cs, false)},
+             {"PSA_MeterColor_t"_cs, std::make_pair("MeterColor_t"_cs, true)}};
 
-    ordered_map<cstring, int> serEnumWidth = {{"MeterColor_t", 8}};
+    ordered_map<cstring, int> serEnumWidth = {{"MeterColor_t"_cs, 8}};
 
  public:
     explicit TypeNameExpressionConverter(ProgramStructure* structure)
@@ -191,10 +191,10 @@ class TypeNameConverter : public Transform {
     ProgramStructure* structure;
     // mapping enum name from psa to tofino
     ordered_map<cstring, std::pair<cstring, bool /* isSerEnums */>> enumsToTranslate =
-            {{"PSA_HashAlgorithm_t", std::make_pair("HashAlgorithm_t", false)},
-             {"PSA_CounterType_t", std::make_pair("CounterType_t", false)},
-             {"PSA_MeterType_t", std::make_pair("MeterType_t", false)},
-             {"PSA_MeterColor_t", std::make_pair("MeterColor_t", true)}};
+            {{"PSA_HashAlgorithm_t"_cs, std::make_pair("HashAlgorithm_t"_cs, false)},
+             {"PSA_CounterType_t"_cs, std::make_pair("CounterType_t"_cs, false)},
+             {"PSA_MeterType_t"_cs, std::make_pair("MeterType_t"_cs, false)},
+             {"PSA_MeterColor_t"_cs, std::make_pair("MeterColor_t"_cs, true)}};
 
  public:
     explicit TypeNameConverter(ProgramStructure* structure)

@@ -769,7 +769,7 @@ SomeContScopeAllocResult AllocatorBase::try_slices_to_container_group(
 
     // try all containers.
     SomeContScopeAllocResult some(
-        new AllocError(ErrorCode::NOT_ENOUGH_SPACE, "no container have enough space"));
+        new AllocError(ErrorCode::NOT_ENOUGH_SPACE, "no container have enough space"_cs));
 
     // Get containers by PHV:Kind
     auto container_kind_order = { PHV::Kind::dark, PHV::Kind::mocha,
@@ -1178,7 +1178,7 @@ bool AllocatorBase::DfsListsAllocator::allocate(const ScoreContext& ctx,
             LOG3(log_prefix << "Current Tx status: ");
             LOG3(AllocResult::pretty_print_tx(tx, log_prefix));
             *err << ";\nWhen some slices have been allocated:\n";
-            *err << AllocResult::pretty_print_tx(tx, "\t");
+            *err << AllocResult::pretty_print_tx(tx, "\t"_cs);
             deepest_err = err;
             deepest_depth = depth;
         }
@@ -1235,7 +1235,7 @@ AllocResult AllocatorBase::try_super_cluster_to_container_group(
                 offset += fs.size();
             }
         }
-        static const cstring prefix = "> trying to allocate wide_arith slice list: ";
+        static const cstring prefix = "> trying to allocate wide_arith slice list: "_cs;
         LOG3(ctx.t_tabs() <<  prefix << "START to allocate the pair: " << lo_sl << ", " << hi_sl);
         auto sl_alloc_rst =
             try_wide_arith_slices_to_container_group(
@@ -1480,7 +1480,7 @@ AllocResult AllocatorBase::try_sliced_super_cluster(const ScoreContext& ctx,
     // slice lists that allocator has returned an error of cannot_pack.
     // stores only critical error message that might help caller to better slice the cluster.
     auto* reslice_required = new ordered_set<const SuperCluster::SliceList*>();
-    cstring reslice_required_reason = "";
+    cstring reslice_required_reason = ""_cs;
     std::optional<const AllocError*> other_err = std::nullopt;
     bool has_any_valid_alignment = false;
     // find the best score, forall (container group) of @p sc.

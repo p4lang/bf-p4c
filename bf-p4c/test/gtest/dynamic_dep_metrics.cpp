@@ -94,8 +94,8 @@ V1Switch(parse(), verifyChecksum(), mau(), my_egress(),
 
     auto& options = BackendOptions();
     options.langVersion = CompilerOptions::FrontendVersion::P4_16;
-    options.target = "tofino";
-    options.arch = "v1model";
+    options.target = "tofino"_cs;
+    options.arch = "v1model"_cs;
     options.disable_parse_min_depth_limit = true;
 
     return TofinoPipeTestCase::createWithThreadLocalInstances(source);
@@ -219,7 +219,7 @@ TEST_F(DynamicDepTest, DownwardProp1) {
     const IR::MAU::Table *t1, *t2, *t3, *t4, *t5, *t6, *e1;
     t1 = t2 = t3 = t4 = t5 = t6 = e1 = nullptr;
     for (const auto& kv : dg.stage_info) {
-        cstring table_name = kv.first->externalName() + "";
+        cstring table_name = kv.first->externalName() + ""_cs;
         if (table_name == ".t1") {
             t1 = kv.first;
         } else if (table_name == ".t2") {
@@ -358,7 +358,7 @@ TEST_F(DynamicDepTest, CanPlaceCDS) {
     const IR::MAU::Table *t1, *t2, *t3, *t3_sub1, *t3_sub2, *t4, *t4_sub1;
     t1 = t2 = t3_sub1 = t3_sub2 = t4 = t4_sub1 = nullptr;
     for (const auto& kv : dg.stage_info) {
-        cstring table_name = kv.first->externalName() + "";
+        cstring table_name = kv.first->externalName() + ""_cs;
         if (table_name == ".t1") {
             t1 = kv.first;
         } else if (table_name == ".t2") {

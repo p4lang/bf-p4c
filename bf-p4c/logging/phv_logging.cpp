@@ -155,8 +155,8 @@ void PhvLogging::CollectDefUseInfo::replace_parser_state_name(cstring old_name, 
 
 void PhvLogging::end_apply(const IR::Node *root) {
     // Populate resources structures.
-    populateContainerGroups("mau");
-    populateContainerGroups("deparser");
+    populateContainerGroups("mau"_cs);
+    populateContainerGroups("deparser"_cs);
 
     logHeaders();
 
@@ -168,7 +168,7 @@ void PhvLogging::end_apply(const IR::Node *root) {
     logConstraintReasons();
     logger.log();
     Logging::Manifest::getManifest().addLog(root->to<IR::BFN::Pipe>()->canon_id(),
-                                            "phv", "phv.json");
+                                            "phv"_cs, "phv.json"_cs);
 }
 
 PHV::Field::AllocState PhvLogging::getAllocatedState(

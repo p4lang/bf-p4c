@@ -146,16 +146,16 @@ class ElimUnused::Tables : public MauTransform {
             }
 
             // Handle the match table.
-            bool haveHitMiss = table->next.count("$hit") || table->next.count("$miss");
+            bool haveHitMiss = table->next.count("$hit"_cs) || table->next.count("$miss"_cs);
             for (auto& kv : table->actions) {
                 auto action_name = kv.first;
                 auto& action = kv.second;
 
                 if (haveHitMiss) {
-                    if (!action->miss_only() && !table->next.count("$hit")) return table;
-                    if (!action->hit_only() && !table->next.count("$miss")) return table;
+                    if (!action->miss_only() && !table->next.count("$hit"_cs)) return table;
+                    if (!action->hit_only() && !table->next.count("$miss"_cs)) return table;
                 } else {
-                    if (!table->next.count(action_name) && !table->next.count("$default"))
+                    if (!table->next.count(action_name) && !table->next.count("$default"_cs))
                         return table;
                 }
             }

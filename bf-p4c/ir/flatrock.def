@@ -47,7 +47,7 @@ class PortMetadataItem {
     }
     dbprint {
         out << "port=" << port << ": data=[";
-        cstring sep = "";
+        std::string sep = "";
         for (auto &d : data) {
             out << sep << static_cast<unsigned int>(d);
             sep = ", ";
@@ -169,7 +169,7 @@ class Profile {
                 "initial W2 offset %d out of allowed range <%d, %d>",
                 (*initial_w2_offset), 0, ::Flatrock::PARSER_W_OFFSET_MAX - 1);
     }
-    toString { return "profile id=" + cstring::to_cstring(index); }
+    toString { return "profile id="_cs + cstring::to_cstring(index); }
     dbprint {
         out << toString() << ":" << IndentCtl::indent;
         out << IndentCtl::endl << "match.port=" << match_port;
@@ -264,7 +264,7 @@ class AnalyzerRule {
     std::optional<::Flatrock::PushHdrId> push_hdr_id;
 #end
 
-    toString { return "rule id=" + cstring::to_cstring(index); }
+    toString { return "rule id="_cs + cstring::to_cstring(index); }
     dbprint {
         out << toString() << ":" << IndentCtl::indent;
         out << IndentCtl::endl << "match_state=" << match_state;
@@ -380,7 +380,7 @@ class PhvBuilderExtract {
                     i, source[i].values.size(), sources);
         }
     }
-    toString { return "extract id=" + cstring::to_cstring(index); }
+    toString { return "extract id="_cs + cstring::to_cstring(index); }
     dbprint {
         out << toString() << ":" << IndentCtl::indent;
         out << IndentCtl::endl << "match=" << match;
@@ -427,7 +427,7 @@ class PhvBuilderGroup {
             "too many extracts: %d, allowed at most %d",
             extracts.size(), ::Flatrock::PARSER_PHV_BUILDER_GROUP_EXTRACTS_NUM);
     }
-    toString { return "phv builder group id=" + std::to_string(index); }
+    toString { return "phv builder group id="_cs + std::to_string(index); }
     dbprint {
         out << toString() << ":" << IndentCtl::indent;
         for (auto &extract : extracts)
@@ -472,7 +472,7 @@ class Parser : BFN::BaseLoweredParser {
             "too many PHV groups: %d, allowed at most %d",
             phv_builder.size(), ::Flatrock::PARSER_PHV_BUILDER_GROUPS);
     }
-    toString { return "parser"; }
+    toString { return "parser"_cs; }
     dbprint {
         out << toString() << IndentCtl::indent;
         out << IndentCtl::endl << "states:";
@@ -524,7 +524,7 @@ class Parser : BFN::BaseLoweredParser {
             "too many PHV groups: %d, allowed at most %d",
             phv_builder.size(), ::Flatrock::PARSER_PHV_BUILDER_GROUPS);
     }
-    toString { return "pseudo parser"; }
+    toString { return "pseudo parser"_cs; }
     dbprint {
         out << toString() << IndentCtl::indent;
         out << IndentCtl::endl << "pov_flags_pos: " << pov_flags_pos << IndentCtl::indent;

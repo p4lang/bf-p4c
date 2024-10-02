@@ -65,8 +65,8 @@ void MapTablesToActions::printTableActionsMap(
 
 void MapTablesToActions::end_apply() {
     if (LOGGING(5)) {
-        printTableActionsMap(tableToActionsMap, "Printing tables to actions map");
-        printTableActionsMap(defaultActions, "Printing tables to default actions map");
+        printTableActionsMap(tableToActionsMap, "Printing tables to actions map"_cs);
+        printTableActionsMap(defaultActions, "Printing tables to default actions map"_cs);
         LOG5("Printing action to tables map");
         for (auto kv : actionMap)
             LOG5("\t" << kv.first->name << "\t:\t" << kv.second->name);

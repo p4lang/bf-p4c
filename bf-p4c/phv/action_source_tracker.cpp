@@ -163,7 +163,7 @@ std::ostream &operator<<(std::ostream &out, const SourceOp& src) {
 std::ostream &operator<<(std::ostream &out, const ActionClassifiedSources& sources) {
     for (const auto& action_sources : sources) {
         out << "{ " << canon_name(action_sources.first->externalName()) << ": ";
-        cstring sep = "";
+        std::string sep = "";
         for (const auto& s : action_sources.second) {
             out << sep << s;
             sep = ", ";

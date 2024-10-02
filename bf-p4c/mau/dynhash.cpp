@@ -61,8 +61,8 @@ bool GenerateDynamicHashJson::preorder(const IR::MAU::Table *tbl) {
     if (auto res = tbl->resources) {
         Util::JsonObject *_dynHashCalc = new Util::JsonObject();
         if (auto match_table = tbl->match_table->to<IR::P4Table>()) {
-            cstring fieldListCalcName = "";
-            cstring fieldListName = "";
+            cstring fieldListCalcName = ""_cs;
+            cstring fieldListName = ""_cs;
             IR::NameList algorithms;
             int hash_bit_width = -1;
             LOG5("Annotations : " << match_table->annotations);
@@ -82,8 +82,8 @@ bool GenerateDynamicHashJson::preorder(const IR::MAU::Table *tbl) {
                     << hash_bit_width << "Algo size: " << algorithms.names.size());
             if (!fieldListCalcName.isNullOrEmpty() && !fieldListName.isNullOrEmpty()
                     && (hash_bit_width > 0) && (algorithms.names.size() > 0)) {
-                _dynHashCalc->emplace("name", fieldListCalcName);
-                _dynHashCalc->emplace("handle", dynHashHandleBase + dynHashHandle++);
+                _dynHashCalc->emplace("name"_cs, fieldListCalcName);
+                _dynHashCalc->emplace("handle"_cs, dynHashHandleBase + dynHashHandle++);
                 LOG4("Generating dynamic hash schema for "
                         << fieldListCalcName << " and field list " << fieldListName);
                 gen_ixbar_json(res->selector_ixbar.get(), _dynHashCalc, tbl->stage(),
@@ -123,8 +123,8 @@ void GenerateDynamicHashJson::gen_hash_dist_json(cstring dyn_hash_name) {
     Util::JsonArray *_xbar_cfgs = new Util::JsonArray();
     Util::JsonArray *_hash_cfgs = new Util::JsonArray();
 
-    _dynHashCalc->emplace("name", dyn_hash_name);
-    _dynHashCalc->emplace("handle", dynHashHandleBase + dynHashHandle++);
+    _dynHashCalc->emplace("name"_cs, dyn_hash_name);
+    _dynHashCalc->emplace("handle"_cs, dynHashHandleBase + dynHashHandle++);
 
     gen_algo_json(_dynHashCalc, hge);
 
@@ -163,12 +163,12 @@ void GenerateDynamicHashJson::gen_hash_dist_json(cstring dyn_hash_name) {
         combined_use.clear();
     }
 
-    _fieldList->emplace("crossbar_configuration", _xbar_cfgs);
+    _fieldList->emplace("crossbar_configuration"_cs, _xbar_cfgs);
     Util::JsonArray *_field_lists = new Util::JsonArray();
     _field_lists->append(_fieldList);
-    _dynHashCalc->emplace("field_lists", _field_lists);
-    _dynHashCalc->emplace("hash_configuration", _hash_cfgs);
-    _dynHashCalc->emplace("hash_bit_width", hash_bit_width);
+    _dynHashCalc->emplace("field_lists"_cs, _field_lists);
+    _dynHashCalc->emplace("hash_configuration"_cs, _hash_cfgs);
+    _dynHashCalc->emplace("hash_bit_width"_cs, hash_bit_width);
     _dynHashNode->append(_dynHashCalc);
 }
 
@@ -292,8 +292,8 @@ void GenerateDynamicHashJson::gen_hash_dist_json(const IR::MAU::Table *tbl) {
 void GenerateDynamicHashJson::gen_single_algo_json(Util::JsonArray *_algos,
         const IR::MAU::HashFunction *algorithm, cstring alg_name, bool &is_default) {
     Util::JsonObject *_algo = new Util::JsonObject();
-    _algo->emplace("name", alg_name);  // p4 algo name
-    _algo->emplace("type", algorithm->algo_type());
+    _algo->emplace("name"_cs, alg_name);  // p4 algo name
+    _algo->emplace("type"_cs, algorithm->algo_type());
     unsigned aHandle = algoHandleBase + algoHandle;
     if (algoHandles.count(alg_name) > 0) {
         aHandle = algoHandles[alg_name];
@@ -301,27 +301,27 @@ void GenerateDynamicHashJson::gen_single_algo_json(Util::JsonArray *_algos,
         algoHandles[alg_name] = aHandle;
         algoHandle++;
     }
-    _algo->emplace("handle", aHandle);
-    _algo->emplace("is_default", is_default);
-    _algo->emplace("msb", algorithm->msb);
-    _algo->emplace("extend", algorithm->extend);
-    _algo->emplace("reverse", algorithm->reverse);
+    _algo->emplace("handle"_cs, aHandle);
+    _algo->emplace("is_default"_cs, is_default);
+    _algo->emplace("msb"_cs, algorithm->msb);
+    _algo->emplace("extend"_cs, algorithm->extend);
+    _algo->emplace("reverse"_cs, algorithm->reverse);
     // Convert poly in koopman notation to actual value
     big_int poly, init, final_xor;
     poly = algorithm->poly;
     poly = (poly << 1) + 1;
-    _algo->emplace("poly", Util::toString(poly, 0, 0, 16));
+    _algo->emplace("poly"_cs, Util::toString(poly, 0, 0, 16));
     init = algorithm->init;
-    _algo->emplace("init", Util::toString(init, 0, 0, 16));
+    _algo->emplace("init"_cs, Util::toString(init, 0, 0, 16));
     final_xor = algorithm->final_xor;
-    _algo->emplace("final_xor", Util::toString(final_xor, 0, 0, 16));
+    _algo->emplace("final_xor"_cs, Util::toString(final_xor, 0, 0, 16));
     _algos->append(_algo);
     is_default = false;  // only set 1st algo to default
 }
 
 void GenerateDynamicHashJson::gen_algo_json(Util::JsonObject *_dhc,
         const IR::MAU::HashGenExpression *hge) {
-    _dhc->emplace("any_hash_algorithm_allowed", hge->any_alg_allowed);
+    _dhc->emplace("any_hash_algorithm_allowed"_cs, hge->any_alg_allowed);
     Util::JsonArray *_algos = new Util::JsonArray();
     bool is_default = true;
     if (hge->alg_names) {
@@ -337,7 +337,7 @@ void GenerateDynamicHashJson::gen_algo_json(Util::JsonObject *_dhc,
     } else {
         gen_single_algo_json(_algos, &hge->algorithm, hge->algorithm.name(), is_default);
     }
-    _dhc->emplace("algorithms", _algos);
+    _dhc->emplace("algorithms"_cs, _algos);
 }
 
 
@@ -347,15 +347,15 @@ void GenerateDynamicHashJson::gen_field_list_json(Util::JsonObject *_field_list,
     auto fle = hge->expr->to<IR::MAU::FieldListExpression>();
 
     cstring field_list_name = fle->id.name;
-    _field_list->emplace("name", field_list_name);
-    _field_list->emplace("handle", fieldListHandleBase + fieldListHandle++);
+    _field_list->emplace("name"_cs, field_list_name);
+    _field_list->emplace("handle"_cs, fieldListHandleBase + fieldListHandle++);
     // Multiple field lists not supported,
     // is_default is always true, remove field?
-    _field_list->emplace("is_default", true);
+    _field_list->emplace("is_default"_cs, true);
     // can_permute & can_rotate need to be passed in (as annotations?) to be set
     // here. these fields are optional in schema
-    _field_list->emplace("can_permute", fle->permutable);
-    _field_list->emplace("can_rotate", fle->rotateable);
+    _field_list->emplace("can_permute"_cs, fle->permutable);
+    _field_list->emplace("can_rotate"_cs, fle->rotateable);
 
     BuildP4HashFunction builder(phv);
     hge->apply(builder);
@@ -365,7 +365,7 @@ void GenerateDynamicHashJson::gen_field_list_json(Util::JsonObject *_field_list,
     for (auto *e : func->inputs) {
         auto field = PHV::AbstractField::create(phv, e);
         Util::JsonObject *_field = new Util::JsonObject();
-        cstring name = "";
+        cstring name = ""_cs;
         auto range = field->range();
         if (field->is<PHV::Constant>()) {
             // Constant fields have unique field names with the format
@@ -380,37 +380,37 @@ void GenerateDynamicHashJson::gen_field_list_json(Util::JsonObject *_field_list,
         } else {
             continue;  // error out here?
         }
-        _field->emplace("name", name);
-        _field->emplace("start_bit", range.lo);
-        _field->emplace("bit_width", range.size());
+        _field->emplace("name"_cs, name);
+        _field->emplace("start_bit"_cs, range.lo);
+        _field->emplace("bit_width"_cs, range.size());
         // All fields optional by default, remove field?
-        _field->emplace("optional", true);
-        _field->emplace("is_constant", field->is<PHV::Constant>());
+        _field->emplace("optional"_cs, true);
+        _field->emplace("is_constant"_cs, field->is<PHV::Constant>());
         _fields->append(_field);
     }
-    _field_list->emplace("fields", _fields);
+    _field_list->emplace("fields"_cs, _fields);
 }
 
 void GenerateDynamicHashJson::gen_ixbar_bytes_json(Util::JsonArray *_xbar_cfgs, int stage,
         const std::map<cstring, cstring> &fieldNames, const IXBar::Use &ixbar_use) {
     Util::JsonObject *_xbar_cfg = new Util::JsonObject();
-    _xbar_cfg->emplace("stage_number", stage);
+    _xbar_cfg->emplace("stage_number"_cs, stage);
     Util::JsonArray *_xbar = new Util::JsonArray();
     for (auto &byte : ixbar_use.use) {
         for (auto &fieldinfo : byte.field_bytes) {
             for (int i = fieldinfo.lo; i <= fieldinfo.hi; i++) {
                 Util::JsonObject *_xbar_byte = new Util::JsonObject();
-                _xbar_byte->emplace("byte_number", (byte.loc.group * 16 + byte.loc.byte));
-                _xbar_byte->emplace("bit_in_byte", (i - fieldinfo.lo + fieldinfo.cont_lo));
-                _xbar_byte->emplace("name", fieldNames.at(fieldinfo.field));
-                _xbar_byte->emplace("field_bit", i);
+                _xbar_byte->emplace("byte_number"_cs, (byte.loc.group * 16 + byte.loc.byte));
+                _xbar_byte->emplace("bit_in_byte"_cs, (i - fieldinfo.lo + fieldinfo.cont_lo));
+                _xbar_byte->emplace("name"_cs, fieldNames.at(fieldinfo.field));
+                _xbar_byte->emplace("field_bit"_cs, i);
                 _xbar->append(_xbar_byte);
             }
         }
     }
-    _xbar_cfg->emplace("crossbar", _xbar);
+    _xbar_cfg->emplace("crossbar"_cs, _xbar);
     // TODO: Add wide hash support to populate 'crossbar_mod'
-    _xbar_cfg->emplace("crossbar_mod", new Util::JsonArray());
+    _xbar_cfg->emplace("crossbar_mod"_cs, new Util::JsonArray());
     _xbar_cfgs->append(_xbar_cfg);
 }
 
@@ -429,8 +429,8 @@ void GenerateDynamicHashJson::gen_hash_json(Util::JsonArray *_hash_cfgs, int sta
             num_hash_bits += b.second.size();
             for (auto bit = b.second.lo; bit <= b.second.hi; bit++) {
                 Util::JsonObject *_hash_bit = new Util::JsonObject();
-                _hash_bit->emplace("gfm_hash_bit", hash_bit++);
-                _hash_bit->emplace("p4_hash_bit", bit);
+                _hash_bit->emplace("gfm_hash_bit"_cs, hash_bit++);
+                _hash_bit->emplace("p4_hash_bit"_cs, bit);
                 _hash_bits->append(_hash_bit);
             }
         }
@@ -442,26 +442,26 @@ void GenerateDynamicHashJson::gen_hash_json(Util::JsonArray *_hash_cfgs, int sta
         if (!num_hash_bits) return;  // invalid bit mask
         for (auto hash_bit = 0; hash_bit < num_hash_bits; hash_bit++) {
             Util::JsonObject *_hash_bit = new Util::JsonObject();
-            _hash_bit->emplace("gfm_hash_bit", hash_bit);
-            _hash_bit->emplace("p4_hash_bit", hash_bit);
+            _hash_bit->emplace("gfm_hash_bit"_cs, hash_bit);
+            _hash_bit->emplace("p4_hash_bit"_cs, hash_bit);
             _hash_bits->append(_hash_bit);
         }
     } else {
         BUG("  Cannot correctly generate a correct hash for dynamic hash");
     }
     Util::JsonObject *_hash_cfg = new Util::JsonObject();
-    _hash_cfg->emplace("stage_number", stage);
+    _hash_cfg->emplace("stage_number"_cs, stage);
     Util::JsonObject *_hash = new Util::JsonObject();
-    _hash->emplace("hash_id", hashGroup);
-    _hash->emplace("num_hash_bits", num_hash_bits);
-    _hash->emplace("hash_bits", _hash_bits);
-    _hash_cfg->emplace("hash", _hash);
+    _hash->emplace("hash_id"_cs, hashGroup);
+    _hash->emplace("num_hash_bits"_cs, num_hash_bits);
+    _hash->emplace("hash_bits"_cs, _hash_bits);
+    _hash_cfg->emplace("hash"_cs, _hash);
     // TODO: Add wide hash support to populate 'hash_mod'
     Util::JsonObject *_hash_mod = new Util::JsonObject();
-    _hash_mod->emplace("hash_id", 0);
-    _hash_mod->emplace("num_hash_bits", 0);
-    _hash_mod->emplace("hash_bits", new Util::JsonArray());
-    _hash_cfg->emplace("hash_mod", _hash_mod);
+    _hash_mod->emplace("hash_id"_cs, 0);
+    _hash_mod->emplace("num_hash_bits"_cs, 0);
+    _hash_mod->emplace("hash_bits"_cs, new Util::JsonArray());
+    _hash_cfg->emplace("hash_mod"_cs, _hash_mod);
     _hash_cfgs->append(_hash_cfg);
 }
 
@@ -472,21 +472,21 @@ void GenerateDynamicHashJson::gen_ixbar_json(const IXBar::Use *ixbar_use_,
     Util::JsonArray *_field_lists = new Util::JsonArray();
     Util::JsonObject *_field_list = new Util::JsonObject();
     Util::JsonArray *_fields = new Util::JsonArray();
-    _field_list->emplace("name", field_list_name);
-    _field_list->emplace("handle", fieldListHandleBase + fieldListHandle++);
+    _field_list->emplace("name"_cs, field_list_name);
+    _field_list->emplace("handle"_cs, fieldListHandleBase + fieldListHandle++);
     // Multiple field lists not supported,
     // is_default is always true, remove field?
-    _field_list->emplace("is_default", true);
+    _field_list->emplace("is_default"_cs, true);
     // can_permute & can_rotate need to be passed in (as annotations?) to be set
     // here. these fields are optional in schema
-    _field_list->emplace("can_permute", false);
-    _field_list->emplace("can_rotate", false);
+    _field_list->emplace("can_permute"_cs, false);
+    _field_list->emplace("can_rotate"_cs, false);
     int numConstants = 0;
     std::map<cstring, cstring> fieldNames;
     for (auto *e : ixbar_use->field_list_order) {
         auto field = PHV::AbstractField::create(phv, e);
         Util::JsonObject *_field = new Util::JsonObject();
-        cstring name = "";
+        cstring name = ""_cs;
         auto range = field->range();
         if (field->is<PHV::Constant>()) {
             // Constant fields have unique field names with the format
@@ -501,38 +501,38 @@ void GenerateDynamicHashJson::gen_ixbar_json(const IXBar::Use *ixbar_use_,
         } else {
             continue;  // error out here?
         }
-        _field->emplace("name", name);
-        _field->emplace("start_bit", range.lo);
-        _field->emplace("bit_width", range.size());
+        _field->emplace("name"_cs, name);
+        _field->emplace("start_bit"_cs, range.lo);
+        _field->emplace("bit_width"_cs, range.size());
         // All fields optional by default, remove field?
-        _field->emplace("optional", true);
-        _field->emplace("is_constant", field->is<PHV::Constant>());
+        _field->emplace("optional"_cs, true);
+        _field->emplace("is_constant"_cs, field->is<PHV::Constant>());
         _fields->append(_field);
     }
-    _field_list->emplace("fields", _fields);
+    _field_list->emplace("fields"_cs, _fields);
     Util::JsonArray *_xbar_cfgs = new Util::JsonArray();
     Util::JsonObject *_xbar_cfg = new Util::JsonObject();
-    _xbar_cfg->emplace("stage_number", stage);
+    _xbar_cfg->emplace("stage_number"_cs, stage);
     Util::JsonArray *_xbar = new Util::JsonArray();
     for (auto &byte : ixbar_use->use) {
         for (auto &fieldinfo : byte.field_bytes) {
             for (int i = fieldinfo.lo; i <= fieldinfo.hi; i++) {
                 Util::JsonObject *_xbar_byte = new Util::JsonObject();
-                _xbar_byte->emplace("byte_number", (byte.loc.group * 16 + byte.loc.byte));
-                _xbar_byte->emplace("bit_in_byte", (i - fieldinfo.lo));
-                _xbar_byte->emplace("name", fieldNames[fieldinfo.field]);
-                _xbar_byte->emplace("field_bit", i);
+                _xbar_byte->emplace("byte_number"_cs, (byte.loc.group * 16 + byte.loc.byte));
+                _xbar_byte->emplace("bit_in_byte"_cs, (i - fieldinfo.lo));
+                _xbar_byte->emplace("name"_cs, fieldNames[fieldinfo.field]);
+                _xbar_byte->emplace("field_bit"_cs, i);
                 _xbar->append(_xbar_byte);
             }
         }
     }
-    _xbar_cfg->emplace("crossbar", _xbar);
+    _xbar_cfg->emplace("crossbar"_cs, _xbar);
     // TODO: Add wide hash support to populate 'crossbar_mod'
-    _xbar_cfg->emplace("crossbar_mod", new Util::JsonArray());
+    _xbar_cfg->emplace("crossbar_mod"_cs, new Util::JsonArray());
     _xbar_cfgs->append(_xbar_cfg);
-    _field_list->emplace("crossbar_configuration", _xbar_cfgs);
+    _field_list->emplace("crossbar_configuration"_cs, _xbar_cfgs);
     _field_lists->append(_field_list);
-    _dhc->emplace("field_lists", _field_lists);
+    _dhc->emplace("field_lists"_cs, _field_lists);
     int hashGroup = -1;
     Util::JsonArray *_hash_bits = new Util::JsonArray();
     int num_hash_bits = 0;
@@ -547,13 +547,13 @@ void GenerateDynamicHashJson::gen_ixbar_json(const IXBar::Use *ixbar_use_,
         if (!num_hash_bits) return;  // invalid bit mask
         for (auto hash_bit = 0; hash_bit < num_hash_bits; hash_bit++) {
             Util::JsonObject *_hash_bit = new Util::JsonObject();
-            _hash_bit->emplace("gfm_hash_bit", hash_bit);
-            _hash_bit->emplace("p4_hash_bit", hash_bit);
+            _hash_bit->emplace("gfm_hash_bit"_cs, hash_bit);
+            _hash_bit->emplace("p4_hash_bit"_cs, hash_bit);
             _hash_bits->append(_hash_bit);
         }
     }
     // any_hash_algorithm_allowed is an optional field
-    _dhc->emplace("any_hash_algorithm_allowed", false);
+    _dhc->emplace("any_hash_algorithm_allowed"_cs, false);
     Util::JsonArray *_algos = new Util::JsonArray();
     if (algorithms) {
         bool is_default = true;
@@ -567,8 +567,8 @@ void GenerateDynamicHashJson::gen_ixbar_json(const IXBar::Use *ixbar_use_,
             auto algorithm = new IR::MAU::HashFunction();
             if (algorithm->setup(algoExpr)) {
                 Util::JsonObject *_algo = new Util::JsonObject();
-                _algo->emplace("name", a);  // p4 algo name
-                _algo->emplace("type", algorithm->algo_type());
+                _algo->emplace("name"_cs, a);  // p4 algo name
+                _algo->emplace("type"_cs, algorithm->algo_type());
                 unsigned aHandle = algoHandleBase + algoHandle;
                 if (algoHandles.count(a) > 0) {
                     aHandle = algoHandles[a];
@@ -576,51 +576,51 @@ void GenerateDynamicHashJson::gen_ixbar_json(const IXBar::Use *ixbar_use_,
                     algoHandles[a] = aHandle;
                     algoHandle++;
                 }
-                _algo->emplace("handle", aHandle);
-                _algo->emplace("is_default", is_default);
-                _algo->emplace("msb", algorithm->msb);
-                _algo->emplace("extend", algorithm->extend);
-                _algo->emplace("reverse", algorithm->reverse);
+                _algo->emplace("handle"_cs, aHandle);
+                _algo->emplace("is_default"_cs, is_default);
+                _algo->emplace("msb"_cs, algorithm->msb);
+                _algo->emplace("extend"_cs, algorithm->extend);
+                _algo->emplace("reverse"_cs, algorithm->reverse);
                 // Convert poly in koopman notation to actual value
                 big_int poly, init, final_xor;
                 poly = algorithm->poly;
                 poly = (poly << 1) + 1;
-                _algo->emplace("poly", Util::toString(poly, 0, 0, 16));
+                _algo->emplace("poly"_cs, Util::toString(poly, 0, 0, 16));
                 init = algorithm->init;
-                _algo->emplace("init", Util::toString(init, 0, 0, 16));
+                _algo->emplace("init"_cs, Util::toString(init, 0, 0, 16));
                 final_xor = algorithm->final_xor;
-                _algo->emplace("final_xor", Util::toString(final_xor, 0, 0, 16));
+                _algo->emplace("final_xor"_cs, Util::toString(final_xor, 0, 0, 16));
                 _algos->append(_algo);
                 is_default = false;  // only set 1st algo to default
             }
         }
     }
-    _dhc->emplace("algorithms", _algos);
+    _dhc->emplace("algorithms"_cs, _algos);
     Util::JsonArray *_hash_cfgs = new Util::JsonArray();
     Util::JsonObject *_hash_cfg = new Util::JsonObject();
-    _hash_cfg->emplace("stage_number", stage);
+    _hash_cfg->emplace("stage_number"_cs, stage);
     Util::JsonObject *_hash = new Util::JsonObject();
-    _hash->emplace("hash_id", hashGroup);
-    _dhc->emplace("hash_bit_width", hash_bit_width);
-    _hash->emplace("num_hash_bits", num_hash_bits);
-    _hash->emplace("hash_bits", _hash_bits);
-    _hash_cfg->emplace("hash", _hash);
+    _hash->emplace("hash_id"_cs, hashGroup);
+    _dhc->emplace("hash_bit_width"_cs, hash_bit_width);
+    _hash->emplace("num_hash_bits"_cs, num_hash_bits);
+    _hash->emplace("hash_bits"_cs, _hash_bits);
+    _hash_cfg->emplace("hash"_cs, _hash);
     // TODO: Add wide hash support to populate 'hash_mod'
     Util::JsonObject *_hash_mod = new Util::JsonObject();
-    _hash_mod->emplace("hash_id", 0);
-    _hash_mod->emplace("num_hash_bits", 0);
-    _hash_mod->emplace("hash_bits", new Util::JsonArray());
-    _hash_cfg->emplace("hash_mod", _hash_mod);
+    _hash_mod->emplace("hash_id"_cs, 0);
+    _hash_mod->emplace("num_hash_bits"_cs, 0);
+    _hash_mod->emplace("hash_bits"_cs, new Util::JsonArray());
+    _hash_cfg->emplace("hash_mod"_cs, _hash_mod);
     _hash_cfgs->append(_hash_cfg);
-    _dhc->emplace("hash_configuration", _hash_cfgs);
+    _dhc->emplace("hash_configuration"_cs, _hash_cfgs);
 }
 
 std::ostream &operator<<(std::ostream &out, const DynamicHashJson &dyn) {
     auto dyn_json = new Util::JsonObject();
     if (dyn._dynHashNode)
-        dyn_json->emplace("dynamic_hash_calculations", dyn._dynHashNode);
+        dyn_json->emplace("dynamic_hash_calculations"_cs, dyn._dynHashNode);
     else
-        dyn_json->emplace("dynamic_hash_calculations", new Util::JsonObject());
+        dyn_json->emplace("dynamic_hash_calculations"_cs, new Util::JsonObject());
     dyn_json->serialize(out);
     return out;
 }

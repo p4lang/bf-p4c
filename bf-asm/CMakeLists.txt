@@ -393,7 +393,12 @@ if (ENABLE_GTESTS)
     ${BFN_P4C_SOURCE_DIR}/p4c
   )
   target_link_libraries (gtestasm PRIVATE bfas_lib gtest absl::strings
-	  absl::str_format)
+	  absl::str_format absl::base
+    absl::flags
+    absl::flags_parse
+    absl::status
+    absl::str_format
+    absl::hash)
   target_compile_options (gtestasm PRIVATE -Wall -Wextra -ggdb -O3
                           -Wno-unused-parameter -Wno-sign-compare)
 

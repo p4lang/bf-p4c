@@ -39,7 +39,7 @@ struct CoPackHint {
     /// true if this packing is the only option and required.
     bool required = false;
     /// reason of this copack constraint.
-    cstring reason = "";
+    cstring reason = ""_cs;
 };
 std::ostream& operator<<(std::ostream&, const CoPackHint&);
 std::ostream& operator<<(std::ostream&, const CoPackHint*);

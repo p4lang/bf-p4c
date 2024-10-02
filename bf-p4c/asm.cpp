@@ -66,9 +66,9 @@ bool AsmOutput::preorder(const IR::BFN::Pipe *pipe) {
     LOG1("ASM generation for successful compile? " << (_successfulCompile ? "true" : "false"));
 
     if (_successfulCompile) {
-        auto outputDir = BFNContext::get().getOutputDirectory("", pipe_id);
+        auto outputDir = BFNContext::get().getOutputDirectory(cstring::empty, pipe_id);
         if (!outputDir) return false;
-        cstring outputFile = outputDir + "/" + options.programName + ".bfa";
+        cstring outputFile = outputDir + "/"_cs + options.programName + ".bfa"_cs;
         std::ofstream out(outputFile, std::ios_base::out);
 
         MauAsmOutput *mauasm = nullptr;

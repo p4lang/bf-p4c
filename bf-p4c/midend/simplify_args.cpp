@@ -1,4 +1,7 @@
 #include "simplify_args.h"
+
+#include <queue>
+
 #include "bf-p4c/common/utils.h"
 #include "bf-p4c/midend/path_linearizer.h"
 
@@ -82,7 +85,7 @@ const IR::Node *InjectTmpVar::DoInject::postorder(IR::MethodCallStatement *mcs) 
         auto arg = paramSub.lookup(param);
         if (param->type->is<IR::Type_Struct>() && isNestedStruct(arg->expression)) {
             LOG3("Processing argument: " << arg << " for parameter: " << param);
-            cstring newName = refMap->newName(param->name);
+            cstring newName = refMap->newName(param->name.string_view());
             newArgs->push_back(new IR::Argument(
                     arg->srcInfo, arg->name, new IR::PathExpression(newName)));
             // Save arguments of in and inout parameters into local variables
@@ -163,9 +166,12 @@ void FlattenHeader::flattenType(const IR::Type* type) {
     }
 }
 
-cstring FlattenHeader::makeName(cstring sep) const {
-    cstring name = "";
-    for (auto n : nameSegments) name += sep + n;
+cstring FlattenHeader::makeName(std::string_view sep) const {
+    std::string name;
+    for (auto n : nameSegments) {
+        name += sep;
+        name += n;
+    }
     /// removing leading separator
     name = name.substr(1);
     return name;
@@ -200,10 +206,12 @@ bool FlattenHeader::preorder(IR::Type_Header* headerType) {
     return false;
 }
 
-cstring FlattenHeader::makeMember(cstring sep) const {
-    cstring name = "";
-    for (auto n = memberSegments.rbegin(); n != memberSegments.rend(); n++)
-        name += sep + *n;
+cstring FlattenHeader::makeMember(std::string_view sep) const {
+    std::string name;
+    for (auto n = memberSegments.rbegin(); n != memberSegments.rend(); n++) {
+        name += sep;
+        name += *n;
+    }
     /// removing leading separator
     name = name.substr(1);
     return name;
@@ -263,6 +271,84 @@ bool FlattenHeader::preorder(IR::Member* member) {
     return true;
 }
 
+int FlattenHeader::memberDepth(const IR::Member* m) {
+    int depth = 1;
+    while (const auto *child = m->expr->to<IR::Member>()) {
+        m = child;
+        depth++;
+    }
+    return depth;
+}
+
+const IR::Member *FlattenHeader::getTailMembers(const IR::Member *m, int depth) {
+    std::queue<const IR::Member *> members;
+
+    members.push(m);
+    while (const auto *child = m->expr->to<IR::Member>()) {
+        m = child;
+        if (members.size() == size_t(depth)) members.pop();
+        members.push(child);
+    }
+
+    BUG_CHECK(members.size() == size_t(depth), "Insufficient nested members; expected %1%", depth);
+
+    return members.front();
+}
+
+const IR::PathExpression *FlattenHeader::replaceSrcInfo(const IR::PathExpression *tgt,
+                                                        const IR::PathExpression *src) {
+    const auto *tgtPath = tgt->path;
+    const auto *srcPath = src->path;
+
+    IR::Path *newPath = new IR::Path(
+        srcPath->srcInfo, IR::ID(srcPath->name.srcInfo, tgtPath->name.name), tgtPath->absolute);
+    IR::PathExpression *newPathExpr = new IR::PathExpression(src->srcInfo, tgt->type, newPath);
+
+    return newPathExpr;
+}
+
+const IR::Member *FlattenHeader::replaceSrcInfo(const IR::Member *tgt, const IR::Member *src) {
+    const auto *tgtChildExpr = tgt->expr;
+    const auto *srcChildExpr = src->expr;
+
+    const auto *tgtChildMember = tgtChildExpr->to<IR::Member>();
+    const auto *srcChildMember = srcChildExpr->to<IR::Member>();
+    if (tgtChildMember && srcChildMember) {
+        tgtChildExpr = replaceSrcInfo(tgtChildMember, srcChildMember);
+    } else {
+        const auto *tgtChildPathExpr = tgtChildExpr->to<IR::PathExpression>();
+        const auto *srcChildPathExpr = srcChildExpr->to<IR::PathExpression>();
+        if (tgtChildPathExpr && srcChildPathExpr) {
+            tgtChildExpr = replaceSrcInfo(tgtChildPathExpr, srcChildPathExpr);
+        }
+    }
+
+    IR::Member *newMember = new IR::Member(src->srcInfo, tgt->type, tgtChildExpr,
+                                           IR::ID(src->member.srcInfo, tgt->member.name));
+
+    return newMember;
+}
+
+const IR::Expression *FlattenHeader::balancedReplaceSrcInfo(const IR::Expression *tgt,
+                                                            const IR::Member *src) {
+    if (const auto *tgt_member = tgt->to<IR::Member>()) {
+        int depth = memberDepth(tgt_member);
+        src = getTailMembers(src, depth);
+        return replaceSrcInfo(tgt_member, src);
+    } else {
+        const auto *tgt_pe = tgt->to<IR::PathExpression>();
+        CHECK_NULL(tgt_pe);
+
+        while (const auto *child = src->expr->to<IR::Member>()) {
+            src = child;
+        }
+        const auto* src_pe = src->expr->to<IR::PathExpression>();
+        CHECK_NULL(src_pe);
+
+        return replaceSrcInfo(tgt_pe, src_pe);
+    }
+}
+
 void FlattenHeader::postorder(IR::Member* member) {
     auto mem = member->toString();
     LOG2("postorder " << mem);
@@ -271,7 +357,22 @@ void FlattenHeader::postorder(IR::Member* member) {
                 "." << member->member <<
                 " with " << std::get<0>(replacementMap.at(mem)) <<
                 "." << std::get<1>(replacementMap.at(mem)));
-        member->expr = std::get<0>(replacementMap.at(mem))->apply(cloner);
+        // Ideally, we would just do:
+        //
+        //   member->expr = std::get<0>(replacementMap.at(mem))->apply(cloner);
+        //   member->member = std::get<1>(replacementMap.at(mem));
+        //
+        // The problem with this is that if we have mutliple instances of a single flattened field,
+        // then all instances will have the same srcInfo. This potentially breaks ResolutionContext
+        // because ResolutionContext verifies that a name being looked up appears after the
+        // corresponding declaration, but now all instances of the field name will use the srcInfo
+        // of the first instance.
+        //
+        // Fix by copying the srcInfo from the original instance to the cloned flattened instance.
+
+        // The flattened expression should be a Member or a PathExpression
+        member->expr = balancedReplaceSrcInfo(std::get<0>(replacementMap.at(mem)), member);
+
         member->member = std::get<1>(replacementMap.at(mem));
     }
 }
@@ -354,9 +455,12 @@ void FlattenHeader::explode(const IR::Expression* expression,
  * We should clean up the frontend flattenHeaders pass to not
  * append a digit after each field.
  */
-cstring FlattenHeader::makePath(cstring sep) const {
-    cstring name = "";
-    for (auto n : pathSegments) name += sep + n;
+cstring FlattenHeader::makePath(std::string_view sep) const {
+    std::string name;
+    for (auto n : pathSegments) {
+        name += sep;
+        name += n;
+    }
     name = name.substr(1);
     return name;
 }

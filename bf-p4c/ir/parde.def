@@ -127,7 +127,7 @@ class ChecksumLVal : FieldLVal {
 // This is useful if we need PHV allocation to derive the size.
 class TotalContainerSize : ParserRVal {
     dbprint { out << toString(); }
-    toString { return "total size of containers for fields"; }
+    toString { return "total size of containers for fields"_cs; }
 
     inline Vector<FieldLVal> fields;
 }
@@ -359,7 +359,7 @@ abstract ParserMatchValue { }
 class ParserConstMatchValue : ParserMatchValue {
     match_t value;
     dbprint { out << "const: " << value; }
-    toString { std::stringstream ss; ss << value; return ss.str().c_str(); }
+    toString { std::stringstream ss; ss << value; return cstring(ss.str()); }
 }
 
 /// One PVS is value vector that is matched against ALL select fields in that states.
@@ -518,7 +518,7 @@ abstract AbstractParser : Unit {
 /// some operands may be expressions that can't yet be evaluated.
 class Parser : AbstractParser {
 #apply
-    toString { return gress ? "egress parser" : "ingress parser"; }
+    toString { return gress ? "egress parser"_cs : "ingress parser"_cs; }
 
     ParserState start;
     optional IR::ID name;
@@ -534,7 +534,7 @@ class Parser : AbstractParser {
 /// are recognized by PHV allocation for allocation and correct live range
 /// analysis.
 class GhostParser : AbstractParser {
-    toString { return "ghost parser"; }
+    toString { return "ghost parser"_cs; }
     // Header ordering must be preserved
     ParserLVal ghost_md;  // field is a ConcreteHeaderRef
     optional IR::ID name;
@@ -722,7 +722,7 @@ class Deparser : AbstractDeparser {
 #noconstructor
     Deparser(gress_t gr) : AbstractDeparser(gr) {}
 #apply
-    toString { return gress ? "egress deparser" : "ingress deparser"; }
+    toString { return gress ? "egress deparser"_cs : "ingress deparser"_cs; }
 
     inline Vector<Emit>                 emits;
     inline Vector<DeparserParameter>    params;

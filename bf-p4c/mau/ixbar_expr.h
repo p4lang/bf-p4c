@@ -191,7 +191,7 @@ struct P4HashFunction {
 
 
     void slice(le_bitrange hash_slice);
-    cstring name() const { return is_dynamic() ? dyn_hash_name : "static_hash"; }
+    cstring name() const { return is_dynamic() ? dyn_hash_name : "static_hash"_cs; }
     int size() const { return hash_bits.size(); }
     bool equiv(const P4HashFunction *) const;
     bool is_next_bit_of_hash(const P4HashFunction *) const;

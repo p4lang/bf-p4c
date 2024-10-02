@@ -74,7 +74,7 @@ void CollectIngressBridgedFields::end_apply() {
         if (f.gress == EGRESS) continue;
         // Indicator does not need to be initialzed in mau.
         // TODO: check if still required.
-        if (f.name.endsWith(BFN::BRIDGED_MD_INDICATOR)) continue;
+        if (f.name.endsWith(BFN::BRIDGED_MD_INDICATOR.string())) continue;
 
         if (f.bridged && !bridged_to_orig.count(f.name)) {
             LOG5("Missing initialzation of bridged field: " << f);
@@ -158,7 +158,7 @@ bool GatherDigestFields::preorder(const IR::BFN::DigestFieldList* fl) {
 
     auto isFlexible = [&](const IR::Type_StructLike* st) -> bool {
         for (auto f : st->fields) {
-            auto anno = f->getAnnotation("flexible");
+            auto anno = f->getAnnotation("flexible"_cs);
             if (anno != nullptr)
                 return true; }
         return false; };
@@ -169,7 +169,7 @@ bool GatherDigestFields::preorder(const IR::BFN::DigestFieldList* fl) {
     auto iter = fl->sources.begin();
     forAllMatchingDoPostOrder<IR::StructField>(fl->type,
         [&](const IR::StructField* f) {
-            if (f->getAnnotation("flexible")) {
+            if (f->getAnnotation("flexible"_cs)) {
                 const auto* field = phv.field((*iter)->field);
                 digest_fields.push_back(field); }
             iter++; });
@@ -181,7 +181,7 @@ bool GatherDigestFields::preorder(const IR::BFN::DigestFieldList* fl) {
 bool GatherDigestFields::preorder(const IR::HeaderOrMetadata* hdr) {
     auto isFlexible = [&](const IR::Type_StructLike* st) -> bool {
         for (auto f : st->fields) {
-            auto anno = f->getAnnotation("flexible");
+            auto anno = f->getAnnotation("flexible"_cs);
             if (anno != nullptr)
                 return true; }
         return false; };
@@ -194,7 +194,7 @@ bool GatherDigestFields::preorder(const IR::HeaderOrMetadata* hdr) {
         [&](const IR::StructField* f) {
             header_stack.push_back(f->name); },
         [&](const IR::StructField* f) {
-            if (f->getAnnotation("flexible")) {
+            if (f->getAnnotation("flexible"_cs)) {
                 cstring fn = hdr->name;
                 for (auto hd : header_stack) {
                     fn = fn + "." + hd; }
@@ -260,7 +260,7 @@ bool CollectConstraints::preorder(const IR::HeaderOrMetadata* hdr) {
             header_stack.push_back(f->name);
         },
         [&](const IR::StructField* f) {
-            if (f->getAnnotation("flexible")) {
+            if (f->getAnnotation("flexible"_cs)) {
                 cstring fn = hdr->name;
                 for (auto hd : header_stack) {
                     fn = fn + "." + hd; }
@@ -297,7 +297,7 @@ bool CollectConstraints::preorder(const IR::BFN::DigestFieldList* fl) {
     auto iter = fl->sources.begin();
     forAllMatchingDoPostOrder<IR::StructField>(fl->type,
         [&](const IR::StructField* f) {
-            if (f->getAnnotation("flexible")) {
+            if (f->getAnnotation("flexible"_cs)) {
                 const auto* field = phv.field((*iter)->field);
                 flexible_fields.push_back(field); }
             iter++; });
@@ -1046,7 +1046,7 @@ void ConstraintSolver::add_field_alignment_constraints(
         str << " ";
         str << align.getAlignment();
         str << ")";
-        debug_info[hdr]["alignment"].insert(str.str());
+        debug_info[hdr]["alignment"_cs].insert(str.str());
     }
 
     // optimization goal, pack everything as close to 0 as possible
@@ -1071,7 +1071,7 @@ void ConstraintSolver::add_non_overlap_constraints(
             str << " ";
             str << (*it2)->name;
             str << ")";
-            debug_info[hdr]["no_overlap"].insert(str.str());
+            debug_info[hdr]["no_overlap"_cs].insert(str.str());
         }
     }
 }
@@ -1099,7 +1099,7 @@ void ConstraintSolver::add_extract_together_constraints(
                 str << " ";
                 str << (*it2)->name;
                 str << ")";
-                debug_info[hdr]["copack"].insert(str.str());
+                debug_info[hdr]["copack"_cs].insert(str.str());
             }
         }
     }
@@ -1127,7 +1127,7 @@ void ConstraintSolver::add_mutually_aligned_constraints(ordered_set<const PHV::F
                 str << " ";
                 str << (*it2)->name;
                 str << ")";
-                debug_info["_"]["mutual_align"].insert(str.str());
+                debug_info["_"_cs]["mutual_align"_cs].insert(str.str());
             }
         }
     }
@@ -1163,7 +1163,7 @@ void ConstraintSolver::add_solitary_constraints(
         str << "(";
         str << f1->name;
         str << ")";
-        debug_info[hdr]["solitary"].insert(str.str());
+        debug_info[hdr]["solitary"_cs].insert(str.str());
     }
 }
 
@@ -1187,7 +1187,7 @@ void ConstraintSolver::add_deparsed_to_tm_constraints(
         str << "(";
         str << f->name;
         str << ")";
-        debug_info[hdr]["fit_one_byte"].insert(str.str());
+        debug_info[hdr]["fit_one_byte"_cs].insert(str.str());
     }
 }
 
@@ -1208,7 +1208,7 @@ void ConstraintSolver::add_no_split_constraints(
             str << "(";
             str << f->name;
             str << ")";
-            debug_info[hdr]["fit_one_byte"].insert(str.str());
+            debug_info[hdr]["fit_one_byte"_cs].insert(str.str());
         } else if (f->size <= 16) {
             z3::expr mustFitTwoBytes =
                 ((v / 8 + 1) * 8) == (((v + f->size - 1) / 8) * 8);
@@ -1219,7 +1219,7 @@ void ConstraintSolver::add_no_split_constraints(
             str << "(";
             str << f->name;
             str << ")";
-            debug_info[hdr]["fit_two_bytes"].insert(str.str());
+            debug_info[hdr]["fit_two_bytes"_cs].insert(str.str());
         }
     }
 
@@ -1256,7 +1256,7 @@ void ConstraintSolver::add_no_split_constraints(
         str << "(";
         str << f1->name;
         str << ")";
-        debug_info[hdr]["solitary"].insert(str.str());
+        debug_info[hdr]["solitary"_cs].insert(str.str());
     }
 }
 
@@ -1284,7 +1284,7 @@ void ConstraintSolver::add_no_pack_constraints(
                 str << " ";
                 str << (*it2)->name;
                 str << ")";
-                debug_info[hdr]["copack"].insert(str.str());
+                debug_info[hdr]["copack"_cs].insert(str.str());
             }
         }
     }
@@ -1409,7 +1409,7 @@ void ConstraintSolver::dump_unsat_core() {
     unsigned i = 0;
     ordered_map<std::string, z3::expr> assertions;
     for (auto e : solver.assertions()) {
-        cstring name = cstring("p" + std::to_string(i++));
+        cstring name = cstring("p"_cs + std::to_string(i++));
         debug.add(e, name.c_str());
         assertions.emplace(name.c_str(), e);
     }
@@ -1505,10 +1505,10 @@ bool PackWithConstraintSolver::preorder(const IR::HeaderOrMetadata* hdr) {
     ordered_set<const PHV::Field*> nonByteAlignedFields;
     ordered_map<const PHV::Field*, const IR::StructField*> phvFieldToStructField;
     auto isNonByteAlignedFlexibleField = [&](const IR::StructField* f) {
-        return f->getAnnotation("flexible") != nullptr &&
+        return f->getAnnotation("flexible"_cs) != nullptr &&
                f->type->width_bits() % 8 != 0; };
     for (auto f : *hdr->type->fields.getEnumerator()->where(isNonByteAlignedFlexibleField)) {
-        cstring fieldName = hdr->name + "." + f->name;
+        cstring fieldName = hdr->name + "."_cs + f->name;
         const auto* field = phv.field(fieldName);
         nonByteAlignedFields.insert(field);
         phvFieldToStructField.emplace(field, f);
@@ -1517,10 +1517,10 @@ bool PackWithConstraintSolver::preorder(const IR::HeaderOrMetadata* hdr) {
 
     ordered_set<const PHV::Field*> byteAlignedFields;
     auto isByteAlignedFlexibleField = [&](const IR::StructField* f) {
-        return f->getAnnotation("flexible") != nullptr &&
+        return f->getAnnotation("flexible"_cs) != nullptr &&
                f->type->width_bits() % 8 == 0; };
     for (auto f : *hdr->type->fields.getEnumerator()->where(isByteAlignedFlexibleField)) {
-        cstring fieldName = hdr->name + "." + f->name;
+        cstring fieldName = hdr->name + "."_cs + f->name;
         const auto* field = phv.field(fieldName);
         byteAlignedFields.insert(field);
         phvFieldToStructField.emplace(field, f);
@@ -1581,7 +1581,7 @@ bool PackWithConstraintSolver::preorder(const IR::BFN::DigestFieldList* d) {
     ordered_set<const PHV::Field*> nonByteAlignedFields;
     ordered_map<const PHV::Field*, const IR::StructField*> phvFieldToStructField;
     auto isNonByteAlignedFlexibleField = [&](const IR::StructField* f) {
-        return f->getAnnotation("flexible") != nullptr &&
+        return f->getAnnotation("flexible"_cs) != nullptr &&
                f->type->width_bits() % 8 != 0; };
     for (auto s : sources) {
         if (isNonByteAlignedFlexibleField(std::get<0>(s))) {
@@ -1593,7 +1593,7 @@ bool PackWithConstraintSolver::preorder(const IR::BFN::DigestFieldList* d) {
 
     ordered_set<const PHV::Field*> byteAlignedFields;
     auto isByteAlignedFlexibleField = [&](const IR::StructField* f) {
-        return f->getAnnotation("flexible") != nullptr &&
+        return f->getAnnotation("flexible"_cs) != nullptr &&
                f->type->width_bits() % 8 == 0; };
     for (auto s : sources) {
         if (isByteAlignedFlexibleField(std::get<0>(s))) {
@@ -1698,8 +1698,8 @@ void PackWithConstraintSolver::solve() {
         // Add non-flexible fields from the header.
         auto type = headerMap.at(name);
         for (auto f : type->fields) {
-            if (!f->getAnnotation("flexible") &&
-                !f->getAnnotation("padding")) {
+            if (!f->getAnnotation("flexible"_cs) &&
+                !f->getAnnotation("padding"_cs)) {
                 fields.push_back(f);
                 LOG6("Pushing original field " << f);
                 continue; } }
@@ -1713,7 +1713,7 @@ void PackWithConstraintSolver::solve() {
                 fields.push_back(field);
                 LOG6("Pushing field " << field);
             } else {
-                cstring padFieldName = "__pad_" + cstring::to_cstring(padFieldId++);
+                cstring padFieldName = "__pad_"_cs + cstring::to_cstring(padFieldId++);
                 auto* fieldAnnotations = new IR::Annotations(
                         { new IR::Annotation(IR::ID("padding"), { }),
                         new IR::Annotation(IR::ID("overlayable"), { }) });
@@ -1807,7 +1807,7 @@ const IR::Node* ReplaceFlexibleType::postorder(IR::BFN::DigestFieldList* d) {
 
     std::vector<FieldListEntry> repacked_field_indices;
     for (auto f : repackedHeaderType->fields) {
-        if (f->getAnnotation("padding")) {
+        if (f->getAnnotation("padding"_cs)) {
             repacked_field_indices.push_back(std::make_pair(-1, f->type));
             continue; }
         repacked_field_indices.push_back(
@@ -1831,7 +1831,7 @@ const IR::Node* ReplaceFlexibleType::postorder(IR::BFN::DigestFieldList* d) {
 const IR::Node*
 ReplaceFlexibleType::postorder(IR::StructExpression* expr) {
     auto isPadding = [&](const IR::StructField* f) -> bool {
-        if (f->getAnnotation("padding"))
+        if (f->getAnnotation("padding"_cs))
             return true;
         return false; };
 
@@ -1860,7 +1860,7 @@ ReplaceFlexibleType::postorder(IR::StructExpression* expr) {
 // helper function
 bool findFlexibleAnnotation(const IR::Type_StructLike* header) {
     for (auto f : header->fields) {
-        auto anno = f->getAnnotation("flexible");
+        auto anno = f->getAnnotation("flexible"_cs);
         if (anno != nullptr)
             return true; }
     return false;
@@ -1956,7 +1956,7 @@ bool LogRepackedHeaders::preorder(const IR::HeaderOrMetadata* h) {
     // Check if this header may have been repacked by looking for flexible fields
     bool isRepacked = false;
     for (auto f : *h->type->fields.getEnumerator()) {
-        if (f->getAnnotation("flexible")) {
+        if (f->getAnnotation("flexible"_cs)) {
             isRepacked = true;
             break;
         }
@@ -2237,7 +2237,8 @@ PackFlexibleHeaders::PackFlexibleHeaders(const BFN_Options& options,
         new HeaderPushPop,
         new GatherReductionOrReqs(deps.red_info),
         new InstructionSelection(options, phv, deps.red_info),
-        new FindDependencyGraph(phv, deps, &options, "program_graph", "Pack Flexible Headers"),
+        new FindDependencyGraph(phv, deps, &options,
+                                "program_graph"_cs, "Pack Flexible Headers"_cs),
         new CollectPhvInfo(phv),
         pragmaAlias,
         new AutoAlias(phv, *pragmaAlias, *noOverlay),
@@ -2526,9 +2527,9 @@ BridgedPacking::BridgedPacking(BFN_Options& options, RepackedHeaderTypes& map,
         new BFN::ConvertSizeOfToConstant(),
         new PassRepeated({
             new P4::ConstantFolding(&refMap, &typeMap, true, typeChecking),
-            new P4::StrengthReduction(&refMap, &typeMap, typeChecking),
+            new P4::StrengthReduction(&typeMap, typeChecking),
             new P4::Reassociation(),
-            new P4::UselessCasts(&refMap, &typeMap)
+            new P4::UselessCasts(&typeMap)
         }),
         typeChecking,
         new RenameArchParams(&refMap, &typeMap),
@@ -2558,9 +2559,9 @@ SubstitutePackedHeaders::SubstitutePackedHeaders(BFN_Options& options,
         new BFN::ConvertSizeOfToConstant(),
         new PassRepeated({
             new P4::ConstantFolding(&refMap, &typeMap, true, typeChecking),
-            new P4::StrengthReduction(&refMap, &typeMap, typeChecking),
+            new P4::StrengthReduction(&typeMap, typeChecking),
             new P4::Reassociation(),
-            new P4::UselessCasts(&refMap, &typeMap)
+            new P4::UselessCasts(&typeMap)
         }),
         typeChecking,
         new RenameArchParams(&refMap, &typeMap),

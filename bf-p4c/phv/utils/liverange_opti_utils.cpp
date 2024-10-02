@@ -170,7 +170,7 @@ update_flowgraph(const PHV::UnitSet& g_units,
             auto* src_tbl = src2dsts.first;
 
             for (auto* dst_tbl : src2dsts.second) {
-                auto edge_descriptor = fg.add_edge(src_tbl, dst_tbl, "always_run");
+                auto edge_descriptor = fg.add_edge(src_tbl, dst_tbl, "always_run"_cs);
                 LOG5("   Added edge " << edge_descriptor.first << " : " << edge_descriptor.second <<
                      "(gress: " << map_entry.first << ")");
             }

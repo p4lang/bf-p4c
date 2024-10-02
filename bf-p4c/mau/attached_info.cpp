@@ -263,7 +263,7 @@ const IR::MAU::Instruction *SplitAttachedInfo::pre_split_addr_instr(const IR::MA
             index = MakeSlice(index, 0, addr_bits - 1);
         else if (index_width > 0 && index_width < addr_bits)
             dest = MakeSlice(dest, 0, index_width - 1);
-        return new IR::MAU::Instruction(act->srcInfo, "set", dest, index); }
+        return new IR::MAU::Instruction(act->srcInfo, "set"_cs, dest, index); }
     return nullptr;
 }
 
@@ -280,7 +280,7 @@ const IR::MAU::Instruction *SplitAttachedInfo::pre_split_enable_instr(const IR::
     // doing so causes problems with imem allocation (it incorrectly tries to pack instructions
     // in the same imem word.)
     if (!enabled) return nullptr;
-    return new IR::MAU::Instruction(act->srcInfo, "set", split_enable(at, tbl),
+    return new IR::MAU::Instruction(act->srcInfo, "set"_cs, split_enable(at, tbl),
                                     new IR::Constant(IR::Type::Bits::get(1), 1));
 }
 
@@ -298,7 +298,7 @@ const IR::MAU::Instruction *SplitAttachedInfo::pre_split_type_instr(const IR::MA
         BUG_CHECK(act->meter_types.count(at->unique_id()) > 0, "An enable stateful op %1% "
             "in action %2% has no meter type?", at->name, act->name);
         int meter_type = static_cast<int>(act->meter_types.at(at->unique_id()));
-        return new IR::MAU::Instruction(act->srcInfo, "set", split_type(at, tbl),
+        return new IR::MAU::Instruction(act->srcInfo, "set"_cs, split_type(at, tbl),
                 new IR::Constant(IR::Type::Bits::get(type_bits), meter_type));
     }
     return nullptr;
@@ -310,7 +310,7 @@ const IR::Expression *SplitAttachedInfo::split_enable(const IR::MAU::AttachedMem
         return nullptr;
     auto &tv = index_tempvars[at->name];
     if (!tv.enable) {
-        cstring enable_name = at->name + "$ena";
+        cstring enable_name = at->name + "$ena"_cs;
         tv.enable = new IR::TempVar(IR::Type::Bits::get(1), 0, enable_name); }
     phv.addTempVar(tv.enable, tbl->gress);
     return tv.enable;
@@ -323,7 +323,7 @@ const IR::Expression *SplitAttachedInfo::split_index(const IR::MAU::AttachedMemo
     if (addr_bits == 0) return nullptr;
     auto &tv = index_tempvars[at->name];
     if (!tv.index) {
-        cstring addr_name = at->name + "$index";
+        cstring addr_name = at->name + "$index"_cs;
         tv.index = new IR::TempVar(IR::Type::Bits::get(addr_bits), false, addr_name); }
     phv.addTempVar(tv.index, tbl->gress);
     return tv.index;
@@ -336,7 +336,7 @@ const IR::Expression *SplitAttachedInfo::split_type(const IR::MAU::AttachedMemor
     if (type_bits == 0) return nullptr;
     auto &tv = index_tempvars[at->name];
     if (!tv.type) {
-        cstring type_name = at->name + "$type";
+        cstring type_name = at->name + "$type"_cs;
         tv.type = new IR::TempVar(IR::Type::Bits::get(type_bits), false, type_name); }
     phv.addTempVar(tv.type, tbl->gress);
     return tv.type;
@@ -380,7 +380,7 @@ const IR::MAU::Action *SplitAttachedInfo::create_split_action(const IR::MAU::Act
         rv->default_allowed = true;
         rv->init_default = true;
         rv->hit_path_imp_only = true;
-        rv->disallowed_reason = "hit_path_only";
+        rv->disallowed_reason = "hit_path_only"_cs;
     }
 
     // Find instructions that depend on SALU/meter outputs and deal with them
@@ -399,7 +399,7 @@ const IR::MAU::Action *SplitAttachedInfo::create_split_action(const IR::MAU::Act
             if (auto ops = earlier_stage.found()) {
                 if (instr->name == "set") {
                     BUG_CHECK(instr->operands.size() == 2, "wrong number of operands to set");
-                    *it = new IR::MAU::Instruction(instr->srcInfo, "or",
+                    *it = new IR::MAU::Instruction(instr->srcInfo, "or"_cs,
                     instr->operands.at(0),
                     instr->operands.at(0),
                     instr->operands.at(1));
@@ -522,7 +522,7 @@ const IR::MAU::Action *SplitAttachedInfo::create_split_action(const IR::MAU::Act
                         " attached table %2% with format type %3%",
                         tbl->name, att.at(i)->name, format_type);
                 auto *adj_idx = new IR::MAU::StatefulCounter(idx->type, att.at(i));
-                auto *set = new IR::MAU::Instruction("set", idx, adj_idx);
+                auto *set = new IR::MAU::Instruction("set"_cs, idx, adj_idx);
                 rv->action.push_back(set); } }
     }
 

@@ -41,7 +41,7 @@ const IR::Node* ElimCallExprInIfCond::postorder(IR::MethodCallExpression* method
         BUG("Unexpected method call", methodCall);
     }
     auto& path = *linearizer.linearPath;
-    auto tempVar = refMap->newName(path.to_cstring());
+    auto tempVar = refMap->newName(path.to_cstring().string_view());
     auto decl = new IR::Declaration_Variable(tempVar, methodCall->type, methodCall->clone());
     stack.push_back(decl);
     return new IR::PathExpression(tempVar);

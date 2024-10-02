@@ -14,7 +14,6 @@
 #include "ir/namemap.h"
 #include "ir/pass_manager.h"
 #include "ir/visitor.h"
-#include "lib/path.h"
 #include "frontends/common/options.h"
 #include "frontends/p4/typeMap.h"
 #include "frontends/common/resolveReferences/resolveReferences.h"
@@ -50,7 +49,7 @@ class Architecture : public Inspector {
 
  private:
     inline static Arch_t architecture = Arch_t::UNKNOWN;
-    inline static cstring version = "UNKNOWN";
+    inline static cstring version = "UNKNOWN"_cs;
     inline static bool disabled_for_gtest = false;
     bool found = false;
 
@@ -120,7 +119,7 @@ struct RemoveExternMethodCallsExcludedByAnnotation : public Transform {
         auto* callExpr = call->methodCall->to<IR::MethodCallExpression>();
         BUG_CHECK(callExpr, "Malformed method call IR: %1%", call);
 
-        auto* dontTranslate = action->getAnnotation("dont_translate_extern_method");
+        auto* dontTranslate = action->getAnnotation("dont_translate_extern_method"_cs);
         if (!dontTranslate) return call;
         for (auto* excluded : dontTranslate->expr) {
             auto* excludedMethod = excluded->to<IR::StringLiteral>();
@@ -246,7 +245,7 @@ struct BlockInfo {
     int              block_index;
 
     BlockInfo(int pipe_index, cstring pipe_name, gress_t gress, ArchBlock_t block_type,
-              cstring parser_inst = "")
+              cstring parser_inst = ""_cs)
         : pipe_index(pipe_index),
           pipe_name(pipe_name),
           gress(gress),

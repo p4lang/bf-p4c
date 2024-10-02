@@ -40,7 +40,7 @@ void MatchRegister::toJSON(JSONGenerator& json) const {
 /* static */
 MatchRegister MatchRegister::fromJSON(JSONLoader& json) {
     if (auto* v = json.json->to<JsonString>())
-        return MatchRegister(v->c_str());
+        return MatchRegister(cstring(v->c_str()));
     BUG("Couldn't decode JSON value to parser match register");
     return MatchRegister();
 }

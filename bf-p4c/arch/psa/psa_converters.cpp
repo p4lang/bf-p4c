@@ -12,7 +12,7 @@ const IR::Node* HashConverter::postorder(IR::MethodCallExpression* node) {
     auto member = node->method->to<IR::Member>();
     BUG_CHECK(member->member == "get_hash",
               "unexpected Hash method %1%", member->member);
-    auto method = new IR::Member(node->srcInfo, member->expr, "get");
+    auto method = new IR::Member(node->srcInfo, member->expr, "get"_cs);
 
     auto typeArgs = new IR::Vector<IR::Type>();
     auto args = new IR::Vector<IR::Argument>();
@@ -37,7 +37,7 @@ const IR::Node* RandomConverter::postorder(IR::MethodCallExpression* node) {
     auto member = node->method->to<IR::Member>();
     BUG_CHECK(member->member == "read",
               "unexpected Random method %1%", member->member);
-    auto method = new IR::Member(node->srcInfo, member->expr, "get");
+    auto method = new IR::Member(node->srcInfo, member->expr, "get"_cs);
     auto args = new IR::Vector<IR::Argument>();
     return new IR::MethodCallExpression(node->srcInfo, method, args);
 }
@@ -47,7 +47,7 @@ const IR::Node* MeterConverter::postorder(IR::MethodCallExpression* node) {
     auto member = node->method->to<IR::Member>();
     if (auto path = member->expr->to<IR::PathExpression>()) {
         auto pathExpr = new IR::PathExpression(path->path->name);
-        auto method = new IR::Member(node->srcInfo, pathExpr, "execute");
+        auto method = new IR::Member(node->srcInfo, pathExpr, "execute"_cs);
         auto args = new IR::Vector<IR::Argument>();
         args->push_back(node->arguments->at(0));
         return new IR::MethodCallExpression(node->srcInfo, method, args);
@@ -72,13 +72,13 @@ const IR::Node* ControlConverter::postorder(IR::Property* p) {
     std::optional<cstring> newName = std::nullopt;
     auto value = p->value;
     if (p->name.name == "psa_implementation") {
-        newName = "implementation";
+        newName = "implementation"_cs;
     } else if (p->name.name == "psa_direct_counter") {
-        newName = "counters";
+        newName = "counters"_cs;
     } else if (p->name.name == "psa_direct_meter") {
-        newName = "meters";
+        newName = "meters"_cs;
     } else if (p->name.name == "psa_idle_timeout") {
-        newName = "idle_timeout";
+        newName = "idle_timeout"_cs;
         bool timeout = false;
         if (auto exprValue = p->value->to<IR::ExpressionValue>()) {
             if (auto expr = exprValue->expression) {
@@ -116,48 +116,48 @@ const IR::Node* IngressParserConverter::postorder(IR::P4Parser *node) {
     ordered_map<cstring, cstring> tnaParams;
 
     auto* packetIn = params->getParameter(0);
-    tnaParams.emplace("pkt", packetIn->name);
+    tnaParams.emplace("pkt"_cs, packetIn->name);
     paramList->push_back(packetIn);
 
     auto* headers = params->getParameter(1);
-    tnaParams.emplace("hdr", headers->name);
+    tnaParams.emplace("hdr"_cs, headers->name);
     paramList->push_back(headers);
 
     auto* meta = parser->getApplyParameters()->getParameter(2);
     auto* param = new IR::Parameter(meta->name, meta->annotations,
                                     IR::Direction::Out, meta->type);
-    tnaParams.emplace("ig_md", meta->name);
+    tnaParams.emplace("ig_md"_cs, meta->name);
     paramList->push_back(param);
 
     // add ig_intr_md
-    auto path = new IR::Path("ingress_intrinsic_metadata_t");
+    auto path = new IR::Path("ingress_intrinsic_metadata_t"_cs);
     auto type = new IR::Type_Name(path);
     param = new IR::Parameter(params->getParameter(3)->name, IR::Direction::Out, type);
-    tnaParams.emplace("ig_intr_md", params->getParameter(3)->name);
+    tnaParams.emplace("ig_intr_md"_cs, params->getParameter(3)->name);
     paramList->push_back(param);
 
     // add ig_intr_md_from_prsr
-    path = new IR::Path("ingress_intrinsic_metadata_from_parser_t");
+    path = new IR::Path("ingress_intrinsic_metadata_from_parser_t"_cs);
     type = new IR::Type_Name(path);
-    param = new IR::Parameter("ig_intr_md_from_prsr", IR::Direction::Out, type);
-    tnaParams.emplace("ig_intr_md_from_prsr", param->name);
+    param = new IR::Parameter("ig_intr_md_from_prsr"_cs, IR::Direction::Out, type);
+    tnaParams.emplace("ig_intr_md_from_prsr"_cs, param->name);
     paramList->push_back(param);
 
     // add ig_intr_md_for_tm
-    path = new IR::Path("ingress_intrinsic_metadata_for_tm_t");
+    path = new IR::Path("ingress_intrinsic_metadata_for_tm_t"_cs);
     type = new IR::Type_Name(path);
-    param = new IR::Parameter("ig_intr_md_for_tm", IR::Direction::Out, type);
-    tnaParams.emplace("ig_intr_md_for_tm", param->name);
+    param = new IR::Parameter("ig_intr_md_for_tm"_cs, IR::Direction::Out, type);
+    tnaParams.emplace("ig_intr_md_for_tm"_cs, param->name);
     paramList->push_back(param);
 
     // add compiler generated struct
-    path = new IR::Path("compiler_generated_metadata_t");
+    path = new IR::Path("compiler_generated_metadata_t"_cs);
     type = new IR::Type_Name(path);
     param = new IR::Parameter(BFN::COMPILER_META, IR::Direction::InOut, type);
     tnaParams.emplace(BFN::COMPILER_META, param->name);
     paramList->push_back(param);
 
-    auto parser_type = new IR::Type_Parser("ingressParserImpl", paramList);
+    auto parser_type = new IR::Type_Parser("ingressParserImpl"_cs, paramList);
 
     auto parserLocals = new IR::IndexedVector<IR::Declaration>();
     parserLocals->append(structure->ingressParserDeclarations);
@@ -170,7 +170,7 @@ const IR::Node* IngressParserConverter::postorder(IR::P4Parser *node) {
                 s->components.push_back(stmt);
         }
     }
-    auto result = new IR::BFN::TnaParser(parser->srcInfo, "ingressParserImpl",
+    auto result = new IR::BFN::TnaParser(parser->srcInfo, "ingressParserImpl"_cs,
                                                   parser_type, parser->constructorParams,
                                                   *parserLocals, parser->states,
                                                   tnaParams, INGRESS);
@@ -196,55 +196,55 @@ const IR::Node* EgressParserConverter::postorder(IR::P4Parser* node) {
     ordered_map<cstring, cstring> tnaParams;
 
     auto* packetIn = params->parameters.at(0);
-    tnaParams.emplace("pkt", packetIn->name);
+    tnaParams.emplace("pkt"_cs, packetIn->name);
     paramList->push_back(packetIn);
 
     auto* headers = params->parameters.at(1);
-    tnaParams.emplace("hdr", headers->name);
+    tnaParams.emplace("hdr"_cs, headers->name);
     paramList->push_back(headers);
 
     auto* meta = params->parameters.at(2);
     auto* param = new IR::Parameter(meta->name, meta->annotations,
                                     IR::Direction::Out, meta->type);
-    tnaParams.emplace("eg_md", meta->name);
+    tnaParams.emplace("eg_md"_cs, meta->name);
     paramList->push_back(param);
 
     // add eg_intr_md
-    auto path = new IR::Path("egress_intrinsic_metadata_t");
+    auto path = new IR::Path("egress_intrinsic_metadata_t"_cs);
     auto type = new IR::Type_Name(path);
-    param = new IR::Parameter("eg_intr_md", IR::Direction::Out, type);
-    tnaParams.emplace("eg_intr_md", param->name);
+    param = new IR::Parameter("eg_intr_md"_cs, IR::Direction::Out, type);
+    tnaParams.emplace("eg_intr_md"_cs, param->name);
     paramList->push_back(param);
 
     // add eg_intr_md_from_prsr
-    path = new IR::Path("egress_intrinsic_metadata_from_parser_t");
+    path = new IR::Path("egress_intrinsic_metadata_from_parser_t"_cs);
     type = new IR::Type_Name(path);
-    param = new IR::Parameter("eg_intr_md_from_prsr", IR::Direction::Out, type);
-    tnaParams.emplace("eg_intr_md_from_prsr", param->name);
+    param = new IR::Parameter("eg_intr_md_from_prsr"_cs, IR::Direction::Out, type);
+    tnaParams.emplace("eg_intr_md_from_prsr"_cs, param->name);
     paramList->push_back(param);
 
     // add ig_intr_md
-    path = new IR::Path("ingress_intrinsic_metadata_t");
+    path = new IR::Path("ingress_intrinsic_metadata_t"_cs);
     type = new IR::Type_Name(path);
-    param = new IR::Parameter("ig_intr_md", IR::Direction::InOut, type);
-    tnaParams.emplace("ig_intr_md", param->name);
+    param = new IR::Parameter("ig_intr_md"_cs, IR::Direction::InOut, type);
+    tnaParams.emplace("ig_intr_md"_cs, param->name);
     paramList->push_back(param);
 
     // add ig_intr_md_for_tm
-    path = new IR::Path("ingress_intrinsic_metadata_for_tm_t");
+    path = new IR::Path("ingress_intrinsic_metadata_for_tm_t"_cs);
     type = new IR::Type_Name(path);
-    param = new IR::Parameter("ig_intr_md_for_tm", IR::Direction::InOut, type);
-    tnaParams.emplace("ig_intr_md_for_tm", param->name);
+    param = new IR::Parameter("ig_intr_md_for_tm"_cs, IR::Direction::InOut, type);
+    tnaParams.emplace("ig_intr_md_for_tm"_cs, param->name);
     paramList->push_back(param);
 
     // add compiler generated struct
-    path = new IR::Path("compiler_generated_metadata_t");
+    path = new IR::Path("compiler_generated_metadata_t"_cs);
     type = new IR::Type_Name(path);
     param = new IR::Parameter(BFN::COMPILER_META, IR::Direction::InOut, type);
     tnaParams.emplace(BFN::COMPILER_META, param->name);
     paramList->push_back(param);
 
-    auto parser_type = new IR::Type_Parser("egressParserImpl", paramList);
+    auto parser_type = new IR::Type_Parser("egressParserImpl"_cs, paramList);
     for (auto* state : parser->states) {
         auto it = structure->egressParserStatements.find(state->name);
         if (it != structure->egressParserStatements.end()) {
@@ -253,7 +253,7 @@ const IR::Node* EgressParserConverter::postorder(IR::P4Parser* node) {
                 s->components.push_back(stmt);
         }
     }
-    auto result = new IR::BFN::TnaParser(parser->srcInfo, "egressParserImpl",
+    auto result = new IR::BFN::TnaParser(parser->srcInfo, "egressParserImpl"_cs,
                                                   parser_type, parser->constructorParams,
                                                   parser->parserLocals, parser->states,
                                                   tnaParams, EGRESS);
@@ -268,49 +268,49 @@ const IR::Node* IngressControlConverter::postorder(IR::P4Control* node) {
     ordered_map<cstring, cstring> tnaParams;
 
     auto* headers = params->parameters.at(0);
-    tnaParams.emplace("hdr", headers->name);
+    tnaParams.emplace("hdr"_cs, headers->name);
     paramList->push_back(headers);
 
     auto* meta = params->parameters.at(1);
-    tnaParams.emplace("ig_md", meta->name);
+    tnaParams.emplace("ig_md"_cs, meta->name);
     paramList->push_back(meta);
 
     // add ig_intr_md
-    auto path = new IR::Path("ingress_intrinsic_metadata_t");
+    auto path = new IR::Path("ingress_intrinsic_metadata_t"_cs);
     auto type = new IR::Type_Name(path);
-    auto param = new IR::Parameter("ig_intr_md", IR::Direction::In, type);
-    tnaParams.emplace("ig_intr_md", param->name);
+    auto param = new IR::Parameter("ig_intr_md"_cs, IR::Direction::In, type);
+    tnaParams.emplace("ig_intr_md"_cs, param->name);
     paramList->push_back(param);
 
     // add ig_intr_md_from_prsr
-    path = new IR::Path("ingress_intrinsic_metadata_from_parser_t");
+    path = new IR::Path("ingress_intrinsic_metadata_from_parser_t"_cs);
     type = new IR::Type_Name(path);
-    param = new IR::Parameter("ig_intr_md_from_parser", IR::Direction::In, type);
-    tnaParams.emplace("ig_intr_md_from_prsr", param->name);
+    param = new IR::Parameter("ig_intr_md_from_parser"_cs, IR::Direction::In, type);
+    tnaParams.emplace("ig_intr_md_from_prsr"_cs, param->name);
     paramList->push_back(param);
 
     // add ig_intr_md_for_dprsr
-    path = new IR::Path("ingress_intrinsic_metadata_for_deparser_t");
+    path = new IR::Path("ingress_intrinsic_metadata_for_deparser_t"_cs);
     type = new IR::Type_Name(path);
-    param = new IR::Parameter("ig_intr_md_for_dprsr", IR::Direction::InOut, type);
-    tnaParams.emplace("ig_intr_md_for_dprsr", param->name);
+    param = new IR::Parameter("ig_intr_md_for_dprsr"_cs, IR::Direction::InOut, type);
+    tnaParams.emplace("ig_intr_md_for_dprsr"_cs, param->name);
     paramList->push_back(param);
 
     // add ig_intr_md_for_tm
-    path = new IR::Path("ingress_intrinsic_metadata_for_tm_t");
+    path = new IR::Path("ingress_intrinsic_metadata_for_tm_t"_cs);
     type = new IR::Type_Name(path);
-    param = new IR::Parameter("ig_intr_md_for_tm", IR::Direction::InOut, type);
-    tnaParams.emplace("ig_intr_md_for_tm", param->name);
+    param = new IR::Parameter("ig_intr_md_for_tm"_cs, IR::Direction::InOut, type);
+    tnaParams.emplace("ig_intr_md_for_tm"_cs, param->name);
     paramList->push_back(param);
 
     // add compiler generated struct
-    path = new IR::Path("compiler_generated_metadata_t");
+    path = new IR::Path("compiler_generated_metadata_t"_cs);
     type = new IR::Type_Name(path);
     param = new IR::Parameter(BFN::COMPILER_META, IR::Direction::InOut, type);
     tnaParams.emplace(BFN::COMPILER_META, param->name);
     paramList->push_back(param);
 
-    auto controlType = new IR::Type_Control("ingress", paramList);
+    auto controlType = new IR::Type_Control("ingress"_cs, paramList);
 
     auto controlLocals = new IR::IndexedVector<IR::Declaration>();
     controlLocals->append(structure->ingressDeclarations);
@@ -320,7 +320,7 @@ const IR::Node* IngressControlConverter::postorder(IR::P4Control* node) {
     body->append(node->body->components);
     body->append(structure->ingressStatements);
 
-    auto result = new IR::BFN::TnaControl(node->srcInfo, "ingress", controlType,
+    auto result = new IR::BFN::TnaControl(node->srcInfo, "ingress"_cs, controlType,
          node->constructorParams, *controlLocals,
          new IR::BlockStatement(node->body->annotations, *body), tnaParams, INGRESS);
     return result;
@@ -334,73 +334,73 @@ const IR::Node* EgressControlConverter::postorder(IR::P4Control *node) {
     ordered_map<cstring, cstring> tnaParams;
 
     auto* headers = params->parameters.at(0);
-    tnaParams.emplace("hdr", headers->name);
+    tnaParams.emplace("hdr"_cs, headers->name);
     paramList->push_back(headers);
 
     auto* meta = params->parameters.at(1);
-    tnaParams.emplace("eg_md", meta->name);
+    tnaParams.emplace("eg_md"_cs, meta->name);
     paramList->push_back(meta);
 
     // add eg_intr_md
-    auto path = new IR::Path("egress_intrinsic_metadata_t");
+    auto path = new IR::Path("egress_intrinsic_metadata_t"_cs);
     auto type = new IR::Type_Name(path);
-    auto param = new IR::Parameter("eg_intr_md", IR::Direction::In, type);
-    tnaParams.emplace("eg_intr_md", param->name);
+    auto param = new IR::Parameter("eg_intr_md"_cs, IR::Direction::In, type);
+    tnaParams.emplace("eg_intr_md"_cs, param->name);
     paramList->push_back(param);
 
     // add eg_intr_md_from_prsr
-    path = new IR::Path("egress_intrinsic_metadata_from_parser_t");
+    path = new IR::Path("egress_intrinsic_metadata_from_parser_t"_cs);
     type = new IR::Type_Name(path);
-    param = new IR::Parameter("eg_intr_md_from_prsr", IR::Direction::In, type);
-    tnaParams.emplace("eg_intr_md_from_prsr", param->name);
+    param = new IR::Parameter("eg_intr_md_from_prsr"_cs, IR::Direction::In, type);
+    tnaParams.emplace("eg_intr_md_from_prsr"_cs, param->name);
     paramList->push_back(param);
 
     // add eg_intr_md_for_dprsr
-    path = new IR::Path("egress_intrinsic_metadata_for_deparser_t");
+    path = new IR::Path("egress_intrinsic_metadata_for_deparser_t"_cs);
     type = new IR::Type_Name(path);
-    param = new IR::Parameter("eg_intr_md_for_dprsr", IR::Direction::InOut, type);
-    tnaParams.emplace("eg_intr_md_for_dprsr", param->name);
+    param = new IR::Parameter("eg_intr_md_for_dprsr"_cs, IR::Direction::InOut, type);
+    tnaParams.emplace("eg_intr_md_for_dprsr"_cs, param->name);
     paramList->push_back(param);
 
     // add eg_intr_md_for_oport
-    path = new IR::Path("egress_intrinsic_metadata_for_output_port_t");
+    path = new IR::Path("egress_intrinsic_metadata_for_output_port_t"_cs);
     type = new IR::Type_Name(path);
-    param = new IR::Parameter("eg_intr_md_for_oport", IR::Direction::InOut, type);
-    tnaParams.emplace("eg_intr_md_for_oport", param->name);
+    param = new IR::Parameter("eg_intr_md_for_oport"_cs, IR::Direction::InOut, type);
+    tnaParams.emplace("eg_intr_md_for_oport"_cs, param->name);
     paramList->push_back(param);
 
     /// TODO following three parameters are added and should be removed after
     /// the defuse analysis is moved to the midend and bridge metadata is implemented.
 
     // add ig_intr_md_from_prsr
-    path = new IR::Path("ingress_intrinsic_metadata_t");
+    path = new IR::Path("ingress_intrinsic_metadata_t"_cs);
     type = new IR::Type_Name(path);
-    param = new IR::Parameter("ig_intr_md", IR::Direction::InOut, type);
-    tnaParams.emplace("ig_intr_md", param->name);
+    param = new IR::Parameter("ig_intr_md"_cs, IR::Direction::InOut, type);
+    tnaParams.emplace("ig_intr_md"_cs, param->name);
     paramList->push_back(param);
 
     // add ig_intr_md_for_tm
-    path = new IR::Path("ingress_intrinsic_metadata_for_tm_t");
+    path = new IR::Path("ingress_intrinsic_metadata_for_tm_t"_cs);
     type = new IR::Type_Name(path);
-    param = new IR::Parameter("ig_intr_md_for_tm", IR::Direction::InOut, type);
-    tnaParams.emplace("ig_intr_md_for_tm", param->name);
+    param = new IR::Parameter("ig_intr_md_for_tm"_cs, IR::Direction::InOut, type);
+    tnaParams.emplace("ig_intr_md_for_tm"_cs, param->name);
     paramList->push_back(param);
 
     // add ig_intr_md_from_prsr
-    path = new IR::Path("ingress_intrinsic_metadata_from_parser_t");
+    path = new IR::Path("ingress_intrinsic_metadata_from_parser_t"_cs);
     type = new IR::Type_Name(path);
-    param = new IR::Parameter("ig_intr_md_from_prsr", IR::Direction::InOut, type);
-    tnaParams.emplace("ig_intr_md_from_prsr", param->name);
+    param = new IR::Parameter("ig_intr_md_from_prsr"_cs, IR::Direction::InOut, type);
+    tnaParams.emplace("ig_intr_md_from_prsr"_cs, param->name);
     paramList->push_back(param);
 
     // add compiler generated struct
-    path = new IR::Path("compiler_generated_metadata_t");
+    path = new IR::Path("compiler_generated_metadata_t"_cs);
     type = new IR::Type_Name(path);
     param = new IR::Parameter(BFN::COMPILER_META, IR::Direction::InOut, type);
     tnaParams.emplace(BFN::COMPILER_META, param->name);
     paramList->push_back(param);
 
-    auto controlType = new IR::Type_Control("egress", paramList);
+    auto controlType = new IR::Type_Control("egress"_cs, paramList);
 
     auto controlLocals = new IR::IndexedVector<IR::Declaration>();
     controlLocals->append(structure->egressDeclarations);
@@ -410,7 +410,7 @@ const IR::Node* EgressControlConverter::postorder(IR::P4Control *node) {
     body->append(node->body->components);
     body->append(structure->egressStatements);
 
-    auto result = new IR::BFN::TnaControl(node->srcInfo, "egress", controlType,
+    auto result = new IR::BFN::TnaControl(node->srcInfo, "egress"_cs, controlType,
         node->constructorParams, *controlLocals,
         new IR::BlockStatement(node->body->annotations, *body), tnaParams, EGRESS);
     return result;
@@ -425,45 +425,45 @@ const IR::Node* IngressDeparserConverter::postorder(IR::P4Control* node) {
     ordered_map<cstring, cstring> tnaParams;
 
     auto* packetOut = params->parameters.at(0);
-    tnaParams.emplace("pkt", packetOut->name);
+    tnaParams.emplace("pkt"_cs, packetOut->name);
     paramList->push_back(packetOut);
 
     // add header
     auto hdr = deparser->getApplyParameters()->parameters.at(4);
     auto param = new IR::Parameter(hdr->name, hdr->annotations,
                                    IR::Direction::InOut, hdr->type);
-    tnaParams.emplace("hdr", param->name);
+    tnaParams.emplace("hdr"_cs, param->name);
     paramList->push_back(param);
 
     // add metadata
     auto meta = deparser->getApplyParameters()->parameters.at(5);
     param = new IR::Parameter(meta->name, meta->annotations,
                               IR::Direction::In, meta->type);
-    tnaParams.emplace("metadata", param->name);
+    tnaParams.emplace("metadata"_cs, param->name);
     paramList->push_back(param);
 
     // add deparser intrinsic metadata
-    auto path = new IR::Path("ingress_intrinsic_metadata_for_deparser_t");
+    auto path = new IR::Path("ingress_intrinsic_metadata_for_deparser_t"_cs);
     auto type = new IR::Type_Name(path);
-    param = new IR::Parameter("ig_intr_md_for_dprsr", IR::Direction::In, type);
-    tnaParams.emplace("ig_intr_md_for_dprsr", param->name);
+    param = new IR::Parameter("ig_intr_md_for_dprsr"_cs, IR::Direction::In, type);
+    tnaParams.emplace("ig_intr_md_for_dprsr"_cs, param->name);
     paramList->push_back(param);
 
     // add intrinsic metadata
-    path = new IR::Path("ingress_intrinsic_metadata_t");
+    path = new IR::Path("ingress_intrinsic_metadata_t"_cs);
     type = new IR::Type_Name(path);
-    param = new IR::Parameter("ig_intr_md", IR::Direction::In, type);
-    tnaParams.emplace("ig_intr_md", param->name);
+    param = new IR::Parameter("ig_intr_md"_cs, IR::Direction::In, type);
+    tnaParams.emplace("ig_intr_md"_cs, param->name);
     paramList->push_back(param);
 
     // add compiler generated struct
-    path = new IR::Path("compiler_generated_metadata_t");
+    path = new IR::Path("compiler_generated_metadata_t"_cs);
     type = new IR::Type_Name(path);
     param = new IR::Parameter(COMPILER_META, IR::Direction::InOut, type);
     tnaParams.emplace(COMPILER_META, param->name);
     paramList->push_back(param);
 
-    auto controlType = new IR::Type_Control("ingressDeparserImpl", paramList);
+    auto controlType = new IR::Type_Control("ingressDeparserImpl"_cs, paramList);
 
     auto controlLocals = new IR::IndexedVector<IR::Declaration>();
     controlLocals->append(structure->ingressDeparserDeclarations);
@@ -474,7 +474,7 @@ const IR::Node* IngressDeparserConverter::postorder(IR::P4Control* node) {
     statements->append(deparser->body->components);
     auto body = new IR::BlockStatement(deparser->body->srcInfo, *statements);
 
-    auto result = new IR::BFN::TnaDeparser(deparser->srcInfo, "ingressDeparserImpl",
+    auto result = new IR::BFN::TnaDeparser(deparser->srcInfo, "ingressDeparserImpl"_cs,
                                                     controlType, deparser->constructorParams,
                                                     *controlLocals, body, tnaParams, INGRESS);
     return result;
@@ -490,66 +490,66 @@ const IR::Node* EgressDeparserConverter::postorder(IR::P4Control* node) {
     ordered_map<cstring, cstring> tnaParams;
 
     auto* packetOut = params->parameters.at(0);
-    tnaParams.emplace("pkt", packetOut->name);
+    tnaParams.emplace("pkt"_cs, packetOut->name);
     paramList->push_back(packetOut);
 
     // add header
     auto hdr = deparser->getApplyParameters()->parameters.at(3);
     auto param = new IR::Parameter(hdr->name, hdr->annotations,
                                    IR::Direction::InOut, hdr->type);
-    tnaParams.emplace("hdr", param->name);
+    tnaParams.emplace("hdr"_cs, param->name);
     paramList->push_back(param);
 
     // add metadata
     auto meta = deparser->getApplyParameters()->parameters.at(4);
     param = new IR::Parameter(meta->name, meta->annotations,
                               IR::Direction::In, meta->type);
-    tnaParams.emplace("metadata", param->name);
+    tnaParams.emplace("metadata"_cs, param->name);
     paramList->push_back(param);
 
     // add eg_intr_md_for_dprsr
-    auto path = new IR::Path("egress_intrinsic_metadata_for_deparser_t");
+    auto path = new IR::Path("egress_intrinsic_metadata_for_deparser_t"_cs);
     auto type = new IR::Type_Name(path);
-    param = new IR::Parameter("eg_intr_md_for_dprsr", IR::Direction::In, type);
-    tnaParams.emplace("eg_intr_md_for_dprsr", param->name);
+    param = new IR::Parameter("eg_intr_md_for_dprsr"_cs, IR::Direction::In, type);
+    tnaParams.emplace("eg_intr_md_for_dprsr"_cs, param->name);
     paramList->push_back(param);
 
     // add eg_intr_md_from_prsr
-    path = new IR::Path("egress_intrinsic_metadata_from_parser_t");
+    path = new IR::Path("egress_intrinsic_metadata_from_parser_t"_cs);
     type = new IR::Type_Name(path);
-    param = new IR::Parameter("eg_intr_md_from_prsr", IR::Direction::In, type);
-    tnaParams.emplace("eg_intr_md_from_prsr", param->name);
+    param = new IR::Parameter("eg_intr_md_from_prsr"_cs, IR::Direction::In, type);
+    tnaParams.emplace("eg_intr_md_from_prsr"_cs, param->name);
     paramList->push_back(param);
 
     // add eg_intr_md
-    path = new IR::Path("egress_intrinsic_metadata_t");
+    path = new IR::Path("egress_intrinsic_metadata_t"_cs);
     type = new IR::Type_Name(path);
-    param = new IR::Parameter("eg_intr_md", IR::Direction::In, type);
-    tnaParams.emplace("eg_intr_md", param->name);
+    param = new IR::Parameter("eg_intr_md"_cs, IR::Direction::In, type);
+    tnaParams.emplace("eg_intr_md"_cs, param->name);
     paramList->push_back(param);
 
     // add ig_intr_md
-    path = new IR::Path("ingress_intrinsic_metadata_t");
+    path = new IR::Path("ingress_intrinsic_metadata_t"_cs);
     type = new IR::Type_Name(path);
-    param = new IR::Parameter("ig_intr_md", IR::Direction::In, type);
-    tnaParams.emplace("ig_intr_md", param->name);
+    param = new IR::Parameter("ig_intr_md"_cs, IR::Direction::In, type);
+    tnaParams.emplace("ig_intr_md"_cs, param->name);
     paramList->push_back(param);
 
     // add ig_intr_md_for_tm
-    path = new IR::Path("ingress_intrinsic_metadata_for_tm_t");
+    path = new IR::Path("ingress_intrinsic_metadata_for_tm_t"_cs);
     type = new IR::Type_Name(path);
-    param = new IR::Parameter("ig_intr_md_for_tm", IR::Direction::In, type);
-    tnaParams.emplace("ig_intr_md_for_tm", param->name);
+    param = new IR::Parameter("ig_intr_md_for_tm"_cs, IR::Direction::In, type);
+    tnaParams.emplace("ig_intr_md_for_tm"_cs, param->name);
     paramList->push_back(param);
 
     // add compiler generated struct
-    path = new IR::Path("compiler_generated_metadata_t");
+    path = new IR::Path("compiler_generated_metadata_t"_cs);
     type = new IR::Type_Name(path);
     param = new IR::Parameter(COMPILER_META, IR::Direction::InOut, type);
     tnaParams.emplace(COMPILER_META, param->name);
     paramList->push_back(param);
 
-    auto controlType = new IR::Type_Control("egressDeparserImpl", paramList);
+    auto controlType = new IR::Type_Control("egressDeparserImpl"_cs, paramList);
 
     auto controlLocals = new IR::IndexedVector<IR::Declaration>();
     controlLocals->append(structure->egressDeparserDeclarations);
@@ -560,7 +560,7 @@ const IR::Node* EgressDeparserConverter::postorder(IR::P4Control* node) {
     statements->append(deparser->body->components);
     auto body = new IR::BlockStatement(deparser->body->srcInfo, *statements);
 
-    auto result = new IR::BFN::TnaDeparser(deparser->srcInfo, "egressDeparserImpl",
+    auto result = new IR::BFN::TnaDeparser(deparser->srcInfo, "egressDeparserImpl"_cs,
                                                     controlType, deparser->constructorParams,
                                                     *controlLocals, body, tnaParams, EGRESS);
     return result;
@@ -624,7 +624,7 @@ const IR::Node* PathExpressionConverter::postorder(IR::Member *node) {
     cstring pathname = expr->path->name.toString();
 
     gress_t thread;
-    cstring blockName = "";
+    cstring blockName = ""_cs;
     if (auto* parser = findContext<IR::BFN::TnaParser>()) {
         thread = parser->thread;
         blockName = parser->toString();

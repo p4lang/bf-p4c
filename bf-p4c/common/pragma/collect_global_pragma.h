@@ -29,7 +29,7 @@ class CollectGlobalPragma : public Inspector {
     const std::vector<const IR::Annotation*>& global_pragmas() const { return global_pragmas_; }
 
     /// Vector of all PHV pragmas recognized by the backend.
-    static const std::vector<cstring> *g_global_pragma_names;
+    static const std::vector<std::string> *g_global_pragma_names;
 
     /// Check if pragma exists
     const IR::Annotation *exists(const char *pragma_name) const;

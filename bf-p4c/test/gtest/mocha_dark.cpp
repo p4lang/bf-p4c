@@ -76,8 +76,8 @@ V1Switch(parse(), verifyChecksum(), mau(), mau(),
 
     auto& options = BackendOptions();
     options.langVersion = CompilerOptions::FrontendVersion::P4_16;
-    options.target = "tofino";
-    options.arch = "v1model";
+    options.target = "tofino"_cs;
+    options.arch = "v1model"_cs;
     options.disable_parse_min_depth_limit = true;
 
     return TofinoPipeTestCase::createWithThreadLocalInstances(source);
@@ -159,15 +159,15 @@ apply {
     after_analysis = after_analysis->apply(*dark);
     ASSERT_TRUE(after_analysis);
 
-    const PHV::Field* h1f1 = phv.field("ingress::h1.f1");
-    const PHV::Field* h1f2 = phv.field("ingress::h1.f2");
-    const PHV::Field* h1f3 = phv.field("ingress::h1.f3");
-    const PHV::Field* h1f4 = phv.field("ingress::h1.f4");
-    const PHV::Field* h1p0 = phv.field("ingress::h1.pad_0");
-    const PHV::Field* m1f1 = phv.field("ingress::meta.f1");
-    const PHV::Field* m1f2 = phv.field("ingress::meta.f2");
-    const PHV::Field* m1f3 = phv.field("ingress::meta.f3");
-    const PHV::Field* m1f4 = phv.field("ingress::meta.f4");
+    const PHV::Field* h1f1 = phv.field("ingress::h1.f1"_cs);
+    const PHV::Field* h1f2 = phv.field("ingress::h1.f2"_cs);
+    const PHV::Field* h1f3 = phv.field("ingress::h1.f3"_cs);
+    const PHV::Field* h1f4 = phv.field("ingress::h1.f4"_cs);
+    const PHV::Field* h1p0 = phv.field("ingress::h1.pad_0"_cs);
+    const PHV::Field* m1f1 = phv.field("ingress::meta.f1"_cs);
+    const PHV::Field* m1f2 = phv.field("ingress::meta.f2"_cs);
+    const PHV::Field* m1f3 = phv.field("ingress::meta.f3"_cs);
+    const PHV::Field* m1f4 = phv.field("ingress::meta.f4"_cs);
 
     ASSERT_TRUE(h1f1 && h1f2 && h1f3 && h1f4 && h1p0 && m1f1 && m1f2 && m1f3 && m1f4);
 

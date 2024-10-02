@@ -136,11 +136,11 @@ void PhvInfo::add_struct(
         if (size == 0)
             continue;
         // "hidden" annotation indicates padding introduced with bridged metadata fields
-        bool isPad = f->getAnnotations()->getSingle("hidden") != nullptr ||
-                     f->getAnnotations()->getSingle("padding") != nullptr;
-        bool isOverlayable = f->getAnnotations()->getSingle("overlayable") != nullptr;
+        bool isPad = f->getAnnotations()->getSingle("hidden"_cs) != nullptr ||
+                     f->getAnnotations()->getSingle("padding"_cs) != nullptr;
+        bool isOverlayable = f->getAnnotations()->getSingle("overlayable"_cs) != nullptr;
         // "flexible" annotation indicates flexible fields
-        bool isFlexible = f->getAnnotations()->getSingle("flexible") != nullptr;
+        bool isFlexible = f->getAnnotations()->getSingle("flexible"_cs) != nullptr;
         bool isFixedSizeHeader = type->is<IR::BFN::Type_FixedSizeHeader>();
         std::optional<Util::SourceInfo> srcInfo = std::nullopt;
         if (f->srcInfo.isValid())
@@ -231,9 +231,9 @@ cstring PhvInfo::full_hdr_name(const cstring& name_) const {
     LOG4("    ...with suffix " << suffix);
     std::set<cstring> matches;
     for (auto& hdr : all_structs) {
-        if ((hdr.first).endsWith(suffix))
+        if ((hdr.first).endsWith(suffix.string()))
             LOG4("    ...found suffix: " << hdr.first);
-        if ((hdr.first).startsWith(prefix) && (hdr.first).endsWith(suffix))
+        if ((hdr.first).startsWith(prefix.string()) && (hdr.first).endsWith(suffix.string()))
             matches.insert(hdr.first);
     }
     if (matches.size() > 1) {
@@ -409,9 +409,9 @@ const PHV::Field *PhvInfo::field(const cstring& name_) const {
     std::set<std::pair<cstring, const PHV::Field*>> matches;
     for (auto& kv : all_fields) {
         cstring name = kv.first;
-        if (name.endsWith(suffix))
+        if (name.endsWith(suffix.string()))
             LOG4("    ...found suffix: " << kv.first);
-        if (name.startsWith(prefix) && name.endsWith(suffix))
+        if (name.startsWith(prefix.string()) && name.endsWith(suffix.string()))
             matches.insert(std::make_pair(kv.first, &kv.second)); }
     if (matches.size() > 1) {
         std::stringstream msg;
@@ -1413,7 +1413,7 @@ class CollectPhvFields : public Inspector {
             f->set_avoid_alloc(true);
         }
         // bridged_metadata_indicator must be placed in 8-bit container
-        if (tv->name.endsWith(BFN::BRIDGED_MD_INDICATOR)) {
+        if (tv->name.endsWith(BFN::BRIDGED_MD_INDICATOR.string())) {
             PHV::Field* f = phv.field(tv);
             BUG_CHECK(f, "No PhvInfo entry for a field we just added?");
             f->set_exact_containers(true);
@@ -1898,17 +1898,17 @@ class CollectPardeConstraints : public Inspector {
         static std::vector<cstring> rv;
 
         if (rv.empty()) {
-            rv = { "eg_intr_md.egress_port",
-                   "ig_intr_md_for_tm.mcast_grp_a",
-                   "ig_intr_md_for_tm.mcast_grp_b",
-                   "ig_intr_md_for_tm.ucast_egress_port"};
+            rv = { "eg_intr_md.egress_port"_cs,
+                   "ig_intr_md_for_tm.mcast_grp_a"_cs,
+                   "ig_intr_md_for_tm.mcast_grp_b"_cs,
+                   "ig_intr_md_for_tm.ucast_egress_port"_cs};
 
             if (Device::currentDevice() == Device::TOFINO) {
-                rv.insert(rv.end(), { "ig_intr_md_for_tm.level1_mcast_hash",
-                                      "ig_intr_md_for_tm.level2_mcast_hash",
-                                      "ig_intr_md_for_tm.level1_exclusion_id",
-                                      "ig_intr_md_for_tm.level2_exclusion_id",
-                                      "ig_intr_md_for_tm.rid"});
+                rv.insert(rv.end(), { "ig_intr_md_for_tm.level1_mcast_hash"_cs,
+                                      "ig_intr_md_for_tm.level2_mcast_hash"_cs,
+                                      "ig_intr_md_for_tm.level1_exclusion_id"_cs,
+                                      "ig_intr_md_for_tm.level2_exclusion_id"_cs,
+                                      "ig_intr_md_for_tm.rid"_cs});
             }
         }
 
@@ -2430,7 +2430,7 @@ std::ostream &operator<<(std::ostream& out, const PhvInfo::SameContainerAllocCon
     out << "SameContainerAllocConstraint:\n";
     for (const auto& set : c.same_byte_bits) {
         out << "{";
-        cstring sep = "";
+        std::string sep = "";
         for (const auto& e : set) {
             out << sep << e;
             sep = ", ";
@@ -2507,7 +2507,7 @@ std::ostream &operator<<(std::ostream &out, const PHV::FieldSlice* fs) {
 
 std::ostream& operator<<(std::ostream& out, const PackingLayout& p) {
     out << "[";
-    cstring sep = "";
+    std::string sep = "";
     for (const auto& v : p.layout) {
         out << sep;
         sep = ", ";

@@ -18,9 +18,9 @@ enum HeaderState : uintmax_t {
 };
 const uint state_size = 2;
 const std::map<HeaderState, cstring> header_state_to_cstring = {
-    { UNKNOWN, "UNKNOWN" },
-    { INACTIVE, "INACTIVE" },
-    { ACTIVE, "ACTIVE" }
+    { UNKNOWN, "UNKNOWN"_cs },
+    { INACTIVE, "INACTIVE"_cs },
+    { ACTIVE, "ACTIVE"_cs }
 };
 
 /**

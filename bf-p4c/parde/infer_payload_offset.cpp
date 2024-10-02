@@ -389,7 +389,7 @@ class InsertFrontierStates : public ParserTransform {
         int id = parser_to_frontier_state_names[parser->gress].size();
 
         auto to_state = new IR::BFN::Transition(match_t(), 0, transition->next);
-        cstring stopper_name = "$hdr_len_inc_stop_" + cstring::to_cstring(id);
+        cstring stopper_name = "$hdr_len_inc_stop_"_cs + cstring::to_cstring(id);
         auto stopper = new IR::BFN::ParserState(stopper_name, parser->gress, {}, {}, {to_state});
 
         LOG3("insert parser state " << stopper->name << " on "
@@ -755,7 +755,7 @@ class InsertStallState : public ParserTransform {
             //  make a new state
 
             unsigned  new_shift = transition->shift - hdr_stop;
-            cstring new_state_name = state->name + ".$hdr_len_stop_stall";
+            cstring new_state_name = state->name + ".$hdr_len_stop_stall"_cs;
             auto new_state =
                 new IR::BFN::ParserState(state->p4States, new_state_name, state->gress);
             auto orig_state_new_transition = new IR::BFN::Transition(match_t(),

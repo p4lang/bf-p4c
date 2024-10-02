@@ -76,8 +76,8 @@ createPaNoOverlayPragmaTestCase() {
 
     auto& options = BackendOptions();
     options.langVersion = CompilerOptions::FrontendVersion::P4_16;
-    options.target = "tofino";
-    options.arch = "v1model";
+    options.target = "tofino"_cs;
+    options.arch = "v1model"_cs;
     options.disable_parse_min_depth_limit = true;
 
     return TofinoPipeTestCase::createWithThreadLocalInstances(source);
@@ -107,11 +107,11 @@ TEST_F(PaNoOverlayPragmaTest, P4_16) {
 
     runMockPassesPaNoOverlay(test->pipe, phv);
 
-    EXPECT_EQ(phv.field_mutex()(phv.field("ingress::h2.f2")->id,
-                                 phv.field("ingress::h3.f2")->id), true);
+    EXPECT_EQ(phv.field_mutex()(phv.field("ingress::h2.f2"_cs)->id,
+                                 phv.field("ingress::h3.f2"_cs)->id), true);
 
-    EXPECT_EQ(phv.field_mutex()(phv.field("ingress::h2.f1")->id,
-                                 phv.field("ingress::h3.f1")->id), false);
+    EXPECT_EQ(phv.field_mutex()(phv.field("ingress::h2.f1"_cs)->id,
+                                 phv.field("ingress::h3.f1"_cs)->id), false);
 }
 
 }  // namespace Test

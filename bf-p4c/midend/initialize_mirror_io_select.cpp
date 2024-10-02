@@ -11,31 +11,31 @@ const IR::Node* DoInitializeMirrorIOSelect::preorder(IR::BFN::TnaParser* parser)
     }
 
     // If available, use existing eg_intr_md_for_dprsr metadata parameter
-    if (parser->tnaParams.find("eg_intr_md_for_dprsr") != parser->tnaParams.end()) {
+    if (parser->tnaParams.find("eg_intr_md_for_dprsr"_cs) != parser->tnaParams.end()) {
         // Save existing eg_intr_md_for_dprsr parameter name for later use
-        egIntrMdForDprsrName = parser->tnaParams.at("eg_intr_md_for_dprsr");
+        egIntrMdForDprsrName = parser->tnaParams.at("eg_intr_md_for_dprsr"_cs);
         return parser;
     }
     // Else, add missing eg_intr_md_for_dprsr (and other necessary optional metadata parameters)
     IR::IndexedVector<IR::Parameter> newParameters(parser->type->applyParams->parameters);
     ordered_map<cstring, cstring> newTnaParams(parser->tnaParams);
-    if (parser->tnaParams.find("eg_intr_md_from_prsr") == parser->tnaParams.end()) {
+    if (parser->tnaParams.find("eg_intr_md_from_prsr"_cs) == parser->tnaParams.end()) {
         LOG3("InitializeMirrorIOSelect : Adding __eg_intr_md_from_prsr parameter to egress parser");
         const auto* newEgIntrMdFromPrsrParam =
             new IR::Parameter(
-                "__eg_intr_md_from_prsr",
+                "__eg_intr_md_from_prsr"_cs,
                 IR::Direction::Out,
                 new IR::Type_Name(new IR::Path("egress_intrinsic_metadata_from_parser_t")));
-        newTnaParams.emplace("eg_intr_md_from_prsr", newEgIntrMdFromPrsrParam->name);
+        newTnaParams.emplace("eg_intr_md_from_prsr"_cs, newEgIntrMdFromPrsrParam->name);
         newParameters.push_back(newEgIntrMdFromPrsrParam);
     }
     LOG3("InitializeMirrorIOSelect : Adding __eg_intr_md_for_dprsr parameter to egress parser");
     const auto* newEgIntrMdForDprsrParam =
         new IR::Parameter(
-            "__eg_intr_md_for_dprsr",
+            "__eg_intr_md_for_dprsr"_cs,
             IR::Direction::Out,
-            new IR::Type_Name(new IR::Path("egress_intrinsic_metadata_for_deparser_t")));
-    newTnaParams.emplace("eg_intr_md_for_dprsr", newEgIntrMdForDprsrParam->name);
+            new IR::Type_Name(new IR::Path("egress_intrinsic_metadata_for_deparser_t"_cs)));
+    newTnaParams.emplace("eg_intr_md_for_dprsr"_cs, newEgIntrMdForDprsrParam->name);
     newParameters.push_back(newEgIntrMdForDprsrParam);
     const auto* newTypeParams = new IR::ParameterList(parser->type->applyParams->srcInfo,
                                                       newParameters);
@@ -72,7 +72,7 @@ const IR::Node* DoInitializeMirrorIOSelect::preorder(IR::ParserState* state) {
         new IR::AssignmentStatement(
             new IR::Member(
                 new IR::PathExpression(new IR::Path(egIntrMdForDprsrName)),
-                "mirror_io_select"),
+                "mirror_io_select"_cs),
             new IR::Constant(IR::Type_Bits::get(1), 1));
     IR::IndexedVector<IR::StatOrDecl> newStateComponents;
     newStateComponents.push_back(mirrorIOSelectInit);

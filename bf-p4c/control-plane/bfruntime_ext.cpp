@@ -29,15 +29,15 @@ static void addROSingleton(Util::JsonArray* dataJson, Util::JsonObject* dataFiel
 
 static Util::JsonObject* makeTypeFloat(cstring type) {
     auto* typeObj = new Util::JsonObject();
-    typeObj->emplace("type", type);
+    typeObj->emplace("type"_cs, type);
     return typeObj;
 }
 
 static Util::JsonObject* makeTypeString(std::optional<cstring> defaultValue = std::nullopt) {
     auto* typeObj = new Util::JsonObject();
-    typeObj->emplace("type", "string");
+    typeObj->emplace("type"_cs, "string"_cs);
     if (defaultValue != std::nullopt)
-        typeObj->emplace("default_value", *defaultValue);
+        typeObj->emplace("default_value"_cs, *defaultValue);
     return typeObj;
 }
 
@@ -416,26 +416,26 @@ void
 BFRuntimeSchemaGenerator::addActionSelectorGetMemberCommon(Util::JsonArray* tablesJson,
                                         const ActionSelector& actionSelector) const {
         auto* tableJson = initTableJson(actionSelector.get_mem_name,
-                actionSelector.get_mem_id, "SelectorGetMember", 1 /* size */,
+                actionSelector.get_mem_id, "SelectorGetMember"_cs, 1 /* size */,
                 actionSelector.annotations);
 
         auto* keyJson = new Util::JsonArray();
-        addKeyField(keyJson, BF_RT_DATA_SELECTOR_GROUP_ID, "$SELECTOR_GROUP_ID",
-                            true /* mandatory */, "Exact", makeTypeInt("uint64"));
-        addKeyField(keyJson, BF_RT_DATA_HASH_VALUE, "hash_value",
-                            true /* mandatory */, "Exact", makeTypeInt("uint64"));
-        tableJson->emplace("key", keyJson);
+        addKeyField(keyJson, BF_RT_DATA_SELECTOR_GROUP_ID, "$SELECTOR_GROUP_ID"_cs,
+                            true /* mandatory */, "Exact"_cs, makeTypeInt("uint64"_cs));
+        addKeyField(keyJson, BF_RT_DATA_HASH_VALUE, "hash_value"_cs,
+                            true /* mandatory */, "Exact"_cs, makeTypeInt("uint64"_cs));
+        tableJson->emplace("key"_cs, keyJson);
 
         auto* dataJson = new Util::JsonArray();
         {
-            auto* f = makeCommonDataField(BF_RT_DATA_ACTION_MEMBER_ID, "$ACTION_MEMBER_ID",
-            makeTypeInt("uint64"), false /* repeated */);
+            auto* f = makeCommonDataField(BF_RT_DATA_ACTION_MEMBER_ID, "$ACTION_MEMBER_ID"_cs,
+            makeTypeInt("uint64"_cs), false /* repeated */);
             addSingleton(dataJson, f, false /* mandatory */, false /* read-only */);
         }
-        tableJson->emplace("data", dataJson);
+        tableJson->emplace("data"_cs, dataJson);
 
-        tableJson->emplace("supported_operations", new Util::JsonArray());
-        tableJson->emplace("attributes", new Util::JsonArray());
+        tableJson->emplace("supported_operations"_cs, new Util::JsonArray());
+        tableJson->emplace("attributes"_cs, new Util::JsonArray());
         addToDependsOn(tableJson, actionSelector.id);
 
         tablesJson->append(tableJson);
@@ -448,44 +448,44 @@ BFRuntimeSchemaGenerator::addActionSelectorCommon(Util::JsonArray* tablesJson,
     // repeat same annotations as for action table
     // the maximum number of groups is the table size for the selector table
     auto* tableJson = initTableJson(
-        actionSelector.name, actionSelector.id, "Selector",
+        actionSelector.name, actionSelector.id, "Selector"_cs,
         actionSelector.num_groups, actionSelector.annotations);
 
     auto* keyJson = new Util::JsonArray();
-    addKeyField(keyJson, TD_DATA_SELECTOR_GROUP_ID, "$SELECTOR_GROUP_ID",
-            true /* mandatory */, "Exact", makeTypeInt("uint32"));
-    tableJson->emplace("key", keyJson);
+    addKeyField(keyJson, TD_DATA_SELECTOR_GROUP_ID, "$SELECTOR_GROUP_ID"_cs,
+            true /* mandatory */, "Exact"_cs, makeTypeInt("uint32"_cs));
+    tableJson->emplace("key"_cs, keyJson);
 
     auto* dataJson = new Util::JsonArray();
     {
         auto* f = makeCommonDataField(
-                TD_DATA_ACTION_MEMBER_ID, "$ACTION_MEMBER_ID",
-                makeTypeInt("uint32"), true /* repeated */);
+                TD_DATA_ACTION_MEMBER_ID, "$ACTION_MEMBER_ID"_cs,
+                makeTypeInt("uint32"_cs), true /* repeated */);
         addSingleton(dataJson, f, false /* mandatory */, false /* read-only */);
     }
     {
         auto* f = makeCommonDataField(
-                BF_RT_DATA_ACTION_MEMBER_STATUS, "$ACTION_MEMBER_STATUS",
+                BF_RT_DATA_ACTION_MEMBER_STATUS, "$ACTION_MEMBER_STATUS"_cs,
                 makeTypeBool(), true /* repeated */);
         addSingleton(dataJson, f, false /* mandatory */, false /* read-only */);
     }
     {
         auto* f = makeCommonDataField(
-                BF_RT_DATA_MAX_GROUP_SIZE, "$MAX_GROUP_SIZE",
-                makeTypeInt("uint32", actionSelector.max_group_size), false /* repeated */);
+                BF_RT_DATA_MAX_GROUP_SIZE, "$MAX_GROUP_SIZE"_cs,
+                makeTypeInt("uint32"_cs, actionSelector.max_group_size), false /* repeated */);
         addSingleton(dataJson, f, false /* mandatory */, false /* read-only */);
     }
     {
         auto* f = makeCommonDataField(
-                BF_RT_DATA_ADT_OFFSET, "$ADT_OFFSET",
-                makeTypeInt("uint32", actionSelector.adt_offset), false /* repeated */);
+                BF_RT_DATA_ADT_OFFSET, "$ADT_OFFSET"_cs,
+                makeTypeInt("uint32"_cs, actionSelector.adt_offset), false /* repeated */);
         addSingleton(dataJson, f, false /* mandatory */, false /* read-only */);
     }
 
-    tableJson->emplace("data", dataJson);
+    tableJson->emplace("data"_cs, dataJson);
 
-    tableJson->emplace("supported_operations", new Util::JsonArray());
-    tableJson->emplace("attributes", new Util::JsonArray());
+    tableJson->emplace("supported_operations"_cs, new Util::JsonArray());
+    tableJson->emplace("attributes"_cs, new Util::JsonArray());
     addToDependsOn(tableJson, actionSelector.action_profile_id);
 
     tablesJson->append(tableJson);
@@ -504,17 +504,17 @@ BFRuntimeSchemaGenerator::addActionProfIds(const p4configv1::Table& table,
             ::error("Invalid implementation id in p4info: %1%", implementationId);
             return false;
         }
-        cstring tableType = "";
+        cstring tableType = ""_cs;
         if (*hasSelector) {
             actSelectorId = makeActSelectorId(implementationId);
-            tableType = "MatchAction_Indirect_Selector";
+            tableType = "MatchAction_Indirect_Selector"_cs;
             // actProfId will be set while visiting action profile externs
         } else {
             actProfId = makeActProfId(implementationId);
-            tableType = "MatchAction_Indirect";
+            tableType = "MatchAction_Indirect"_cs;
         }
-        tableJson->erase("table_type");
-        tableJson->emplace("table_type", tableType);
+        tableJson->erase("table_type"_cs);
+        tableJson->emplace("table_type"_cs, tableType);
     }
 
     if (actProfId > 0) addToDependsOn(tableJson, actProfId);
@@ -539,23 +539,23 @@ void
 BFRuntimeSchemaGenerator::addValueSet(Util::JsonArray* tablesJson,
                                  const ValueSet& valueSet) const {
     auto* tableJson = initTableJson(
-        valueSet.name, valueSet.id, "ParserValueSet", valueSet.size, valueSet.annotations);
+        valueSet.name, valueSet.id, "ParserValueSet"_cs, valueSet.size, valueSet.annotations);
 
     auto* keyJson = new Util::JsonArray();
-    auto parser = TypeSpecParser::make(p4info, valueSet.typeSpec, "ValueSet", valueSet.name);
+    auto parser = TypeSpecParser::make(p4info, valueSet.typeSpec, "ValueSet"_cs, valueSet.name);
     for (const auto &f : parser) {
         // JIRA-DOC: DRV-3112 -
         // Make key fields not mandatory, this allows user to use a
         // driver initialized default value (0).
-        addKeyField(keyJson, f.id, f.name, false /* mandatory */, "Ternary", f.type);
+        addKeyField(keyJson, f.id, f.name, false /* mandatory */, "Ternary"_cs, f.type);
     }
-    tableJson->emplace("key", keyJson);
+    tableJson->emplace("key"_cs, keyJson);
 
-    tableJson->emplace("data", new Util::JsonArray());
-    tableJson->emplace("supported_operations", new Util::JsonArray());
+    tableJson->emplace("data"_cs, new Util::JsonArray());
+    tableJson->emplace("supported_operations"_cs, new Util::JsonArray());
     auto* attributesJson =  new Util::JsonArray();
-    attributesJson->append("EntryScope");
-    tableJson->emplace("attributes", attributesJson);
+    attributesJson->append("EntryScope"_cs);
+    tableJson->emplace("attributes"_cs, attributesJson);
 
     tablesJson->append(tableJson);
 }
@@ -567,13 +567,13 @@ void BFRuntimeSchemaGenerator::addDirectResources(const p4configv1::Table& table
     for (auto directResId : table.direct_resource_ids()) {
         if (auto counter = getDirectCounter(directResId)) {
             addCounterDataFields(dataJson, *counter);
-            operationsJson->append("SyncCounters");
+            operationsJson->append("SyncCounters"_cs);
         } else if (auto meter = getDirectMeter(directResId)) {
             addMeterDataFields(dataJson, *meter);
-            attributesJson->append("MeterByteCountAdjust");
+            attributesJson->append("MeterByteCountAdjust"_cs);
         } else if (auto register_ = getDirectRegister(directResId)) {
             addRegisterDataFields(dataJson, *register_, maxActionParamId);
-            operationsJson->append("SyncRegisters");
+            operationsJson->append("SyncRegisters"_cs);
         } else if (auto lpf = getDirectLpf(directResId)) {
             addLpfDataFields(dataJson);
         } else if (auto lpf = getDirectWred(directResId)) {
@@ -605,10 +605,10 @@ BFRuntimeSchemaGenerator::genSchema() const {
     LOG1("Generating BFRT schema" << indent);
     auto* json = new Util::JsonObject();
 
-    json->emplace("schema_version", cstring("1.0.0"));
+    json->emplace("schema_version"_cs, cstring("1.0.0"));
 
     auto* tablesJson = new Util::JsonArray();
-    json->emplace("tables", tablesJson);
+    json->emplace("tables"_cs, tablesJson);
 
     addMatchTables(tablesJson);
     addActionProfs(tablesJson);
@@ -617,7 +617,7 @@ BFRuntimeSchemaGenerator::genSchema() const {
     // handle "standard" (v1model / PSA) registers
 
     auto* learnFiltersJson = new Util::JsonArray();
-    json->emplace("learn_filters", learnFiltersJson);
+    json->emplace("learn_filters"_cs, learnFiltersJson);
     addLearnFilters(learnFiltersJson);
 
     addTNAExterns(tablesJson, learnFiltersJson);
@@ -755,7 +755,7 @@ BFRuntimeSchemaGenerator::addRegisterParamDataFields(Util::JsonArray* dataJson,
         }
     }
     if (type == nullptr) return;
-    auto *f = makeCommonDataField(idOffset, "value", type, false /* repeated */);
+    auto *f = makeCommonDataField(idOffset, "value"_cs, type, false /* repeated */);
     addSingleton(dataJson, f, true /* mandatory */, false /* read-only */);
 }
 
@@ -763,21 +763,21 @@ void
 BFRuntimeSchemaGenerator::addRegisterParam(Util::JsonArray* tablesJson,
                                       const RegisterParam& register_param_) const {
     auto* tableJson = initTableJson(register_param_.name, register_param_.id,
-        "RegisterParam", 1 /* size */, register_param_.annotations);
+        "RegisterParam"_cs, 1 /* size */, register_param_.annotations);
 
     // The register or M/A table the register parameter is attached to
     // The zero value means it is not used anywhere and hasn't been optimized out.
     if (register_param_.tableId != 0)
         addToDependsOn(tableJson, register_param_.tableId);
 
-    tableJson->emplace("key", new Util::JsonArray());
+    tableJson->emplace("key"_cs, new Util::JsonArray());
 
     auto* dataJson = new Util::JsonArray();
     addRegisterParamDataFields(dataJson, register_param_);
-    tableJson->emplace("data", dataJson);
+    tableJson->emplace("data"_cs, dataJson);
 
-    tableJson->emplace("attributes", new Util::JsonArray());
-    tableJson->emplace("supported_operations", new Util::JsonArray());
+    tableJson->emplace("attributes"_cs, new Util::JsonArray());
+    tableJson->emplace("supported_operations"_cs, new Util::JsonArray());
 
     tablesJson->append(tableJson);
     LOG2("Added Register Param " << register_param_.name);
@@ -787,20 +787,20 @@ void
 BFRuntimeSchemaGenerator::addPortMetadata(Util::JsonArray* tablesJson,
                                      const PortMetadata& portMetadata) const {
     auto* tableJson = initTableJson(
-        portMetadata.name, portMetadata.id, "PortMetadata", Device::numMaxChannels(),
+        portMetadata.name, portMetadata.id, "PortMetadata"_cs, Device::numMaxChannels(),
         portMetadata.annotations);
 
     auto* keyJson = new Util::JsonArray();
     addKeyField(keyJson, BF_RT_DATA_PORT_METADATA_PORT, portMetadata.key_name + ".ingress_port",
-                true /* mandatory */, "Exact", makeTypeBytes(Device::portBitWidth()));
-    tableJson->emplace("key", keyJson);
+                true /* mandatory */, "Exact"_cs, makeTypeBytes(Device::portBitWidth()));
+    tableJson->emplace("key"_cs, keyJson);
 
     auto* dataJson = new Util::JsonArray();
     if (portMetadata.typeSpec.type_spec_case() !=
         ::p4::config::v1::P4DataTypeSpec::TYPE_SPEC_NOT_SET) {
         auto* fieldsJson = new Util::JsonArray();
         transformTypeSpecToDataFields(
-            fieldsJson, portMetadata.typeSpec, "PortMetadata",
+            fieldsJson, portMetadata.typeSpec, "PortMetadata"_cs,
             portMetadata.name);
         for (auto* f : *fieldsJson) {
             addSingleton(dataJson, f->to<Util::JsonObject>(),
@@ -808,14 +808,14 @@ BFRuntimeSchemaGenerator::addPortMetadata(Util::JsonArray* tablesJson,
       }
     } else {
         auto* f = makeCommonDataField(
-            BF_RT_DATA_PORT_METADATA_DEFAULT_FIELD, "$DEFAULT_FIELD",
+            BF_RT_DATA_PORT_METADATA_DEFAULT_FIELD, "$DEFAULT_FIELD"_cs,
             makeTypeBytes(Device::pardeSpec().bitPhase0Size()), false /* repeated */);
         addSingleton(dataJson, f, false /* mandatory */, false /* read-only */);
     }
-    tableJson->emplace("data", dataJson);
+    tableJson->emplace("data"_cs, dataJson);
 
-    tableJson->emplace("supported_operations", new Util::JsonArray());
-    tableJson->emplace("attributes", new Util::JsonArray());
+    tableJson->emplace("supported_operations"_cs, new Util::JsonArray());
+    tableJson->emplace("attributes"_cs, new Util::JsonArray());
 
     tablesJson->append(tableJson);
     LOG2("Added PortMetadata " << portMetadata.name);
@@ -834,34 +834,34 @@ BFRuntimeSchemaGenerator::addDynHashConfig(Util::JsonArray* tablesJson,
                                      const DynHash& dynHash) const {
     // Add <hash>.configure Table
     auto* tableJson = initTableJson(dynHash.getConfigTableName(), dynHash.cfgId,
-            "DynHashConfigure", 1 /* size */, dynHash.annotations);
+            "DynHashConfigure"_cs, 1 /* size */, dynHash.annotations);
 
-    tableJson->emplace("key", new Util::JsonArray());  // empty key for configure table
+    tableJson->emplace("key"_cs, new Util::JsonArray());  // empty key for configure table
 
     auto* dataJson = new Util::JsonArray();
     auto hashFieldNames = dynHash.getHashFieldNames();
     auto parser = TypeSpecParser::make(
-        p4info, dynHash.typeSpec, "DynHash", dynHash.name, &hashFieldNames, "", "");
+        p4info, dynHash.typeSpec, "DynHash"_cs, dynHash.name, &hashFieldNames, ""_cs, ""_cs);
     int numConstants = 0;
     for (const auto &field : parser) {
         auto* containerItemsJson = new Util::JsonArray();
-        auto fLength = field.type->get("width")->to<Util::JsonValue>()->getInt();
+        auto fLength = field.type->get("width"_cs)->to<Util::JsonValue>()->getInt();
         {
-            auto* f = makeCommonDataField(BF_RT_DATA_HASH_CONFIGURE_START_BIT, "start_bit",
-                makeTypeInt("uint64", 0), false /* repeated */);
+            auto* f = makeCommonDataField(BF_RT_DATA_HASH_CONFIGURE_START_BIT, "start_bit"_cs,
+                makeTypeInt("uint64"_cs, 0), false /* repeated */);
             addSingleton(containerItemsJson, f, false /* mandatory */, false /* read-only */);
         }
         {
-            auto* f = makeCommonDataField(BF_RT_DATA_HASH_CONFIGURE_LENGTH, "length",
-                makeTypeInt("uint64", fLength), false /* repeated */);
+            auto* f = makeCommonDataField(BF_RT_DATA_HASH_CONFIGURE_LENGTH, "length"_cs,
+                makeTypeInt("uint64"_cs, fLength), false /* repeated */);
             addSingleton(containerItemsJson, f, false /* mandatory */, false /* read-only */);
         }
         {
-            auto* f = makeCommonDataField(BF_RT_DATA_HASH_CONFIGURE_ORDER, "order",
-                makeTypeInt("uint64"), false /* repeated */);
+            auto* f = makeCommonDataField(BF_RT_DATA_HASH_CONFIGURE_ORDER, "order"_cs,
+                makeTypeInt("uint64"_cs), false /* repeated */);
             addSingleton(containerItemsJson, f, true /* mandatory */, false /* read-only */);
         }
-        cstring field_prefix = "";
+        cstring field_prefix = ""_cs;
         Util::JsonArray *annotations = nullptr;
         if (dynHash.is_constant(field.name)) {
             // Constant fields have unique field names with the format
@@ -871,7 +871,7 @@ BFRuntimeSchemaGenerator::addDynHashConfig(Util::JsonArray* tablesJson,
             field_prefix = "constant" + std::to_string(numConstants++)
                             + "_" + std::to_string(fLength) + "_";
             auto *constantAnnot = new Util::JsonObject();
-            constantAnnot->emplace("name", "bfrt_p4_constant");
+            constantAnnot->emplace("name"_cs, "bfrt_p4_constant"_cs);
             annotations = new Util::JsonArray();
             annotations->append(constantAnnot);
         }
@@ -879,9 +879,9 @@ BFRuntimeSchemaGenerator::addDynHashConfig(Util::JsonArray* tablesJson,
                 containerItemsJson, true /* repeated */, annotations);
         addSingleton(dataJson, fJson, false /* mandatory */, false /* read-only */);
     }
-    tableJson->emplace("data", dataJson);
-    tableJson->emplace("supported_operations", new Util::JsonArray());
-    tableJson->emplace("attributes", new Util::JsonArray());
+    tableJson->emplace("data"_cs, dataJson);
+    tableJson->emplace("supported_operations"_cs, new Util::JsonArray());
+    tableJson->emplace("attributes"_cs, new Util::JsonArray());
 
     tablesJson->append(tableJson);
     LOG2("Added DynHashConfigure " << dynHash.getConfigTableName());
@@ -891,42 +891,42 @@ void
 BFRuntimeSchemaGenerator::addDynHashAlgorithm(Util::JsonArray* tablesJson,
                                      const DynHash& dynHash) const {
     auto* tableJson = initTableJson(
-        dynHash.getAlgorithmTableName(), dynHash.algId, "DynHashAlgorithm",
+        dynHash.getAlgorithmTableName(), dynHash.algId, "DynHashAlgorithm"_cs,
         1 /* size */, dynHash.annotations);
 
-    tableJson->emplace("key", new Util::JsonArray());  // empty key
+    tableJson->emplace("key"_cs, new Util::JsonArray());  // empty key
 
     auto* dataJson = new Util::JsonArray();
     // Add rotate key field
-    auto* rotateJson = makeCommonDataField(BF_RT_DATA_HASH_ALGORITHM_ROTATE, "rotate",
-                makeTypeInt("uint32", 0 /* default */), false /* repeated */);
+    auto* rotateJson = makeCommonDataField(BF_RT_DATA_HASH_ALGORITHM_ROTATE, "rotate"_cs,
+                makeTypeInt("uint32"_cs, 0 /* default */), false /* repeated */);
     addSingleton(dataJson, rotateJson, false /* mandatory */, false /* read-only */);
 
     // Add seed key field
-    auto* seedJson = makeCommonDataField(BF_RT_DATA_HASH_ALGORITHM_SEED, "seed",
-                makeTypeInt("uint32", 0 /* default */), false /* repeated */);
+    auto* seedJson = makeCommonDataField(BF_RT_DATA_HASH_ALGORITHM_SEED, "seed"_cs,
+                makeTypeInt("uint32"_cs, 0 /* default */), false /* repeated */);
     addSingleton(dataJson, seedJson, false /* mandatory */, false /* read-only */);
 
     // Add msb key field
-    auto* msbJson = makeCommonDataField(BF_RT_DATA_HASH_ALGORITHM_MSB, "msb",
+    auto* msbJson = makeCommonDataField(BF_RT_DATA_HASH_ALGORITHM_MSB, "msb"_cs,
             makeTypeBool(false /* default */), false /* repeated */);
     addSingleton(dataJson, msbJson, false /* mandatory */, false /* read-only */);
 
     // Add extend key field
-    auto* extendJson = makeCommonDataField(BF_RT_DATA_HASH_ALGORITHM_EXTEND, "extend",
+    auto* extendJson = makeCommonDataField(BF_RT_DATA_HASH_ALGORITHM_EXTEND, "extend"_cs,
             makeTypeBool(false /* default */), false /* repeated */);
     addSingleton(dataJson, extendJson, false /* mandatory */, false /* read-only */);
 
-    tableJson->emplace("data", dataJson);
+    tableJson->emplace("data"_cs, dataJson);
 
     auto* actionSpecsJson = new Util::JsonArray();
 
     // Add pre-defined action spec
     auto* preDefinedJson = new Util::JsonObject();
-    preDefinedJson->emplace("id", BF_RT_DATA_HASH_ALGORITHM_PRE_DEFINED);
-    preDefinedJson->emplace("name", "pre_defined");
-    preDefinedJson->emplace("action_scope", "TableAndDefault");
-    preDefinedJson->emplace("annotations", new Util::JsonArray());
+    preDefinedJson->emplace("id"_cs, BF_RT_DATA_HASH_ALGORITHM_PRE_DEFINED);
+    preDefinedJson->emplace("name"_cs, "pre_defined"_cs);
+    preDefinedJson->emplace("action_scope"_cs, "TableAndDefault"_cs);
+    preDefinedJson->emplace("annotations"_cs, new Util::JsonArray());
 
     P4Id dataId = 1;
     auto* preDefinedDataJson = new Util::JsonArray();
@@ -951,17 +951,17 @@ BFRuntimeSchemaGenerator::addDynHashAlgorithm(Util::JsonArray* tablesJson,
     addActionDataField(preDefinedDataJson, dataId, "algorithm_name",
             false /* mandatory */, false /* read_only */,
             algoType, nullptr /* annotations */);
-    preDefinedJson->emplace("data", preDefinedDataJson);
+    preDefinedJson->emplace("data"_cs, preDefinedDataJson);
 
     actionSpecsJson->append(preDefinedJson);
     addToDependsOn(tableJson, dynHash.cfgId);
 
     // Add user_defined action spec
     auto* userDefinedJson = new Util::JsonObject();
-    userDefinedJson->emplace("id", BF_RT_DATA_HASH_ALGORITHM_USER_DEFINED);
-    userDefinedJson->emplace("name", "user_defined");
-    userDefinedJson->emplace("action_scope", "TableAndDefault");
-    userDefinedJson->emplace("annotations", new Util::JsonArray());
+    userDefinedJson->emplace("id"_cs, BF_RT_DATA_HASH_ALGORITHM_USER_DEFINED);
+    userDefinedJson->emplace("name"_cs, "user_defined"_cs);
+    userDefinedJson->emplace("action_scope"_cs, "TableAndDefault"_cs);
+    userDefinedJson->emplace("annotations"_cs, new Util::JsonArray());
 
     auto* userDefinedDataJson = new Util::JsonArray();
     dataId = 1;
@@ -972,35 +972,35 @@ BFRuntimeSchemaGenerator::addDynHashAlgorithm(Util::JsonArray* tablesJson,
             revType, nullptr /* annotations */);
 
     // Add polynomial data field
-    auto* polyType = makeTypeInt("uint64");
+    auto* polyType = makeTypeInt("uint64"_cs);
     addActionDataField(userDefinedDataJson, dataId++, "polynomial",
             true /* mandatory */, false /* read_only */,
             polyType, nullptr /* annotations */);
 
     // Add init data field
-    auto* initType = makeTypeInt("uint64", 0 /* default_value */);
+    auto* initType = makeTypeInt("uint64"_cs, 0 /* default_value */);
     addActionDataField(userDefinedDataJson, dataId++, "init",
             false /* mandatory */, false /* read_only */,
             initType, nullptr /* annotations */);
 
     // Add final_xor data field
-    auto* finalXorType = makeTypeInt("uint64", 0 /* default_value */);
+    auto* finalXorType = makeTypeInt("uint64"_cs, 0 /* default_value */);
     addActionDataField(userDefinedDataJson, dataId++, "final_xor",
             false /* mandatory */, false /* read_only */,
             finalXorType, nullptr /* annotations */);
 
     // Add hash_bit_width data field
-    auto* hashBitWidthType = makeTypeInt("uint64");
+    auto* hashBitWidthType = makeTypeInt("uint64"_cs);
     addActionDataField(userDefinedDataJson, dataId++, "hash_bit_width",
             false /* mandatory */, false /* read_only */,
             hashBitWidthType, nullptr /* annotations */);
-    userDefinedJson->emplace("data", userDefinedDataJson);
+    userDefinedJson->emplace("data"_cs, userDefinedDataJson);
 
     actionSpecsJson->append(userDefinedJson);
 
-    tableJson->emplace("action_specs", actionSpecsJson);
-    tableJson->emplace("supported_operations", new Util::JsonArray());
-    tableJson->emplace("attributes", new Util::JsonArray());
+    tableJson->emplace("action_specs"_cs, actionSpecsJson);
+    tableJson->emplace("supported_operations"_cs, new Util::JsonArray());
+    tableJson->emplace("attributes"_cs, new Util::JsonArray());
 
     tablesJson->append(tableJson);
     LOG2("Added DynHashAlgorithm " << dynHash.getAlgorithmTableName());
@@ -1011,35 +1011,35 @@ BFRuntimeSchemaGenerator::addDynHashCompute(Util::JsonArray* tablesJson,
                                      const DynHash& dynHash) const {
     // Add <hash>.compute Table
     auto* tableJson = initTableJson(
-        dynHash.getComputeTableName(), dynHash.cmpId, "DynHashCompute",
+        dynHash.getComputeTableName(), dynHash.cmpId, "DynHashCompute"_cs,
         1 /* size */, dynHash.annotations);
 
     P4Id id = 1;
     auto* keyJson = new Util::JsonArray();
     auto hashFieldNames = dynHash.getHashFieldNames();
     auto parser = TypeSpecParser::make(
-        p4info, dynHash.typeSpec, "DynHash", dynHash.name, &hashFieldNames, "", "");
+        p4info, dynHash.typeSpec, "DynHash"_cs, dynHash.name, &hashFieldNames, ""_cs, ""_cs);
     for (const auto &field : parser) {
         if (dynHash.is_constant(field.name)) {
             // If this is a constant field, then skip adding a field
             // in compute table
             continue;
         }
-        auto* type = makeTypeBytes(field.type->get("width")->to<Util::JsonValue>()->getInt());
-        addKeyField(keyJson, id++, field.name, false /* mandatory */, "Exact", type);
+        auto* type = makeTypeBytes(field.type->get("width"_cs)->to<Util::JsonValue>()->getInt());
+        addKeyField(keyJson, id++, field.name, false /* mandatory */, "Exact"_cs, type);
     }
-    tableJson->emplace("key", keyJson);
+    tableJson->emplace("key"_cs, keyJson);
 
     auto* dataJson = new Util::JsonArray();
     auto* f = makeCommonDataField(
-        BF_RT_DATA_HASH_VALUE, "hash_value",
+        BF_RT_DATA_HASH_VALUE, "hash_value"_cs,
         makeTypeBytes(dynHash.hashWidth), false /* repeated */);
     addSingleton(dataJson, f, false /* mandatory */, true /* read-only */);
-    tableJson->emplace("data", dataJson);
+    tableJson->emplace("data"_cs, dataJson);
 
-    tableJson->emplace("supported_operations", new Util::JsonArray());
-    tableJson->emplace("attributes", new Util::JsonArray());
-    tableJson->emplace("read_only", true);
+    tableJson->emplace("supported_operations"_cs, new Util::JsonArray());
+    tableJson->emplace("attributes"_cs, new Util::JsonArray());
+    tableJson->emplace("read_only"_cs, true);
     addToDependsOn(tableJson, dynHash.cfgId);
 
     tablesJson->append(tableJson);
@@ -1050,45 +1050,45 @@ void
 BFRuntimeSchemaGenerator::addLpfDataFields(Util::JsonArray* dataJson) {
     {
         auto* f = makeCommonDataField(
-            BF_RT_DATA_LPF_SPEC_TYPE, "$LPF_SPEC_TYPE",
-            makeTypeEnum({"RATE", "SAMPLE"}), false /* repeated */);
+            BF_RT_DATA_LPF_SPEC_TYPE, "$LPF_SPEC_TYPE"_cs,
+            makeTypeEnum({"RATE"_cs, "SAMPLE"_cs}), false /* repeated */);
         addSingleton(dataJson, f, true /* mandatory */, false /* read-only */);
     }
     {
         auto* f = makeCommonDataField(
-            BF_RT_DATA_LPF_SPEC_GAIN_TIME_CONSTANT_NS, "$LPF_SPEC_GAIN_TIME_CONSTANT_NS",
-            makeTypeFloat("float"), false /* repeated */);
+            BF_RT_DATA_LPF_SPEC_GAIN_TIME_CONSTANT_NS, "$LPF_SPEC_GAIN_TIME_CONSTANT_NS"_cs,
+            makeTypeFloat("float"_cs), false /* repeated */);
         addSingleton(dataJson, f, true /* mandatory */, false /* read-only */);
     }
     {
         auto* f = makeCommonDataField(
-            BF_RT_DATA_LPF_SPEC_DECAY_TIME_CONSTANT_NS, "$LPF_SPEC_DECAY_TIME_CONSTANT_NS",
-            makeTypeFloat("float"), false /* repeated */);
+            BF_RT_DATA_LPF_SPEC_DECAY_TIME_CONSTANT_NS, "$LPF_SPEC_DECAY_TIME_CONSTANT_NS"_cs,
+            makeTypeFloat("float"_cs), false /* repeated */);
         addSingleton(dataJson, f, true /* mandatory */, false /* read-only */);
     }
     {
         auto* f = makeCommonDataField(
-            BF_RT_DATA_LPF_SPEC_OUT_SCALE_DOWN_FACTOR, "$LPF_SPEC_OUT_SCALE_DOWN_FACTOR",
-            makeTypeInt("uint32"), false /* repeated */);
+            BF_RT_DATA_LPF_SPEC_OUT_SCALE_DOWN_FACTOR, "$LPF_SPEC_OUT_SCALE_DOWN_FACTOR"_cs,
+            makeTypeInt("uint32"_cs), false /* repeated */);
         addSingleton(dataJson, f, true /* mandatory */, false /* read-only */);
     }
 }
 
 void
 BFRuntimeSchemaGenerator::addLpf(Util::JsonArray* tablesJson, const Lpf& lpf) const {
-    auto* tableJson = initTableJson(lpf.name, lpf.id, "Lpf", lpf.size, lpf.annotations);
+    auto* tableJson = initTableJson(lpf.name, lpf.id, "Lpf"_cs, lpf.size, lpf.annotations);
 
     auto* keyJson = new Util::JsonArray();
-    addKeyField(keyJson, BF_RT_DATA_LPF_INDEX, "$LPF_INDEX",
-                true /* mandatory */, "Exact", makeTypeInt("uint32"));
-    tableJson->emplace("key", keyJson);
+    addKeyField(keyJson, BF_RT_DATA_LPF_INDEX, "$LPF_INDEX"_cs,
+                true /* mandatory */, "Exact"_cs, makeTypeInt("uint32"_cs));
+    tableJson->emplace("key"_cs, keyJson);
 
     auto* dataJson = new Util::JsonArray();
     addLpfDataFields(dataJson);
-    tableJson->emplace("data", dataJson);
+    tableJson->emplace("data"_cs, dataJson);
 
-    tableJson->emplace("supported_operations", new Util::JsonArray());
-    tableJson->emplace("attributes", new Util::JsonArray());
+    tableJson->emplace("supported_operations"_cs, new Util::JsonArray());
+    tableJson->emplace("attributes"_cs, new Util::JsonArray());
 
     tablesJson->append(tableJson);
 }
@@ -1097,45 +1097,45 @@ void
 BFRuntimeSchemaGenerator::addWredDataFields(Util::JsonArray* dataJson) {
     {
         auto* f = makeCommonDataField(
-            BF_RT_DATA_WRED_SPEC_TIME_CONSTANT_NS, "$WRED_SPEC_TIME_CONSTANT_NS",
-            makeTypeFloat("float"), false /* repeated */);
+            BF_RT_DATA_WRED_SPEC_TIME_CONSTANT_NS, "$WRED_SPEC_TIME_CONSTANT_NS"_cs,
+            makeTypeFloat("float"_cs), false /* repeated */);
         addSingleton(dataJson, f, true /* mandatory */, false /* read-only */);
     }
     {
         auto* f = makeCommonDataField(
-            BF_RT_DATA_WRED_SPEC_MIN_THRESH_CELLS, "$WRED_SPEC_MIN_THRESH_CELLS",
-            makeTypeInt("uint32"), false /* repeated */);
+            BF_RT_DATA_WRED_SPEC_MIN_THRESH_CELLS, "$WRED_SPEC_MIN_THRESH_CELLS"_cs,
+            makeTypeInt("uint32"_cs), false /* repeated */);
         addSingleton(dataJson, f, true /* mandatory */, false /* read-only */);
     }
     {
         auto* f = makeCommonDataField(
-            BF_RT_DATA_WRED_SPEC_MAX_THRESH_CELLS, "$WRED_SPEC_MAX_THRESH_CELLS",
-            makeTypeInt("uint32"), false /* repeated */);
+            BF_RT_DATA_WRED_SPEC_MAX_THRESH_CELLS, "$WRED_SPEC_MAX_THRESH_CELLS"_cs,
+            makeTypeInt("uint32"_cs), false /* repeated */);
         addSingleton(dataJson, f, true /* mandatory */, false /* read-only */);
     }
     {
         auto* f = makeCommonDataField(
-            BF_RT_DATA_WRED_SPEC_MAX_PROBABILITY, "$WRED_SPEC_MAX_PROBABILITY",
-            makeTypeFloat("float"), false /* repeated */);
+            BF_RT_DATA_WRED_SPEC_MAX_PROBABILITY, "$WRED_SPEC_MAX_PROBABILITY"_cs,
+            makeTypeFloat("float"_cs), false /* repeated */);
         addSingleton(dataJson, f, true /* mandatory */, false /* read-only */);
     }
 }
 
 void
 BFRuntimeSchemaGenerator::addWred(Util::JsonArray* tablesJson, const Wred& wred) const {
-    auto* tableJson = initTableJson(wred.name, wred.id, "Wred", wred.size, wred.annotations);
+    auto* tableJson = initTableJson(wred.name, wred.id, "Wred"_cs, wred.size, wred.annotations);
 
     auto* keyJson = new Util::JsonArray();
-    addKeyField(keyJson, BF_RT_DATA_WRED_INDEX, "$WRED_INDEX",
-                true /* mandatory */, "Exact", makeTypeInt("uint32"));
-    tableJson->emplace("key", keyJson);
+    addKeyField(keyJson, BF_RT_DATA_WRED_INDEX, "$WRED_INDEX"_cs,
+                true /* mandatory */, "Exact"_cs, makeTypeInt("uint32"_cs));
+    tableJson->emplace("key"_cs, keyJson);
 
     auto* dataJson = new Util::JsonArray();
     addWredDataFields(dataJson);
-    tableJson->emplace("data", dataJson);
+    tableJson->emplace("data"_cs, dataJson);
 
-    tableJson->emplace("supported_operations", new Util::JsonArray());
-    tableJson->emplace("attributes", new Util::JsonArray());
+    tableJson->emplace("supported_operations"_cs, new Util::JsonArray());
+    tableJson->emplace("attributes"_cs, new Util::JsonArray());
 
     tablesJson->append(tableJson);
 }
@@ -1152,58 +1152,59 @@ BFRuntimeSchemaGenerator::addSnapshot(Util::JsonArray* tablesJson,
         if (!tableJson) {
             auto* tableJson = initTableJson(tblName,
                     makeBFRuntimeId(snapshot.id, ::barefoot::P4Ids::SNAPSHOT),
-                    "SnapshotCfg", size);
+                    "SnapshotCfg"_cs, size);
 
             auto* keyJson = new Util::JsonArray();
-            addKeyField(keyJson, BF_RT_DATA_SNAPSHOT_START_STAGE, "start_stage",
-                        false /* mandatory */, "Exact", makeTypeInt("uint32", 0));
-            addKeyField(keyJson, BF_RT_DATA_SNAPSHOT_END_STAGE, "end_stage",
-                        false /* mandatory */, "Exact", makeTypeInt("uint32", size - 1));
-            tableJson->emplace("key", keyJson);
+            addKeyField(keyJson, BF_RT_DATA_SNAPSHOT_START_STAGE, "start_stage"_cs,
+                        false /* mandatory */, "Exact"_cs, makeTypeInt("uint32"_cs, 0));
+            addKeyField(keyJson, BF_RT_DATA_SNAPSHOT_END_STAGE, "end_stage"_cs,
+                        false /* mandatory */, "Exact"_cs, makeTypeInt("uint32"_cs, size - 1));
+            tableJson->emplace("key"_cs, keyJson);
 
             auto* dataJson = new Util::JsonArray();
             {
-                auto* f = makeCommonDataField(BF_RT_DATA_SNAPSHOT_TIMER_ENABLE, "timer_enable",
+                auto* f = makeCommonDataField(BF_RT_DATA_SNAPSHOT_TIMER_ENABLE, "timer_enable"_cs,
                         makeTypeBool(false), false /* repeated */);
                 addSingleton(dataJson, f, false, false);
             }
             {
                 auto* f = makeCommonDataField(BF_RT_DATA_SNAPSHOT_TIMER_VALUE_USECS,
-                        "timer_value_usecs", makeTypeInt("uint32"), false /* repeated */);
+                        "timer_value_usecs"_cs, makeTypeInt("uint32"_cs), false /* repeated */);
                 addSingleton(dataJson, f, false, false);
             }
             {
-                std::vector<cstring> choices =  {"INGRESS", "GHOST", "INGRESS_GHOST", "ANY"};
-                cstring defaultChoice = "INGRESS";
+                std::vector<cstring> choices = {"INGRESS"_cs, "GHOST"_cs, "INGRESS_GHOST"_cs,
+                                                "ANY"_cs};
+                cstring defaultChoice = "INGRESS"_cs;
                 auto* f = makeCommonDataField(BF_RT_DATA_SNAPSHOT_INGRESS_TRIGGER_MODE,
-                        "ingress_trigger_mode", makeTypeEnum(choices, defaultChoice),
+                        "ingress_trigger_mode"_cs, makeTypeEnum(choices, defaultChoice),
                         false /* repeated */);
                 addSingleton(dataJson, f, false, false);
             }
             {
-                auto* f = makeCommonDataField(BF_RT_DATA_SNAPSHOT_THREAD, "thread",
-                        makeTypeEnum({"INGRESS", "EGRESS", "ALL"}), false /* repeated */);
+                auto* f = makeCommonDataField(BF_RT_DATA_SNAPSHOT_THREAD, "thread"_cs,
+                        makeTypeEnum({"INGRESS"_cs, "EGRESS"_cs, "ALL"_cs}), false /* repeated */);
                 addSingleton(dataJson, f, true, false);
             }
             {
                 auto* f = makeCommonDataField(BF_RT_DATA_SNAPSHOT_INGRESS_CAPTURE,
-                        "ingress_capture", makeTypeInt("uint32"), true /* repeated */);
+                        "ingress_capture"_cs, makeTypeInt("uint32"_cs), true /* repeated */);
                 addROSingleton(dataJson, f);
             }
             {
                 auto* f = makeCommonDataField(BF_RT_DATA_SNAPSHOT_EGRESS_CAPTURE,
-                        "egress_capture", makeTypeInt("uint32"), true /* repeated */);
+                        "egress_capture"_cs, makeTypeInt("uint32"_cs), true /* repeated */);
                 addROSingleton(dataJson, f);
             }
             {
                 auto* f = makeCommonDataField(BF_RT_DATA_SNAPSHOT_GHOST_CAPTURE,
-                        "ghost_capture", makeTypeInt("uint32"), true /* repeated */);
+                        "ghost_capture"_cs, makeTypeInt("uint32"_cs), true /* repeated */);
                 addROSingleton(dataJson, f);
             }
-            tableJson->emplace("data", dataJson);
+            tableJson->emplace("data"_cs, dataJson);
 
-            tableJson->emplace("supported_operations", new Util::JsonArray());
-            tableJson->emplace("attributes", new Util::JsonArray());
+            tableJson->emplace("supported_operations"_cs, new Util::JsonArray());
+            tableJson->emplace("attributes"_cs, new Util::JsonArray());
 
             tablesJson->append(tableJson);
             LOG2("Added SnapshotCfg " << tblName);
@@ -1214,22 +1215,24 @@ BFRuntimeSchemaGenerator::addSnapshot(Util::JsonArray* tablesJson,
     {
         auto tblName = snapshot.getTrigTblName();
         auto tableId = makeBFRuntimeId(snapshot.id, ::barefoot::P4Ids::SNAPSHOT_TRIGGER);
-        auto* tableJson = initTableJson(tblName, tableId, "SnapshotTrigger", size);
+        auto* tableJson = initTableJson(tblName, tableId, "SnapshotTrigger"_cs, size);
 
         auto* keyJson = new Util::JsonArray();
-        addKeyField(keyJson, BF_RT_DATA_SNAPSHOT_START_STAGE, "stage",
-                    true /* mandatory */, "Exact", makeTypeInt("uint32", 0));
-        tableJson->emplace("key", keyJson);
+        addKeyField(keyJson, BF_RT_DATA_SNAPSHOT_START_STAGE, "stage"_cs,
+                    true /* mandatory */, "Exact"_cs, makeTypeInt("uint32"_cs, 0));
+        tableJson->emplace("key"_cs, keyJson);
 
         auto* dataJson = new Util::JsonArray();
         {
-            auto* f = makeCommonDataField(BF_RT_DATA_SNAPSHOT_ENABLE, "enable",
+            auto* f = makeCommonDataField(BF_RT_DATA_SNAPSHOT_ENABLE, "enable"_cs,
                     makeTypeBool(false), false /* repeated */);
             addSingleton(dataJson, f, false, false);
         }
         {
-            auto* f = makeCommonDataField(BF_RT_DATA_SNAPSHOT_TRIGGER_STATE, "trigger_state",
-                makeTypeEnum({"PASSIVE", "ARMED", "FULL"}, std::nullopt), true /* repeated */);
+            auto *f = makeCommonDataField(
+                BF_RT_DATA_SNAPSHOT_TRIGGER_STATE, "trigger_state"_cs,
+                makeTypeEnum({"PASSIVE"_cs, "ARMED"_cs, "FULL"_cs}, std::nullopt),
+                true /* repeated */);
             addROSingleton(dataJson, f);
         }
         for (const auto& sF : snapshot.fields) {
@@ -1244,10 +1247,10 @@ BFRuntimeSchemaGenerator::addSnapshot(Util::JsonArray* tablesJson,
                 addSingleton(dataJson, f, false, false);
             }
         }
-        tableJson->emplace("data", dataJson);
+        tableJson->emplace("data"_cs, dataJson);
 
-        tableJson->emplace("supported_operations", new Util::JsonArray());
-        tableJson->emplace("attributes", new Util::JsonArray());
+        tableJson->emplace("supported_operations"_cs, new Util::JsonArray());
+        tableJson->emplace("attributes"_cs, new Util::JsonArray());
 
         tablesJson->append(tableJson);
         LOG2("Added SnapshotTrigger " << tblName);
@@ -1264,35 +1267,35 @@ BFRuntimeSchemaGenerator::addSnapshot(Util::JsonArray* tablesJson,
         Util::JsonArray* dataJson = nullptr;
         auto *tableJson = initTableJson(tblName,
             makeBFRuntimeId(snapshot.id, ::barefoot::P4Ids::SNAPSHOT_DATA),
-            "SnapshotData", size);
+            "SnapshotData"_cs, size);
 
         auto* keyJson = new Util::JsonArray();
-        addKeyField(keyJson, BF_RT_DATA_SNAPSHOT_START_STAGE, "stage",
-                    true /* mandatory */, "Exact", makeTypeInt("uint32", 0));
-        tableJson->emplace("key", keyJson);
+        addKeyField(keyJson, BF_RT_DATA_SNAPSHOT_START_STAGE, "stage"_cs,
+                    true /* mandatory */, "Exact"_cs, makeTypeInt("uint32"_cs, 0));
+        tableJson->emplace("key"_cs, keyJson);
 
         dataJson = new Util::JsonArray();
         {
             auto* f = makeCommonDataField(
-                BF_RT_DATA_SNAPSHOT_PREV_STAGE_TRIGGER, "prev_stage_trigger",
+                BF_RT_DATA_SNAPSHOT_PREV_STAGE_TRIGGER, "prev_stage_trigger"_cs,
                 makeTypeBool(false), false /* repeated */);
             addROSingleton(dataJson, f);
         }
         {
             auto* f = makeCommonDataField(
-                BF_RT_DATA_SNAPSHOT_TIMER_TRIGGER, "timer_trigger",
+                BF_RT_DATA_SNAPSHOT_TIMER_TRIGGER, "timer_trigger"_cs,
                 makeTypeBool(false), false /* repeated */);
             addROSingleton(dataJson, f);
         }
         {
             auto* f = makeCommonDataField(
-                BF_RT_DATA_SNAPSHOT_LOCAL_STAGE_TRIGGER, "local_stage_trigger",
+                BF_RT_DATA_SNAPSHOT_LOCAL_STAGE_TRIGGER, "local_stage_trigger"_cs,
                 makeTypeBool(false), false /* repeated */);
             addROSingleton(dataJson, f);
         }
         {
             auto* f = makeCommonDataField(
-                BF_RT_DATA_SNAPSHOT_NEXT_TABLE_NAME, "next_table_name",
+                BF_RT_DATA_SNAPSHOT_NEXT_TABLE_NAME, "next_table_name"_cs,
                 makeTypeString(), false /* repeated */);
             addROSingleton(dataJson, f);
         }
@@ -1301,36 +1304,36 @@ BFRuntimeSchemaGenerator::addSnapshot(Util::JsonArray* tablesJson,
             auto* tableContainerItemsJson = new Util::JsonArray();
             {
                 auto* f = makeCommonDataField(
-                    BF_RT_DATA_SNAPSHOT_TABLE_NAME, "table_name",
+                    BF_RT_DATA_SNAPSHOT_TABLE_NAME, "table_name"_cs,
                     makeTypeString(), false /* repeated */);
                 addROSingleton(tableContainerItemsJson, f);
             }
             {
                 auto* f = makeCommonDataField(
-                    BF_RT_DATA_SNAPSHOT_MATCH_HIT_HANDLE, "match_hit_handle",
-                    makeTypeInt("uint32"), false /* repeated */);
+                    BF_RT_DATA_SNAPSHOT_MATCH_HIT_HANDLE, "match_hit_handle"_cs,
+                    makeTypeInt("uint32"_cs), false /* repeated */);
                 addROSingleton(tableContainerItemsJson, f);
             }
             {
                 auto* f = makeCommonDataField(
-                    BF_RT_DATA_SNAPSHOT_TABLE_HIT, "table_hit",
+                    BF_RT_DATA_SNAPSHOT_TABLE_HIT, "table_hit"_cs,
                     makeTypeBool(), false /* repeated */);
                 addROSingleton(tableContainerItemsJson, f);
             }
             {
                 auto* f = makeCommonDataField(
-                    BF_RT_DATA_SNAPSHOT_TABLE_INHIBITED, "table_inhibited",
+                    BF_RT_DATA_SNAPSHOT_TABLE_INHIBITED, "table_inhibited"_cs,
                     makeTypeBool(), false /* repeated */);
                 addROSingleton(tableContainerItemsJson, f);
             }
             {
                 auto* f = makeCommonDataField(
-                    BF_RT_DATA_SNAPSHOT_TABLE_EXECUTED, "table_executed",
+                    BF_RT_DATA_SNAPSHOT_TABLE_EXECUTED, "table_executed"_cs,
                     makeTypeBool(), false /* repeated */);
                 addROSingleton(tableContainerItemsJson, f);
             }
             auto* tableContainerJson = makeContainerDataField(
-                BF_RT_DATA_SNAPSHOT_TABLE_INFO, "table_info",
+                BF_RT_DATA_SNAPSHOT_TABLE_INFO, "table_info"_cs,
                 tableContainerItemsJson, true /* repeated */);
 
             addROSingleton(dataJson, tableContainerJson);
@@ -1341,38 +1344,38 @@ BFRuntimeSchemaGenerator::addSnapshot(Util::JsonArray* tablesJson,
             // instead...
             {
                 auto* f = makeCommonDataField(
-                    BF_RT_DATA_SNAPSHOT_ENABLED_NEXT_TABLES, "enabled_next_tables",
+                    BF_RT_DATA_SNAPSHOT_ENABLED_NEXT_TABLES, "enabled_next_tables"_cs,
                     makeTypeString(), true /* repeated */);
                 addROSingleton(dataJson, f);
             }
             {
                 auto* f = makeCommonDataField(
-                    BF_RT_DATA_SNAPSHOT_GLOBAL_EXECUTE_TABLES, "global_execute_tables",
+                    BF_RT_DATA_SNAPSHOT_GLOBAL_EXECUTE_TABLES, "global_execute_tables"_cs,
                     makeTypeString(), true /* repeated */);
                 addROSingleton(dataJson, f);
             }
             {
                 auto* f = makeCommonDataField(
                     BF_RT_DATA_SNAPSHOT_ENABLED_GLOBAL_EXECUTE_TABLES,
-                    "enabled_global_execute_tables",
+                    "enabled_global_execute_tables"_cs,
                     makeTypeString(), true /* repeated */);
                 addROSingleton(dataJson, f);
             }
             {
                 auto* f = makeCommonDataField(
-                    BF_RT_DATA_SNAPSHOT_LONG_BRANCH_TABLES, "long_branch_tables",
+                    BF_RT_DATA_SNAPSHOT_LONG_BRANCH_TABLES, "long_branch_tables"_cs,
                     makeTypeString(), true /* repeated */);
                 addROSingleton(dataJson, f);
             }
             {
                 auto* f = makeCommonDataField(
-                    BF_RT_DATA_SNAPSHOT_ENABLED_LONG_BRANCH_TABLES, "enabled_long_branch_tables",
+                    BF_RT_DATA_SNAPSHOT_ENABLED_LONG_BRANCH_TABLES, "enabled_long_branch_tables"_cs,
                     makeTypeString(), true /* repeated */);
                 addROSingleton(dataJson, f);
             }
             {
                 auto* f = makeCommonDataField(
-                    BF_RT_DATA_SNAPSHOT_DEPARSER_ERROR, "deparser_error",
+                    BF_RT_DATA_SNAPSHOT_DEPARSER_ERROR, "deparser_error"_cs,
                     makeTypeBool(), false /* repeated */);
                 addROSingleton(dataJson, f);
             }
@@ -1380,19 +1383,19 @@ BFRuntimeSchemaGenerator::addSnapshot(Util::JsonArray* tablesJson,
             auto* meterContainerItemsJson = new Util::JsonArray();
             {
                 auto* f = makeCommonDataField(
-                    BF_RT_DATA_SNAPSHOT_METER_TABLE_NAME, "table_name",
+                    BF_RT_DATA_SNAPSHOT_METER_TABLE_NAME, "table_name"_cs,
                     makeTypeString(), false /* repeated */);
                 addROSingleton(meterContainerItemsJson, f);
             }
             {
                 auto* f = makeCommonDataField(
                     BF_RT_DATA_SNAPSHOT_METER_ALU_OPERATION_TYPE,
-                    "meter_alu_operation_type",
+                    "meter_alu_operation_type"_cs,
                     makeTypeString(), false /* repeated */);
                 addROSingleton(meterContainerItemsJson, f);
             }
             auto* meterContainerJson = makeContainerDataField(
-                BF_RT_DATA_SNAPSHOT_METER_ALU_INFO, "meter_alu_info",
+                BF_RT_DATA_SNAPSHOT_METER_ALU_INFO, "meter_alu_info"_cs,
                 meterContainerItemsJson, true /* repeated */);
             addROSingleton(dataJson, meterContainerJson);
         }
@@ -1404,10 +1407,10 @@ BFRuntimeSchemaGenerator::addSnapshot(Util::JsonArray* tablesJson,
             addROSingleton(dataJson, f);
         }
 
-        tableJson->emplace("data", dataJson);
+        tableJson->emplace("data"_cs, dataJson);
 
-        tableJson->emplace("supported_operations", new Util::JsonArray());
-        tableJson->emplace("attributes", new Util::JsonArray());
+        tableJson->emplace("supported_operations"_cs, new Util::JsonArray());
+        tableJson->emplace("attributes"_cs, new Util::JsonArray());
 
         tablesJson->append(tableJson);
         LOG2("Added SnapshotData " << tblName);
@@ -1422,24 +1425,24 @@ BFRuntimeSchemaGenerator::addSnapshotLiveness(Util::JsonArray* tablesJson,
   if (!tableJson) {
     auto tableId = makeBFRuntimeId(snapshot.id, ::barefoot::P4Ids::SNAPSHOT_LIVENESS);
     auto* tableJson = initTableJson(tblName, tableId,
-        "SnapshotLiveness", 0 /* size, read-only table */);
+        "SnapshotLiveness"_cs, 0 /* size, read-only table */);
 
     auto* keyJson = new Util::JsonArray();
-    addKeyField(keyJson, BF_RT_DATA_SNAPSHOT_LIVENESS_FIELD_NAME, "field_name",
-        true /* mandatory */, "Exact", makeTypeString());
-    tableJson->emplace("key", keyJson);
+    addKeyField(keyJson, BF_RT_DATA_SNAPSHOT_LIVENESS_FIELD_NAME, "field_name"_cs,
+        true /* mandatory */, "Exact"_cs, makeTypeString());
+    tableJson->emplace("key"_cs, keyJson);
 
     auto* dataJson = new Util::JsonArray();
     {
       auto* f = makeCommonDataField(
-          BF_RT_DATA_SNAPSHOT_LIVENESS_VALID_STAGES, "valid_stages",
-          makeTypeInt("uint32"), true /* repeated */);
+          BF_RT_DATA_SNAPSHOT_LIVENESS_VALID_STAGES, "valid_stages"_cs,
+          makeTypeInt("uint32"_cs), true /* repeated */);
       addROSingleton(dataJson, f);
     }
-    tableJson->emplace("data", dataJson);
+    tableJson->emplace("data"_cs, dataJson);
 
-    tableJson->emplace("supported_operations", new Util::JsonArray());
-    tableJson->emplace("attributes", new Util::JsonArray());
+    tableJson->emplace("supported_operations"_cs, new Util::JsonArray());
+    tableJson->emplace("attributes"_cs, new Util::JsonArray());
 
     tablesJson->append(tableJson);
     LOG2("Added SnapshotLiveness " << tblName);
@@ -1450,25 +1453,25 @@ void
 BFRuntimeSchemaGenerator::addParserChoices(Util::JsonArray* tablesJson,
                                       const ParserChoices& parserChoices) const {
     auto* tableJson = initTableJson(
-        parserChoices.name, parserChoices.id, "ParserInstanceConfigure",
+        parserChoices.name, parserChoices.id, "ParserInstanceConfigure"_cs,
         Device::numParsersPerPipe() /* size */);
 
     auto* keyJson = new Util::JsonArray();
-    addKeyField(keyJson, BF_RT_DATA_PARSER_INSTANCE, "$PARSER_INSTANCE",
-                true /* mandatory */, "Exact", makeTypeInt("uint32"));
-    tableJson->emplace("key", keyJson);
+    addKeyField(keyJson, BF_RT_DATA_PARSER_INSTANCE, "$PARSER_INSTANCE"_cs,
+                true /* mandatory */, "Exact"_cs, makeTypeInt("uint32"_cs));
+    tableJson->emplace("key"_cs, keyJson);
 
     auto* dataJson = new Util::JsonArray();
     {
         auto* f = makeCommonDataField(
-            BF_RT_DATA_PARSER_NAME, "$PARSER_NAME",
+            BF_RT_DATA_PARSER_NAME, "$PARSER_NAME"_cs,
             makeTypeEnum(parserChoices.choices), false /* repeated */);
         addSingleton(dataJson, f, true /* mandatory */, false /* read-only */);
     }
-    tableJson->emplace("data", dataJson);
+    tableJson->emplace("data"_cs, dataJson);
 
-    tableJson->emplace("supported_operations", new Util::JsonArray());
-    tableJson->emplace("attributes", new Util::JsonArray());
+    tableJson->emplace("supported_operations"_cs, new Util::JsonArray());
+    tableJson->emplace("attributes"_cs, new Util::JsonArray());
 
     tablesJson->append(tableJson);
     LOG2("Added ParserChoices " << parserChoices.name);
@@ -1483,33 +1486,33 @@ BFRuntimeSchemaGenerator::addDebugCounterTable(Util::JsonArray* tablesJson) cons
     LOG1("Adding Debug Counter Table" << indent);
     P4Id id = makeBFRuntimeId(0, barefoot::P4Ids::DEBUG_COUNTER);
     auto tblName = "tbl_dbg_counter";
-    auto* tableJson = initTableJson(tblName, id, "TblDbgCnt",
+    auto* tableJson = initTableJson(tblName, id, "TblDbgCnt"_cs,
         Device::numStages() * Device::numLogTablesPerStage() /* size */);
 
     auto* keyJson = new Util::JsonArray();
-    addKeyField(keyJson, BF_RT_DATA_DEBUG_CNT_TABLE_NAME, "tbl_name",
-                true /* mandatory */, "Exact", makeTypeString());
-    tableJson->emplace("key", keyJson);
+    addKeyField(keyJson, BF_RT_DATA_DEBUG_CNT_TABLE_NAME, "tbl_name"_cs,
+                true /* mandatory */, "Exact"_cs, makeTypeString());
+    tableJson->emplace("key"_cs, keyJson);
 
     auto* dataJson = new Util::JsonArray();
     {
-        std::vector<cstring> choices = { "DISABLED", "TBL_MISS", "TBL_HIT",
-            "GW_TBL_MISS", "GW_TBL_HIT", "GW_TBL_INHIBIT" };
+        std::vector<cstring> choices = { "DISABLED"_cs, "TBL_MISS"_cs, "TBL_HIT"_cs,
+            "GW_TBL_MISS"_cs, "GW_TBL_HIT"_cs, "GW_TBL_INHIBIT"_cs };
         auto* f = makeCommonDataField(
-            BF_RT_DATA_DEBUG_CNT_TYPE, "type",
+            BF_RT_DATA_DEBUG_CNT_TYPE, "type"_cs,
             makeTypeEnum(choices, choices[2]), false /* repeated */);
         addSingleton(dataJson, f, false /* mandatory */, false /* read-only */);
     }
     {
         auto* f = makeCommonDataField(
-          BF_RT_DATA_DEBUG_CNT_VALUE, "value",
-          makeTypeInt("uint64", 0), false /* repeated */);
+          BF_RT_DATA_DEBUG_CNT_VALUE, "value"_cs,
+          makeTypeInt("uint64"_cs, 0), false /* repeated */);
         addSingleton(dataJson, f, false /* mandatory */, false /* read-only */);
     }
-    tableJson->emplace("data", dataJson);
+    tableJson->emplace("data"_cs, dataJson);
 
-    tableJson->emplace("supported_operations", new Util::JsonArray());
-    tableJson->emplace("attributes", new Util::JsonArray());
+    tableJson->emplace("supported_operations"_cs, new Util::JsonArray());
+    tableJson->emplace("attributes"_cs, new Util::JsonArray());
 
     tablesJson->append(tableJson);
     LOG2("Added Debug Counter " << tblName);

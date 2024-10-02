@@ -44,7 +44,7 @@ class MapFieldToExpr : public Inspector {
             new IR::Constant(IR::Type_Bits::get(f->size), 0);
         const IR::Expression* field_expr = get_expr(f);
         auto* prim =
-            new IR::MAU::Instruction("set", { field_expr, zero_expr });
+            new IR::MAU::Instruction("set"_cs, { field_expr, zero_expr });
         return prim;
     }
 };

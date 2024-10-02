@@ -588,7 +588,7 @@ class PadFixedSizeHeaders : public Inspector {
         auto countPadding = [&](const IR::IndexedVector<IR::StructField>& fields) -> int {
             int count = 0;
             for (auto f = fields.begin(); f != fields.end(); f++) {
-                if ((*f)->getAnnotation("padding"))
+                if ((*f)->getAnnotation("padding"_cs))
                     count++; }
             return count;
         };
@@ -743,7 +743,7 @@ class LogFlexiblePacking : public Logging::PassManager {
 
  public:
     explicit LogFlexiblePacking(const PhvInfo& phv) :
-    Logging::PassManager("flexible_packing", Logging::Mode::AUTO) {
+    Logging::PassManager("flexible_packing"_cs, Logging::Mode::AUTO) {
         flexibleLogging = new LogRepackedHeaders(phv);
         addPasses({
             flexibleLogging,

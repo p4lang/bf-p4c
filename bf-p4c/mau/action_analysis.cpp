@@ -937,7 +937,7 @@ bool ActionAnalysis::init_special_alignment(const ActionParam &read, ContainerAc
 
         if (cont_action.counts[ActionParam::ACTIONDATA] == 0) {
             adi.alignment.add_alignment(mini_write_bits, slot_bits);
-            cstring name = "$special";
+            cstring name = "$special"_cs;
             adi.initialize(name, alu_pos->loc == ActionData::IMMEDIATE, alu_pos->start_byte, 1);
             cont_action.counts[ActionParam::ACTIONDATA] = 1;
         } else if (static_cast<int>(alu_pos->start_byte) != adi.start ||
@@ -1278,7 +1278,7 @@ void ActionAnalysis::verify_P4_action_with_phv(cstring action_name) {
                 to_bitmasked_set = true;
         }
 
-        instr_name = to_bitmasked_set ? "to-bitmasked-set" : cont_action.field_actions[0].name;
+        instr_name = to_bitmasked_set ? "to-bitmasked-set"_cs : cont_action.field_actions[0].name;
         LOG5("Instruction name: " << instr_name << "------");
 
         for (auto &field_action : cont_action.field_actions) {
@@ -2915,30 +2915,30 @@ std::ostream &operator<<(std::ostream &out, const ActionAnalysis::FieldAction &f
 
 const std::vector<cstring> ActionAnalysis::ContainerAction::error_code_string_t = {
     // "NO_PROBLEM", // Set to 0 so not indexed
-    "MULTIPLE_CONTAINER_ACTIONS",
-    "READ_PHV_MISMATCH",
-    "ACTION_DATA_MISMATCH",
-    "CONSTANT_MISMATCH",
-    "TOO_MANY_PHV_SOURCES",
-    "IMPOSSIBLE_ALIGNMENT",
-    "CONSTANT_TO_ACTION_DATA",
-    "MULTIPLE_ACTION_DATA",
-    "ILLEGAL_OVERWRITE",
-    "BIT_COLLISION",
-    "OPERAND_MISMATCH",
-    "UNHANDLED_ACTION_DATA",
-    "DIFFERENT_READ_SIZE",
-    "MAU_GROUP_MISMATCH",
-    "PHV_AND_ACTION_DATA",
-    "PARTIAL_OVERWRITE",
-    "MULTIPLE_SHIFTS",
-    "ILLEGAL_ACTION_DATA",
-    "REFORMAT_CONSTANT",
-    "UNRESOLVED_REPEATED_ACTION_DATA",
-    "ATTACHED_OUTPUT_ILLEGAL_ALIGNMENT",
-    "CONSTANT_TO_HASH",
-    "ILLEGAL_MOCHA_OR_DARK_WRITE",
-    "BIT_COLLISION_SET",
+    "MULTIPLE_CONTAINER_ACTIONS"_cs,
+    "READ_PHV_MISMATCH"_cs,
+    "ACTION_DATA_MISMATCH"_cs,
+    "CONSTANT_MISMATCH"_cs,
+    "TOO_MANY_PHV_SOURCES"_cs,
+    "IMPOSSIBLE_ALIGNMENT"_cs,
+    "CONSTANT_TO_ACTION_DATA"_cs,
+    "MULTIPLE_ACTION_DATA"_cs,
+    "ILLEGAL_OVERWRITE"_cs,
+    "BIT_COLLISION"_cs,
+    "OPERAND_MISMATCH"_cs,
+    "UNHANDLED_ACTION_DATA"_cs,
+    "DIFFERENT_READ_SIZE"_cs,
+    "MAU_GROUP_MISMATCH"_cs,
+    "PHV_AND_ACTION_DATA"_cs,
+    "PARTIAL_OVERWRITE"_cs,
+    "MULTIPLE_SHIFTS"_cs,
+    "ILLEGAL_ACTION_DATA"_cs,
+    "REFORMAT_CONSTANT"_cs,
+    "UNRESOLVED_REPEATED_ACTION_DATA"_cs,
+    "ATTACHED_OUTPUT_ILLEGAL_ALIGNMENT"_cs,
+    "CONSTANT_TO_HASH"_cs,
+    "ILLEGAL_MOCHA_OR_DARK_WRITE"_cs,
+    "BIT_COLLISION_SET"_cs,
 };
 
 void ActionAnalysis::ContainerAction::set_mismatch(ActionParam::type_t type) {

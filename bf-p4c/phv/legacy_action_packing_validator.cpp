@@ -295,7 +295,7 @@ Result make_slicelist_group_prop(
             }
             continue;
         } else if (valid_sizes.size() == 0) {
-            return Result(Code::BAD, "container size conflicts");
+            return Result(Code::BAD, "container size conflicts"_cs);
         }
         const int cont_size = *valid_sizes.begin();
         for (const auto* sl : group) {
@@ -519,12 +519,12 @@ Result validate_one_byte_slice_list(const SliceListGroupProp& prop,
                 continue;
             }
             if (*cont_size != *src_cont_size) {
-                return Result(Code::BAD, "multiple different src container sizes");
+                return Result(Code::BAD, "multiple different src container sizes"_cs);
             }
         }
     }
     if (!cont_size) {
-        return Result(Code::UNKNOWN, "container size not decided yet");
+        return Result(Code::UNKNOWN, "container size not decided yet"_cs);
     }
 
     const int byte_list_sz = prop.sl_bits.at(byte_list);  // it could be less than 8 bits.
@@ -539,7 +539,7 @@ Result validate_one_byte_slice_list(const SliceListGroupProp& prop,
         for (int offset = 0; offset <= *cont_size - byte_list_sz; offset += step) {
             LOG5("check action: " << action->externalName() << ", dest alloc offset: " << offset);
             rst = validate_slicelist_for_action(
-                    prop, "byte_dest", *cont_size, offset, byte_list, action);
+                    prop, "byte_dest"_cs, *cont_size, offset, byte_list, action);
             if (rst.code == Code::OK || rst.code == Code::UNKNOWN) {
                 LOG5("found valid allocation at offset " << offset);
                 break;

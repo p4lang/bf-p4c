@@ -39,9 +39,9 @@ static unsigned getIndex(const IR::Expression *expr,
 CONVERT_PRIMITIVE(bypass_egress) {
     if (primitive->operands.size() != 0) return nullptr;
     if (use_v1model())
-        structure->include("tofino/p4_14_prim.p4", "-D_TRANSLATE_TO_V1MODEL");
+        structure->include("tofino/p4_14_prim.p4"_cs, "-D_TRANSLATE_TO_V1MODEL"_cs);
     return new IR::MethodCallStatement(primitive->srcInfo,
-            IR::ID(primitive->srcInfo, "bypass_egress"), {});
+            IR::ID(primitive->srcInfo, "bypass_egress"_cs), {});
 }
 
 static cstring makeHashCall(ProgramStructure *structure, IR::BlockStatement *block,
@@ -52,7 +52,7 @@ static cstring makeHashCall(ProgramStructure *structure, IR::BlockStatement *blo
         ::error("%1%: Expected a field_list_calculation", field_list);
         return cstring(); }
     auto ttype = IR::Type_Bits::get(flc->output_width);
-    cstring temp = structure->makeUniqueName("temp");
+    cstring temp = structure->makeUniqueName("temp"_cs);
     block->push_back(new IR::Declaration_Variable(temp, ttype));
 
     auto fl = structure->getFieldLists(flc);
@@ -123,12 +123,12 @@ static bool makeMeterExecCall(const Util::SourceInfo &srcInfo, ProgramStructure 
 CONVERT_PRIMITIVE(execute_meter, 5) {
     if (primitive->operands.size() != 4) return nullptr;
     if (use_v1model())
-        structure->include("tofino/p4_14_prim.p4", "-D_TRANSLATE_TO_V1MODEL");
+        structure->include("tofino/p4_14_prim.p4"_cs, "-D_TRANSLATE_TO_V1MODEL"_cs);
     ExpressionConverter conv(structure);
     // FIXME -- convert this to a custom primitive so TNA translation can convert
     // FIXME -- it to an execute call on a TNA meter
     return new IR::MethodCallStatement(primitive->srcInfo,
-            IR::ID(primitive->srcInfo, "execute_meter_with_color"), {
+            IR::ID(primitive->srcInfo, "execute_meter_with_color"_cs), {
                 new IR::Argument(conv.convert(primitive->operands.at(0))),
                 new IR::Argument(conv.convert(primitive->operands.at(1))),
                 new IR::Argument(conv.convert(primitive->operands.at(2))),
@@ -149,10 +149,10 @@ CONVERT_PRIMITIVE(execute_meter_from_hash) {
     } else {
         // has pre-color, so need TNA specific call
         if (use_v1model())
-            structure->include("tofino/p4_14_prim.p4", "-D_TRANSLATE_TO_V1MODEL");
+            structure->include("tofino/p4_14_prim.p4"_cs, "-D_TRANSLATE_TO_V1MODEL"_cs);
         block->push_back(
             new IR::MethodCallStatement(primitive->srcInfo,
-                IR::ID(primitive->srcInfo, "execute_meter_with_color"), {
+                IR::ID(primitive->srcInfo, "execute_meter_with_color"_cs), {
                     new IR::Argument(conv.convert(primitive->operands.at(0))),
                     new IR::Argument(new IR::PathExpression(new IR::Path(temp))),
                     new IR::Argument(conv.convert(primitive->operands.at(2))),
@@ -166,7 +166,7 @@ CONVERT_PRIMITIVE(execute_meter_from_hash_with_or) {
     auto block = new IR::BlockStatement;
     cstring temp = makeHashCall(structure, block, primitive->operands.at(1));
     auto dest = conv.convert(primitive->operands.at(2));
-    cstring temp2 = structure->makeUniqueName("temp");
+    cstring temp2 = structure->makeUniqueName("temp"_cs);
     block->push_back(new IR::Declaration_Variable(temp2, dest->type));
     if (primitive->operands.size() == 3) {
         if (!makeMeterExecCall(primitive->srcInfo, structure, block,
@@ -177,10 +177,10 @@ CONVERT_PRIMITIVE(execute_meter_from_hash_with_or) {
     } else {
         // has pre-color, so need TNA specific call
         if (use_v1model())
-            structure->include("tofino/p4_14_prim.p4", "-D_TRANSLATE_TO_V1MODEL");
+            structure->include("tofino/p4_14_prim.p4"_cs, "-D_TRANSLATE_TO_V1MODEL"_cs);
         block->push_back(
             new IR::MethodCallStatement(primitive->srcInfo,
-                IR::ID(primitive->srcInfo, "execute_meter_with_color"), {
+                IR::ID(primitive->srcInfo, "execute_meter_with_color"_cs), {
                     new IR::Argument(conv.convert(primitive->operands.at(0))),
                     new IR::Argument(new IR::PathExpression(new IR::Path(temp))),
                     new IR::Argument(new IR::PathExpression(new IR::Path(temp2))),
@@ -196,7 +196,7 @@ CONVERT_PRIMITIVE(execute_meter_with_or) {
     ExpressionConverter conv(structure);
     auto block = new IR::BlockStatement;
     auto dest = conv.convert(primitive->operands.at(2));
-    cstring temp2 = structure->makeUniqueName("temp");
+    cstring temp2 = structure->makeUniqueName("temp"_cs);
     block->push_back(new IR::Declaration_Variable(temp2, dest->type));
     if (primitive->operands.size() == 3) {
         if (!makeMeterExecCall(primitive->srcInfo, structure, block,
@@ -207,10 +207,10 @@ CONVERT_PRIMITIVE(execute_meter_with_or) {
     } else {
         // has pre-color, so need TNA specific call
         if (use_v1model())
-            structure->include("tofino/p4_14_prim.p4", "-D_TRANSLATE_TO_V1MODEL");
+            structure->include("tofino/p4_14_prim.p4"_cs, "-D_TRANSLATE_TO_V1MODEL"_cs);
         block->push_back(
             new IR::MethodCallStatement(primitive->srcInfo,
-                IR::ID(primitive->srcInfo, "execute_meter_with_color"), {
+                IR::ID(primitive->srcInfo, "execute_meter_with_color"_cs), {
                     new IR::Argument(conv.convert(primitive->operands.at(0))),
                     new IR::Argument(conv.convert(primitive->operands.at(1))),
                     new IR::Argument(new IR::PathExpression(new IR::Path(temp2))),
@@ -224,24 +224,24 @@ CONVERT_PRIMITIVE(execute_meter_with_or) {
 CONVERT_PRIMITIVE(invalidate) {
     if (primitive->operands.size() != 1) return nullptr;
     if (use_v1model())
-        structure->include("tofino/p4_14_prim.p4", "-D_TRANSLATE_TO_V1MODEL");
+        structure->include("tofino/p4_14_prim.p4"_cs, "-D_TRANSLATE_TO_V1MODEL"_cs);
     ExpressionConverter conv(structure);
     auto arg = conv.convert(primitive->operands.at(0));
     return new IR::MethodCallStatement(primitive->srcInfo, IR::ID(primitive->srcInfo,
-                    arg->is<IR::Constant>() ? "invalidate_raw" : "invalidate"),
+                    arg->is<IR::Constant>() ? "invalidate_raw"_cs : "invalidate"_cs),
                                        { new IR::Argument(arg) });
 }
 
 CONVERT_PRIMITIVE(invalidate_digest) {
     if (primitive->operands.size() != 0) return nullptr;
     if (use_v1model())
-        structure->include("tofino/p4_14_prim.p4", "-D_TRANSLATE_TO_V1MODEL");
+        structure->include("tofino/p4_14_prim.p4"_cs, "-D_TRANSLATE_TO_V1MODEL"_cs);
     ExpressionConverter conv(structure);
     // Since V1model does not understand the Tofino metadata, this is a simple pass through
     // and will be translated to `invalidate(ig_intr_md_for_dprsr.digest_type)` in
     // arch/simple_switch.cpp during Tofino mapping.
     return new IR::MethodCallStatement(primitive->srcInfo, IR::ID(primitive->srcInfo,
-                                                                  "invalidate_digest"),
+                                                                  "invalidate_digest"_cs),
                                        {});
 }
 
@@ -249,13 +249,13 @@ static const IR::Statement *
 convertRecirculate(ProgramStructure *structure, const IR::Primitive *primitive) {
     if (primitive->operands.size() != 1) return nullptr;
     if (use_v1model())
-        structure->include("tofino/p4_14_prim.p4", "-D_TRANSLATE_TO_V1MODEL");
+        structure->include("tofino/p4_14_prim.p4"_cs, "-D_TRANSLATE_TO_V1MODEL"_cs);
     ExpressionConverter conv(structure);
     auto port = primitive->operands.at(0);
     if (!port->is<IR::Constant>() && !port->is<IR::ActionArg>()) return nullptr;
     port = conv.convert(port);
     port = new IR::Cast(IR::Type::Bits::get(9), port);
-    auto recirc = new IR::MethodCallStatement(primitive->srcInfo, "recirculate_raw",
+    auto recirc = new IR::MethodCallStatement(primitive->srcInfo, "recirculate_raw"_cs,
                                        { new IR::Argument(port) });
     return recirc;
 }
@@ -330,7 +330,7 @@ CONVERT_PRIMITIVE(generate_digest, 1) {
     structure->types.emplace(type);
 
     IR::PathExpression *path = new IR::PathExpression("ig_intr_md_for_dprsr");
-    auto mem = new IR::Member(path, "digest_type");
+    auto mem = new IR::Member(path, "digest_type"_cs);
     auto st = dynamic_cast<TnaProgramStructure*>(structure);
     if (st == nullptr) return nullptr;
     unsigned digestId = getIndex(list, st->digestIndexHashes);
@@ -354,7 +354,7 @@ CONVERT_PRIMITIVE(sample_e2e) {
 
     /* -- add includes which imports the sample3 and sample4 directives */
     if (use_v1model())
-        structure->include("tofino/p4_14_prim.p4", "-D_TRANSLATE_TO_V1MODEL");
+        structure->include("tofino/p4_14_prim.p4"_cs, "-D_TRANSLATE_TO_V1MODEL"_cs);
 
     ExpressionConverter conv(structure);
 
@@ -399,9 +399,9 @@ CONVERT_PRIMITIVE(sample_e2e) {
                 args->push_back(new IR::Argument(field_list));
         }
 
-        fn = IR::ID(primitive->srcInfo, "sample4");
+        fn = IR::ID(primitive->srcInfo, "sample4"_cs);
     } else {
-        fn = IR::ID(primitive->srcInfo, "sample3");
+        fn = IR::ID(primitive->srcInfo, "sample3"_cs);
     }
 
     return new IR::MethodCallStatement(
@@ -414,7 +414,7 @@ CONVERT_PRIMITIVE(sample_e2e) {
 CONVERT_PRIMITIVE(swap) {
     if (primitive->operands.size() != 2) return nullptr;
     ExpressionConverter conv(structure);
-    auto temp = IR::ID(structure->makeUniqueName("temp"));
+    auto temp = IR::ID(structure->makeUniqueName("temp"_cs));
     auto v1 = primitive->operands.at(0);
     auto v2 = primitive->operands.at(1);
     auto type = v1->type;

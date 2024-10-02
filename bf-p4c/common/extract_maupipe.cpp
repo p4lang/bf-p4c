@@ -77,12 +77,12 @@ static int64_t getConstant(const IR::Annotation* annotation,
 static cstring getString(const IR::Annotation* annotation) {
     if (annotation->expr.size() != 1) {
         ::error("%1% should contain a string", annotation);
-        return "";
+        return ""_cs;
     }
     auto str = annotation->expr[0]->to<IR::StringLiteral>();
     if (str == nullptr) {
         ::error("%1% should contain a string", annotation);
-        return "";
+        return ""_cs;
     }
     return str->value;
 }
@@ -154,7 +154,7 @@ class ConvertMethodCalls : public MauTransform {
             } else if (name == "setValid" || name == "setInvalid") {
                 recv = new IR::Member(mc->type, recv, "$valid");
                 extra_arg = new IR::Constant(mc->type, name == "setValid");
-                name = "modify_field"; }
+                name = "modify_field"_cs; }
 #endif
         } else if (auto em = mi->to<P4::ExternMethod>()) {
             name = em->actualExternType->name + "." + em->method->name;
@@ -274,22 +274,22 @@ class SetupActionProperties : public MauModifier {
         bool is_the_default_action = false;
         bool is_const_default_action = false;
         bool can_be_hit_action = true;
-        cstring hit_disallowed_reason = "";
+        cstring hit_disallowed_reason = ""_cs;
         bool can_be_default_action = !has_constant_default_action;
-        cstring default_disallowed_reason = "";
+        cstring default_disallowed_reason = ""_cs;
 
         // First, check for action annotations
-        auto table_only_annot = elem->annotations->getSingle("tableonly");
-        auto default_only_annot = elem->annotations->getSingle("defaultonly");
+        auto table_only_annot = elem->annotations->getSingle("tableonly"_cs);
+        auto default_only_annot = elem->annotations->getSingle("defaultonly"_cs);
         if (has_constant_default_action)
-          default_disallowed_reason = "has_const_default_action";
+          default_disallowed_reason = "has_const_default_action"_cs;
         if (table_only_annot) {
           can_be_default_action = false;
-          default_disallowed_reason = "user_indicated_table_only";
+          default_disallowed_reason = "user_indicated_table_only"_cs;
         }
         if (default_only_annot) {
           can_be_hit_action = false;
-          hit_disallowed_reason = "user_indicated_default_only";
+          hit_disallowed_reason = "user_indicated_default_only"_cs;
         }
 
         // Second, see if this action is the default action and/or constant default action
@@ -310,7 +310,7 @@ class SetupActionProperties : public MauModifier {
             is_the_default_action = true;
             if (has_constant_default_action) {
               can_be_default_action = true;  // this is the constant default action
-              default_disallowed_reason = "";
+              default_disallowed_reason = ""_cs;
               is_const_default_action = true;
             }
           }
@@ -351,25 +351,27 @@ class ActionBodySetup : public Inspector {
     bool InHashAnnot() const {
         const Visitor::Context *ctxt = nullptr;
         while (auto *blk = findContext<IR::BlockStatement>(ctxt)) {
-            if (blk->getAnnotation("in_hash")) return true;
-            if (blk->getAnnotation("in_vliw")) return false; }
+            if (blk->getAnnotation("in_hash"_cs)) return true;
+            if (blk->getAnnotation("in_vliw"_cs)) return false; }
         return false; }
 
     bool preorder(const IR::IndexedVector<IR::StatOrDecl> *) override { return true; }
     bool preorder(const IR::BlockStatement *) override { return true; }
     bool preorder(const IR::AssignmentStatement *assign) override {
         if (!af->exitAction) {
-            cstring pname = "modify_field";
+            cstring pname = "modify_field"_cs;
             if (assign->left->type->is<IR::Type_Header>())
-                pname = "copy_header";
+                pname = "copy_header"_cs;
             auto prim = new IR::MAU::Primitive(assign->srcInfo, pname, assign->left, assign->right);
             prim->in_hash = InHashAnnot();
             af->action.push_back(prim); }
         return false; }
     bool preorder(const IR::MethodCallStatement *mc) override {
         if (!af->exitAction) {
-            auto mc_init = new IR::MAU::Primitive(mc->srcInfo, "method_call_init", mc->methodCall);
-            af->action.push_back(mc_init); }
+            auto mc_init =
+                new IR::MAU::Primitive(mc->srcInfo, "method_call_init"_cs, mc->methodCall);
+            af->action.push_back(mc_init);
+        }
         return false;
     }
     bool preorder(const IR::ExitStatement *) override {
@@ -422,7 +424,7 @@ static const IR::MAU::Action *createActionFunction(const IR::P4Action *ac,
 static IR::MAU::AttachedMemory *createIdleTime(cstring name, const IR::Annotations *annot) {
     auto idletime = new IR::MAU::IdleTime(name);
 
-    if (auto s = annot->getSingle("idletime_precision")) {
+    if (auto s = annot->getSingle("idletime_precision"_cs)) {
         idletime->precision = getConstant(s);
         /* Default is 3 */
         if (idletime->precision != 1 && idletime->precision != 2 &&
@@ -430,21 +432,21 @@ static IR::MAU::AttachedMemory *createIdleTime(cstring name, const IR::Annotatio
                 idletime->precision = 3;
     }
 
-    if (auto s = annot->getSingle("idletime_interval")) {
+    if (auto s = annot->getSingle("idletime_interval"_cs)) {
         idletime->interval = getConstant(s);
         if (idletime->interval < 0 || idletime->interval > 12)
             idletime->interval = 7;
     }
 
-    if (auto s = annot->getSingle("idletime_two_way_notification")) {
+    if (auto s = annot->getSingle("idletime_two_way_notification"_cs)) {
         int two_way_notification = getConstant(s);
         if (two_way_notification == 1)
-            idletime->two_way_notification = "two_way";
+            idletime->two_way_notification = "two_way"_cs;
         else if (two_way_notification == 0)
-            idletime->two_way_notification = "disable";
+            idletime->two_way_notification = "disable"_cs;
     }
 
-    if (auto s = annot->getSingle("idletime_per_flow_idletime")) {
+    if (auto s = annot->getSingle("idletime_per_flow_idletime"_cs)) {
         int per_flow_enable = getConstant(s);
         idletime->per_flow_idletime = (per_flow_enable == 1) ? true : false;
     }
@@ -452,7 +454,7 @@ static IR::MAU::AttachedMemory *createIdleTime(cstring name, const IR::Annotatio
     /* this is weird - precision value overrides an explicit two_way_notification
      * and per_flow_idletime pragma  */
     if (idletime->precision > 1)
-        idletime->two_way_notification = "two_way";
+        idletime->two_way_notification = "two_way"_cs;
 
     if (idletime->precision == 1 || idletime->precision == 2)
         idletime->per_flow_idletime = false;
@@ -525,17 +527,17 @@ static void getCRCPolynomialFromExtern(const P4::ExternInstance& instance,
     if (instance.type->name != "CRCPolynomial") {
         ::error("Expected CRCPolynomial extern instance %1%", instance.type->name);
         return; }
-    auto coeffValue = instance.substitution.lookupByName("coeff")->expression;
+    auto coeffValue = instance.substitution.lookupByName("coeff"_cs)->expression;
     BUG_CHECK(coeffValue->to<IR::Constant>(), "Non-constant coeff");
-    auto reverseValue = instance.substitution.lookupByName("reversed")->expression;
+    auto reverseValue = instance.substitution.lookupByName("reversed"_cs)->expression;
     BUG_CHECK(reverseValue->to<IR::BoolLiteral>(), "Non-boolean reversed");
-    auto msbValue = instance.substitution.lookupByName("msb")->expression;
+    auto msbValue = instance.substitution.lookupByName("msb"_cs)->expression;
     BUG_CHECK(msbValue->to<IR::BoolLiteral>(), "Non-boolean msb");
-    auto initValue = instance.substitution.lookupByName("init")->expression;
+    auto initValue = instance.substitution.lookupByName("init"_cs)->expression;
     BUG_CHECK(initValue->to<IR::Constant>(), "Non-constant init");
-    auto extendValue = instance.substitution.lookupByName("extended")->expression;
+    auto extendValue = instance.substitution.lookupByName("extended"_cs)->expression;
     BUG_CHECK(extendValue->to<IR::BoolLiteral>(), "Non-boolean extend");
-    auto xorValue = instance.substitution.lookupByName("xor")->expression;
+    auto xorValue = instance.substitution.lookupByName("xor"_cs)->expression;
     BUG_CHECK(xorValue->to<IR::Constant>(), "Non-constant xor");
 
     hashFunc.msb = msbValue->to<IR::BoolLiteral>()->value;
@@ -605,7 +607,7 @@ static IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
         // the action selector object.
         if (match_table) {
             // Check for max group size pragma.
-            int pragma_max_group_size = getSingleAnnotationValue("selector_max_group_size",
+            int pragma_max_group_size = getSingleAnnotationValue("selector_max_group_size"_cs,
                                                                  match_table);
             if (pragma_max_group_size != -1) {
                 max_group_size = pragma_max_group_size;
@@ -615,7 +617,7 @@ static IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
                             "not between %d and %d.", match_table->srcInfo,
                             match_table->name, 1, 992*120); } }
             // Check for number of max groups pragma.
-            int pragma_num_max_groups = getSingleAnnotationValue("selector_num_max_groups",
+            int pragma_num_max_groups = getSingleAnnotationValue("selector_num_max_groups"_cs,
                                                                  match_table);
             if (pragma_num_max_groups != -1) {
                 num_groups = pragma_num_max_groups;
@@ -624,7 +626,7 @@ static IR::MAU::AttachedMemory *createAttached(Util::SourceInfo srcInfo,
                             "not greater than or equal to 1.", match_table->srcInfo,
                              match_table->name); } }
             // Check for selector_enable_scramble pragma.
-            int pragma_sps_en = getSingleAnnotationValue("selector_enable_scramble",
+            int pragma_sps_en = getSingleAnnotationValue("selector_enable_scramble"_cs,
                                                          match_table);
             if (pragma_sps_en != -1) {
                 if (pragma_sps_en == 0) {
@@ -927,7 +929,7 @@ class FixP4Table : public Inspector {
     }
 
     bool preorder(const IR::P4Table *tc) override {
-        auto impl = getExternInstanceFromProperty(tc, "implementation", refMap, typeMap);
+        auto impl = getExternInstanceFromProperty(tc, "implementation"_cs, refMap, typeMap);
         if (impl != std::nullopt) {
             if (impl->type->name == "ActionProfile") {
                 createAttachedTableFromTableProperty(*impl, refMap, typeMap);
@@ -936,21 +938,21 @@ class FixP4Table : public Inspector {
             }
         }
 
-        auto counters = getExternInstanceFromProperty(tc, "counters", refMap, typeMap);
+        auto counters = getExternInstanceFromProperty(tc, "counters"_cs, refMap, typeMap);
         if (counters != std::nullopt) {
             if (counters->type->name == "DirectCounter") {
                 createAttachedTableFromTableProperty(*counters, refMap, typeMap);
             }
         }
 
-        auto meters = getExternInstanceFromProperty(tc, "meters", refMap, typeMap);
+        auto meters = getExternInstanceFromProperty(tc, "meters"_cs, refMap, typeMap);
         if (meters != std::nullopt) {
             if (meters->type->name == "DirectMeter") {
                 createAttachedTableFromTableProperty(*meters, refMap, typeMap);
             }
         }
 
-        auto timeout = getExpressionFromProperty(tc, "idle_timeout");
+        auto timeout = getExpressionFromProperty(tc, "idle_timeout"_cs);
         if (timeout != std::nullopt) {
             auto bool_lit = (*timeout)->expression->to<IR::BoolLiteral>();
             if (bool_lit == nullptr || bool_lit->value == false)
@@ -960,7 +962,7 @@ class FixP4Table : public Inspector {
             tt->attached.push_back(new IR::MAU::BackendAttached(it->srcInfo, it));
         }
 
-        auto atcam = getExternInstanceFromProperty(tc, "atcam", refMap, typeMap);
+        auto atcam = getExternInstanceFromProperty(tc, "atcam"_cs, refMap, typeMap);
         if (atcam != std::nullopt) {
             if (atcam->type->name == "Atcam") {
                 tt->layout.partition_count =
@@ -975,50 +977,51 @@ class FixP4Table : public Inspector {
         // atcam and preclassifier tcam based on the intuition that the ALPM
         // extern definition in TNA is a library extern, not a primitive
         // extern.
-        auto as_atcam = getExpressionFromProperty(tc, "as_atcam");
+        auto as_atcam = getExpressionFromProperty(tc, "as_atcam"_cs);
         if (as_atcam != std::nullopt) {
             auto bool_lit = (*as_atcam)->expression->to<IR::BoolLiteral>();
             tt->layout.atcam = bool_lit->value;
         }
 
-        auto as_alpm = getExpressionFromProperty(tc, "as_alpm");
+        auto as_alpm = getExpressionFromProperty(tc, "as_alpm"_cs);
         if (as_alpm != std::nullopt) {
             auto bool_lit = (*as_alpm)->expression->to<IR::BoolLiteral>();
             tt->layout.alpm = bool_lit->value;
         }
 
-        auto alpm_preclassifier = getExpressionFromProperty(tc, "alpm_preclassifier");
+        auto alpm_preclassifier = getExpressionFromProperty(tc, "alpm_preclassifier"_cs);
         if (alpm_preclassifier != std::nullopt) {
             auto bool_lit = (*alpm_preclassifier)->expression->to<IR::BoolLiteral>();
             tt->layout.pre_classifier = bool_lit->value;
         }
 
 
-        auto partition_count = getExpressionFromProperty(tc, "atcam_partition_count");
+        auto partition_count = getExpressionFromProperty(tc, "atcam_partition_count"_cs);
         if (partition_count != std::nullopt) {
             auto int_lit = (*partition_count)->expression->to<IR::Constant>()->asInt();
             tt->layout.partition_count = int_lit;
         }
 
-        auto subtrees_per_partition = getExpressionFromProperty(tc, "atcam_subtrees_per_partition");
+        auto subtrees_per_partition =
+            getExpressionFromProperty(tc, "atcam_subtrees_per_partition"_cs);
         if (subtrees_per_partition != std::nullopt) {
             auto int_lit = (*subtrees_per_partition)->expression->to<IR::Constant>()->asInt();
             tt->layout.subtrees_per_partition = int_lit;
         }
 
-        auto number_entries = getExpressionFromProperty(tc, "alpm_preclassifier_number_entries");
+        auto number_entries = getExpressionFromProperty(tc, "alpm_preclassifier_number_entries"_cs);
         if (number_entries != std::nullopt) {
             auto int_lit = (*number_entries)->expression->to<IR::Constant>()->asInt();
             tt->layout.pre_classifer_number_entries = int_lit;
         }
 
-        auto atcam_subset_width = getExpressionFromProperty(tc, "atcam_subset_width");
+        auto atcam_subset_width = getExpressionFromProperty(tc, "atcam_subset_width"_cs);
         if (atcam_subset_width != std::nullopt) {
             auto int_lit = (*atcam_subset_width)->expression->to<IR::Constant>()->asInt();
             tt->layout.atcam_subset_width = int_lit;
         }
 
-        auto shift_granularity = getExpressionFromProperty(tc, "shift_granularity");
+        auto shift_granularity = getExpressionFromProperty(tc, "shift_granularity"_cs);
         if (shift_granularity != std::nullopt) {
             auto int_lit = (*shift_granularity)->expression->to<IR::Constant>()->asInt();
             tt->layout.shift_granularity = int_lit;
@@ -1026,7 +1029,7 @@ class FixP4Table : public Inspector {
 
         // table property to pass the excluded_field_msb_bits pragma info to backend
         // the syntax is excluded_field_msb = { {name, msb}, {name, msb} };
-        auto exclude_field_msb = getExpressionFromProperty(tc, "excluded_field_msb_bits");
+        auto exclude_field_msb = getExpressionFromProperty(tc, "excluded_field_msb_bits"_cs);
         if (exclude_field_msb != std::nullopt) {
             if (auto all_excluded_fields =
                     (*exclude_field_msb)->expression->to<IR::ListExpression>()) {
@@ -1041,7 +1044,7 @@ class FixP4Table : public Inspector {
         }
         // END:: ALPM_OPT
 
-        auto hash = getExternInstanceFromProperty(tc, "proxy_hash", refMap, typeMap);
+        auto hash = getExternInstanceFromProperty(tc, "proxy_hash"_cs, refMap, typeMap);
         if (hash != std::nullopt) {
             if (hash->type->name == "Hash") {
                 tt->layout.proxy_hash = true;
@@ -1093,7 +1096,7 @@ bool AttachTables::findSaluDeclarations(const IR::Declaration_Instance *ext,
         auto reg_arg = ext->arguments->size() > 0 ? ext->arguments->at(0)->expression : nullptr;
         if (!reg_arg) {
             // FIXME -- P4_14 compat code, no longer needed?
-            if (auto regprop = ext->properties["reg"]) {
+            if (auto regprop = ext->properties["reg"_cs]) {
                 if (auto rpv = regprop->value->to<IR::ExpressionValue>())
                     reg_arg = rpv->expression;
                 else
@@ -1145,7 +1148,7 @@ void AttachTables::InitializeStatefulAlus
              (regtype ? regtype->toString() : seltype->toString()) << " " << reg->name);
         auto regName = reg->externalName();
         // @reg annotation is used in p4-14 to generate PD API for action selector.
-        auto anno = ext->annotations->getSingle("reg");
+        auto anno = ext->annotations->getSingle("reg"_cs);
         if (anno)
             regName = getString(anno);
         salu = new IR::MAU::StatefulAlu(reg->srcInfo, regName, reg->annotations, reg);
@@ -1202,7 +1205,7 @@ void AttachTables::InitializeStatefulAlus
                             salu->init_reg_hi = k->value; } } }
         } else {
             salu->width = 1; }
-        if (auto cts = reg->annotations->getSingle("chain_total_size"))
+        if (auto cts = reg->annotations->getSingle("chain_total_size"_cs))
             salu->chain_total_size = getConstant(cts);
         self.salu_inits[reg] = salu; }
 
@@ -1222,7 +1225,7 @@ void AttachTables::InitializeStatefulAlus
         new_annot->add(annot); }
     if (new_annot) salu->annotations = new_annot;
 
-    if (auto red_or = ext->annotations->getSingle("reduction_or_group")) {
+    if (auto red_or = ext->annotations->getSingle("reduction_or_group"_cs)) {
         auto pragma_val = red_or->expr.at(0)->to<IR::StringLiteral>();
         ERROR_CHECK(pragma_val, "%s: Please provide a valid reduction_or_group for, which should "
                     "be a string %s", salu->srcInfo, salu->name);
@@ -1244,26 +1247,26 @@ void AttachTables::InitializeStatefulAlus
         salu->chain_vpn = true;
         return; }
     auto tbl = findContext<IR::MAU::Table>();
-    auto tbl_name = tbl ? tbl->name : "<no table>";
+    auto tbl_name = tbl ? tbl->name : "<no table>"_cs;
     LOG6("  - table " << tbl_name);
     auto act = findContext<IR::MAU::Action>();
-    auto act_name = act ? act->name : "<no action>";
+    auto act_name = act ? act->name.originalName: "<no action>"_cs;
     LOG6("  - action " << act_name);
-    auto ta_pair = tbl_name + "-" + act_name.originalName;
+    auto ta_pair = tbl_name + "-" + act_name;
     if (!salu->action_map.emplace(ta_pair, ext->name).second)
         error("%s: multiple calls to execute in action %s", gref->srcInfo, act_name);
 }
 
 bool AttachTables::isSaluActionType(const IR::Type *type) {
     static std::set<cstring> saluActionTypes = {
-        "DirectRegister",
-        "DirectRegisterAction", "DirectRegisterAction2", "DirectRegisterAction3",
-        "DirectRegisterAction4",
-        "LearnAction", "LearnAction2", "LearnAction3", "LearnAction4",
-        "MinMaxAction", "MinMaxAction2", "MinMaxAction3", "MinMaxAction4",
-        "Register",
-        "RegisterAction", "RegisterAction2", "RegisterAction3", "RegisterAction4",
-        "SelectorAction" };
+        "DirectRegister"_cs,
+        "DirectRegisterAction"_cs, "DirectRegisterAction2"_cs, "DirectRegisterAction3"_cs,
+        "DirectRegisterAction4"_cs,
+        "LearnAction"_cs, "LearnAction2"_cs, "LearnAction3"_cs, "LearnAction4"_cs,
+        "MinMaxAction"_cs, "MinMaxAction2"_cs, "MinMaxAction3"_cs, "MinMaxAction4"_cs,
+        "Register"_cs,
+        "RegisterAction"_cs, "RegisterAction2"_cs, "RegisterAction3"_cs, "RegisterAction4"_cs,
+        "SelectorAction"_cs };
     cstring tname = type->toString();
     tname = tname.before(tname.find('<'));
     return saluActionTypes.count(tname) > 0;
@@ -1526,7 +1529,7 @@ class GetBackendTables : public MauInspector {
 
  private:
     void handle_pragma_ixbar_group_num(const IR::Annotations *annotations, IR::MAU::TableKey *key) {
-        if (auto ixbar_num = annotations->getSingle("ixbar_group_num")) {
+        if (auto ixbar_num = annotations->getSingle("ixbar_group_num"_cs)) {
             key->ixbar_group_num = getConstant(ixbar_num, 0, 7);
         }
     }
@@ -1572,7 +1575,7 @@ class GetBackendTables : public MauInspector {
         auto annot = table->getAnnotations();
         // Set compiler generated flag if hidden annotation present
         // Can be on a keyless table, hence we check this at the beginning
-        auto h = annot->getSingle("hidden");
+        auto h = annot->getSingle("hidden"_cs);
         if (h) tt->is_compiler_generated = true;
 
         auto *key = table->getKey();
@@ -1582,7 +1585,7 @@ class GetBackendTables : public MauInspector {
 
         std::optional<cstring> partition_index = std::nullopt;
         // Fold 'atcam_partition_index' annotation into InputXbarRead IR node.
-        auto s = annot->getSingle("atcam_partition_index");
+        auto s = annot->getSingle("atcam_partition_index"_cs);
         if (s)
             partition_index = s->expr.at(0)->to<IR::StringLiteral>()->value;
 
@@ -1615,7 +1618,7 @@ class GetBackendTables : public MauInspector {
                 // atcam_partition_index field is managed by driver, therefore
                 // does not need to be emitted as p4 param in assembly and
                 // context.json.
-                auto as_alpm = getExpressionFromProperty(table, "as_alpm");
+                auto as_alpm = getExpressionFromProperty(table, "as_alpm"_cs);
                 if (as_alpm != std::nullopt) {
                     ixbar_read->used_in_alpm = true; }
                 tt->match_key.push_back(ixbar_read);
@@ -1665,7 +1668,7 @@ class GetBackendTables : public MauInspector {
             auto newaction = createActionFunction(decl, mce->arguments,
                 // if this is a @hidden table it was probably created from statements in
                 // the apply, so include that context when looking for @in_hash annotations
-                table->getAnnotations()->getSingle("hidden") ? getContext() : nullptr);
+                table->getAnnotations()->getSingle("hidden"_cs) ? getContext() : nullptr);
             SetupActionProperties sap(table, act, refMap);
             auto newaction_props = newaction->apply(sap)->to<IR::MAU::Action>();
             if (!tt->actions.count(newaction_props->name.originalName))
@@ -1727,7 +1730,7 @@ class GetBackendTables : public MauInspector {
         for (auto c : s->cases) {
             cstring label;
             if (c->label->is<IR::DefaultExpression>()) {
-                label = "$default";
+                label = "$default"_cs;
             } else {
                 label = refMap->getDeclaration(c->label->to<IR::PathExpression>()->path)
                               ->getName().originalName;
@@ -1749,19 +1752,19 @@ class GetBackendTables : public MauInspector {
             static unsigned uid = 0;
             char buf[16];
             snprintf(buf, sizeof(buf), "cond-%d", ++uid);
-            tables[c] = new IR::MAU::Table(buf, gress, c->condition);
+            tables[c] = new IR::MAU::Table(cstring(buf), gress, c->condition);
 
-            sourceInfoLogging.addSymbol(
-                CollectSourceInfoLogging::Symbol(buf, c->node_type_name(), c->getSourceInfo()));
+            sourceInfoLogging.addSymbol(CollectSourceInfoLogging::Symbol(
+                cstring(buf), c->node_type_name(), c->getSourceInfo()));
         }
         return true; }
     void postorder(const IR::IfStatement *c) override {
         bool lnot;
-        cstring T = "$true", F = "$false";
+        cstring T = "$true"_cs, F = "$false"_cs;
         if (auto *mc = isApplyHit(c->condition, &lnot)) {
             tables[c] = tables.at(mc);
-            T = lnot ? "$miss" : "$hit";
-            F = lnot ? "$hit" : "$miss"; }
+            T = lnot ? "$miss"_cs : "$hit"_cs;
+            F = lnot ? "$hit"_cs : "$miss"_cs; }
         if (c->ifTrue && !c->ifTrue->is<IR::EmptyStatement>())
             tables.at(c)->next.emplace(T, getseq(c->ifTrue));
         if (c->ifFalse && !c->ifFalse->is<IR::EmptyStatement>())
@@ -1822,7 +1825,7 @@ class ExtractMetadata : public Inspector {
         // only used to support v1model
         if (gress == INGRESS) {
             if (auto param = getParameterByTypeName(mau->getApplyParameters(),
-                        "compiler_generated_metadata_t")) {
+                        "compiler_generated_metadata_t"_cs)) {
                 rv->metadata.addUnique(COMPILER_META,
                         bindings->get(param)->obj->to<IR::Metadata>());
             }
@@ -1869,7 +1872,7 @@ ProcessBackendPipe::ProcessBackendPipe(P4::ReferenceMap *refMap, P4::TypeMap *ty
 }
 
 cstring BackendConverter::getPipelineName(const IR::P4Program* program, int index) {
-    auto mainDecls = program->getDeclsByName("main")->toVector();
+    auto mainDecls = program->getDeclsByName("main"_cs)->toVector();
     if (mainDecls.size() == 0) {
         ::error("No main declaration in the program");
         return nullptr;
@@ -1985,10 +1988,10 @@ bool BackendConverter::preorder(const IR::P4Program* program) {
         // ghost control
         if (options.ghost_pipes > 0) {
             auto gh_intr_md_fields = IR::IndexedVector<IR::StructField>({
-            new IR::StructField("ping_pong", IR::Type_Bits::get(1)),
-            new IR::StructField("qlength"  , IR::Type_Bits::get(18)),
-            new IR::StructField("qid"      , IR::Type_Bits::get(11)),
-            new IR::StructField("pipe_id"  , IR::Type_Bits::get(2)) });
+            new IR::StructField("ping_pong"_cs, IR::Type_Bits::get(1)),
+            new IR::StructField("qlength"_cs  , IR::Type_Bits::get(18)),
+            new IR::StructField("qid"_cs      , IR::Type_Bits::get(11)),
+            new IR::StructField("pipe_id"_cs  , IR::Type_Bits::get(2)) });
             auto ghost_type = new IR::Type_Header(
                     IR::ID("ghost_intrinsic_metadata_t"), gh_intr_md_fields);
             auto ghost_hdr = new IR::Header(IR::ID("gh_intr_md"), ghost_type);

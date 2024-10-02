@@ -92,7 +92,7 @@ struct ParserAsmSerializer : public ParserInspector {
     bool preorder(const IR::Flatrock::PortMetadataItem* port_metadata_item) override {
         AutoIndent indentParser(indent, 2);
         out << indent << port_metadata_item->port << ": [ ";
-        cstring sep = "";
+        std::string sep = "";
         for (auto &i : port_metadata_item->data) {
             out << sep << static_cast<unsigned int>(i);
             sep = ", ";
@@ -534,7 +534,7 @@ struct ParserAsmSerializer : public ParserInspector {
                 out << "      # - " << info << std::endl;
         }
 
-        if (state->name.startsWith(BFN::ParserEnforceDepthReq::pad_state_name)) {
+        if (state->name.startsWith(BFN::ParserEnforceDepthReq::pad_state_name.string())) {
             // FIXME -- what if the user uses this name for their own state?  Should have
             // flag in the state that identifies it as one that is used for min padding
             out << indent << "  option: ignore_max_depth" << std::endl;

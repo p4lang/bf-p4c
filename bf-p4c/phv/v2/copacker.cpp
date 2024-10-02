@@ -49,7 +49,7 @@ std::ostream& operator<<(std::ostream& out, const SrcPackVec* v) {
 }
 
 std::ostream& operator<<(std::ostream& out, const CoPackHint& v) {
-    cstring sep = "";
+    std::string sep = "";
     for (const auto* src : v.pack_sources) {
         out << sep << src;
         sep = ", ";
@@ -66,7 +66,7 @@ std::ostream& operator<<(std::ostream& out, const CoPackHint* v) {
 }
 
 std::ostream& operator<<(std::ostream& out, const ActionSourceCoPackMap& v) {
-    cstring sep = "";
+    std::string sep = "";
     for (const auto& action_hints : v) {
         out << sep << action_hints.first->externalName() << ":{";
         for (const auto* copack : action_hints.second) {
@@ -157,7 +157,7 @@ const CoPackHint* CoPacker::gen_bitwise_copack(const Allocation& allocated_tx,
     // group sources by their index in @p writes.
     CoPackHint* rst = new CoPackHint();
     rst->pack_sources = {new SrcPackVec(), new SrcPackVec()};
-    rst->reason = "bitwise-op";
+    rst->reason = "bitwise-op"_cs;
     LOG5("gen_bitwise_copack: " << action);
     for (const auto& dest_sources : writes) {
         const auto& dest = dest_sources.first;
@@ -267,7 +267,7 @@ CoPacker::CoPackHintOrErr CoPacker::gen_whole_container_set_copack(const Allocat
     // one fieldslice. Because it makes allocator try a source with fixed alignment first.
     auto* rst = new CoPackHint();
     rst->required = true;
-    rst->reason = "whole-container-set";
+    rst->reason = "whole-container-set"_cs;
     rst->pack_sources = {copack};
     return CoPackHintOrErr(rst);
 }
@@ -447,7 +447,7 @@ CoPacker::CoPackHintOrErr CoPacker::gen_move_copack(const Allocation& allocated_
         }
     }
     auto* rst = new CoPackHint();
-    rst->reason = "move-based";
+    rst->reason = "move-based"_cs;
     // empty and only one field slice source packing are ignored.
     if (!aligned_src_pack->empty() && (shiftable_src_pack && !shiftable_src_pack->empty())) {
         // if each has at least one field slice, then return packing.

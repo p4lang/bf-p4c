@@ -36,7 +36,7 @@ void BuildPowerGraph::end_apply(const IR::Node *root) {
             SimplePowerGraph *graph = get_graph(g);
             std::string fname = graph->name_ + ".power.dot";
             auto logDir = BFNContext::get().getOutputDirectory(
-                "graphs", root->to<IR::BFN::Pipe>()->canon_id());
+                "graphs"_cs, root->to<IR::BFN::Pipe>()->canon_id());
             if (logDir) fname = logDir + "/" + graph->name_ + ".power.dot";
             graph->to_dot(fname);
         }
@@ -53,7 +53,7 @@ bool BuildPowerGraph::preorder(const IR::MAU::TableSeq *seq) {
         SimplePowerGraph *graph = get_graph(t->gress);
         Node *root = graph->get_root();
         if (root->out_edges_.size() == 0) {
-            graph->add_connection(root->unique_id_, {t->unique_id()}, "$start");
+            graph->add_connection(root->unique_id_, {t->unique_id()}, "$start"_cs);
             break;
         }
     }
@@ -71,7 +71,7 @@ bool BuildPowerGraph::preorder(const IR::MAU::Table *tbl) {
                 std::vector<UniqueId> leaves;
                 graph->get_leaves(last, leaves);
                 for (auto u : leaves) {
-                    graph->add_connection(u, {tbl->unique_id()}, "$always");
+                    graph->add_connection(u, {tbl->unique_id()}, "$always"_cs);
                 }
             }
             always_run_.push_back(tbl->unique_id());
@@ -103,7 +103,7 @@ bool BuildPowerGraph::preorder(const IR::MAU::Table *tbl) {
         }
     }
 
-    std::vector<cstring> edge_types = {"$hit", "$miss", "$try_next_stage", "$default"};
+    std::vector<cstring> edge_types = {"$hit"_cs, "$miss"_cs, "$try_next_stage"_cs, "$default"_cs};
     for (cstring edge_name : edge_types) {
         ordered_set<UniqueId> found_edges = next_for(tbl, edge_name);
         if (found_edges.size() > 0) {

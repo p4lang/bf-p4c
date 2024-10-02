@@ -52,8 +52,8 @@ bool PragmaMutuallyExclusive::preorder(const IR::BFN::Pipe* pipe) {
         }
 
         if (!PHV::Pragmas::checkNumberArgs(annotation, required_arguments,
-                min_required_arguments, true, PragmaMutuallyExclusive::name,
-                "`gress', `node1', `node2'")) {
+                min_required_arguments, true, cstring(PragmaMutuallyExclusive::name),
+                "`gress', `node1', `node2'"_cs)) {
             continue;
         }
 
@@ -70,8 +70,8 @@ bool PragmaMutuallyExclusive::preorder(const IR::BFN::Pipe* pipe) {
              << node1_ir->value << ", "
              << node2_ir->value);
 
-        cstring node1_name = gress_arg->value + "::" + node1_ir->value;
-        cstring node2_name = gress_arg->value + "::" + node2_ir->value;
+        cstring node1_name = gress_arg->value + "::"_cs + node1_ir->value;
+        cstring node2_name = gress_arg->value + "::"_cs + node2_ir->value;
         const PHV::Field* field1 = phv_i.field(node1_name);
         const PHV::Field* field2 = phv_i.field(node2_name);
         const PhvInfo::StructInfo* hdr1 = field1 ? nullptr : phv_i.hdr(node1_name);

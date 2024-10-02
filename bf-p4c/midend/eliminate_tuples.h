@@ -54,7 +54,7 @@ class EliminateTuples final : public PassManager {
         // to structs.
         passes.push_back(new P4::ResolveReferences(refMap));
         if (!typeInference)
-            typeInference = new P4::TypeInference(refMap, typeMap, false);
+            typeInference = new P4::TypeInference(typeMap, false);
         passes.push_back(typeInference);
         // Reinsert HashListExpression information
         passes.push_back(new InsertHashStructExpression(&shle->update_hashes));

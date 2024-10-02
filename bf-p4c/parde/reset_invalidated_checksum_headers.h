@@ -143,7 +143,7 @@ class InsertParsedValidBits : public ParserModifier {
         std::string parsed_valid_bit_name = pov_bit_name.replace(pos, 7, "$parsed");
 
         auto parsed_valid_bit = new IR::TempVar(IR::Type::Bits::get(1), false,
-                                         parsed_valid_bit_name.c_str());
+                                         cstring(parsed_valid_bit_name));
 
         LOG4("created " << parsed_valid_bit_name);
         return parsed_valid_bit;
@@ -200,7 +200,7 @@ class InsertTableToResetInvalidatedHeaders : public MauTransform {
 
         for (auto field : fields_to_reset) {
             auto field_expr = phv_field_to_expr.at(field);
-            auto reset = new IR::MAU::Instruction("set", field_expr,
+            auto reset = new IR::MAU::Instruction("set"_cs, field_expr,
                              new IR::Constant(IR::Type_Bits::get(field->size), 0));
             action->action.push_back(reset);
             auto* annotation = new IR::Annotation(IR::ID("pa_no_overlay"), {
@@ -241,7 +241,7 @@ class InsertTableToResetInvalidatedHeaders : public MauTransform {
         auto gw = new IR::MAU::Table(gateway_name, gress, cond);
 
         gw->is_compiler_generated = true;
-        gw->next.emplace("$true", new IR::MAU::TableSeq(ac));
+        gw->next.emplace("$true"_cs, new IR::MAU::TableSeq(ac));
 
         return gw;
     }

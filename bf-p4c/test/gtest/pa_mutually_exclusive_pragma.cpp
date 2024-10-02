@@ -66,8 +66,8 @@ std::optional<TofinoPipeTestCase> createPaMutuallyExclusivePragmaTestCase() {
 
     auto &options = BackendOptions();
     options.langVersion = CompilerOptions::FrontendVersion::P4_16;
-    options.target = "tofino";
-    options.arch = "v1model";
+    options.target = "tofino"_cs;
+    options.arch = "v1model"_cs;
     options.disable_parse_min_depth_limit = true;
 
     return TofinoPipeTestCase::createWithThreadLocalInstances(source);
@@ -118,8 +118,8 @@ std::optional<TofinoPipeTestCase> createPaMutuallyExclusiveHeaderPragmaTestCase(
 
     auto &options = BackendOptions();
     options.langVersion = CompilerOptions::FrontendVersion::P4_16;
-    options.target = "tofino";
-    options.arch = "v1model";
+    options.target = "tofino"_cs;
+    options.arch = "v1model"_cs;
     options.disable_parse_min_depth_limit = true;
 
     return TofinoPipeTestCase::createWithThreadLocalInstances(source);
@@ -173,8 +173,8 @@ std::optional<TofinoPipeTestCase> createPaMutuallyExclusivePragmaNoMatchingPhvFi
 
     auto &options = BackendOptions();
     options.langVersion = CompilerOptions::FrontendVersion::P4_16;
-    options.target = "tofino";
-    options.arch = "v1model";
+    options.target = "tofino"_cs;
+    options.arch = "v1model"_cs;
     options.disable_parse_min_depth_limit = true;
 
     return TofinoPipeTestCase::createWithThreadLocalInstances(source);
@@ -215,10 +215,10 @@ TEST_F(PaMutuallyExclusivePragmaTest, P4_16) {
     EXPECT_FALSE(checkNoMatchingPhvField(stderr, "h1.f1"));
     EXPECT_FALSE(checkNoMatchingPhvField(stderr, "h2.f1"));
 
-    EXPECT_EQ(phv.field_mutex()(phv.field("ingress::h1.f2")->id, phv.field("ingress::h2.f1")->id),
+    EXPECT_EQ(phv.field_mutex()(phv.field("ingress::h1.f2"_cs)->id, phv.field("ingress::h2.f1"_cs)->id),
               false);
 
-    EXPECT_EQ(phv.field_mutex()(phv.field("ingress::h1.f1")->id, phv.field("ingress::h2.f1")->id),
+    EXPECT_EQ(phv.field_mutex()(phv.field("ingress::h1.f1"_cs)->id, phv.field("ingress::h2.f1"_cs)->id),
               true);
 
     auto test2 = createPaMutuallyExclusiveHeaderPragmaTestCase();
@@ -233,11 +233,11 @@ TEST_F(PaMutuallyExclusivePragmaTest, P4_16) {
     EXPECT_FALSE(checkNoMatchingPhvField(stderr, "h2"));
 
     EXPECT_EQ(
-        phv2.field_mutex()(phv2.field("ingress::h1.f2")->id, phv2.field("ingress::h2.f2")->id),
+        phv2.field_mutex()(phv2.field("ingress::h1.f2"_cs)->id, phv2.field("ingress::h2.f2"_cs)->id),
         true);
 
     EXPECT_EQ(
-        phv2.field_mutex()(phv2.field("ingress::h1.f1")->id, phv2.field("ingress::h2.f1")->id),
+        phv2.field_mutex()(phv2.field("ingress::h1.f1"_cs)->id, phv2.field("ingress::h2.f1"_cs)->id),
         true);
 }
 

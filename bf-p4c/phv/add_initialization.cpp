@@ -17,12 +17,12 @@ MapFieldToExpr::generateInitInstruction(const PHV::AllocSlice& slice) const {
     const IR::Expression* zeroExpr = new IR::Constant(IR::Type_Bits::get(slice.width()), 0);
     const IR::Expression* fieldExpr = getExpr(f);
     if (slice.width() == f->size) {
-        auto* prim = new IR::MAU::Instruction("set", { fieldExpr, zeroExpr });
+        auto* prim = new IR::MAU::Instruction("set"_cs, { fieldExpr, zeroExpr });
         return prim;
     } else {
         le_bitrange range = slice.field_slice();
         const IR::Expression* sliceExpr = new IR::Slice(fieldExpr, range.hi, range.lo);
-        auto* prim = new IR::MAU::Instruction("set", { sliceExpr, zeroExpr });
+        auto* prim = new IR::MAU::Instruction("set"_cs, { sliceExpr, zeroExpr });
         return prim;
     }
 }
@@ -45,7 +45,7 @@ MapFieldToExpr::generateInitInstruction(
         le_bitrange range = source.field_slice();
         sourceExpr = new IR::Slice(sourceExpr, range.hi, range.lo);
     }
-    auto* prim = new IR::MAU::Instruction("set", { destExpr, sourceExpr });
+    auto* prim = new IR::MAU::Instruction("set"_cs, { destExpr, sourceExpr });
     return prim;
 }
 

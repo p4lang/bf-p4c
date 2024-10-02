@@ -126,8 +126,8 @@ void BuildDominatorTree::generateDominatorTree(
 
 void BuildDominatorTree::printDominatorTree(const ImmediateDominatorMap& idom) const {
     for (auto kv : idom) {
-        cstring idominator;
-        cstring source;
+        std::string idominator;
+        std::string source;
         if (kv.second == kv.first)
             idominator = "SOURCE";
         else
@@ -143,7 +143,7 @@ void BuildDominatorTree::printDominatorTree(const ImmediateDominatorMap& idom) c
 
 std::optional<const IR::MAU::Table*>
 BuildDominatorTree::getImmediateDominator(const IR::MAU::Table* t, gress_t gress) const {
-    cstring tableName = (t == NULL) ? "deparser" : t->name;
+    cstring tableName = (t == NULL) ? "deparser"_cs : t->name;
     BUG_CHECK(iDominator.count(gress) > 0, "Invalid gress %1% for table %2%", gress, tableName);
     const ImmediateDominatorMap* iDom = iDominator.at(gress);
     if (!iDom->count(t)) return std::nullopt;
@@ -152,7 +152,7 @@ BuildDominatorTree::getImmediateDominator(const IR::MAU::Table* t, gress_t gress
 
 std::optional<const IR::MAU::Table*>
 BuildDominatorTree::getNonGatewayImmediateDominator(const IR::MAU::Table* t, gress_t gress) const {
-    cstring tableName = (t == NULL) ? "deparser" : t->name;
+    cstring tableName = (t == NULL) ? "deparser"_cs : t->name;
     BUG_CHECK(iDominator.count(gress) > 0, "Invalid gress %1% for table %2%", gress, tableName);
     auto dom = getImmediateDominator(t, gress);
     if (!dom) return std::nullopt;

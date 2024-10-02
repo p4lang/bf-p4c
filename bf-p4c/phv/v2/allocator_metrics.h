@@ -27,7 +27,7 @@ class AllocatorMetrics {
     std::chrono::time_point<std::chrono::steady_clock> stop_time;
 
  public:
-    explicit AllocatorMetrics(cstring name = "") : name(name) {}
+    explicit AllocatorMetrics(cstring name = ""_cs) : name(name) {}
 
     cstring get_name() const { return name; };
 

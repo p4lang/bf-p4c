@@ -26,7 +26,7 @@ TEST(TofinoFieldPacking, Fields) {
 
     // Test adding a second field.
     auto* field2 = new IR::Constant(0);
-    packing.appendField(field2, "field2", 1);
+    packing.appendField(field2, "field2"_cs, 1);
     EXPECT_TRUE(packing.containsFields());
     EXPECT_EQ(2u, packing.fields.size());
     EXPECT_EQ(11u, packing.totalWidth);
@@ -225,21 +225,21 @@ TEST(TofinoFieldPacking, ForEachField) {
     // Define a packing.
     FieldPacking packing;
     packing.appendPadding(3);
-    auto* field1 = new IR::Member(new IR::Constant(0), "field1");
-    packing.appendField(field1, "field1", 6);
-    auto* field2 = new IR::Member(new IR::Constant(0), "field2");
-    packing.appendField(field2, "field2", 15);
+    auto* field1 = new IR::Member(new IR::Constant(0), "field1"_cs);
+    packing.appendField(field1, "field1"_cs, 6);
+    auto* field2 = new IR::Member(new IR::Constant(0), "field2"_cs);
+    packing.appendField(field2, "field2"_cs, 15);
     packing.appendPadding(9);
-    auto* field3 = new IR::Member(new IR::Constant(0), "field3");
-    packing.appendField(field3, "field3", 8);
+    auto* field3 = new IR::Member(new IR::Constant(0), "field3"_cs);
+    packing.appendField(field3, "field3"_cs, 8);
     packing.padToAlignment(8);
 
     // Check that we can iterate over it correctly with network order ranges.
     {
         const std::vector<std::pair<cstring, nw_bitrange>> expected = {
-            { "field1", nw_bitrange(StartLen(3, 6)) },
-            { "field2", nw_bitrange(StartLen(9, 15)) },
-            { "field3", nw_bitrange(StartLen(33, 8)) },
+            { "field1"_cs, nw_bitrange(StartLen(3, 6)) },
+            { "field2"_cs, nw_bitrange(StartLen(9, 15)) },
+            { "field3"_cs, nw_bitrange(StartLen(33, 8)) },
         };
 
         unsigned currentField = 0;
@@ -262,9 +262,9 @@ TEST(TofinoFieldPacking, ForEachField) {
     // Check that we can iterate over it correctly with little endian ranges.
     {
         const std::vector<std::pair<cstring, le_bitrange>> expected = {
-            { "field1", le_bitrange(StartLen(39, 6)) },
-            { "field2", le_bitrange(StartLen(24, 15)) },
-            { "field3", le_bitrange(StartLen(7, 8)) },
+            { "field1"_cs, le_bitrange(StartLen(39, 6)) },
+            { "field2"_cs, le_bitrange(StartLen(24, 15)) },
+            { "field3"_cs, le_bitrange(StartLen(7, 8)) },
         };
 
         unsigned currentField = 0;
@@ -289,19 +289,19 @@ TEST(TofinoFieldPacking, CreateExtractionState) {
     // Define a packing.
     FieldPacking packing;
     packing.appendPadding(3);
-    auto* field1 = new IR::Member(new IR::Constant(0), "field1");
+    auto* field1 = new IR::Member(new IR::Constant(0), "field1"_cs);
     packing.appendField(field1, 6);
-    auto* field2 = new IR::Member(new IR::Constant(0), "field2");
+    auto* field2 = new IR::Member(new IR::Constant(0), "field2"_cs);
     packing.appendField(field2, 15);
     packing.appendPadding(9);
-    auto* field3 = new IR::Member(new IR::Constant(0), "field3");
+    auto* field3 = new IR::Member(new IR::Constant(0), "field3"_cs);
     packing.appendField(field3, 8);
     packing.padToAlignment(8);
 
     // Create a parser state to extract fields according to that packing.
     auto gress = INGRESS;
-    auto* finalState = new IR::BFN::ParserState("final", gress, { }, { }, { });
-    cstring extractionStateName = "extract";
+    auto* finalState = new IR::BFN::ParserState("final"_cs, gress, { }, { }, { });
+    cstring extractionStateName = "extract"_cs;
     auto* extractionState =
       packing.createExtractionState(gress, extractionStateName, finalState);
 

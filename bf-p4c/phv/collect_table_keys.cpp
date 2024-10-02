@@ -34,9 +34,9 @@ int CollectTableKeys::get_n_entries(const IR::MAU::Table *tbl) const {
     if (tbl->layout.no_match_data()) entries = 1;
     if (tbl->layout.pre_classifier)
         entries = tbl->layout.pre_classifer_number_entries;
-    else if (auto k = tbl->match_table->getConstantProperty("size"))
+    else if (auto k = tbl->match_table->getConstantProperty("size"_cs))
         entries = k->asInt();
-    else if (auto k = tbl->match_table->getConstantProperty("min_size"))
+    else if (auto k = tbl->match_table->getConstantProperty("min_size"_cs))
         entries = k->asInt();
 
     if (tbl->layout.exact) {

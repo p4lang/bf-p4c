@@ -9,35 +9,35 @@ cstring to_str(const ErrorCode& e) {
     using ec = ErrorCode;
     switch (e) {
         case ec::NOT_ENOUGH_SPACE:
-            return "NOT_ENOUGH_SPACE";
+            return "NOT_ENOUGH_SPACE"_cs;
         case ec::ACTION_CANNOT_BE_SYNTHESIZED:
-            return "ACTION_CANNOT_BE_SYNTHESIZED";
+            return "ACTION_CANNOT_BE_SYNTHESIZED"_cs;
         case ec::CONTAINER_TYPE_MISMATCH:
-            return "CONTAINER_TYPE_MISMATCH";
+            return "CONTAINER_TYPE_MISMATCH"_cs;
         case ec::CONTAINER_GRESS_MISMATCH:
-            return "CONTAINER_GRESS_MISMATCH";
+            return "CONTAINER_GRESS_MISMATCH"_cs;
         case ec::CONTAINER_PARSER_WRITE_MODE_MISMATCH:
-            return "CONTAINER_PARSER_WRITE_MODE_MISMATCH";
+            return "CONTAINER_PARSER_WRITE_MODE_MISMATCH"_cs;
         case ec::CONTAINER_PARSER_PACKING_INVALID:
-            return "CONTAINER_PARSER_PACKING_INVALID";
+            return "CONTAINER_PARSER_PACKING_INVALID"_cs;
         case ec::FIELD_MAX_CONTAINER_BYTES_EXCEEDED:
-            return "FIELD_MAX_CONTAINER_BYTES_EXCEEDED";
+            return "FIELD_MAX_CONTAINER_BYTES_EXCEEDED"_cs;
         case ec::ALIGNED_CLUSTER_NO_VALID_START:
-            return "ALIGNED_CLUSTER_NO_VALID_START";
+            return "ALIGNED_CLUSTER_NO_VALID_START"_cs;
         case ec::ALIGNED_CLUSTER_CANNOT_BE_ALLOCATED:
-            return "ALIGNED_CLUSTER_CANNOT_BE_ALLOCATED";
+            return "ALIGNED_CLUSTER_CANNOT_BE_ALLOCATED"_cs;
         case ec::NO_VALID_CONTAINER_SIZE:
-            return "NO_VALID_CONTAINER_SIZE";
+            return "NO_VALID_CONTAINER_SIZE"_cs;
         case ec::NO_VALID_SC_ALLOC_ALIGNMENT:
-            return "NO_VALID_SC_ALLOC_ALIGNMENT";
+            return "NO_VALID_SC_ALLOC_ALIGNMENT"_cs;
         case ec::WIDE_ARITH_ALLOC_FAILED:
-            return "WIDE_ARITH_ALLOC_FAILED";
+            return "WIDE_ARITH_ALLOC_FAILED"_cs;
         case ec::NO_SLICING_FOUND:
-            return "NO_SLICING_FOUND";
+            return "NO_SLICING_FOUND"_cs;
         case ec::INVALID_ALLOC_FOUND_BY_COPACKER:
-            return "INVALID_ALLOC_FOUND_BY_COPACKER";
+            return "INVALID_ALLOC_FOUND_BY_COPACKER"_cs;
         case ec::CANNOT_APPLY_REQUIRED_COPACK_HINTS:
-            return "CANNOT_APPLY_REQUIRED_COPACK_HINTS";
+            return "CANNOT_APPLY_REQUIRED_COPACK_HINTS"_cs;
         default:
             BUG("unimplemented errorcode: %1%", int(e));
     }
@@ -81,7 +81,7 @@ bool AllocResult::operator==(const AllocResult& other) const {
 
 std::string AllocResult::pretty_print_tx(const PHV::Transaction& tx, cstring prefix) {
     std::stringstream ss;
-    cstring new_line = "";
+    std::string new_line = "";
     for (const auto& container_status : tx.get_actual_diff()) {
         // const auto& c = container_status.first;
         const auto& slices = container_status.second.slices;
@@ -222,11 +222,11 @@ std::vector<ScAllocAlignment> make_sc_alloc_alignment(
 
 cstring ScAllocAlignment::pretty_print(cstring prefix, const SuperCluster* sc) const {
     std::stringstream ss;
-    cstring new_line = "";
+    std::string new_line = "";
     for (const auto* sl : sc->slice_lists()) {
         ss << new_line << prefix << "[";
         new_line = "\n";
-        cstring sep = "";
+        std::string sep = "";
         for (const auto& fs : *sl) {
             ss << sep << "{" << fs.shortString() << ", "
                << cluster_starts.at(&sc->aligned_cluster(fs)) << "}";

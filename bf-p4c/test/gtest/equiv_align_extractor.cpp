@@ -40,14 +40,14 @@ TEST_F(EquivalentAlignExtractorTest, IgnoresAlignedClusterWithSingleItem) {
     groups.push_back(*sc1);
 
     // Add required fields
-    info.add("egress::eg_md.flags.pfc_wd_drop", EGRESS, 1, 0, true, false);
+    info.add("egress::eg_md.flags.pfc_wd_drop"_cs, EGRESS, 1, 0, true, false);
 
     // Extract groups
     fieldMap = ConstrainedFieldMapBuilder::buildMap(info, groups);
     EquivalentAlignExtractor extractor(groups, fieldMap);
 
     // Assertions
-    EXPECT_FALSE(extractor.isFieldInAnyGroup("egress::eg_md.flags.pfc_wd_drop"));
+    EXPECT_FALSE(extractor.isFieldInAnyGroup("egress::eg_md.flags.pfc_wd_drop"_cs));
 }
 
 TEST_F(EquivalentAlignExtractorTest, ExtractsAlignedClusterWithMoreItems) {
@@ -57,9 +57,9 @@ TEST_F(EquivalentAlignExtractorTest, ExtractsAlignedClusterWithMoreItems) {
     groups.push_back(*sc1);
 
     // Add required fields
-    info.add("egress::eg_md.checks.mtu", EGRESS, 16, 0, false, false);
-    info.add("egress::hdr.ipv4.total_len", EGRESS, 16, 0, false, false);
-    info.add("egress::hdr.ipv6.payload_len", EGRESS, 16, 0, false, false);
+    info.add("egress::eg_md.checks.mtu"_cs, EGRESS, 16, 0, false, false);
+    info.add("egress::hdr.ipv4.total_len"_cs, EGRESS, 16, 0, false, false);
+    info.add("egress::hdr.ipv6.payload_len"_cs, EGRESS, 16, 0, false, false);
 
     // Extract groups
     fieldMap = ConstrainedFieldMapBuilder::buildMap(info, groups);
@@ -74,9 +74,9 @@ TEST_F(EquivalentAlignExtractorTest, ExtractsAlignedClusterWithMoreItems) {
         ASSERT_EQ(agroups[0]->size(), 3u) << "Failed with field: " << field;
 
         auto &group = *agroups[0];
-        EXPECT_EQ(group[0].getParent().getName(), "egress::eg_md.checks.mtu");
-        EXPECT_EQ(group[1].getParent().getName(), "egress::hdr.ipv4.total_len");
-        EXPECT_EQ(group[2].getParent().getName(), "egress::hdr.ipv6.payload_len");
+        EXPECT_EQ(group[0].getParent().getName(), "egress::eg_md.checks.mtu"_cs);
+        EXPECT_EQ(group[1].getParent().getName(), "egress::hdr.ipv4.total_len"_cs);
+        EXPECT_EQ(group[2].getParent().getName(), "egress::hdr.ipv6.payload_len"_cs);
     }
 }
 

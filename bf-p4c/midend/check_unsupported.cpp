@@ -18,7 +18,7 @@ bool CheckUnsupported::preorder(const IR::PathExpression* path_expression) {
 }
 
 bool CheckUnsupported::preorder(const IR::Declaration_Instance *instance) {
-    if (instance->annotations->getSingle("symmetric") != nullptr) {
+    if (instance->annotations->getSingle("symmetric"_cs) != nullptr) {
         cstring type_name;
         if (auto type = instance->type->to<IR::Type_Specialized>()) {
             type_name = type->baseType->path->name;

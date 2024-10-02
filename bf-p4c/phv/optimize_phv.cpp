@@ -364,7 +364,7 @@ std::list<PHV::SuperCluster*> BruteForceOptimizationStrategy::optimize(
                    " unallocated super clusters remaining\n";
     if (LOGGING(1)) {
         // Use a separate file for the optimization_history.
-        auto filename = Logging::PassManager::getNewLogFileName("phv_optimization_history_");
+        auto filename = Logging::PassManager::getNewLogFileName("phv_optimization_history_"_cs);
         int pipe_id = alloc_strategy_i.getPipeId();
         auto logfile = new Logging::FileLog(pipe_id, filename, Logging::Mode::AUTO);
         LOG1(opt_history.str());

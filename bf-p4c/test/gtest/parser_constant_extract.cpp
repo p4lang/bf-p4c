@@ -62,8 +62,8 @@ createParserConstantExtractTestCase(const std::string& parserSource) {
 
     auto& options = BackendOptions();
     options.langVersion = CompilerOptions::FrontendVersion::P4_16;
-    options.target = "tofino";
-    options.arch = "v1model";
+    options.target = "tofino"_cs;
+    options.arch = "v1model"_cs;
     options.disable_parse_min_depth_limit = true;
 
     return TofinoPipeTestCase::createWithThreadLocalInstances(source);
@@ -139,16 +139,16 @@ state parse6 {
     test->pipe->apply(quick_backend);
 
     const auto& unionFind = phv.getSameSetConstantExtraction();
-    PHV::Field* v1 = phv.field("ingress::h1.$valid");
-    PHV::Field* v2 = phv.field("ingress::h2.$valid");
-    PHV::Field* v3 = phv.field("ingress::h3.$valid");
-    PHV::Field* v4 = phv.field("ingress::h4.$valid");
-    PHV::Field* v5 = phv.field("ingress::h5.$valid");
-    PHV::Field* v6 = phv.field("ingress::h6.$valid");
-    PHV::Field* v7 = phv.field("ingress::h7.$valid");
-    PHV::Field* v8 = phv.field("ingress::h8.$valid");
-    PHV::Field* v9 = phv.field("ingress::h9.$valid");
-    PHV::Field* v10 = phv.field("ingress::h10.$valid");
+    PHV::Field* v1 = phv.field("ingress::h1.$valid"_cs);
+    PHV::Field* v2 = phv.field("ingress::h2.$valid"_cs);
+    PHV::Field* v3 = phv.field("ingress::h3.$valid"_cs);
+    PHV::Field* v4 = phv.field("ingress::h4.$valid"_cs);
+    PHV::Field* v5 = phv.field("ingress::h5.$valid"_cs);
+    PHV::Field* v6 = phv.field("ingress::h6.$valid"_cs);
+    PHV::Field* v7 = phv.field("ingress::h7.$valid"_cs);
+    PHV::Field* v8 = phv.field("ingress::h8.$valid"_cs);
+    PHV::Field* v9 = phv.field("ingress::h9.$valid"_cs);
+    PHV::Field* v10 = phv.field("ingress::h10.$valid"_cs);
 
     // Check that the field objects are correctly referenced.
     EXPECT_TRUE(v1);

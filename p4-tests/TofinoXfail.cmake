@@ -514,11 +514,6 @@ p4c_add_xfail_reason("tofino"
   testdata/p4_16_samples/issue1210.p4
 )
 
-p4c_add_xfail_reason("tofino"
-  "Number of fields .* in initializer different than number of fields"
-  testdata/p4_16_samples/issue2303.p4
-)
-
 # This test attempts to match on a field of `error` type.
 p4c_add_xfail_reason("tofino"
   "PHV details for .* not found"
@@ -1336,4 +1331,15 @@ p4c_add_xfail_reason("tofino"
 p4c_add_xfail_reason("tofino"
   "error: Action profile ActionProfile IngressI.ap on table IngressI.indirect does not have any action data"
   testdata/p4_16_samples/action_profile_sum_of_members_annotation.p4
+)
+
+# p4c update 2024-09-28 (new test)
+p4c_add_xfail_reason("tofino"
+  "Compiler Bug: BFN::CollectBridgedFields pass does not support loops"
+  testdata/p4_16_samples/issue4739.p4
+)
+
+p4c_add_xfail_reason("tofino"
+  "error: ingress::hdr.vlan.tpid previously assigned in state ingress::parse_vlan2"
+  testdata/p4_16_samples/parser-unroll-issue4006_twice_extracted_header.p4
 )

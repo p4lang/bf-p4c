@@ -52,7 +52,7 @@ struct PsaBridgeIngressToEgress : public Transform {
     }
 
     void skip_to_packet(IR::ParserState* state) {
-        auto select = new IR::PathExpression("__egress_p4_entry_point");
+        auto select = new IR::PathExpression("__egress_p4_entry_point"_cs);
         state->selectExpression = select;
         state->components.clear();
     }
@@ -113,7 +113,7 @@ struct PsaBridgeIngressToEgress : public Transform {
         if (tnaContext->thread != EGRESS) return state;
 
         // Add "pkt.extract(md.^bridged_metadata);"
-        auto packetInParam = tnaContext->tnaParams.at("pkt");
+        auto packetInParam = tnaContext->tnaParams.at("pkt"_cs);
         auto* method = new IR::Member(new IR::PathExpression(packetInParam),
                                       IR::ID("extract"));
 
@@ -126,7 +126,7 @@ struct PsaBridgeIngressToEgress : public Transform {
         auto* callExpr = new IR::MethodCallExpression(method, typeArgs, args);
         state->components.push_back(new IR::MethodCallStatement(callExpr));
         // add assignment
-        auto pathname = structure->egress_parser.psaParams.at("metadata");
+        auto pathname = structure->egress_parser.psaParams.at("metadata"_cs);
         auto path = new IR::PathExpression(pathname);
         for (auto& bridgedField :
                        structure->bridge.structType->to<IR::Type_StructLike>()->fields) {
@@ -157,7 +157,7 @@ struct PsaBridgeIngressToEgress : public Transform {
     updateIngressDeparser(IR::BFN::TnaDeparser* control) {
         // Add "pkt.emit(md.^bridged_metadata);" as the first statement in the
         // ingress deparser.
-        auto packetOutParam = control->tnaParams.at("pkt");
+        auto packetOutParam = control->tnaParams.at("pkt"_cs);
         auto* method = new IR::Member(new IR::PathExpression(packetOutParam),
                                       IR::ID("emit"));
 
@@ -279,7 +279,7 @@ struct MoveBridgeMetadataAssignment : public Transform {
 
         // First create assignment members that uses Ingress pipeline params
         auto cgMetadataParam = control->tnaParams.at(COMPILER_META);
-        auto metdataParam = structure->ingress.psaParams.at("metadata");
+        auto metdataParam = structure->ingress.psaParams.at("metadata"_cs);
         auto* compilerBridgeHeader = new IR::Member(structure->bridge.p4Type,
                 new IR::PathExpression(cgMetadataParam), IR::ID(BRIDGED_MD));
         auto metadataPath = new IR::PathExpression(metdataParam);

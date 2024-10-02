@@ -15,7 +15,7 @@ std::map<int, PHV::FieldUse> LiveRangeReport::processUseDefSet(
             auto* ps = use_unit->to<IR::BFN::ParserState>();
             cstring use_location;
             if (!ps) {
-                use_location = " to parser";
+                use_location = " to parser"_cs;
             } else {
                 use_location = " to parser state " + ps->name;
                 // Ignore initialization in parser.

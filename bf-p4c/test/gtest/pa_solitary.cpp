@@ -67,8 +67,8 @@ createPaSolitaryPragmaTestCase(const std::string& pragmas) {
 
     auto& options = BackendOptions();
     options.langVersion = CompilerOptions::FrontendVersion::P4_16;
-    options.target = "tofino";
-    options.arch = "v1model";
+    options.target = "tofino"_cs;
+    options.arch = "v1model"_cs;
     options.disable_parse_min_depth_limit = true;
 
     return TofinoPipeTestCase::createWithThreadLocalInstances(source);
@@ -101,9 +101,9 @@ TEST_F(PaSolitaryPragmaTest, Basic) {
     PragmaSolitary pa_solitary(phv);
     runMockPasses(test->pipe, phv, pa_solitary);
 
-    auto* h1_f1 = phv.field("ingress::h1.f1");
-    auto* h1_f2 = phv.field("ingress::h1.f2");
-    auto* h2_f1 = phv.field("ingress::h2.f1");
+    auto* h1_f1 = phv.field("ingress::h1.f1"_cs);
+    auto* h1_f2 = phv.field("ingress::h1.f2"_cs);
+    auto* h2_f1 = phv.field("ingress::h2.f1"_cs);
 
     EXPECT_EQ(h1_f1->is_solitary(), true);
     EXPECT_EQ(h1_f2->is_solitary(), false);  // skip if not container-sized header field

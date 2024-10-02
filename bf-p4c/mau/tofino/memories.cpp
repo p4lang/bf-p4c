@@ -319,7 +319,7 @@ bool Memories::allocate_all() {
     LOG3("Analyzing tables " << tables << IndentCtl::indent);
     if (!analyze_tables(mi)) {
         LOG3_UNINDENT;
-        if (!failure_reason) failure_reason = "analyze_tables failed";
+        if (!failure_reason) failure_reason = "analyze_tables failed"_cs;
         return false;
     }
     unsigned row = 0;
@@ -343,7 +343,7 @@ bool Memories::allocate_all() {
 
     LOG3_UNINDENT;
     if (!finished) {
-        if (!failure_reason) failure_reason = "unknown failure";
+        if (!failure_reason) failure_reason = "unknown failure"_cs;
         return false;
     }
 
@@ -725,26 +725,26 @@ bool Memories::mem_info::constraint_check(int lt_allowed, cstring &failure_reaso
             no_match_tables << ") + ternary_tables(" << ternary_tables <<
             ") + independent_gw_tables(" << independent_gw_tables <<
             ") > Memories::TABLES_MAX(" << Memories::TABLES_MAX << ")");
-        failure_reason = "too many tables total";
+        failure_reason = "too many tables total"_cs;
         return false; }
 
     if (tind_tables > Memories::TERNARY_TABLES_MAX) {
         LOG6(" tind_tables(" << tind_tables << ") > Memories::TERNARY_TABLES_MAX("
             << Memories::TERNARY_TABLES_MAX << ")");
-        failure_reason = "too many tind tables";
+        failure_reason = "too many tind tables"_cs;
         return false; }
 
     if (action_tables > Memories::ACTION_TABLES_MAX) {
         LOG6(" action_tables(" << action_tables << ") > Memories::ACTION_TABLES_MAX("
             << Memories::ACTION_TABLES_MAX << ")");
-        failure_reason = "too many action tables";
+        failure_reason = "too many action tables"_cs;
         return false; }
 
     if (action_bus_min > Memories::SRAM_ROWS * Memories::BUS_COUNT) {
         LOG6(" action_bus_min(" << action_bus_min << ") > Memories::SRAM_ROWS("
             << Memories::SRAM_ROWS << ") * Memories::BUS_COUNT(" <<
             Memories::BUS_COUNT << ")");
-        failure_reason = "too many action busses";
+        failure_reason = "too many action busses"_cs;
         return false; }
 
     if (match_RAMs + action_RAMs + tind_RAMs > Memories::SRAM_ROWS * Memories::SRAM_COLUMNS) {
@@ -752,26 +752,26 @@ bool Memories::mem_info::constraint_check(int lt_allowed, cstring &failure_reaso
             << ") + tind_RAMs(" << tind_RAMs << ") > Memories::SRAM_ROWS(" <<
             Memories::SRAM_ROWS << ") * Memories::SRAM_COLUMNS(" << Memories::SRAM_COLUMNS
             << ")");
-        failure_reason = "too many srams";
+        failure_reason = "too many srams"_cs;
         return false; }
 
     if (ternary_tables > Memories::TERNARY_TABLES_MAX) {
         LOG6(" ternary_tables(" << ternary_tables << ") > Memories::TERNARY_TABLES_MAX("
             << Memories::TERNARY_TABLES_MAX << ")");
-        failure_reason = "too many ternary tables";
+        failure_reason = "too many ternary tables"_cs;
         return false; }
 
     if (stats_tables > Memories::STATS_ALUS) {
         LOG6(" stats_tables(" << stats_tables << ") > Memories::STATS_ALUS("
             << Memories::STATS_ALUS << ")");
-        failure_reason = "too many stats tables";
+        failure_reason = "too many stats tables"_cs;
         return false; }
 
     if (meter_tables + stateful_tables + selector_tables > Memories::METER_ALUS) {
         LOG6(" meter_tables(" << meter_tables << ") + stateful_tables(" <<
             stateful_tables << ") + selector_tables(" << selector_tables <<
             ") > Memories::METER_ALUS(" << Memories::METER_ALUS << ")");
-        failure_reason = "too many meter alu users";
+        failure_reason = "too many meter alu users"_cs;
         return false; }
 
     if (meter_RAMs + stats_RAMs + stateful_RAMs + selector_RAMs + idletime_RAMs >
@@ -781,13 +781,13 @@ bool Memories::mem_info::constraint_check(int lt_allowed, cstring &failure_reaso
             << ") + idletime_RAMs(" << idletime_RAMs << ") > Memories::MAPRAM_COLUMNS("
             << Memories::MAPRAM_COLUMNS << ") * Memories::SRAM_ROWS(" <<
             Memories::SRAM_ROWS << ")");
-        failure_reason = "too many map rams";
+        failure_reason = "too many map rams"_cs;
         return false; }
 
     if (logical_tables > lt_allowed) {
         LOG6(" logical_tables(" << logical_tables << ") > lt_allowed(" <<
            lt_allowed << ")");
-        failure_reason = "too many logical tables";
+        failure_reason = "too many logical tables"_cs;
         return false; }
 
     return true;
@@ -1081,13 +1081,13 @@ bool Memories::find_best_row_and_fill_out(unsigned column_mask) {
         = available_SRAMs_per_row(column_mask, way, way->width - 1);
     // No memories left to place anything
     if (available_rams.size() == 0) {
-        failure_reason = "no rams left in exact_match.find_best_row";
+        failure_reason = "no rams left in exact_match.find_best_row"_cs;
         return false; }
 
     int row = available_rams[0].first;
     match_selection match_select;
     if (available_rams[0].second == 0) {
-        failure_reason = "empty row in exact_match.find_best_row";
+        failure_reason = "empty row in exact_match.find_best_row"_cs;
         return false; }
     if (!determine_match_rows_and_cols(way, row, column_mask, match_select, false))
         return false;
@@ -1502,7 +1502,7 @@ bool Memories::determine_match_rows_and_cols(SRAM_group *group, int row, unsigne
             available_match_SRAMs_per_row(match_select.column_mask, column_mask,
                                           determined_rows, group, i);
         if (matching_rows.size() == 0) {
-            failure_reason = "empty row for wide match in determine_match_rows_and_cols";
+            failure_reason = "empty row for wide match in determine_match_rows_and_cols"_cs;
             return false; }
         int wide_row = matching_rows[0];
         match_select.rows.push_back(wide_row);
@@ -1519,7 +1519,7 @@ bool Memories::determine_match_rows_and_cols(SRAM_group *group, int row, unsigne
     // A logical table partition must be fully placed
     if (atcam &&
         bitcount(match_select.column_mask) != static_cast<size_t>(group->left_to_place())) {
-        failure_reason = "atcam fail in determine_match_rows_and_cols";
+        failure_reason = "atcam fail in determine_match_rows_and_cols"_cs;
         return false; }
 
     std::sort(match_select.rows.begin(), match_select.rows.end());
@@ -1742,7 +1742,7 @@ bool Memories::allocate_all_atcam(mem_info &mi) {
                 }
             }
             if (!found) {
-                failure_reason = "atcam partition failure";
+                failure_reason = "atcam partition failure"_cs;
                 LOG3(failure_reason);
                 return false; }
         }
@@ -1796,7 +1796,7 @@ bool Memories::find_ternary_stretch(int TCAMs_necessary, int &row, int &col,
             }
         }
     }
-    failure_reason = "find_ternary_stretch failed";
+    failure_reason = "find_ternary_stretch failed"_cs;
     return false;
 }
 
@@ -1993,7 +1993,7 @@ bool Memories::allocate_all_tind() {
         int best_bus = 0;
         int best_row = find_best_tind_row(tg, best_bus);
         if (best_row == -1) {
-            failure_reason = "no tind row available";
+            failure_reason = "no tind row available"_cs;
             LOG4("no tind row available for " << tg->ta->table->name);
             return false; }
         for (int i = 0; i < LEFT_SIDE_COLUMNS; i++) {
@@ -3590,7 +3590,7 @@ bool Memories::allocate_all_swbox_users() {
                     // JIRA-DOC: The example in
                     // JIRA-DOC: P4C-3205 has both a selector and a register in the stage.
                     // As a stopgap, we just fail memory allocation instead of aborting
-                    failure_reason = "syth2port failed over center on jbay";
+                    failure_reason = "syth2port failed over center on jbay"_cs;
                     LOG4(failure_reason);
                     return false;
                 }
@@ -3610,7 +3610,7 @@ bool Memories::allocate_all_swbox_users() {
         for (auto sbu : synth_bus_users)
             sup_unused += sbu->left_to_place();
 
-        failure_reason = "allocate_all_swbox_users failed";
+        failure_reason = "allocate_all_swbox_users failed"_cs;
         LOG4(failure_reason);
         return false;
     }
@@ -3923,8 +3923,8 @@ bool Memories::allocate_all_payload_gw(bool alloc_search_bus) {
             if (!(gw_found && result_bus_found)) {
                 if (!gw_found) LOG3("  failed to find gw for " << u_id);
                 if (!result_bus_found) LOG3("  failed to find result_bus for " << u_id);
-                failure_reason = "failed to place payload gw " + u_id.build_name()
-                               + (alloc_search_bus ? " with search bus" : " no search bus");
+                failure_reason = "failed to place payload gw "_cs + u_id.build_name()
+                               + (alloc_search_bus ? " with search bus"_cs : " no search bus"_cs);
                 return false; }
             BUG_CHECK(alloc.row.size() == 1, "Help me payload");
         }
@@ -3961,8 +3961,8 @@ bool Memories::allocate_all_normal_gw(bool alloc_search_bus) {
             alloc.gateway.payload_row = -1;
             if (!gw_found) {
                 LOG3("  failed to find gw for " << u_id);
-                failure_reason = "failed to place normal gw " + u_id.build_name()
-                               + (alloc_search_bus ? " with search bus" : " no search bus");
+                failure_reason = "failed to place normal gw "_cs + u_id.build_name()
+                               + (alloc_search_bus ? " with search bus"_cs : " no search bus"_cs);
                 return false; }
             BUG_CHECK(alloc.row.size() == 1, "Help me normal");
         }
@@ -3986,7 +3986,7 @@ bool Memories::allocate_all_no_match_gw() {
             if (!(unit_found && result_bus_found)) {
                 if (!unit_found) LOG3("  failed to find gw for " << u_id);
                 if (!result_bus_found) LOG3("  failed to find result_bus for " << u_id);
-                failure_reason = "failed to place no_match gw " + u_id.build_name();
+                failure_reason = "failed to place no_match gw "_cs + u_id.build_name();
                 return false; }
             BUG_CHECK(alloc.row.size() == 1, "Help me no match");
         }
@@ -4148,7 +4148,7 @@ bool Memories::allocate_all_no_match_miss() {
             }
 
             if (!found) {
-                failure_reason = "failed to place no match miss " + u_id.build_name();
+                failure_reason = "failed to place no match miss "_cs + u_id.build_name();
                 LOG4(failure_reason);
                 return false;
             } else {
@@ -4193,7 +4193,7 @@ bool Memories::allocate_all_tind_result_bus_tables() {
             }
 
             if (!found) {
-                failure_reason = "failed to place tind result bus " + u_id.build_name();
+                failure_reason = "failed to place tind result bus "_cs + u_id.build_name();
                 LOG4(failure_reason);
                 return false; }
         }
@@ -4294,7 +4294,7 @@ bool Memories::allocate_idletime(SRAM_group* idletime_group) {
         return true;
     if (allocate_idletime_in_top_or_bottom_half(idletime_group, !in_top_half))
         return true;
-    failure_reason = "allocate_idletime failed";
+    failure_reason = "allocate_idletime failed"_cs;
     return false;
 }
 

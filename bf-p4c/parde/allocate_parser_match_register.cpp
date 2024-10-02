@@ -19,7 +19,7 @@ using namespace Parser;
 // before it where we can insert the save instructions.
 struct InsertInitSaveState : public ParserTransform {
     IR::BFN::Parser* preorder(IR::BFN::Parser* parser) override {
-        auto init = new IR::BFN::ParserState(nullptr, "$init_match", parser->start->gress);
+        auto init = new IR::BFN::ParserState(nullptr, "$init_match"_cs, parser->start->gress);
         auto next = new IR::BFN::Transition(match_t(), 0, parser->start);
         init->transitions = { next };
         parser->start = init;
@@ -50,7 +50,7 @@ struct ResolveOutOfBufferSaves : public ParserTransform {
         auto src = parser_info.graph(parser).get_src(orig);
 
         auto cnt = orig_state_to_stall_cnt[src->name]++;
-        cstring name = src->name + ".$oob_stall_" + cstring::to_cstring(cnt);
+        cstring name = src->name + ".$oob_stall_"_cs + cstring::to_cstring(cnt);
         auto stall = new IR::BFN::ParserState(src->p4States, name, src->gress);
 
         LOG2("created stall state for out of buffer select on "
@@ -1601,7 +1601,7 @@ class MatcherAllocator : public Visitor {
                                                 std::make_pair(def->state->name, def->rval->range);
                                             if (!prev_delay_defs.count(def_pair) ||
                                                 !prev_delay_defs.at(def_pair).count(
-                                                    t->next ? t->next->name : "NULL"))
+                                                    t->next ? t->next->name : "NULL"_cs))
                                                 defs_to_delay[def].emplace(t->next);
                                         }
                                     }

@@ -1253,7 +1253,7 @@ const RamSection *ALUOperation::create_meter_color_RamSection() const {
     // Padding the unused bits rest with all meter color padding
     for (auto br : bitranges(bitvec(0, Format::METER_COLOR_SIZE) - meter_bits_in_use)) {
         le_bitrange pad_range = { br.first, br.second };
-        MeterColor *mc_padding = new MeterColor("$padding", pad_range);
+        MeterColor *mc_padding = new MeterColor("$padding"_cs, pad_range);
         rv->add_param(pad_range.lo + Format::METER_COLOR_START_BIT, mc_padding);
     }
 
@@ -2244,7 +2244,7 @@ cstring Format::Use::get_format_name(const ALUPosition &alu_pos, bool bitmasked_
  */
 cstring Format::Use::get_format_name(SlotType_t slot_type, Location_t loc, int byte_offset,
         le_bitrange *slot_bits, le_bitrange *postpone_range) const {
-    cstring rv = "";
+    cstring rv = ""_cs;
     BUG_CHECK(slot_bits == nullptr || postpone_range == nullptr, "Invalid call of the "
          "get_format_name function");
     int size = slot_type_to_bits(slot_type);
@@ -2972,7 +2972,7 @@ bool Format::analyze_actions(FormatType_t format_type) {
      * a 4 bit range of immediate data in order to successfully fit within in one logical
      * table
      */
-    condense_action("locked_in_all_actions", locked_in_all_actions_sects);
+    condense_action("locked_in_all_actions"_cs, locked_in_all_actions_sects);
 
     int locked_in_all_actions_bits = 0;
     for (auto *sect : locked_in_all_actions_sects) {
@@ -3122,7 +3122,7 @@ bool Format::determine_bytes_per_loc(bool &initialized,
         auto &ram_sect = locked_in_all_actions_sects[i];
         locked_sects.emplace_back(ram_sect);
     }
-    locked_in_all_actions_inputs.emplace_back("locked_in_all_actions", locked_sects);
+    locked_in_all_actions_inputs.emplace_back("locked_in_all_actions"_cs, locked_sects);
 
     // First run, only allocate on action data
     if (!initialized) {

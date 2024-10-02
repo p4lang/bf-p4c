@@ -27,15 +27,15 @@ void ActionMutuallyExclusive::postorder(const IR::MAU::Table *tbl) {
             if (tbl->next.count(act->name.originalName) > 0) {
                 actions_running_on_branch[act->name.originalName].setbit(action_ids[act]);
             } else if (tbl->has_default_path()) {
-                actions_running_on_branch["$default"].setbit(action_ids[act]);
+                actions_running_on_branch["$default"_cs].setbit(action_ids[act]);
             }
         }
     } else if (tbl->hit_miss_p4()) {
         for (const auto *act : Values(tbl->actions)) {
-            if (tbl->next.count("$hit") > 0 && !act->miss_only())
-                actions_running_on_branch["$hit"].setbit(action_ids[act]);
-            if (tbl->next.count("$miss") > 0 && !act->hit_only()) {
-                actions_running_on_branch["$miss"].setbit(action_ids[act]);
+            if (tbl->next.count("$hit"_cs) > 0 && !act->miss_only())
+                actions_running_on_branch["$hit"_cs].setbit(action_ids[act]);
+            if (tbl->next.count("$miss"_cs) > 0 && !act->hit_only()) {
+                actions_running_on_branch["$miss"_cs].setbit(action_ids[act]);
             }
         }
     }

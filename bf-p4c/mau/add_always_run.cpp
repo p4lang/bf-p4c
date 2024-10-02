@@ -72,13 +72,13 @@ Visitor::profile_t AddAlwaysRun::PrepareToAdd::init_apply(const IR::Node* root) 
             for (auto& beforeId : tableIdsBefore) {
                 auto* beforeTable = tablesByUniqueId.at(beforeId);
                 LOG2("\t    Before Table " << beforeTable->name);
-                flowGraph.add_edge(beforeTable, table, "always_run");
+                flowGraph.add_edge(beforeTable, table, "always_run"_cs);
             }
 
             for (auto& afterId : tableIdsAfter) {
                 auto* afterTable = tablesByUniqueId.at(afterId);
                 LOG2("\t    After Table " << afterTable->name);
-                flowGraph.add_edge(table, afterTable, "always_run");
+                flowGraph.add_edge(table, afterTable, "always_run"_cs);
             }
         }
 

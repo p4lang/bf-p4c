@@ -262,7 +262,7 @@ CheckUninitializedAndOverlayedReads::CheckUninitializedAndOverlayedReads(const F
         const PhvInfo& phv, const PHV::Pragmas &pragmas, const BFN_Options &options) {
     auto *deps = new DependencyGraph();
     addPasses({
-        new FindDependencyGraph(phv, *deps, &options, "", "Before Uninitialized Read Check"),
+        new FindDependencyGraph(phv, *deps, &options, ""_cs, "Before Uninitialized Read Check"_cs),
         new FindUninitializedAndOverlayedReads(defuse, phv, pragmas, *deps)
     });
 }

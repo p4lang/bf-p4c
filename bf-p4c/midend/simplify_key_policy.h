@@ -18,7 +18,7 @@ class IsPhase0 : public P4::KeyIsSimple {
                 return false;
             if (auto table = n->to<IR::P4Table>()) {
                 auto annot = table->getAnnotations();
-                if (annot->getSingle("phase0")) {
+                if (annot->getSingle("phase0"_cs)) {
                     return true;
                 }
                 return false;

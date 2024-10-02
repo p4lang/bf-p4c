@@ -23,7 +23,7 @@ struct RewriteHeader : public Transform {
  public:
     RewriteHeader() {}
     const IR::Node* postorder(IR::Type_Struct* st) override {
-        if (st->getAnnotation("flexible") == nullptr)
+        if (st->getAnnotation("flexible"_cs) == nullptr)
             return st;
 
         IR::IndexedVector<IR::StructField> fields;

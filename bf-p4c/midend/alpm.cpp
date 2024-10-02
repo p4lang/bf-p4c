@@ -13,11 +13,11 @@
 namespace BFN {
 
 const std::set<unsigned> SplitAlpm::valid_partition_values = {1024, 2048, 4096, 8192};
-const cstring SplitAlpm::ALGORITHMIC_LPM_PARTITIONS  = PragmaAlpmPartitions::name;
+const cstring SplitAlpm::ALGORITHMIC_LPM_PARTITIONS  = cstring(PragmaAlpmPartitions::name);
 const cstring SplitAlpm::ALGORITHMIC_LPM_SUBTREES_PER_PARTITION =
-    PragmaAlpmSubtreePartitions::name;
+    cstring(PragmaAlpmSubtreePartitions::name);
 const cstring SplitAlpm::ALGORITHMIC_LPM_ATCAM_EXCLUDE_FIELD_MSBS =
-    PragmaAlpmAtcamExcludeFieldMsbs::name;
+    cstring(PragmaAlpmAtcamExcludeFieldMsbs::name);
 
 bool SplitAlpm::use_funnel_shift(int lpm_key_width) {
     return lpm_key_width > 32 && lpm_key_width <= 64;
@@ -230,54 +230,54 @@ const IR::P4Table* SplitAlpm::create_atcam_table(const IR::P4Table* tbl,
                 new IR::PathExpression(IR::ID("atcam_partition_index"))));
 
 
-    properties->push_back(new IR::Property("key",
+    properties->push_back(new IR::Property("key"_cs,
                           new IR::Key(keys), false));
 
     // create partition_key for further alpm optimization
-    properties->push_back(new IR::Property("actions", tbl->getActionList(), false));
+    properties->push_back(new IR::Property("actions"_cs, tbl->getActionList(), false));
 
     // create size
-    properties->push_back(new IR::Property("size",
+    properties->push_back(new IR::Property("size"_cs,
         new IR::ExpressionValue(tbl->getSizeProperty()), false));
 
     // create default_action
     if (tbl->getDefaultAction()) {
-        properties->push_back(new IR::Property("default_action",
+        properties->push_back(new IR::Property("default_action"_cs,
                               new IR::ExpressionValue(tbl->getDefaultAction()),
                               false)); }
 
-    if (auto prop = tbl->properties->getProperty("idle_timeout")) {
+    if (auto prop = tbl->properties->getProperty("idle_timeout"_cs)) {
         properties->push_back(prop);
     }
 
-    if (auto prop = tbl->properties->getProperty("implementation")) {
+    if (auto prop = tbl->properties->getProperty("implementation"_cs)) {
         properties->push_back(prop);
     }
 
-    properties->push_back(new IR::Property("as_atcam",
+    properties->push_back(new IR::Property("as_atcam"_cs,
                 new IR::Annotations({new IR::Annotation(IR::Annotation::hiddenAnnotation, {})}),
                 new IR::ExpressionValue(new IR::BoolLiteral(true)), false));
 
-    properties->push_back(new IR::Property("as_alpm",
+    properties->push_back(new IR::Property("as_alpm"_cs,
                 new IR::Annotations({new IR::Annotation(IR::Annotation::hiddenAnnotation, {})}),
                 new IR::ExpressionValue(new IR::BoolLiteral(true)), false));
 
-    properties->push_back(new IR::Property("atcam_partition_count",
+    properties->push_back(new IR::Property("atcam_partition_count"_cs,
                 new IR::Annotations({new IR::Annotation(IR::Annotation::hiddenAnnotation, {})}),
                 new IR::ExpressionValue(new IR::Constant(partition_count)), false));
 
-    properties->push_back(new IR::Property("atcam_subtrees_per_partition",
+    properties->push_back(new IR::Property("atcam_subtrees_per_partition"_cs,
                 new IR::Annotations({new IR::Annotation(IR::Annotation::hiddenAnnotation, {})}),
                 new IR::ExpressionValue(new IR::Constant(subtrees_per_partition)), false));
 
     if (atcam_subset_width != -1) {
-        properties->push_back(new IR::Property("atcam_subset_width",
+        properties->push_back(new IR::Property("atcam_subset_width"_cs,
                     new IR::Annotations({new IR::Annotation(IR::Annotation::hiddenAnnotation, {})}),
                     new IR::ExpressionValue(new IR::Constant(atcam_subset_width)), false));
     }
 
     if (shift_granularity != -1) {
-        properties->push_back(new IR::Property("shift_granularity",
+        properties->push_back(new IR::Property("shift_granularity"_cs,
                     new IR::Annotations({new IR::Annotation(IR::Annotation::hiddenAnnotation, {})}),
                     new IR::ExpressionValue(new IR::Constant(shift_granularity)), false));
     }
@@ -367,7 +367,7 @@ const IR::P4Table* SplitAlpm::create_preclassifier_table(const IR::P4Table* tbl,
                 new IR::Annotations({new IR::Annotation(IR::Annotation::hiddenAnnotation, {})}),
                 new IR::ExpressionValue(new IR::Constant(number_entries)), false));
 
-    if (auto prop = tbl->properties->getProperty("requires_versioning")) {
+    if (auto prop = tbl->properties->getProperty("requires_versioning"_cs)) {
         properties->push_back(prop);
     }
 
@@ -473,8 +473,8 @@ bool SplitAlpm::values_through_impl(const IR::P4Table *tbl,
     };
 
     // get Alpm instance from table implementation property
-    auto instance =
-        getExternInstanceFromPropertyByTypeName(tbl, "implementation", "Alpm", refMap, typeMap);
+    auto instance = getExternInstanceFromPropertyByTypeName(tbl, "implementation"_cs, "Alpm"_cs,
+                                                            refMap, typeMap);
     if (instance) {
         found_in_implementation = true;
         extract_alpm_config_from_property(instance);
@@ -482,7 +482,7 @@ bool SplitAlpm::values_through_impl(const IR::P4Table *tbl,
     }
 
     // for backward compatibility, also check the 'alpm' table property
-    auto alpm = getExternInstanceFromProperty(tbl, "alpm", refMap, typeMap);
+    auto alpm = getExternInstanceFromProperty(tbl, "alpm"_cs, refMap, typeMap);
     if (alpm == std::nullopt)
         return false;
     if (alpm->type->name != "Alpm") {
@@ -518,7 +518,7 @@ bool SplitAlpm::pragma_exclude_msbs(const IR::P4Table* tbl,
         analyze_key_name_and_type(k, fname);
         // alternatively, if user refers to the name in @name annotation
         // that also works. This is needed for programs translated from p4-14.
-        auto fname_annot = k->getAnnotation("name");
+        auto fname_annot = k->getAnnotation("name"_cs);
         if (fname_annot != nullptr) {
             auto fname = fname_annot->expr.at(0)->to<IR::StringLiteral>()->value;
             // if annotation use a different name than the original field.
@@ -759,11 +759,11 @@ void CollectAlpmInfo::postorder(const IR::P4Table* tbl) {
     using BFN::getExternInstanceFromProperty;
 
     auto instance = getExternInstanceFromPropertyByTypeName(
-            tbl, "implementation", "Alpm", refMap, typeMap);
+            tbl, "implementation"_cs, "Alpm"_cs, refMap, typeMap);
     if (instance) alpm_table.insert(tbl->name);
 
     // for backward compatibility, also check the 'alpm' property
-    auto alpm = getExternInstanceFromProperty(tbl, "alpm", refMap, typeMap);
+    auto alpm = getExternInstanceFromProperty(tbl, "alpm"_cs, refMap, typeMap);
     if (alpm != std::nullopt) {
         ::warning(ErrorType::WARN_DEPRECATED, "table property 'alpm' is deprecated,"
                 " use 'implementation' instead.");
@@ -771,7 +771,7 @@ void CollectAlpmInfo::postorder(const IR::P4Table* tbl) {
 
     // support @alpm(1) or @alpm(true)
     auto annot = tbl->getAnnotations();
-    if (auto s = annot->getSingle(PragmaAlpm::name)) {
+    if (auto s = annot->getSingle(cstring(PragmaAlpm::name))) {
         ERROR_CHECK(s->expr.size() > 0, "%s: Please provide a valid alpm "
                 "for table %s", tbl->srcInfo, tbl->name);
         if (auto pragma_val = s->expr.at(0)->to<IR::Constant>()) {

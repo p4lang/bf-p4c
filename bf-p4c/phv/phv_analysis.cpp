@@ -66,7 +66,7 @@ PHV_AnalysisPass::PHV_AnalysisPass(
         CollectPhvLoggingInfo *phvLoggingInfo,
         std::set<PHV::FieldRange> &mauInitFields,
         const TableSummary &table_summary)
-    : Logging::PassManager("phv_allocation_"),
+    : Logging::PassManager("phv_allocation_"_cs),
       phv_i(phv),
       uses_i(uses),
       clot_i(clot),
@@ -141,7 +141,7 @@ PHV_AnalysisPass::PHV_AnalysisPass(
             // calculate ingress/egress parser's critical path
             &parser_critical_path,
             // Refresh dependency graph for live range analysis
-            new FindDependencyGraph(phv, deps, &options, "", "Just Before PHV allocation"),
+            new FindDependencyGraph(phv, deps, &options, ""_cs, "Just Before PHV allocation"_cs),
             new MemoizeStage(deps, alloc),
             // Refresh defuse
             &defuse,
@@ -240,7 +240,7 @@ namespace {
 class IncrementalPHVAllocPass : public Logging::PassManager {
  public:
     IncrementalPHVAllocPass(const std::initializer_list<VisitorRef>& visitors)
-        : Logging::PassManager("phv_incremental_allocation_") {
+        : Logging::PassManager("phv_incremental_allocation_"_cs) {
         addPasses(visitors);
     }
 };
@@ -257,8 +257,8 @@ Visitor* PHV_AnalysisPass::make_incremental_alloc_pass(
          &tableActionsMap,
          &uses_i,
          // Refresh dependency graph for live range analysis
-         new FindDependencyGraph(phv_i, deps_i, &options_i, "",
-                                 "Just Before Incremental PHV allocation"),
+         new FindDependencyGraph(phv_i, deps_i, &options_i, ""_cs,
+                                 "Just Before Incremental PHV allocation"_cs),
          // TODO: MemoizeMinStage will corrupt existing allocslice liverange, because
          // deparser stage is marked as last stage + 1. DO NOT run it.
          &defuse_i,

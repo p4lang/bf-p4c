@@ -184,43 +184,43 @@ bool FindFlowGraph::preorder(const IR::MAU::TableSeq* table_seq) {
 
 std::pair<bool, cstring> FindFlowGraph::next_incomplete(const IR::MAU::Table *t) {
     // TODO: Handle $try_next_stage
-    if (t->next.count("$hit") && t->next.count("$miss"))
-        return std::make_pair(false, "");
+    if (t->next.count("$hit"_cs) && t->next.count("$miss"_cs))
+        return std::make_pair(false, ""_cs);
 
-    if (t->next.count("$hit"))
+    if (t->next.count("$hit"_cs))
         // Miss falls through to next_table.
-        return std::make_pair(true, "$miss");
+        return std::make_pair(true, "$miss"_cs);
 
-    if (t->next.count("$miss"))
+    if (t->next.count("$miss"_cs))
         // Hit falls through to next_table.
-        return std::make_pair(true, "$hit");
+        return std::make_pair(true, "$hit"_cs);
 
-    if (t->next.count("$true") && t->next.count("$false"))
-        return std::make_pair(false, "");
+    if (t->next.count("$true"_cs) && t->next.count("$false"_cs))
+        return std::make_pair(false, ""_cs);
 
-    if (t->next.count("$true"))
+    if (t->next.count("$true"_cs))
         // "false" case falls through to next_table.
-        return std::make_pair(true, "$false");
+        return std::make_pair(true, "$false"_cs);
 
-    if (t->next.count("$false"))
+    if (t->next.count("$false"_cs))
         // "true" case falls through to next_table.
-        return std::make_pair(true, "$true");
+        return std::make_pair(true, "$true"_cs);
 
-    if (t->next.count("$default"))
-        return std::make_pair(false, "");
+    if (t->next.count("$default"_cs))
+        return std::make_pair(false, ""_cs);
 
     if (t->next.size() == 0)
-        return std::make_pair(true, "$default");
+        return std::make_pair(true, "$default"_cs);
 
     // See if we have a next-table entry for every action. If not, next_table can be executed after
     // the given table.
     for (auto kv : t->actions) {
         if (!t->next.count(kv.first)) {
-            return std::make_pair(true, "$hit");
+            return std::make_pair(true, "$hit"_cs);
         }
     }
 
-    return std::make_pair(false, "");
+    return std::make_pair(false, ""_cs);
 }
 
 bool FindFlowGraph::preorder(const IR::MAU::Table *t) {

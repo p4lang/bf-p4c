@@ -637,7 +637,7 @@ const IR::Node *LiveRangeSplitOrFail::apply_visitor(const IR::Node *root, const 
     const ConcreteAllocation *alloc = getAllocFn();
 
     const int pipeId = root->to<IR::BFN::Pipe>()->canon_id();
-    auto lrsFilename = Logging::PassManager::getNewLogFileName("live_range_split_");
+    auto lrsFilename = Logging::PassManager::getNewLogFileName("live_range_split_"_cs);
     auto lrsLogfile = new Logging::FileLog(pipeId, lrsFilename, Logging::Mode::AUTO);
 
     PHV::LiveRangeSplit lrs(*alloc, phv, utils, deps,
@@ -664,7 +664,7 @@ const IR::Node *LiveRangeSplitOrFail::apply_visitor(const IR::Node *root, const 
 
     Logging::FileLog::close(lrsLogfile);
 
-    auto summaryFilename = Logging::PassManager::getNewLogFileName("phv_allocation_summary_");
+    auto summaryFilename = Logging::PassManager::getNewLogFileName("phv_allocation_summary_"_cs);
     auto summaryLogfile = new Logging::FileLog(pipeId, summaryFilename, Logging::Mode::AUTO);
 
     if (!unallocated.empty()) {

@@ -8,7 +8,7 @@ class CheckForNamePrefix : public Inspector {
     cstring name;
     const IR::Node* node;
     bool preorder(const IR::PathExpression* e) override {
-        if (e->path->name.name.startsWith(name))
+        if (e->path->name.name.startsWith(name.string()))
             node = e;
         return false;
     }

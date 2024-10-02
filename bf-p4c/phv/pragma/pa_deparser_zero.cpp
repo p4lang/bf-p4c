@@ -1,8 +1,8 @@
 #include "bf-p4c/phv/pragma/pa_deparser_zero.h"
 #include "bf-p4c/phv/pragma/phv_pragmas.h"
 
-const std::vector<cstring>*
-PragmaDeparserZero::supported_pragmas = new std::vector<cstring>{
+const std::vector<std::string>*
+PragmaDeparserZero::supported_pragmas = new std::vector<std::string>{
     PHV::pragma::NOT_PARSED,
     PHV::pragma::NOT_DEPARSED,
     PHV::pragma::DISABLE_DEPARSE_ZERO
@@ -21,7 +21,7 @@ Visitor::profile_t PragmaDeparserZero::init_apply(const IR::Node* root) {
 bool PragmaDeparserZero::preorder(const IR::BFN::Pipe* pipe) {
     auto global_pragmas = pipe->global_pragmas;
     for (const auto* annotation : global_pragmas) {
-        cstring pragma_name = annotation->name.name;
+        std::string pragma_name = annotation->name.name.string();
 
         if (std::find(supported_pragmas->begin(), supported_pragmas->end(), pragma_name) ==
                 supported_pragmas->end())
@@ -62,7 +62,7 @@ bool PragmaDeparserZero::preorder(const IR::BFN::Pipe* pipe) {
             continue;
         }
 
-        cstring header_name = gress_arg->value + "::" + field_ir->value;
+        cstring header_name = gress_arg->value + "::"_cs + field_ir->value;
         LOG1("    Marking pragma " << pragma_name << " for header " << header_name);
         if (!headerFields.count(header_name))
             continue;

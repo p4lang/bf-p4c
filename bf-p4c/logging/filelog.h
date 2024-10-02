@@ -8,7 +8,6 @@
 #include <utility>
 
 #include "lib/cstring.h"
-#include "lib/path.h"
 #include "bf-p4c/logging/manifest.h"
 
 namespace Logging {
@@ -46,15 +45,19 @@ class FileLog {
 
         filesWritten.insert(logName);
 
-        auto logDir = BFNContext::get().getOutputDirectory("logs", pipe);
+        auto logDir = BFNContext::get().getOutputDirectory("logs"_cs, pipe);
         if (logDir) {
-            auto fileName = Util::PathName(logDir).join(logName).toString();
-            LOG1("Open logfile " << fileName << " append: " << append);
+            // Assuming cstring has a method to convert to std::string
+            std::filesystem::path fullPath =
+                std::filesystem::path(logDir.string_view()) / logName.string_view();
+
+            // Open the file stream with the full path
+            LOG1("Open logfile " << fullPath.string() << " append: " << append);
             Manifest::getManifest().addLog(pipe, name2type(logName), logName);
             clog_buff = std::clog.rdbuf();
             auto flags = std::ios_base::out;
             if (append) flags |= std::ios_base::app;
-            log = new std::ofstream(fileName, flags);
+            log = new std::ofstream(fullPath, flags);
             std::clog.rdbuf(log->rdbuf());
         }
     }

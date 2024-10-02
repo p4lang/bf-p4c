@@ -270,12 +270,12 @@ class CreateSaluInstruction : public Inspector {
     bool preorder(const IR::MAU::Primitive *) override;
     bool preorder(const IR::MAU::SaluRegfileRow *) override;
     bool preorder(const IR::Operation::Relation *, cstring op, bool eq);
-    bool preorder(const IR::Equ *r) override { return preorder(r, "equ", true); }
-    bool preorder(const IR::Neq *r) override { return preorder(r, "neq", true); }
-    bool preorder(const IR::Grt *r) override { return preorder(r, "grt", false); }
-    bool preorder(const IR::Lss *r) override { return preorder(r, "lss", false); }
-    bool preorder(const IR::Geq *r) override { return preorder(r, "geq", false); }
-    bool preorder(const IR::Leq *r) override { return preorder(r, "leq", false); }
+    bool preorder(const IR::Equ *r) override { return preorder(r, "equ"_cs, true); }
+    bool preorder(const IR::Neq *r) override { return preorder(r, "neq"_cs, true); }
+    bool preorder(const IR::Grt *r) override { return preorder(r, "grt"_cs, false); }
+    bool preorder(const IR::Lss *r) override { return preorder(r, "lss"_cs, false); }
+    bool preorder(const IR::Geq *r) override { return preorder(r, "geq"_cs, false); }
+    bool preorder(const IR::Leq *r) override { return preorder(r, "leq"_cs, false); }
     bool preorder(const IR::Cast *) override;
     void postorder(const IR::Cast *) override;
     bool preorder(const IR::BFN::SignExtend *) override;
@@ -305,8 +305,8 @@ class CreateSaluInstruction : public Inspector {
     bool preorder(const IR::Concat *) override;
     void postorder(const IR::Concat *) override;
     bool divmod(const IR::Operation::Binary *, cstring op);
-    bool preorder(const IR::Div *e) override { return divmod(e, "div"); }
-    bool preorder(const IR::Mod *e) override { return divmod(e, "mod"); }
+    bool preorder(const IR::Div *e) override { return divmod(e, "div"_cs); }
+    bool preorder(const IR::Mod *e) override { return divmod(e, "mod"_cs); }
     bool preorder(const IR::Expression *e) override {
         error("%s: expression too complex for register action", e->srcInfo);
         return false; }

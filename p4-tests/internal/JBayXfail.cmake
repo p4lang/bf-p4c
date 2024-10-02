@@ -180,3 +180,9 @@ if (NOT TEST_ALT_PHV_ALLOC)
     )
 endif()
 
+# V1 model tests: inconsistent srcInfo data when processing RegisterAction in ResolutionContext::lookup
+p4c_add_xfail_reason("tofino2"
+  "error: RegisterAction: declaration not found"
+  extensions/p4_tests/p4_16/internal/customer/jeju/p4c-762-2.p4
+)
+

@@ -25,7 +25,7 @@ namespace BFN {
 
 namespace {
 
-const cstring defaultPhase0TableKeyName = "phase0_data";  //  DRY, SPOT/SSOT
+const cstring defaultPhase0TableKeyName = "phase0_data"_cs;  //  DRY, SPOT/SSOT
 
 cstring getPhase0TableKeyName(const IR::ParameterList* params) {
     cstring keyName = defaultPhase0TableKeyName;
@@ -123,7 +123,7 @@ struct FindPhase0Table : public Inspector {
     // phase0 table to always be implemented in the parser. If phase0 pragma is
     // not set we return false
     bool checkPhase0Pragma(const bool phase0PragmaSet, const IR::P4Table* table,
-                                                            cstring errStr = "") {
+                                                            cstring errStr = ""_cs) {
         ERROR_CHECK(!phase0PragmaSet,
             "Phase0 pragma set but table - %s is not a valid Phase0. Reason - %s",
                                                                 table->name, errStr);
@@ -144,7 +144,7 @@ struct FindPhase0Table : public Inspector {
         // Pragma value = 0 => Table must be implemented only in MAU
         bool phase0PragmaSet = false;
         auto annot = table->getAnnotations();
-        if (auto s = annot->getSingle("phase0")) {
+        if (auto s = annot->getSingle("phase0"_cs)) {
             auto pragma_val = s->expr.at(0)->to<IR::Constant>();
             ERROR_CHECK((pragma_val != nullptr),
                 "Invalid Phase0 pragma value. Must be a constant (either 0 or 1) on table - %s",
@@ -166,7 +166,7 @@ struct FindPhase0Table : public Inspector {
 
         // Check if this table meets all of the phase 0 criteria.
         if (!tableInIngressBeforeInline() && !tableInIngressAfterInline()) {
-            cstring errGress = "Invalid gress; table expected in Ingress";
+            cstring errGress = "Invalid gress; table expected in Ingress"_cs;
             LOG3(" - " << errGress);
             return checkPhase0Pragma(phase0PragmaSet, table, errGress);
         }
@@ -174,34 +174,34 @@ struct FindPhase0Table : public Inspector {
 
         if (!hasCorrectSize(phase0->table)) {
             auto expectedSize = Device::numMaxChannels();
-            cstring errSize = "Invalid size; expected " + std::to_string(expectedSize);
+            cstring errSize = "Invalid size; expected "_cs + std::to_string(expectedSize);
             LOG3(" - " << errSize);
             return checkPhase0Pragma(phase0PragmaSet, table, errSize);
         }
         LOG3(" - The size is correct");
 
-        cstring errSideEffects = "";
+        cstring errSideEffects = ""_cs;
         if (!hasNoSideEffects(phase0->table, errSideEffects)) {
             LOG3(" - Invalid because it has side effects." << errSideEffects);
             return checkPhase0Pragma(phase0PragmaSet, table, errSideEffects);
         }
         LOG3(" - It has no side effects");
 
-        cstring errKey = "";
+        cstring errKey = ""_cs;
         if (!hasCorrectKey(phase0->table, errKey)) {
             LOG3(" - " << errKey);
             return checkPhase0Pragma(phase0PragmaSet, table, errKey);
         }
         LOG3(" - The key (ingress_port) and table type (exact)  are correct");
 
-        cstring errAction = "";
+        cstring errAction = ""_cs;
         if (!hasValidAction(phase0->table, errAction)) {
             LOG3(" - " << errAction);
             return checkPhase0Pragma(phase0PragmaSet, table, errAction);
         }
         LOG3(" - The action is valid");
 
-        cstring errControlFlow = "";
+        cstring errControlFlow = ""_cs;
         if (!hasValidControlFlow(phase0->table, errControlFlow)) {
             LOG3(" - " << errControlFlow);
             return checkPhase0Pragma(phase0PragmaSet, table);
@@ -210,7 +210,7 @@ struct FindPhase0Table : public Inspector {
 
         if (!canPackDataIntoPhase0()) {
             auto phase0PackWidth = Device::pardeSpec().bitPhase0Size();
-            cstring errPack = "Invalid action parameters;";
+            cstring errPack = "Invalid action parameters;"_cs;
             errPack += "Action parameters are too large to pack into ";
             errPack += std::to_string(phase0PackWidth) + " bits";
             LOG3(" - " << errPack);
@@ -249,7 +249,7 @@ struct FindPhase0Table : public Inspector {
 
     bool hasCorrectSize(const IR::P4Table* table) const {
         // The phase 0 table's size must have a specific value.
-        auto* sizeProperty = table->properties->getProperty("size");
+        auto* sizeProperty = table->properties->getProperty("size"_cs);
         if (sizeProperty == nullptr) return false;
         if (!sizeProperty->value->is<IR::ExpressionValue>()) return false;
         auto* expression = sizeProperty->value->to<IR::ExpressionValue>()->expression;
@@ -260,25 +260,25 @@ struct FindPhase0Table : public Inspector {
 
     bool hasNoSideEffects(const IR::P4Table* table, cstring &errStr) const {
         // Actions profiles aren't allowed.
-        errStr = "Action profiles not allowed on phase 0 table";
+        errStr = "Action profiles not allowed on phase 0 table"_cs;
         auto implProp = P4V1::V1Model::instance.tableAttributes
                                                .tableImplementation.name;
         if (table->properties->getProperty(implProp) != nullptr) return false;
 
-        errStr = "Counters not allowed on phase 0 table";
+        errStr = "Counters not allowed on phase 0 table"_cs;
         // Counters aren't allowed.
         auto counterProp = P4V1::V1Model::instance.tableAttributes
                                                   .counters.name;
         if (table->properties->getProperty(counterProp) != nullptr) return false;
 
         // Meters aren't allowed.
-        errStr = "Meters not allowed on phase 0 table";
+        errStr = "Meters not allowed on phase 0 table"_cs;
         auto meterProp = P4V1::V1Model::instance.tableAttributes
                                                 .meters.name;
         if (table->properties->getProperty(meterProp) != nullptr) return false;
 
         // Statefuls aren't allowed.
-        errStr = "Statefuls not allowed on phase 0 table";
+        errStr = "Statefuls not allowed on phase 0 table"_cs;
         auto* al = table->getActionList();
         // Check for stateful execute call within table actions
         for (auto act : al->actionList) {
@@ -289,13 +289,13 @@ struct FindPhase0Table : public Inspector {
             if (hasStateful) return false;
         }
 
-        errStr = "";
+        errStr = ""_cs;
         return true;
     }
 
     bool hasCorrectKey(const IR::P4Table* table, cstring &errStr) const {
         // The phase 0 table must match against 'ingress_intrinsic_metadata.ingress_port'.
-        errStr = "Invalid key; the phase 0 table should match against ingress_port";
+        errStr = "Invalid key; the phase 0 table should match against ingress_port"_cs;
         auto* key = table->getKey();
         if (key == nullptr) return false;
         if (key->keyElements.size() != 1) return false;
@@ -308,14 +308,14 @@ struct FindPhase0Table : public Inspector {
         if (containingTypeDecl->name != "ingress_intrinsic_metadata_t") return false;
         if (member->member != "ingress_port") return false;
 
-        errStr = "Invalid match type; the phase 0 table should be an exact match table";
+        errStr = "Invalid match type; the phase 0 table should be an exact match table"_cs;
         // The match type must be 'exact'.
         auto* matchType = refMap->getDeclaration(keyElem->matchType->path, true)
                                ->to<IR::Declaration_ID>();
         if (matchType->name.name != P4::P4CoreLibrary::instance().exactMatch.name)
             return false;
 
-        errStr = "";
+        errStr = ""_cs;
         return true;
     }
 
@@ -333,7 +333,7 @@ struct FindPhase0Table : public Inspector {
     }
 
     bool hasValidAction(const IR::P4Table* table, cstring &errStr) {
-        errStr = "Invalid action; action is empty";
+        errStr = "Invalid action; action is empty"_cs;
         auto* actions = table->getActionList();
         if (actions == nullptr) return false;
 
@@ -344,7 +344,7 @@ struct FindPhase0Table : public Inspector {
             if (actionElem != nullptr) return false;
             actionElem = elem;
         }
-        errStr = "Invalid action; multiple actions present";
+        errStr = "Invalid action; multiple actions present"_cs;
         if (actionElem == nullptr) return false;
 
         auto* decl = refMap->getDeclaration(actionElem->getPath(), true);
@@ -355,7 +355,7 @@ struct FindPhase0Table : public Inspector {
         phase0->actionName = canon_name(action->externalName());
 
         // The action should have only action data parameters.
-        errStr = "Invalid action; action does not have only action data parameters";
+        errStr = "Invalid action; action does not have only action data parameters"_cs;
         for (auto* param : *action->parameters)
             if (param->direction != IR::Direction::None) return false;
 
@@ -365,7 +365,7 @@ struct FindPhase0Table : public Inspector {
 
         for (auto* statement : action->body->components) {
             // The action should contain only assignments.
-            errStr = "Invalid action; action does not contain only assignments";
+            errStr = "Invalid action; action does not contain only assignments"_cs;
             if (!statement->is<IR::AssignmentStatement>()) return false;
             auto* assignment = statement->to<IR::AssignmentStatement>();
             auto* dest = assignment->left;
@@ -376,7 +376,7 @@ struct FindPhase0Table : public Inspector {
             // that the parser doesn't already write to.
             PathLinearizer path;
             dest->apply(path);
-            errStr = "Invalid action; action writes to non metadata fields";
+            errStr = "Invalid action; action writes to non metadata fields"_cs;
             if (!path.linearPath) {
                 LOG5("   - Assigning to an expression which is too complex: " << dest);
                 return false;
@@ -402,8 +402,8 @@ struct FindPhase0Table : public Inspector {
                 continue;
             }
 
-            errStr = "Invalid action; action assigns from a value which is not ";
-            errStr += "a constant or an action parameter";
+            errStr = "Invalid action; action assigns from a value which is not "_cs;
+            errStr += "a constant or an action parameter"_cs;
             if (!isParam(source, action->parameters)) {
                 LOG5("   - " << errStr << source);
                 return false;
@@ -415,28 +415,28 @@ struct FindPhase0Table : public Inspector {
             });
         }
 
-        errStr = "";
+        errStr = ""_cs;
         return true;
     }
 
     bool hasValidControlFlow(const IR::P4Table* table, cstring &errStr) {
-        cstring errPrefix = "Invalid control flow; ";
+        cstring errPrefix = "Invalid control flow; "_cs;
         // The phase 0 table should be applied in the control's first statement.
-        errStr = errPrefix + "the phase 0 table must be applied first in ingress";
+        errStr = errPrefix + "the phase 0 table must be applied first in ingress"_cs;
         auto* control = findContext<IR::P4Control>();
         if (!control) return false;
         if (control->body->components.size() == 0) return false;
         auto& statements = control->body->components;
 
         // That statement should be an `if` statement.
-        errStr = errPrefix + "the phase 0 table must be guarded with an 'if' clause";
+        errStr = errPrefix + "the phase 0 table must be guarded with an 'if' clause"_cs;
         if (!statements[0]->is<IR::IfStatement>()) return false;
         auto* ifStatement = statements[0]->to<IR::IfStatement>();
         if (!ifStatement->condition->is<IR::Equ>()) return false;
         auto* equ = ifStatement->condition->to<IR::Equ>();
 
         // The `if` should check that `ingress_intrinsic_metadata.resubmit_flag` is 0.
-        errStr = errStr + ", that checks if 'resubmit_flag' is zero";
+        errStr = errStr + ", that checks if 'resubmit_flag' is zero"_cs;
         auto* member = equ->left->to<IR::Member>()
                      ? equ->left->to<IR::Member>()
                      : equ->right->to<IR::Member>();
@@ -452,7 +452,7 @@ struct FindPhase0Table : public Inspector {
         if (!constant->fitsInt() || constant->asInt() != 0) return false;
 
         // The body of the `if` should consist only of the table apply call.
-        errStr = errStr + " and should consist of only the table apply call";
+        errStr = errStr + " and should consist of only the table apply call"_cs;
         const IR::StatOrDecl* statement = nullptr;
         if (ifStatement->ifTrue->is<IR::BlockStatement>()) {
             auto* containingStmts = ifStatement->ifTrue->to<IR::BlockStatement>();
@@ -470,7 +470,7 @@ struct FindPhase0Table : public Inspector {
         if (!mi->object->is<IR::P4Table>()) return false;
         if (!table->equiv(*(mi->object->to<IR::P4Table>()))) return false;
 
-        errStr = "";
+        errStr = ""_cs;
         return true;
     }
 
@@ -485,7 +485,7 @@ struct FindPhase0Table : public Inspector {
             // TODO: replace impl with @flexible annotation
             const int fieldSize = param->type->width_bits();
             const int alignment = getAlignment(fieldSize);
-            bool is_pad_field   = param->getAnnotation("padding");
+            bool is_pad_field   = param->getAnnotation("padding"_cs);
             const int phase     = is_pad_field ? 0 : alignment;
             packing.padToAlignment(8, phase);
             LOG4("Padding phase = " << phase << ",  totalWidth = " << packing.totalWidth);
@@ -510,7 +510,7 @@ struct FindPhase0Table : public Inspector {
         unsigned padFieldId = 0;
         for (auto& packedField : packing) {
             if (packedField.isPadding()) {
-                cstring padFieldName = "__pad_";
+                cstring padFieldName = "__pad_"_cs;
                 padFieldName += cstring::to_cstring(padFieldId++);
                 auto* padFieldType = IR::Type::Bits::get(packedField.width);
                 fields.push_back(new IR::StructField(padFieldName, new IR::Annotations({
@@ -604,7 +604,7 @@ struct RewritePhase0IfPresent : public Transform {
         auto size = Device::numMaxChannels();
         auto tableName = phase0->table->controlPlaneName();
         auto actionName = phase0->actionName;
-        auto keyName = "";
+        auto keyName = ""_cs;
         auto *fieldVec = &phase0->p4Type->fields;
         auto handle = 0x20 << 24;
         parser->phase0 =
@@ -623,7 +623,7 @@ struct RewritePhase0IfPresent : public Transform {
             const IR::Member* method = nullptr;
             // Add "pkt.extract(compiler_generated_meta.__phase0_data)"
             auto cgMeta = tnaContext->tnaParams.at(COMPILER_META);
-            auto packetInParam = tnaContext->tnaParams.at("pkt");
+            auto packetInParam = tnaContext->tnaParams.at("pkt"_cs);
             method = new IR::Member(new IR::PathExpression(packetInParam), IR::ID("extract"));
             member = new IR::Member(new IR::PathExpression(cgMeta), IR::ID("__phase0_data"));
             // Clear the existing statements in the state, which are just
@@ -678,10 +678,10 @@ struct RewritePhase0IfPresent : public Transform {
         }
 
         LOG4("Add phase0 annotation: " << phase0->table->name);
-        state->annotations = state->annotations->addAnnotation("override_phase0_table_name",
+        state->annotations = state->annotations->addAnnotation("override_phase0_table_name"_cs,
                 new IR::StringLiteral(phase0->table->name));
 
-        state->annotations = state->annotations->addAnnotation("override_phase0_action_name",
+        state->annotations = state->annotations->addAnnotation("override_phase0_action_name"_cs,
                 new IR::StringLiteral(phase0->actionName));
 
         return state;
@@ -735,7 +735,7 @@ bool CheckPhaseZeroExtern::preorder(const IR::MethodCallExpression* expr) {
 
 bool CollectPhase0Annotation::preorder(const IR::ParserState* state) {
     auto annot = state->getAnnotations();
-    if (auto ann = annot->getSingle("override_phase0_table_name")) {
+    if (auto ann = annot->getSingle("override_phase0_table_name"_cs)) {
         if (auto phase0 = ann->expr.at(0)->to<IR::StringLiteral>()) {
             auto parser = findOrigCtxt<IR::P4Parser>();
             if (!parser) return false;
@@ -743,7 +743,7 @@ bool CollectPhase0Annotation::preorder(const IR::ParserState* state) {
             phase0_name_annot->emplace(name, phase0->value);
         }
     }
-    if (auto ann = annot->getSingle("override_phase0_action_name")) {
+    if (auto ann = annot->getSingle("override_phase0_action_name"_cs)) {
         if (auto phase0 = ann->expr.at(0)->to<IR::StringLiteral>()) {
             auto parser = findOrigCtxt<IR::P4Parser>();
             if (!parser) return false;
@@ -770,11 +770,11 @@ UpdatePhase0NodeInParser::canPackDataIntoPhase0(
         // TODO: Once phase0 node is properly supported in the
         // backend, we won't need this (or any padding), so we should remove
         // it at that point.
-        if (param->annotations->getSingle("padding"))
+        if (param->annotations->getSingle("padding"_cs))
             continue;
         const int fieldSize = param->type->width_bits();
         const int alignment = getAlignment(fieldSize);
-        bool is_pad_field   = param->getAnnotation("padding");
+        bool is_pad_field   = param->getAnnotation("padding"_cs);
         const int phase     = is_pad_field ? 0 : alignment;
         packing->padToAlignment(8, phase);
         LOG4("Padding phase = " << phase << ",  totalWidth = " << packing->totalWidth);
@@ -809,7 +809,7 @@ UpdatePhase0NodeInParser::canPackDataIntoPhase0(
     unsigned padFieldId = 0;
     for (auto& packedField : *packing) {
         if (packedField.isPadding()) {
-            cstring padFieldName = "__pad_";
+            cstring padFieldName = "__pad_"_cs;
             padFieldName += cstring::to_cstring(padFieldId++);
             auto* padFieldType = IR::Type::Bits::get(packedField.width);
             packFields->push_back(new IR::StructField(padFieldName, new IR::Annotations({
@@ -838,19 +838,19 @@ UpdatePhase0NodeInParser::preorder(IR::BFN::TnaParser *parser) {
         tableName = phase0_name_annot->at(parser->externalName());
         namedByAnnotation = true;
     } else {
-        tableName = "$PORT_METADATA";
+        tableName = "$PORT_METADATA"_cs;
         namedByAnnotation = false;
     }
 
     if (phase0_action_annot->count(parser->externalName())) {
         actionName = phase0_action_annot->at(parser->externalName());
     } else {
-        actionName = "set_port_metadata";
+        actionName = "set_port_metadata"_cs;
     }
 
     auto *params = parser->getApplyParameters();
     cstring keyName = getPhase0TableKeyName(params);
-    cstring hdrName = "__phase0_header" + std::to_string(phase0_count);
+    cstring hdrName = "__phase0_header"_cs + std::to_string(phase0_count);
     auto handle = 0x20 << 24 | phase0_count++ << 16;
 
     IR::IndexedVector<IR::StructField>* packedFields;
@@ -905,7 +905,7 @@ IR::MethodCallExpression* ConvertPhase0AssignToExtract::generate_phase0_extract_
             extFuncExpr->method->toString() == BFN::ExternPortMetadataUnpackString) {
             // Create packet extract method call to replace extern
             auto parser = findOrigCtxt<IR::BFN::TnaParser>();
-            auto packetInParam = parser->tnaParams.at("pkt");
+            auto packetInParam = parser->tnaParams.at("pkt"_cs);
             auto* args = new IR::Vector<IR::Argument>();
             if (lExpr) {
                 IR::Argument* a = new IR::Argument(lExpr);

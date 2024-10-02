@@ -56,8 +56,8 @@ createFieldAlignmentTestCase(const std::string& headerSource) {
 
     auto& options = BackendOptions();
     options.langVersion = CompilerOptions::FrontendVersion::P4_16;
-    options.target = "tofino";
-    options.arch = "v1model";
+    options.target = "tofino"_cs;
+    options.arch = "v1model"_cs;
     options.disable_parse_min_depth_limit = true;
 
     return TofinoPipeTestCase::create(source);
@@ -114,11 +114,11 @@ TEST_F(TofinoFieldAlignment, ByteAlignedFields) {
     EXPECT_EQ(0u, ::diagnosticCount());
 
     checkFieldAlignment(test->pipe, {
-        { "h.field1", 0 },
-        { "h.field2", 0 },
-        { "h.field3", 0 },
-        { "h.field4", 0 },
-        { "h.field5", 0 },
+        { "h.field1"_cs, 0 },
+        { "h.field2"_cs, 0 },
+        { "h.field3"_cs, 0 },
+        { "h.field4"_cs, 0 },
+        { "h.field5"_cs, 0 },
     });
 }
 
@@ -136,12 +136,12 @@ TEST_F(TofinoFieldAlignment, SmallUnalignedFields) {
     EXPECT_EQ(0u, ::diagnosticCount());
 
     checkFieldAlignment(test->pipe, {
-        { "h.field1", 7 },
-        { "h.field2", 4 },
-        { "h.field3", 0 },
-        { "h.field4", 3 },
-        { "h.field5", 6 },
-        { "h.field6", 0 },
+        { "h.field1"_cs, 7 },
+        { "h.field2"_cs, 4 },
+        { "h.field3"_cs, 0 },
+        { "h.field4"_cs, 3 },
+        { "h.field5"_cs, 6 },
+        { "h.field6"_cs, 0 },
     });
 }
 
@@ -158,19 +158,19 @@ TEST_F(TofinoFieldAlignment, LargeUnalignedFields) {
     EXPECT_EQ(0u, ::diagnosticCount());
 
     checkFieldAlignment(test->pipe, {
-        { "h.field1", 1 },
-        { "h.field2", 0 },
-        { "h.field3", 7 },
-        { "h.field4", 3 },
-        { "h.field5", 0 },
+        { "h.field1"_cs, 1 },
+        { "h.field2"_cs, 0 },
+        { "h.field3"_cs, 7 },
+        { "h.field4"_cs, 3 },
+        { "h.field5"_cs, 0 },
     });
 }
 
 TEST_F(TofinoFieldAlignment, NonPardeFieldsDoNotForceAlignment) {
     auto& options = BackendOptions();
     options.langVersion = CompilerOptions::FrontendVersion::P4_16;
-    options.target = "tofino";
-    options.arch = "v1model";
+    options.target = "tofino"_cs;
+    options.arch = "v1model"_cs;
     options.disable_parse_min_depth_limit = true;
 
     auto test = TofinoPipeTestCase::create(P4_SOURCE(P4Headers::V1MODEL, R"(
@@ -215,9 +215,9 @@ TEST_F(TofinoFieldAlignment, NonPardeFieldsDoNotForceAlignment) {
     EXPECT_EQ(0u, ::diagnosticCount());
 
     checkFieldAlignment(test->pipe, {
-        { "usedInParser.field", 0 },
-        { "usedOnlyInMAU.field", std::nullopt },
-        { "meta.metadataField", std::nullopt },
+        { "usedInParser.field"_cs, 0 },
+        { "usedOnlyInMAU.field"_cs, std::nullopt },
+        { "meta.metadataField"_cs, std::nullopt },
     });
 }
 

@@ -59,8 +59,8 @@ createComputedChecksumTestCase(const std::string& computeChecksumSource,
 
     auto& options = BackendOptions();
     options.langVersion = CompilerOptions::FrontendVersion::P4_16;
-    options.target = "tofino";
-    options.arch = "v1model";
+    options.target = "tofino"_cs;
+    options.arch = "v1model"_cs;
     options.disable_parse_min_depth_limit = true;
 
     return TofinoPipeTestCase::create(source);
@@ -106,10 +106,10 @@ TEST_F(TofinoComputedChecksum, SimpleWithIsValid) {
     ASSERT_TRUE(test);
     EXPECT_EQ(0u, ::diagnosticCount());
     checkComputedChecksum(test->pipe, {
-        "emit headers.h1.field1 if headers.h1.$valid",
-        "emit headers.h1.field2 if headers.h1.$valid",
-        "emit checksum { headers.h1.field1, headers.h1.field3 } if headers.h1.$valid",
-        "emit headers.h1.field3 if headers.h1.$valid"
+        "emit headers.h1.field1 if headers.h1.$valid"_cs,
+        "emit headers.h1.field2 if headers.h1.$valid"_cs,
+        "emit checksum { headers.h1.field1, headers.h1.field3 } if headers.h1.$valid"_cs,
+        "emit headers.h1.field3 if headers.h1.$valid"_cs
     });
 }
 
@@ -127,10 +127,10 @@ TEST_F(TofinoComputedChecksum, SimpleWithoutIsValid) {
     ASSERT_TRUE(test);
     EXPECT_EQ(0u, ::diagnosticCount());
     checkComputedChecksum(test->pipe, {
-        "emit headers.h1.field1 if headers.h1.$valid",
-        "emit headers.h1.field2 if headers.h1.$valid",
-        "emit checksum { headers.h1.field1, headers.h1.field3 } if headers.h1.$valid",
-        "emit headers.h1.field3 if headers.h1.$valid"
+        "emit headers.h1.field1 if headers.h1.$valid"_cs,
+        "emit headers.h1.field2 if headers.h1.$valid"_cs,
+        "emit checksum { headers.h1.field1, headers.h1.field3 } if headers.h1.$valid"_cs,
+        "emit headers.h1.field3 if headers.h1.$valid"_cs
     });
 }
 
@@ -149,15 +149,15 @@ TEST_F(TofinoComputedChecksum, DuplicateHeader) {
     ASSERT_TRUE(test);
     EXPECT_EQ(0u, ::diagnosticCount());
     checkComputedChecksum(test->pipe, {
-        "emit headers.h1.field1 if headers.h1.$valid",
-        "emit headers.h1.field2 if headers.h1.$valid",
-        "emit headers.h1.checksum if headers.h1.$valid",  // We didn't compute this one.
-        "emit headers.h1.field3 if headers.h1.$valid",
+        "emit headers.h1.field1 if headers.h1.$valid"_cs,
+        "emit headers.h1.field2 if headers.h1.$valid"_cs,
+        "emit headers.h1.checksum if headers.h1.$valid"_cs,  // We didn't compute this one.
+        "emit headers.h1.field3 if headers.h1.$valid"_cs,
 
-        "emit headers.h2.field1 if headers.h2.$valid",
-        "emit headers.h2.field2 if headers.h2.$valid",
-        "emit checksum { headers.h2.field1, headers.h2.field3 } if headers.h2.$valid",
-        "emit headers.h2.field3 if headers.h2.$valid"
+        "emit headers.h2.field1 if headers.h2.$valid"_cs,
+        "emit headers.h2.field2 if headers.h2.$valid"_cs,
+        "emit checksum { headers.h2.field1, headers.h2.field3 } if headers.h2.$valid"_cs,
+        "emit headers.h2.field3 if headers.h2.$valid"_cs
     });
 }
 
@@ -181,15 +181,15 @@ TEST_F(TofinoComputedChecksum, DuplicateHeader2) {
     ASSERT_TRUE(test);
     EXPECT_EQ(0u, ::diagnosticCount());
     checkComputedChecksum(test->pipe, {
-        "emit headers.h1.field1 if headers.h1.$valid",
-        "emit headers.h1.field2 if headers.h1.$valid",
-        "emit checksum { headers.h1.field1, headers.h1.field3 } if headers.h1.$valid",
-        "emit headers.h1.field3 if headers.h1.$valid",
+        "emit headers.h1.field1 if headers.h1.$valid"_cs,
+        "emit headers.h1.field2 if headers.h1.$valid"_cs,
+        "emit checksum { headers.h1.field1, headers.h1.field3 } if headers.h1.$valid"_cs,
+        "emit headers.h1.field3 if headers.h1.$valid"_cs,
 
-        "emit headers.h2.field1 if headers.h2.$valid",
-        "emit headers.h2.field2 if headers.h2.$valid",
-        "emit checksum { headers.h2.field1, headers.h2.field3 } if headers.h2.$valid",
-        "emit headers.h2.field3 if headers.h2.$valid"
+        "emit headers.h2.field1 if headers.h2.$valid"_cs,
+        "emit headers.h2.field2 if headers.h2.$valid"_cs,
+        "emit checksum { headers.h2.field1, headers.h2.field3 } if headers.h2.$valid"_cs,
+        "emit headers.h2.field3 if headers.h2.$valid"_cs
     });
 }
 
@@ -207,10 +207,10 @@ TEST_F(TofinoComputedChecksum, NotEmitted) {
     ASSERT_TRUE(test);
     EXPECT_EQ(0u, ::diagnosticCount());
     checkComputedChecksum(test->pipe, {
-        "emit headers.h1.field1 if headers.h1.$valid",
-        "emit headers.h1.field2 if headers.h1.$valid",
-        "emit headers.h1.checksum if headers.h1.$valid",
-        "emit headers.h1.field3 if headers.h1.$valid"
+        "emit headers.h1.field1 if headers.h1.$valid"_cs,
+        "emit headers.h1.field2 if headers.h1.$valid"_cs,
+        "emit headers.h1.checksum if headers.h1.$valid"_cs,
+        "emit headers.h1.field3 if headers.h1.$valid"_cs
     });
 }
 
@@ -229,15 +229,15 @@ TEST_F(TofinoComputedChecksum, EmittedTwice) {
     ASSERT_TRUE(test);
     EXPECT_EQ(0u, ::diagnosticCount());
     checkComputedChecksum(test->pipe, {
-        "emit headers.h1.field1 if headers.h1.$valid",
-        "emit headers.h1.field2 if headers.h1.$valid",
-        "emit checksum { headers.h1.field1, headers.h1.field3 } if headers.h1.$valid",
-        "emit headers.h1.field3 if headers.h1.$valid",
+        "emit headers.h1.field1 if headers.h1.$valid"_cs,
+        "emit headers.h1.field2 if headers.h1.$valid"_cs,
+        "emit checksum { headers.h1.field1, headers.h1.field3 } if headers.h1.$valid"_cs,
+        "emit headers.h1.field3 if headers.h1.$valid"_cs,
 
-        "emit headers.h1.field1 if headers.h1.$valid",
-        "emit headers.h1.field2 if headers.h1.$valid",
-        "emit checksum { headers.h1.field1, headers.h1.field3 } if headers.h1.$valid",
-        "emit headers.h1.field3 if headers.h1.$valid",
+        "emit headers.h1.field1 if headers.h1.$valid"_cs,
+        "emit headers.h1.field2 if headers.h1.$valid"_cs,
+        "emit checksum { headers.h1.field1, headers.h1.field3 } if headers.h1.$valid"_cs,
+        "emit headers.h1.field3 if headers.h1.$valid"_cs,
     });
 }
 
@@ -256,10 +256,10 @@ TEST_F(TofinoComputedChecksum, ChecksumFieldInChecksum) {
     ASSERT_TRUE(test);
     EXPECT_EQ(0u, ::diagnosticCount());
     checkComputedChecksum(test->pipe, {
-        "emit headers.h1.field1 if headers.h1.$valid",
-        "emit headers.h1.field2 if headers.h1.$valid",
-        "emit checksum { headers.h1.field1, headers.h1.checksum, headers.h1.field3 } if headers.h1.$valid",  // NOLINT
-        "emit headers.h1.field3 if headers.h1.$valid"
+        "emit headers.h1.field1 if headers.h1.$valid"_cs,
+        "emit headers.h1.field2 if headers.h1.$valid"_cs,
+        "emit checksum { headers.h1.field1, headers.h1.checksum, headers.h1.field3 } if headers.h1.$valid"_cs,  // NOLINT
+        "emit headers.h1.field3 if headers.h1.$valid"_cs
     });
 }
 
@@ -282,10 +282,10 @@ TEST_F(TofinoComputedChecksum, MultipleChecksumsInOneHeader) {
     ASSERT_TRUE(test);
     EXPECT_EQ(0u, ::diagnosticCount());
     checkComputedChecksum(test->pipe, {
-        "emit headers.h1.field1 if headers.h1.$valid",
-        "emit checksum { headers.h1.field1, headers.h1.field3 } if headers.h1.$valid",
-        "emit checksum { headers.h1.field2, headers.h1.field3 } if headers.h1.$valid",
-        "emit headers.h1.field3 if headers.h1.$valid"
+        "emit headers.h1.field1 if headers.h1.$valid"_cs,
+        "emit checksum { headers.h1.field1, headers.h1.field3 } if headers.h1.$valid"_cs,
+        "emit checksum { headers.h1.field2, headers.h1.field3 } if headers.h1.$valid"_cs,
+        "emit headers.h1.field3 if headers.h1.$valid"_cs
     });
 }
 

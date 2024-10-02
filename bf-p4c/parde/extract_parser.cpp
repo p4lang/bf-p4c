@@ -20,14 +20,14 @@ namespace BFN {
 
 using BlockInfoMapping = std::multimap<const IR::Node*, BlockInfo>;
 
-static bool isExtern(const IR::Member* method, cstring externName) {
+static bool isExtern(const IR::Member* method, std::string externName) {
     if (auto pe = method->expr->to<IR::PathExpression>()) {
         if (auto type = pe->type->to<IR::Type_SpecializedCanonical>()) {
             if (auto baseType = type->baseType->to<IR::Type_Extern>())
-                if (baseType->name == externName)
+                if (baseType->name.name == externName)
                     return true;
         } else if (auto type = pe->type->to<IR::Type_Extern>()) {
-            if (type->name == externName)
+            if (type->name.name == externName)
                 return true;
         }
     }
@@ -471,7 +471,7 @@ GetBackendParser::createBackendParser() {
             backendState->stride = true;
             LOG3("mark " << state->name << " as strided");
         }
-        if (auto dontmerge = state->getAnnotation("dontmerge")) {
+        if (auto dontmerge = state->getAnnotation("dontmerge"_cs)) {
             if (dontmerge->expr.size()) {
                 auto gress = dontmerge->expr[0]->to<IR::StringLiteral>();
                 if (gress->value == toString(parser->thread)) {
@@ -536,7 +536,7 @@ GetBackendParser::createBackendParser() {
     // 3. now convert states and stitch them together
 
     bool isLoopState = false;
-    IR::BFN::ParserState* startState = convertState(getStateName("start"), isLoopState);
+    IR::BFN::ParserState* startState = convertState(getStateName("start"_cs), isLoopState);
 
     BlockInfoMapping* binfo = &arch->toBlockInfo;
     IR::ID multiParserName;
@@ -599,7 +599,7 @@ void GetBackendParser::addTransition(IR::BFN::ParserState* state, match_t matchV
         // supports this feature in TNA with the 'pd_pvs_name' annotation by
         // overriding the pvs name with the name in the annotation.
         cstring valueSetName;
-        if (auto anno = valueSet->annotations->getSingle("pd_pvs_name")) {
+        if (auto anno = valueSet->annotations->getSingle("pd_pvs_name"_cs)) {
             auto name = anno->expr.at(0)->to<IR::StringLiteral>();
             valueSetName = name->value;
         } else {
@@ -763,7 +763,7 @@ struct RewriteParserStatements : public Transform {
         auto header = hdr->baseRef()->name;
 
         if (gress == EGRESS &&
-            hdr_type->getAnnotation("not_extracted_in_egress") != nullptr) {
+            hdr_type->getAnnotation("not_extracted_in_egress"_cs) != nullptr) {
             ::warning("Ignoring egress extract of @not_extracted_in_egress "
                       "header: %1%", dest);
             return nullptr;
@@ -1349,11 +1349,11 @@ struct RewriteParserChecksums : public Transform {
             totalOffset += rval->range.size();
             stateOffset += rval->range.size();
             if (isAdd) {
-                bool isChecksum = isChecksumField(member, "header_checksum");
+                bool isChecksum = isChecksumField(member, "header_checksum"_cs);
                 auto* add = new IR::BFN::ChecksumAdd(declName, rval, swap, isChecksum);
                 rv->push_back(add);
             } else {
-                bool isChecksum = isChecksumField(member, "payload_checksum");
+                bool isChecksum = isChecksumField(member, "payload_checksum"_cs);
                 auto* subtract = new IR::BFN::ChecksumSubtract(declName, rval,
                                                                swap, isChecksum);
                 lastChecksumSubtract = subtract;
@@ -1745,7 +1745,7 @@ IR::BFN::ParserState* GetBackendParser::convertBody(IR::BFN::ParserState* state)
 
     // case 2: @pragma terminate_parsing applied on this state
     if (parserPragmas.terminate_parsing.count(state->p4State())) {
-        addTransition(state, match_t(), shift, "accept");
+        addTransition(state, match_t(), shift, "accept"_cs);
         return state;
     }
 
@@ -1879,8 +1879,8 @@ void ExtractParser::end_apply() {
 /// parser state in the midend instead, and let the backend to insert the
 /// intrinsic metadata extraction logic based on the target device (tofino/jbay).
 ProcessParde::ProcessParde(const IR::BFN::Pipe* rv, bool useV1model) :
-    Logging::PassManager("parser", Logging::Mode::AUTO) {
-    setName("ProcessParde");
+    Logging::PassManager("parser"_cs, Logging::Mode::AUTO) {
+    setName("ProcessParde"_cs);
     addPasses({
         new AddParserMetadata(rv, useV1model),
         new AddDeparserMetadata(rv),

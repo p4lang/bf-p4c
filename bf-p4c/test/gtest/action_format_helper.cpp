@@ -551,19 +551,19 @@ void ConditionalArgs_Test(ActionData::Parameter *arg1, ActionData::Parameter *ar
 TEST(ActionFormatHelper, ConditionalArgs) {
     ActionData::Argument *arg1 = new ActionData::Argument("arg1", {0, 7});
     ActionData::Argument *arg1_cond1 = new ActionData::Argument("arg1", {0, 7});
-    arg1_cond1->set_cond(ActionData::VALUE, "cond1");
+    arg1_cond1->set_cond(ActionData::VALUE, "cond1"_cs);
     ActionData::Argument *arg1_cond2 = new ActionData::Argument("arg1", {0, 7});
-    arg1_cond2->set_cond(ActionData::VALUE, "cond2");
+    arg1_cond2->set_cond(ActionData::VALUE, "cond2"_cs);
     ActionData::Argument *arg1_extend_cond1 = new ActionData::Argument("arg1", {8, 15});
-    arg1_extend_cond1->set_cond(ActionData::VALUE, "cond1");
+    arg1_extend_cond1->set_cond(ActionData::VALUE, "cond1"_cs);
 
     ConditionalArgs_Test(arg1, arg1_cond1, arg1_cond2, arg1_extend_cond1);
 
     ActionData::Constant *con1 = new ActionData::Constant(1, 8);
     ActionData::Constant *con1_cond1 = new ActionData::Constant(1, 8);
-    con1_cond1->set_cond(ActionData::VALUE, "cond1");
+    con1_cond1->set_cond(ActionData::VALUE, "cond1"_cs);
     ActionData::Constant *con1_cond2 = new ActionData::Constant(1, 8);
-    con1_cond2->set_cond(ActionData::VALUE, "cond2");
+    con1_cond2->set_cond(ActionData::VALUE, "cond2"_cs);
     ActionData::Constant *con1_extend_cond1 = new ActionData::Constant(*con1_cond1);
     ConditionalArgs_Test(con1, con1_cond1, con1_cond2, con1_extend_cond1);
 }
@@ -572,8 +572,8 @@ TEST(ActionFormatHelper, ConditionalArgs) {
  * Test to make sure RandomNumbers in the same action cannot merge
  */
 void RandomNumberSingleAction() {
-    ActionData::RandomNumber *rn1_a1 = new ActionData::RandomNumber("rand1", "act1", {0, 7});
-    ActionData::RandomNumber *rn2_a1 = new ActionData::RandomNumber("rand2", "act1", {0, 7});
+    ActionData::RandomNumber *rn1_a1 = new ActionData::RandomNumber("rand1"_cs, "act1"_cs, {0, 7});
+    ActionData::RandomNumber *rn2_a1 = new ActionData::RandomNumber("rand2"_cs, "act1"_cs, {0, 7});
     ActionData::RandomPadding *pad = new ActionData::RandomPadding(8);
 
     EXPECT_EQ(rn1_a1->size(), 8);
@@ -599,10 +599,10 @@ void RandomNumberSingleAction() {
  * appropriately
  */
 void RandomNumberMultipleActions() {
-    ActionData::RandomNumber *rn1_a1 = new ActionData::RandomNumber("rand1", "act1", {0, 7});
-    ActionData::RandomNumber *rn2_a1 = new ActionData::RandomNumber("rand2", "act1", {0, 7});
-    ActionData::RandomNumber *rn1_a2 = new ActionData::RandomNumber("rand1", "act2", {0, 7});
-    ActionData::RandomNumber *rn2_a2 = new ActionData::RandomNumber("rand2", "act2", {0, 7});
+    ActionData::RandomNumber *rn1_a1 = new ActionData::RandomNumber("rand1"_cs, "act1"_cs, {0, 7});
+    ActionData::RandomNumber *rn2_a1 = new ActionData::RandomNumber("rand2"_cs, "act1"_cs, {0, 7});
+    ActionData::RandomNumber *rn1_a2 = new ActionData::RandomNumber("rand1"_cs, "act2"_cs, {0, 7});
+    ActionData::RandomNumber *rn2_a2 = new ActionData::RandomNumber("rand2"_cs, "act2"_cs, {0, 7});
     ActionData::RandomPadding *pad = new ActionData::RandomPadding(8);
 
     EXPECT_TRUE(rn1_a1->can_merge(rn1_a2));
@@ -651,11 +651,11 @@ void RandomNumberMultipleActions() {
  * Test to make sure RandomNumbers overlap function works properly
  */
 void RandomNumberOverlaps() {
-    ActionData::RandomNumber *rn1_a1 = new ActionData::RandomNumber("rand1", "act1", {0, 1});
-    ActionData::RandomNumber *rn2_a1 = new ActionData::RandomNumber("rand2", "act1", {0, 3});
+    ActionData::RandomNumber *rn1_a1 = new ActionData::RandomNumber("rand1"_cs, "act1"_cs, {0, 1});
+    ActionData::RandomNumber *rn2_a1 = new ActionData::RandomNumber("rand2"_cs, "act1"_cs, {0, 3});
 
-    ActionData::RandomNumber *rn1_a2 = new ActionData::RandomNumber("rand1", "act2", {0, 5});
-    ActionData::RandomNumber *rn2_a2 = new ActionData::RandomNumber("rand2", "act2", {0, 7});
+    ActionData::RandomNumber *rn1_a2 = new ActionData::RandomNumber("rand1"_cs, "act2"_cs, {0, 5});
+    ActionData::RandomNumber *rn2_a2 = new ActionData::RandomNumber("rand2"_cs, "act2"_cs, {0, 7});
 
     le_bitrange my_overlap = {0, 0};
     le_bitrange ad_overlap = {0, 0};
@@ -688,10 +688,10 @@ void RandomNumberOverlaps() {
 /**
  */
 void RandomNumberRamSection() {
-    ActionData::RandomNumber *rn1_a1 = new ActionData::RandomNumber("rand1", "act1", {0, 3});
-    ActionData::RandomNumber *rn2_a1 = new ActionData::RandomNumber("rand1", "act1", {4, 7});
+    ActionData::RandomNumber *rn1_a1 = new ActionData::RandomNumber("rand1"_cs, "act1"_cs, {0, 3});
+    ActionData::RandomNumber *rn2_a1 = new ActionData::RandomNumber("rand1"_cs, "act1"_cs, {4, 7});
     ActionData::RandomPadding *pad = new ActionData::RandomPadding(4);
-    ActionData::RandomNumber *rn1_a2 = new ActionData::RandomNumber("rand1", "act2", {0, 7});
+    ActionData::RandomNumber *rn1_a2 = new ActionData::RandomNumber("rand1"_cs, "act2"_cs, {0, 7});
 
     ActionData::PackingConstraint pc;
     ActionData::PackingConstraint first_layer_pc = pc.expand(1, 8);

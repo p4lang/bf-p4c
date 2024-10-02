@@ -346,7 +346,7 @@ std::vector<IXBar::FieldInfo> IXBar::Use::Byte::get_slices_for_visualization() c
         int used_end_bit = bit_use.ffz(used_start_bit);
         if (unused_start_bit < unused_end_bit) {
             int lo = 0; int hi = (unused_end_bit - unused_start_bit) - 1;
-            result.push_back(FieldInfo("unused", lo, hi, 0, std::nullopt));
+            result.push_back(FieldInfo("unused"_cs, lo, hi, 0, std::nullopt));
         }
 
         BUG_CHECK(used_start_bit != used_end_bit, "The bit_use object in %s is incorrectly "
@@ -368,7 +368,7 @@ std::vector<IXBar::FieldInfo> IXBar::Use::Byte::get_slices_for_visualization() c
         BUG_CHECK(!first_time, "Byte %s has no field slices", *this);
 
         int lo = 0; int hi = 7 - unused_start_bit;
-        result.push_back(FieldInfo("unused", lo, hi, 0, std::nullopt));
+        result.push_back(FieldInfo("unused"_cs, lo, hi, 0, std::nullopt));
     }
 
     return result;

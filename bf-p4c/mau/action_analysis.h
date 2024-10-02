@@ -74,20 +74,20 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
         const IR::Expression *unsliced_expr() const;
 
         cstring get_type_string() const {
-            if (type == PHV)             return "PHV";
-            else if (type == ACTIONDATA) return "ACTIONDATA";
-            else if (type == CONSTANT)   return "CONSTANT";
-            return "INVALID_TYPE";
+            if (type == PHV)             return "PHV"_cs;
+            else if (type == ACTIONDATA) return "ACTIONDATA"_cs;
+            else if (type == CONSTANT)   return "CONSTANT"_cs;
+            return "INVALID_TYPE"_cs;
         }
 
         cstring get_speciality_string() const {
-            if (speciality == NO_SPECIAL)         return "NO_SPECIAL";
-            else if (speciality == HASH_DIST)     return "HASH_DIST";
-            else if (speciality == METER_COLOR)   return "METER_COLOR";
-            else if (speciality == RANDOM)        return "RANDOM";
-            else if (speciality == METER_ALU)     return "METER_ALU";
-            else if (speciality == STFUL_COUNTER) return "STFUL_COUNTER";
-            return "INVALID_SPECIALITY";
+            if (speciality == NO_SPECIAL)         return "NO_SPECIAL"_cs;
+            else if (speciality == HASH_DIST)     return "HASH_DIST"_cs;
+            else if (speciality == METER_COLOR)   return "METER_COLOR"_cs;
+            else if (speciality == RANDOM)        return "RANDOM"_cs;
+            else if (speciality == METER_ALU)     return "METER_ALU"_cs;
+            else if (speciality == STFUL_COUNTER) return "STFUL_COUNTER"_cs;
+            return "INVALID_SPECIALITY"_cs;
         }
     };
 

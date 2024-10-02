@@ -12,14 +12,14 @@ Visitor::profile_t TableFindSeqDependencies::init_apply(const IR::Node *root) {
 
 static bool ignore_dep(const IR::MAU::Table *t1, const IR::MAU::Table *t2) {
     std::vector<IR::ID>         pragmas;
-    if (t1->getAnnotation("ignore_table_dependency", pragmas)) {
+    if (t1->getAnnotation("ignore_table_dependency"_cs, pragmas)) {
         for (auto name : pragmas) {
-            if (t2->externalName().endsWith(name))
+            if (t2->externalName().endsWith(name.string()))
                 return true; } }
     pragmas.clear();
-    if (t2->getAnnotation("ignore_table_dependency", pragmas)) {
+    if (t2->getAnnotation("ignore_table_dependency"_cs, pragmas)) {
         for (auto name : pragmas) {
-            if (t1->externalName().endsWith(name))
+            if (t1->externalName().endsWith(name.string()))
                 return true; } }
     return false;
 }

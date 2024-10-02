@@ -5,10 +5,10 @@
 
 class RemoveEmptyControls : public MauTransform {
     const IR::MAU::Table *postorder(IR::MAU::Table *tbl) override {
-        if (tbl->next.count("$default")) {
-            auto def = tbl->next.at("$default");
+        if (tbl->next.count("$default"_cs)) {
+            auto def = tbl->next.at("$default"_cs);
             if (def->tables.empty())
-                tbl->next.erase("$default");
+                tbl->next.erase("$default"_cs);
         } else {
             for (auto it = tbl->next.begin(); it != tbl->next.end();) {
                 if (it->second->tables.empty())

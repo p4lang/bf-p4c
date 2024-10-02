@@ -255,7 +255,7 @@ class TransformTnatoT5na : public PassManager {
             IR::IndexedVector<IR::StructField> newMetadataStructFields;
             cstring newMetadataStructInstName =
                 "__" + nodeName + T5naProgramStructure::EXTRA_METADATA_STRING;
-            cstring newMetadataStructName = newMetadataStructInstName + "_h";
+            cstring newMetadataStructName = newMetadataStructInstName + "_h"_cs;
             // Create new structure with extra fields for this ingress
             for (auto hdrField : hdrFieldModifications) {
                 auto fieldName = hdrField.first;

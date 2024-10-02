@@ -63,7 +63,7 @@ TEST_F(MauGroupExtractorTest, GetGroupThrowsOnEmpty) {
     MauGroupExtractor extractor(groups, fieldMap);
 
     EXPECT_THROW({
-        extractor.getGroups("dummy");
+        extractor.getGroups("dummy"_cs);
     }, Util::CompilerBug);
 }
 
@@ -74,14 +74,14 @@ TEST_F(MauGroupExtractorTest, IgnoresSuperClustersWithSingleField) {
     groups.push_back(*sc1);
 
     // Add required fields
-    info.add("egress::eg_intr_md.$valid", EGRESS, 1, 0, false, true);
+    info.add("egress::eg_intr_md.$valid"_cs, EGRESS, 1, 0, false, true);
 
     // Extract groups
     fieldMap = ConstrainedFieldMapBuilder::buildMap(info, groups);
     MauGroupExtractor extractor(groups, fieldMap);
 
     // Assertions
-    EXPECT_FALSE(extractor.isFieldInAnyGroup("egress::eg_intr_md.$valid"));
+    EXPECT_FALSE(extractor.isFieldInAnyGroup("egress::eg_intr_md.$valid"_cs));
 }
 
 TEST_F(MauGroupExtractorTest, ExtractsWholeSlices) {
@@ -91,9 +91,9 @@ TEST_F(MauGroupExtractorTest, ExtractsWholeSlices) {
     groups.push_back(*sc1);
 
     // Add required fields
-    info.add("ingress::hdr.arp.$valid", INGRESS, 1, 0, false, true);
-    info.add("ingress::hdr.cpu.$valid", INGRESS, 1, 0, false, true);
-    info.add("ingress::hdr.vn_tag.$valid", INGRESS, 1, 0, false, true);
+    info.add("ingress::hdr.arp.$valid"_cs, INGRESS, 1, 0, false, true);
+    info.add("ingress::hdr.cpu.$valid"_cs, INGRESS, 1, 0, false, true);
+    info.add("ingress::hdr.vn_tag.$valid"_cs, INGRESS, 1, 0, false, true);
 
     // Extract groups
     fieldMap = ConstrainedFieldMapBuilder::buildMap(info, groups);
@@ -108,15 +108,15 @@ TEST_F(MauGroupExtractorTest, ExtractsWholeSlices) {
         ASSERT_EQ(mgroups[0]->size(), 3u) << "Failed with field: " << field;
     }
 
-    auto mgroups = extractor.getGroups("ingress::hdr.vn_tag.$valid");
+    auto mgroups = extractor.getGroups("ingress::hdr.vn_tag.$valid"_cs);
     auto &group = *mgroups[0];
 
 
-    EXPECT_EQ(group[0].getParent().getName(), "ingress::hdr.arp.$valid");
+    EXPECT_EQ(group[0].getParent().getName(), "ingress::hdr.arp.$valid"_cs);
     EXPECT_EQ(group[0].getRange(), le_bitrange(0, 0));
-    EXPECT_EQ(group[1].getParent().getName(), "ingress::hdr.cpu.$valid");
+    EXPECT_EQ(group[1].getParent().getName(), "ingress::hdr.cpu.$valid"_cs);
     EXPECT_EQ(group[1].getRange(), le_bitrange(0, 0));
-    EXPECT_EQ(group[2].getParent().getName(), "ingress::hdr.vn_tag.$valid");
+    EXPECT_EQ(group[2].getParent().getName(), "ingress::hdr.vn_tag.$valid"_cs);
     EXPECT_EQ(group[2].getRange(), le_bitrange(0, 0));
 }
 
@@ -127,27 +127,27 @@ TEST_F(MauGroupExtractorTest, ExtractsPartialSlices) {
     groups.push_back(*sc1);
 
     // Add required fields
-    info.add("ingress::hdr.vlan_tag.$stkvalid", INGRESS, 2, 0, true, true);
-    info.add("ingress::dummy.dummy", INGRESS, 2, 0, false, false);
+    info.add("ingress::hdr.vlan_tag.$stkvalid"_cs, INGRESS, 2, 0, true, true);
+    info.add("ingress::dummy.dummy"_cs, INGRESS, 2, 0, false, false);
 
     // Extract groups
     fieldMap = ConstrainedFieldMapBuilder::buildMap(info, groups);
     MauGroupExtractor extractor(groups, fieldMap);
 
     // Assertions
-    EXPECT_TRUE(extractor.isFieldInAnyGroup("ingress::hdr.vlan_tag.$stkvalid"));
+    EXPECT_TRUE(extractor.isFieldInAnyGroup("ingress::hdr.vlan_tag.$stkvalid"_cs));
 
-    auto mgroups = extractor.getGroups("ingress::hdr.vlan_tag.$stkvalid");
+    auto mgroups = extractor.getGroups("ingress::hdr.vlan_tag.$stkvalid"_cs);
     ASSERT_EQ(mgroups.size(), 1u);
 
     auto &group = *mgroups[0];
     ASSERT_EQ(group.size(), 3u);  // three items in group (2 slices + dummy)
 
-    EXPECT_EQ(group[0].getParent().getName(), "ingress::hdr.vlan_tag.$stkvalid");
+    EXPECT_EQ(group[0].getParent().getName(), "ingress::hdr.vlan_tag.$stkvalid"_cs);
     EXPECT_EQ(group[0].getRange(), le_bitrange(0, 0));
-    EXPECT_EQ(group[1].getParent().getName(), "ingress::hdr.vlan_tag.$stkvalid");
+    EXPECT_EQ(group[1].getParent().getName(), "ingress::hdr.vlan_tag.$stkvalid"_cs);
     EXPECT_EQ(group[1].getRange(), le_bitrange(1, 1));
-    EXPECT_EQ(group[2].getParent().getName(), "ingress::dummy.dummy");
+    EXPECT_EQ(group[2].getParent().getName(), "ingress::dummy.dummy"_cs);
     EXPECT_EQ(group[2].getRange(), le_bitrange(0, 1));
 }
 
@@ -162,19 +162,19 @@ TEST_F(MauGroupExtractorTest, ExtractFieldInMultipleGroups) {
     groups.push_back(*sc2);
 
     // Add required fields
-    info.add("ingress::Millstone.Guion.Wilmore", INGRESS, 3, 0, true, false);
-    info.add("ingress::Millstone.LaMoille.Philbrook", INGRESS, 3, 0, true, false);
-    info.add("ingress::Millstone.Hapeville.Luzerne", INGRESS, 3, 0, true, false);
-    info.add("ingress::Millstone.LaMoille.Skyway", INGRESS, 3, 0, true, false);
+    info.add("ingress::Millstone.Guion.Wilmore"_cs, INGRESS, 3, 0, true, false);
+    info.add("ingress::Millstone.LaMoille.Philbrook"_cs, INGRESS, 3, 0, true, false);
+    info.add("ingress::Millstone.Hapeville.Luzerne"_cs, INGRESS, 3, 0, true, false);
+    info.add("ingress::Millstone.LaMoille.Skyway"_cs, INGRESS, 3, 0, true, false);
 
     // Extract groups
     fieldMap = ConstrainedFieldMapBuilder::buildMap(info, groups);
     MauGroupExtractor extractor(groups, fieldMap);
 
     // Assertions
-    EXPECT_TRUE(extractor.isFieldInAnyGroup("ingress::Millstone.Guion.Wilmore"));
+    EXPECT_TRUE(extractor.isFieldInAnyGroup("ingress::Millstone.Guion.Wilmore"_cs));
 
-    auto mgroups = extractor.getGroups("ingress::Millstone.Guion.Wilmore");
+    auto mgroups = extractor.getGroups("ingress::Millstone.Guion.Wilmore"_cs);
     ASSERT_EQ(mgroups.size(), 2u);
 
     ASSERT_EQ(mgroups[0]->size(), 4u);  // cluster_multi_a
@@ -183,20 +183,20 @@ TEST_F(MauGroupExtractorTest, ExtractFieldInMultipleGroups) {
     auto &group0 = *mgroups[0];
     auto &group1 = *mgroups[1];
 
-    EXPECT_EQ(group0[0].getParent().getName(), "ingress::Millstone.Guion.Wilmore");
+    EXPECT_EQ(group0[0].getParent().getName(), "ingress::Millstone.Guion.Wilmore"_cs);
     EXPECT_EQ(group0[0].getRange(), le_bitrange(0, 0));
-    EXPECT_EQ(group0[1].getParent().getName(), "ingress::Millstone.LaMoille.Philbrook");
+    EXPECT_EQ(group0[1].getParent().getName(), "ingress::Millstone.LaMoille.Philbrook"_cs);
     EXPECT_EQ(group0[1].getRange(), le_bitrange(0, 0));
-    EXPECT_EQ(group0[2].getParent().getName(), "ingress::Millstone.Hapeville.Luzerne");
+    EXPECT_EQ(group0[2].getParent().getName(), "ingress::Millstone.Hapeville.Luzerne"_cs);
     EXPECT_EQ(group0[2].getRange(), le_bitrange(0, 0));
-    EXPECT_EQ(group0[3].getParent().getName(), "ingress::Millstone.LaMoille.Skyway");
+    EXPECT_EQ(group0[3].getParent().getName(), "ingress::Millstone.LaMoille.Skyway"_cs);
     EXPECT_EQ(group0[3].getRange(), le_bitrange(0, 0));
 
-    EXPECT_EQ(group1[0].getParent().getName(), "ingress::Millstone.Guion.Wilmore");
+    EXPECT_EQ(group1[0].getParent().getName(), "ingress::Millstone.Guion.Wilmore"_cs);
     EXPECT_EQ(group1[0].getRange(), le_bitrange(1, 2));
-    EXPECT_EQ(group1[1].getParent().getName(), "ingress::Millstone.LaMoille.Philbrook");
+    EXPECT_EQ(group1[1].getParent().getName(), "ingress::Millstone.LaMoille.Philbrook"_cs);
     EXPECT_EQ(group1[1].getRange(), le_bitrange(1, 2));
-    EXPECT_EQ(group1[2].getParent().getName(), "ingress::Millstone.LaMoille.Skyway");
+    EXPECT_EQ(group1[2].getParent().getName(), "ingress::Millstone.LaMoille.Skyway"_cs);
     EXPECT_EQ(group1[2].getRange(), le_bitrange(1, 2));
 }
 

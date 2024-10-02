@@ -137,7 +137,7 @@ TEST(CustomHeaderStackName, Test1) {
     // Re-register the original p4c one so that (plain) p4c tests are not affected
     auto p4RuntimeSerializer = P4::P4RuntimeSerializer::get();
     p4RuntimeSerializer->registerArch(
-        "psa",
+        "psa"_cs,
         new P4::ControlPlaneAPI::Standard::PSAArchHandlerBuilder());
     // Check the runtime JSON file
     std::ifstream bfrt_stream(bfrt_file);

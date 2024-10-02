@@ -1128,7 +1128,7 @@ bool break_cond_digest_field(const BreakSliceListCtx& ctx,
 void Clustering::CollectPlaceTogetherConstraints::solve_place_together_constraints() {
     LOG1("solve place-together constraints");
     std::set<PHV::FieldSlice> slices_used;
-    SliceListAccumulator accumulator(&slices_used, "priority-solving");
+    SliceListAccumulator accumulator(&slices_used, "priority-solving"_cs);
 
     /// all fields slices that has been assigned to a slice list.
     std::vector<PHV::SuperCluster::SliceList*> candidates;
@@ -1175,7 +1175,7 @@ void Clustering::CollectPlaceTogetherConstraints::solve_place_together_constrain
             }
         }
     }
-    candidates = break_slicelist_by(candidates, "digest-fields",
+    candidates = break_slicelist_by(candidates, "digest-fields"_cs,
                                     [&digest_fields](const BreakSliceListCtx& ctx) -> bool {
                                         return break_cond_digest_field(ctx, digest_fields);
                                     });
@@ -1183,19 +1183,19 @@ void Clustering::CollectPlaceTogetherConstraints::solve_place_together_constrain
     /// break at constraints.
     // split by deparsed zero.
     LOG1("break slice list of different deparsed zero constraints");
-    candidates = break_slicelist_by(candidates, "deparsed-zero", break_cond_deparsed_zero);
+    candidates = break_slicelist_by(candidates, "deparsed-zero"_cs, break_cond_deparsed_zero);
 
     // break at conflicting alignments.
     LOG1("break slice list of conflicting alignments");
-    candidates = break_slicelist_by(candidates, "alignment", break_cond_alignment_conflict);
+    candidates = break_slicelist_by(candidates, "alignment"_cs, break_cond_alignment_conflict);
 
     // break by clear-on-write.
     LOG1("break slice list to separate clear-on-write fields");
-    candidates = break_slicelist_by(candidates, "clear-on-write", break_cond_clear_on_write);
+    candidates = break_slicelist_by(candidates, "clear-on-write"_cs, break_cond_clear_on_write);
 
     // break by solitary.
     LOG1("break slice list of mixed solitary/non-solitary fields");
-    candidates = break_slicelist_by(candidates, "solitary", break_cond_solitary);
+    candidates = break_slicelist_by(candidates, "solitary"_cs, break_cond_solitary);
 
     // save results.
     for (const auto& sl : candidates) {

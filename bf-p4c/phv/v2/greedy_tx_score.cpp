@@ -675,7 +675,7 @@ std::ostream& operator<<(std::ostream& out, const ContainerByte& c) {
 
 std::ostream& operator<<(std::ostream& out, const KindSizeIndexedMap& m) {
     out << "{";
-    cstring sep = "";
+    std::string sep = "";
     for (const auto& kv : m.m) {
         out << sep << kv.first.first << kv.first.second << ": " << kv.second;
         sep = ", ";

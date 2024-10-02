@@ -18,8 +18,9 @@ class P4ParserGraphs: public graphs::ParserGraphs {
             // Create empty control graphs
             std::vector<graphs::Graphs::Graph *> emptyControl;
             // And call graph visitor that actually outputs the graphs from the arrays
-            cstring filePath("");
-            graphs::Graph_visitor gvs(cstring(), true, false, false, filePath);
+            std::filesystem::path filePath = "";
+            std::filesystem::path empty_path = "";
+            graphs::Graph_visitor gvs(empty_path, true, false, false, filePath);
             gvs.process(emptyControl, parserGraphsArray);
             // Clear the array so it won't stay there if another parser is outputted
             parserGraphsArray.clear();
@@ -61,7 +62,7 @@ class P4ParserGraphs: public graphs::ParserGraphs {
 
  public:
     P4ParserGraphs(P4::ReferenceMap *refMap, bool dumpDot) :
-        graphs::ParserGraphs(refMap, cstring()), dumpDot(dumpDot) { }
+        graphs::ParserGraphs(refMap, ""), dumpDot(dumpDot) { }
 
     /// Is "a" a descendant of "b"?
     bool is_descendant(cstring a, cstring b) const {

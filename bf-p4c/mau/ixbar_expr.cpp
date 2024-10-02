@@ -114,7 +114,7 @@ bool verifySymmetricHashPairs(
         const auto *sl0 = annot->expr.at(0)->to<IR::StringLiteral>();
         const auto *sl1 = annot->expr.at(1)->to<IR::StringLiteral>();
 
-        cstring gress_str = (gress == INGRESS ? "ingress::" : "egress::");
+        cstring gress_str = (gress == INGRESS ? "ingress::"_cs : "egress::"_cs);
         auto field0 = phv.field(gress_str + sl0->value);
         auto field1 = phv.field(gress_str + sl1->value);
 

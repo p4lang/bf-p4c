@@ -50,172 +50,209 @@ class LoadTargetArchitecture : public Inspector {
 
     void setupMetadataRenameMap() {
         int portWidth = Device::portBitWidth();
-        structure->addMetadata(INGRESS,
-                               MetadataField{"standard_metadata", "egress_spec", portWidth},
-                               MetadataField{"ig_intr_md_for_tm", "ucast_egress_port", portWidth});
-
-        structure->addMetadata(EGRESS,
-                               MetadataField{"standard_metadata", "egress_spec", portWidth},
-                               MetadataField{"eg_intr_md", "egress_port", portWidth});
-
-        structure->addMetadata(INGRESS,
-                               MetadataField{"standard_metadata", "egress_port", portWidth},
-                               MetadataField{"ig_intr_md_for_tm", "ucast_egress_port", portWidth});
-
-        structure->addMetadata(EGRESS,
-                               MetadataField{"standard_metadata", "egress_port", portWidth},
-                               MetadataField{"eg_intr_md", "egress_port", portWidth});
-
-        structure->addMetadata(MetadataField{"standard_metadata", "ingress_port", portWidth},
-                               MetadataField{"ig_intr_md", "ingress_port", portWidth});
-
-        structure->addMetadata(EGRESS,
-                               MetadataField{"standard_metadata", "packet_length", 32},
-                               MetadataField{"eg_intr_md", "pkt_length", 16});
-
-        structure->addMetadata(MetadataField{"standard_metadata", "clone_spec", 32},
-                               MetadataField{COMPILER_META, "mirror_id",
-                                             Device::cloneSessionIdWidth()});
-
-        structure->addMetadata(INGRESS,
-                               MetadataField{"standard_metadata", "drop", 1},
-                               MetadataField{"ig_intr_md_for_dprsr", "drop_ctl", 3});
-
-        structure->addMetadata(EGRESS,
-                               MetadataField{"standard_metadata", "drop", 1},
-                               MetadataField{"eg_intr_md_for_dprsr", "drop_ctl", 3});
-
-        structure->addMetadata(INGRESS,
-                               MetadataField{"standard_metadata", "mcast_grp", 16},
-                               MetadataField{"ig_intr_md_for_tm", "mcast_grp_a", 16});
-
-        structure->addMetadata(INGRESS, MetadataField{"standard_metadata", "checksum_error", 1},
-                               MetadataField{"ig_intr_md_from_prsr", "parser_err", 1, 12});
-
-        structure->addMetadata(EGRESS, MetadataField{"standard_metadata", "checksum_error", 1},
-                               MetadataField{"eg_intr_md_from_prsr", "parser_err", 1, 12});
-
-        structure->addMetadata(MetadataField{"standard_metadata", "instance_type", 32},
-                               MetadataField{COMPILER_META, "instance_type", 32});
-
-        structure->addMetadata(INGRESS,
-                               MetadataField{"ig_intr_md_for_tm", "drop_ctl", 3},
-                               MetadataField{"ig_intr_md_for_dprsr", "drop_ctl", 3});
-
-        structure->addMetadata(EGRESS,
-                               MetadataField{"eg_intr_md_for_oport", "drop_ctl", 3},
-                               MetadataField{"eg_intr_md_for_dprsr", "drop_ctl", 3});
+        structure->addMetadata(
+            INGRESS,
+            MetadataField{"standard_metadata"_cs, "egress_spec"_cs, portWidth},
+            MetadataField{"ig_intr_md_for_tm"_cs, "ucast_egress_port"_cs, portWidth});
 
         structure->addMetadata(
-                MetadataField{"ig_intr_md_from_parser_aux", "ingress_global_tstamp", 48},
-                MetadataField{"ig_intr_md_from_prsr", "global_tstamp", 48});
-
-        structure->addMetadata(MetadataField{"standard_metadata", "ingress_global_timestamp", 48},
-                               MetadataField{"ig_intr_md_from_prsr", "global_tstamp", 48});
+            EGRESS,
+            MetadataField{"standard_metadata"_cs, "egress_spec"_cs, portWidth},
+            MetadataField{"eg_intr_md"_cs, "egress_port"_cs, portWidth});
 
         structure->addMetadata(
-                EGRESS,
-                MetadataField{"eg_intr_md_from_parser_aux", "egress_global_tstamp", 48},
-                MetadataField{"eg_intr_md_from_prsr", "global_tstamp", 48});
+            INGRESS,
+            MetadataField{"standard_metadata"_cs, "egress_port"_cs, portWidth},
+            MetadataField{"ig_intr_md_for_tm"_cs, "ucast_egress_port"_cs, portWidth});
 
         structure->addMetadata(
-                INGRESS,
-                MetadataField{"ig_intr_md_from_parser_aux", "ingress_parser_err", 16},
-                MetadataField{"ig_intr_md_from_prsr", "parser_err", 16});
+            EGRESS,
+            MetadataField{"standard_metadata"_cs, "egress_port"_cs, portWidth},
+            MetadataField{"eg_intr_md"_cs, "egress_port"_cs, portWidth});
 
         structure->addMetadata(
-                EGRESS,
-                MetadataField{"eg_intr_md_from_parser_aux", "egress_parser_err", 16},
-                MetadataField{"eg_intr_md_from_prsr", "parser_err", 16});
+            MetadataField{"standard_metadata"_cs, "ingress_port"_cs, portWidth},
+            MetadataField{"ig_intr_md"_cs, "ingress_port"_cs, portWidth});
 
         structure->addMetadata(
-                EGRESS,
-                MetadataField{"standard_metadata", "egress_global_timestamp", 48},
-                MetadataField{"eg_intr_md_from_prsr", "global_tstamp", 48});
+            EGRESS,
+            MetadataField{"standard_metadata"_cs, "packet_length"_cs, 32},
+            MetadataField{"eg_intr_md"_cs, "pkt_length"_cs, 16});
 
         structure->addMetadata(
-                EGRESS,
-                MetadataField{"standard_metadata", "enq_qdepth", 19},
-                MetadataField{"eg_intr_md", "enq_qdepth", 19});
+            MetadataField{"standard_metadata"_cs, "clone_spec"_cs, 32},
+            MetadataField{COMPILER_META, "mirror_id"_cs, Device::cloneSessionIdWidth()});
 
         structure->addMetadata(
-                EGRESS,
-                MetadataField{"standard_metadata", "enq_timestamp", 32},
-                MetadataField{"eg_intr_md", "enq_tstamp", 18});
+            INGRESS,
+            MetadataField{"standard_metadata"_cs, "drop"_cs, 1},
+            MetadataField{"ig_intr_md_for_dprsr"_cs, "drop_ctl"_cs, 3});
 
         structure->addMetadata(
-                EGRESS,
-                MetadataField{"standard_metadata", "deq_qdepth", 19},
-                MetadataField{"eg_intr_md", "deq_qdepth", 19});
+            EGRESS,
+            MetadataField{"standard_metadata"_cs, "drop"_cs, 1},
+            MetadataField{"eg_intr_md_for_dprsr"_cs, "drop_ctl"_cs, 3});
 
         structure->addMetadata(
-                EGRESS,
-                MetadataField{"eg_intr_md", "deq_timedelta", 32},
-                MetadataField{"eg_intr_md", "deq_timedelta", 18});
+            INGRESS,
+            MetadataField{"standard_metadata"_cs, "mcast_grp"_cs, 16},
+            MetadataField{"ig_intr_md_for_tm"_cs, "mcast_grp_a"_cs, 16});
 
         structure->addMetadata(
-                EGRESS,
-                MetadataField{"eg_intr_md_from_parser_aux", "clone_src", 4},
-                MetadataField{COMPILER_META, "clone_src", 4});
+            INGRESS,
+            MetadataField{"standard_metadata"_cs, "checksum_error"_cs, 1},
+            MetadataField{"ig_intr_md_from_prsr"_cs, "parser_err"_cs, 1, 12});
 
         structure->addMetadata(
-                EGRESS,
-                MetadataField{"eg_intr_md_from_parser_aux", "clone_digest_id", 4},
-                MetadataField{COMPILER_META, "clone_digest_id", 4});
+            EGRESS,
+            MetadataField{"standard_metadata"_cs, "checksum_error"_cs, 1},
+            MetadataField{"eg_intr_md_from_prsr"_cs, "parser_err"_cs, 1, 12});
 
         structure->addMetadata(
-                EGRESS,
-                MetadataField{"standard_metadata", "egress_rid", 16},
-                MetadataField{"eg_intr_md", "egress_rid", 16});
+            MetadataField{"standard_metadata"_cs, "instance_type"_cs, 32},
+            MetadataField{COMPILER_META, "instance_type"_cs, 32});
+
+        structure->addMetadata(
+            INGRESS,
+            MetadataField{"ig_intr_md_for_tm"_cs, "drop_ctl"_cs, 3},
+            MetadataField{"ig_intr_md_for_dprsr"_cs, "drop_ctl"_cs, 3});
+
+        structure->addMetadata(
+            EGRESS,
+            MetadataField{"eg_intr_md_for_oport"_cs, "drop_ctl"_cs, 3},
+            MetadataField{"eg_intr_md_for_dprsr"_cs, "drop_ctl"_cs, 3});
+
+        structure->addMetadata(
+            MetadataField{"ig_intr_md_from_parser_aux"_cs, "ingress_global_tstamp"_cs, 48},
+            MetadataField{"ig_intr_md_from_prsr"_cs, "global_tstamp"_cs, 48});
+
+        structure->addMetadata(
+            MetadataField{"standard_metadata"_cs, "ingress_global_timestamp"_cs, 48},
+            MetadataField{"ig_intr_md_from_prsr"_cs, "global_tstamp"_cs, 48});
+
+        structure->addMetadata(
+            EGRESS,
+            MetadataField{"eg_intr_md_from_parser_aux"_cs, "egress_global_tstamp"_cs, 48},
+            MetadataField{"eg_intr_md_from_prsr"_cs, "global_tstamp"_cs, 48});
+
+        structure->addMetadata(
+            INGRESS,
+            MetadataField{"ig_intr_md_from_parser_aux"_cs, "ingress_parser_err"_cs, 16},
+            MetadataField{"ig_intr_md_from_prsr"_cs, "parser_err"_cs, 16});
+
+        structure->addMetadata(
+            EGRESS,
+            MetadataField{"eg_intr_md_from_parser_aux"_cs, "egress_parser_err"_cs, 16},
+            MetadataField{"eg_intr_md_from_prsr"_cs, "parser_err"_cs, 16});
+
+        structure->addMetadata(
+            EGRESS,
+            MetadataField{"standard_metadata"_cs, "egress_global_timestamp"_cs, 48},
+            MetadataField{"eg_intr_md_from_prsr"_cs, "global_tstamp"_cs, 48});
+
+        structure->addMetadata(
+            EGRESS,
+            MetadataField{"standard_metadata"_cs, "enq_qdepth"_cs, 19},
+            MetadataField{"eg_intr_md"_cs, "enq_qdepth"_cs, 19});
+
+        structure->addMetadata(
+            EGRESS,
+            MetadataField{"standard_metadata"_cs, "enq_timestamp"_cs, 32},
+            MetadataField{"eg_intr_md"_cs, "enq_tstamp"_cs, 18});
+
+        structure->addMetadata(
+            EGRESS,
+            MetadataField{"standard_metadata"_cs, "deq_qdepth"_cs, 19},
+            MetadataField{"eg_intr_md"_cs, "deq_qdepth"_cs, 19});
+
+        structure->addMetadata(
+            EGRESS,
+            MetadataField{"eg_intr_md"_cs, "deq_timedelta"_cs, 32},
+            MetadataField{"eg_intr_md"_cs, "deq_timedelta"_cs, 18});
+
+        structure->addMetadata(
+            EGRESS,
+            MetadataField{"eg_intr_md_from_parser_aux"_cs, "clone_src"_cs, 4},
+            MetadataField{COMPILER_META, "clone_src"_cs, 4});
+
+        structure->addMetadata(
+            EGRESS,
+            MetadataField{"eg_intr_md_from_parser_aux"_cs, "clone_digest_id"_cs, 4},
+            MetadataField{COMPILER_META, "clone_digest_id"_cs, 4});
+
+        structure->addMetadata(
+            EGRESS,
+            MetadataField{"standard_metadata"_cs, "egress_rid"_cs, 16},
+            MetadataField{"eg_intr_md"_cs, "egress_rid"_cs, 16});
 #ifdef HAVE_JBAY
-        structure->addMetadata(INGRESS, MetadataField{"ig_intr_md_for_mb", "mirror_io_select", 1},
-                               MetadataField{"ig_intr_md_for_dprsr", "mirror_io_select", 1});
-        structure->addMetadata(EGRESS, MetadataField{"eg_intr_md_for_mb", "mirror_io_select", 1},
-                               MetadataField{"eg_intr_md_for_dprsr", "mirror_io_select", 1});
-        structure->addMetadata(INGRESS, MetadataField{"ig_intr_md_for_mb", "mirror_hash", 13},
-                               MetadataField{"ig_intr_md_for_dprsr", "mirror_hash", 13});
-        structure->addMetadata(EGRESS, MetadataField{"eg_intr_md_for_mb", "mirror_hash", 13},
-                               MetadataField{"eg_intr_md_for_dprsr", "mirror_hash", 13});
-        structure->addMetadata(INGRESS, MetadataField{"ig_intr_md_for_mb", "mirror_ingress_cos", 3},
-                               MetadataField{"ig_intr_md_for_dprsr", "mirror_ingress_cos", 3});
-        structure->addMetadata(EGRESS, MetadataField{"eg_intr_md_for_mb", "mirror_ingress_cos", 3},
-                               MetadataField{"eg_intr_md_for_dprsr", "mirror_ingress_cos", 3});
-        structure->addMetadata(INGRESS,
-                               MetadataField{"ig_intr_md_for_mb", "mirror_deflect_on_drop", 1},
-                               MetadataField{"ig_intr_md_for_dprsr", "mirror_deflect_on_drop", 1});
-        structure->addMetadata(EGRESS,
-                               MetadataField{"eg_intr_md_for_mb", "mirror_deflect_on_drop", 1},
-                               MetadataField{"eg_intr_md_for_dprsr", "mirror_deflect_on_drop", 1});
+        structure->addMetadata(
+            INGRESS,
+                               MetadataField{"ig_intr_md_for_mb"_cs, "mirror_io_select"_cs, 1},
+                               MetadataField{"ig_intr_md_for_dprsr"_cs, "mirror_io_select"_cs, 1});
+        structure->addMetadata(
+            EGRESS,
+                               MetadataField{"eg_intr_md_for_mb"_cs, "mirror_io_select"_cs, 1},
+                               MetadataField{"eg_intr_md_for_dprsr"_cs, "mirror_io_select"_cs, 1});
+        structure->addMetadata(
+            INGRESS, MetadataField{"ig_intr_md_for_mb"_cs, "mirror_hash"_cs, 13},
+                               MetadataField{"ig_intr_md_for_dprsr"_cs, "mirror_hash"_cs, 13});
+        structure->addMetadata(
+            EGRESS, MetadataField{"eg_intr_md_for_mb"_cs, "mirror_hash"_cs, 13},
+                               MetadataField{"eg_intr_md_for_dprsr"_cs, "mirror_hash"_cs, 13});
+        structure->addMetadata(
+            INGRESS, MetadataField{"ig_intr_md_for_mb"_cs, "mirror_ingress_cos"_cs, 3},
+            MetadataField{"ig_intr_md_for_dprsr"_cs, "mirror_ingress_cos"_cs, 3});
+        structure->addMetadata(
+            EGRESS, MetadataField{"eg_intr_md_for_mb"_cs, "mirror_ingress_cos"_cs, 3},
+            MetadataField{"eg_intr_md_for_dprsr"_cs, "mirror_ingress_cos"_cs, 3});
+        structure->addMetadata(
+            INGRESS, MetadataField{"ig_intr_md_for_mb"_cs, "mirror_deflect_on_drop"_cs, 1},
+            MetadataField{"ig_intr_md_for_dprsr"_cs, "mirror_deflect_on_drop"_cs, 1});
+        structure->addMetadata(
+            EGRESS, MetadataField{"eg_intr_md_for_mb"_cs, "mirror_deflect_on_drop"_cs, 1},
+            MetadataField{"eg_intr_md_for_dprsr"_cs, "mirror_deflect_on_drop"_cs, 1});
 
         // XXX(TF2LAB-105): disabled due to JBAY-A0 TM BUG
-        // structure->addMetadata(INGRESS,
-        //                     MetadataField{"ig_intr_md_for_mb", "mirror_copy_to_cpu_ctrl", 1},
-        //                     MetadataField{"ig_intr_md_for_dprsr", "mirror_copy_to_cpu_ctrl", 1});
-        // structure->addMetadata(EGRESS,
-        //                     MetadataField{"eg_intr_md_for_mb", "mirror_copy_to_cpu_ctrl", 1},
-        //                     MetadataField{"eg_intr_md_for_dprsr", "mirror_copy_to_cpu_ctrl", 1});
-        structure->addMetadata(INGRESS,
-                               MetadataField{"ig_intr_md_for_mb", "mirror_multicast_ctrl", 1},
-                               MetadataField{"ig_intr_md_for_dprsr", "mirror_multicast_ctrl", 1});
-        structure->addMetadata(EGRESS,
-                               MetadataField{"eg_intr_md_for_mb", "mirror_multicast_ctrl", 1},
-                               MetadataField{"eg_intr_md_for_dprsr", "mirror_multicast_ctrl", 1});
-        structure->addMetadata(INGRESS,
-                MetadataField{"ig_intr_md_for_mb", "mirror_egress_port", portWidth},
-                MetadataField{"ig_intr_md_for_dprsr", "mirror_egress_port", portWidth});
-        structure->addMetadata(EGRESS,
-                MetadataField{"eg_intr_md_for_mb", "mirror_egress_port", portWidth},
-                MetadataField{"eg_intr_md_for_dprsr", "mirror_egress_port", portWidth});
-        structure->addMetadata(INGRESS, MetadataField{"ig_intr_md_for_mb", "mirror_qid", 7},
-                               MetadataField{"ig_intr_md_for_dprsr", "mirror_qid", 7});
-        structure->addMetadata(EGRESS, MetadataField{"eg_intr_md_for_mb", "mirror_qid", 7},
-                               MetadataField{"eg_intr_md_for_dprsr", "mirror_qid", 7});
-        structure->addMetadata(INGRESS,
-                               MetadataField{"ig_intr_md_for_mb", "mirror_coalesce_length", 8},
-                               MetadataField{"ig_intr_md_for_dprsr", "mirror_coalesce_length", 8});
-        structure->addMetadata(EGRESS,
-                               MetadataField{"eg_intr_md_for_mb", "mirror_coalesce_length", 8},
-                               MetadataField{"eg_intr_md_for_dprsr", "mirror_coalesce_length", 8});
+        // structure->addMetadata(
+        //     INGRESS,
+        //     MetadataField{"ig_intr_md_for_mb"_cs, "mirror_copy_to_cpu_ctrl"_cs, 1},
+        //     MetadataField{"ig_intr_md_for_dprsr"_cs, "mirror_copy_to_cpu_ctrl"_cs, 1});
+        // structure->addMetadata(
+        //     EGRESS,
+        //     MetadataField{"eg_intr_md_for_mb"_cs, "mirror_copy_to_cpu_ctrl"_cs, 1},
+        //     MetadataField{"eg_intr_md_for_dprsr"_cs, "mirror_copy_to_cpu_ctrl"_cs, 1});
+        structure->addMetadata(
+            INGRESS,
+            MetadataField{"ig_intr_md_for_mb"_cs, "mirror_multicast_ctrl"_cs, 1},
+            MetadataField{"ig_intr_md_for_dprsr"_cs, "mirror_multicast_ctrl"_cs, 1});
+        structure->addMetadata(
+            EGRESS,
+            MetadataField{"eg_intr_md_for_mb"_cs, "mirror_multicast_ctrl"_cs, 1},
+            MetadataField{"eg_intr_md_for_dprsr"_cs, "mirror_multicast_ctrl"_cs, 1});
+        structure->addMetadata(
+            INGRESS,
+            MetadataField{"ig_intr_md_for_mb"_cs, "mirror_egress_port"_cs, portWidth},
+            MetadataField{"ig_intr_md_for_dprsr"_cs, "mirror_egress_port"_cs, portWidth});
+        structure->addMetadata(
+            EGRESS,
+            MetadataField{"eg_intr_md_for_mb"_cs, "mirror_egress_port"_cs, portWidth},
+            MetadataField{"eg_intr_md_for_dprsr"_cs, "mirror_egress_port"_cs, portWidth});
+        structure->addMetadata(
+            INGRESS,
+            MetadataField{"ig_intr_md_for_mb"_cs, "mirror_qid"_cs, 7},
+            MetadataField{"ig_intr_md_for_dprsr"_cs, "mirror_qid"_cs, 7});
+        structure->addMetadata(
+            EGRESS,
+            MetadataField{"eg_intr_md_for_mb"_cs, "mirror_qid"_cs, 7},
+            MetadataField{"eg_intr_md_for_dprsr"_cs, "mirror_qid"_cs, 7});
+        structure->addMetadata(
+            INGRESS,
+            MetadataField{"ig_intr_md_for_mb"_cs, "mirror_coalesce_length"_cs, 8},
+            MetadataField{"ig_intr_md_for_dprsr"_cs, "mirror_coalesce_length"_cs, 8});
+        structure->addMetadata(
+            EGRESS,
+            MetadataField{"eg_intr_md_for_mb"_cs, "mirror_coalesce_length"_cs, 8},
+            MetadataField{"eg_intr_md_for_dprsr"_cs, "mirror_coalesce_length"_cs, 8});
 #endif
     }
 
@@ -244,14 +281,14 @@ class LoadTargetArchitecture : public Inspector {
         bit<16> packet_id; } */
     const IR::Node* create_pktgen_generic_header_t() {
         auto fields = new IR::IndexedVector<IR::StructField>({
-            new IR::StructField("_pad0", IR::Type_Bits::get(3)),
-            new IR::StructField("pipe_id", IR::Type_Bits::get(2)),
-            new IR::StructField("app_id", IR::Type_Bits::get(3)),
-            new IR::StructField("key_msb", IR::Type_Bits::get(8)),
-            new IR::StructField("batch_id", IR::Type_Bits::get(16)),
-            new IR::StructField("packet_id", IR::Type_Bits::get(16))
+            new IR::StructField("_pad0"_cs, IR::Type_Bits::get(3)),
+            new IR::StructField("pipe_id"_cs, IR::Type_Bits::get(2)),
+            new IR::StructField("app_id"_cs, IR::Type_Bits::get(3)),
+            new IR::StructField("key_msb"_cs, IR::Type_Bits::get(8)),
+            new IR::StructField("batch_id"_cs, IR::Type_Bits::get(16)),
+            new IR::StructField("packet_id"_cs, IR::Type_Bits::get(16))
         });
-        return new IR::Type_Header("pktgen_generic_header_t", *fields);
+        return new IR::Type_Header("pktgen_generic_header_t"_cs, *fields);
     }
 
     /* extern math_unit<T, U> {
@@ -261,30 +298,30 @@ class LoadTargetArchitecture : public Inspector {
     const IR::Node* create_math_unit() {
         auto methods = new IR::Vector<IR::Method>({
             new IR::Method(
-                "math_unit",
+                "math_unit"_cs,
                 new IR::Type_Method(
                 new IR::ParameterList({
-                    new IR::Parameter("invert", IR::Direction::None,
+                    new IR::Parameter("invert"_cs, IR::Direction::None,
                         IR::Type_Boolean::get()),
-                    new IR::Parameter("shift", IR::Direction::None,
+                    new IR::Parameter("shift"_cs, IR::Direction::None,
                         IR::Type_Bits::get(2, true)),
-                    new IR::Parameter("scale", IR::Direction::None,
+                    new IR::Parameter("scale"_cs, IR::Direction::None,
                         IR::Type_Bits::get(6, true)),
-                    new IR::Parameter("data", IR::Direction::None,
-                        new IR::Type_Name("U"))}), "math_unit"), false),
+                    new IR::Parameter("data"_cs, IR::Direction::None,
+                        new IR::Type_Name("U"_cs))}), "math_unit"_cs), false),
             new IR::Method(
-                "execute",
+                "execute"_cs,
                 new IR::Type_Method(
-                new IR::Type_Name("T"),
+                new IR::Type_Name("T"_cs),
                 new IR::ParameterList({
-                    new IR::Parameter("x",
-                        IR::Direction::In, new IR::Type_Name("T"))}), "execute"), false),
+                    new IR::Parameter("x"_cs,
+                        IR::Direction::In, new IR::Type_Name("T"))}), "execute"_cs), false),
         });
         auto typeVars = new IR::IndexedVector<IR::Type_Var>({
-            new IR::Type_Var("T"), new IR::Type_Var("U")
+            new IR::Type_Var("T"_cs), new IR::Type_Var("U"_cs)
         });
         auto typeParams = new IR::TypeParameters(*typeVars);
-        return new IR::Type_Extern("math_unit", typeParams, *methods);
+        return new IR::Type_Extern("math_unit"_cs, typeParams, *methods);
     }
 
     void postorder(const IR::P4Program *) override {
@@ -298,7 +335,7 @@ class LoadTargetArchitecture : public Inspector {
         // we can't safely separate metadata definitions (which are device specific)
         // from control block definitions (which are not device specific).
         char * drvP4IncludePath = getenv("P4C_16_INCLUDE_PATH");
-        Util::PathName path(drvP4IncludePath ? drvP4IncludePath : p4includePath);
+        std::filesystem::path path(drvP4IncludePath ? drvP4IncludePath : p4includePath);
         char tempPath[PATH_MAX];
         snprintf(tempPath, PATH_MAX-1, "/tmp/arch_XXXXXX.p4");
         std::vector<const char *>filenames;
@@ -325,7 +362,7 @@ class LoadTargetArchitecture : public Inspector {
         }
 #endif  // HAVE_FLATROCK
         else
-            BUG("Unsupported device id %s", Device::currentDevice());
+            BUG("Unsupported device id %s"_cs, Device::currentDevice());
         filenames.push_back("tofino/stratum.p4");
         filenames.push_back("tofino/p4_14_prim.p4");
 
@@ -345,20 +382,20 @@ class LoadTargetArchitecture : public Inspector {
             return;
         }
         for (auto f : filenames) {
-            Util::PathName fPath = path.join(f);
-            std::ifstream inFile(fPath.toString(), std::ios::in);
+            std::filesystem::path fPath = path / f;
+            std::ifstream inFile(fPath, std::ios::in);
             if (inFile.is_open()) {
                 result << inFile.rdbuf();
                 inFile.close();
             } else {
-                ::error("Failed to open architecture include file %1%", fPath.toString());
+                ::error("Failed to open architecture include file %1%", fPath);
                 result.close();
                 unlink(tempPath);
                 return;
             }
         }
         result.close();
-        structure->include(tempPath, &structure->targetTypes);
+        structure->include(cstring(tempPath), &structure->targetTypes);
         unlink(tempPath);
 
         // TODO: add extra type declaration that are not ready to publish
@@ -381,23 +418,23 @@ class RemoveNodesWithNoMapping : public Transform {
     // In TNA, most of these metadata are individual parameter to
     // the control block, and shall be removed from struct H.
     std::set<cstring> removeAllOccurences = {
-            "generator_metadata_t_0",
-            "ingress_parser_control_signals",
-            "standard_metadata_t",
-            "egress_intrinsic_metadata_t",
-            "egress_intrinsic_metadata_for_mirror_buffer_t",
-            "egress_intrinsic_metadata_for_output_port_t",
-            "egress_intrinsic_metadata_from_parser_aux_t",
-            "ingress_intrinsic_metadata_t",
-            "ingress_intrinsic_metadata_for_mirror_buffer_t",
-            "ingress_intrinsic_metadata_for_tm_t",
-            "ingress_intrinsic_metadata_from_parser_aux_t"};
+            "generator_metadata_t_0"_cs,
+            "ingress_parser_control_signals"_cs,
+            "standard_metadata_t"_cs,
+            "egress_intrinsic_metadata_t"_cs,
+            "egress_intrinsic_metadata_for_mirror_buffer_t"_cs,
+            "egress_intrinsic_metadata_for_output_port_t"_cs,
+            "egress_intrinsic_metadata_from_parser_aux_t"_cs,
+            "ingress_intrinsic_metadata_t"_cs,
+            "ingress_intrinsic_metadata_for_mirror_buffer_t"_cs,
+            "ingress_intrinsic_metadata_for_tm_t"_cs,
+            "ingress_intrinsic_metadata_from_parser_aux_t"_cs};
 
     std::set<cstring> removeDeclarations = {
-            "pktgen_generic_header_t",
-            "pktgen_port_down_header_t",
-            "pktgen_recirc_header_t",
-            "pktgen_timer_header_t"};
+            "pktgen_generic_header_t"_cs,
+            "pktgen_port_down_header_t"_cs,
+            "pktgen_recirc_header_t"_cs,
+            "pktgen_timer_header_t"_cs};
 
  public:
     RemoveNodesWithNoMapping() { setName("RemoveNodesWithNoMapping"); }
@@ -495,7 +532,7 @@ class NormalizeProgram : public Transform {
         } else if (auto parser = node->to<IR::P4Parser>()) {
             list = parser->type->getApplyParameters();
         } else {
-            BUG("Unknown block type %1%", node);
+            BUG("Unknown block type %1%"_cs, node);
         }
 
         for (auto p : list->parameters) {
@@ -549,22 +586,22 @@ class NormalizeProgram : public Transform {
     }
 
     const IR::Node *preorder(IR::P4Control *node) override {
-        pushParam(node, "standard_metadata_t", "standard_metadata");
+        pushParam(node, "standard_metadata_t"_cs, "standard_metadata"_cs);
         return node;
     }
 
     const IR::Node *postorder(IR::P4Control *node) override {
-        popParam(node, "standard_metadata_t");
+        popParam(node, "standard_metadata_t"_cs);
         return node;
     }
 
     const IR::Node *preorder(IR::P4Parser *node) override {
-        pushParam(node, "standard_metadata_t", "standard_metadata");
+        pushParam(node, "standard_metadata_t"_cs, "standard_metadata"_cs);
         return node;
     }
 
     const IR::Node *postorder(IR::P4Parser *node) override {
-        popParam(node, "standard_metadata_t");
+        popParam(node, "standard_metadata_t"_cs);
         return node;
     }
 
@@ -666,7 +703,7 @@ class AnalyzeProgram : public Inspector {
     void analyzeArchBlock(const IR::ToplevelBlock *blk, cstring name, cstring type) {
         auto main = blk->getMain();
         auto ctrl = main->findParameterValue(name);
-        ERROR_CHECK(ctrl != nullptr, "%1%: could not find parameter %2%", main, name);
+        ERROR_CHECK(ctrl != nullptr, "%1%: could not find parameter %2%"_cs, main, name);
         ERROR_CHECK(ctrl->is<BlockType>(), "%1%: main package match the expected model", main);
         auto block = ctrl->to<BlockType>()->container;
         BUG_CHECK(block != nullptr, "Unable to find %1% block in V1Switch", name);
@@ -767,49 +804,49 @@ class AnalyzeProgram : public Inspector {
             return;
         }
         analyzeArchBlock<IR::P4Parser, IR::ParserBlock>(
-                structure->toplevel, "p", ProgramStructure::INGRESS_PARSER);
+                structure->toplevel, "p"_cs, ProgramStructure::INGRESS_PARSER);
         analyzeArchBlock<IR::P4Parser, IR::ParserBlock>(
-                structure->toplevel, "p", ProgramStructure::EGRESS_PARSER);
+                structure->toplevel, "p"_cs, ProgramStructure::EGRESS_PARSER);
         analyzeArchBlock<IR::P4Control, IR::ControlBlock>(
-                structure->toplevel, "ig", ProgramStructure::INGRESS);
+                structure->toplevel, "ig"_cs, ProgramStructure::INGRESS);
         analyzeArchBlock<IR::P4Control, IR::ControlBlock>(
-                structure->toplevel, "eg", ProgramStructure::EGRESS);
+                structure->toplevel, "eg"_cs, ProgramStructure::EGRESS);
         analyzeArchBlock<IR::P4Control, IR::ControlBlock>(
-                structure->toplevel, "dep", ProgramStructure::INGRESS_DEPARSER);
+                structure->toplevel, "dep"_cs, ProgramStructure::INGRESS_DEPARSER);
         analyzeArchBlock<IR::P4Control, IR::ControlBlock>(
-                structure->toplevel, "dep", ProgramStructure::EGRESS_DEPARSER);
+                structure->toplevel, "dep"_cs, ProgramStructure::EGRESS_DEPARSER);
         analyzeArchBlock<IR::P4Control, IR::ControlBlock>(
-                structure->toplevel, "vr", "verifyChecksum");
+                structure->toplevel, "vr"_cs, "verifyChecksum"_cs);
         analyzeArchBlock<IR::P4Control, IR::ControlBlock>(
-                structure->toplevel, "ck", "updateChecksum");
+                structure->toplevel, "ck"_cs, "updateChecksum"_cs);
     }
 
     void end_apply() override {
         // add 'compiler_generated_metadata_t'
-        auto cgm = new IR::Type_Struct("compiler_generated_metadata_t");
+        auto cgm = new IR::Type_Struct("compiler_generated_metadata_t"_cs);
 
         // Inject new fields for mirroring.
         cgm->fields.push_back(
-            new IR::StructField("mirror_id",
+            new IR::StructField("mirror_id"_cs,
                     IR::Type::Bits::get(Device::cloneSessionIdWidth())));
         cgm->fields.push_back(
-            new IR::StructField("mirror_source", IR::Type::Bits::get(8)));
+            new IR::StructField("mirror_source"_cs, IR::Type::Bits::get(8)));
         // TODO: we can probably remove these two fields.
         cgm->fields.push_back(
-            new IR::StructField("clone_src", IR::Type::Bits::get(4)));
+            new IR::StructField("clone_src"_cs, IR::Type::Bits::get(4)));
         cgm->fields.push_back(
-            new IR::StructField("clone_digest_id", IR::Type::Bits::get(4)));
+            new IR::StructField("clone_digest_id"_cs, IR::Type::Bits::get(4)));
         // Used to support separate egress_start parser state.
         cgm->fields.push_back(
-            new IR::StructField("instance_type", IR::Type::Bits::get(32)));
+            new IR::StructField("instance_type"_cs, IR::Type::Bits::get(32)));
 
-        structure->type_declarations.emplace("compiler_generated_metadata_t", cgm);
+        structure->type_declarations.emplace("compiler_generated_metadata_t"_cs, cgm);
 
         // Add an instance of parser counter
         {
             auto type = new IR::Type_Name("ParserCounter");
             auto decl = new IR::Declaration_Instance(
-                "ig_prsr_ctrl_parser_counter", type,
+                "ig_prsr_ctrl_parser_counter"_cs, type,
                 new IR::Vector<IR::Argument>());
             structure->ingressParserDeclarations.push_back(decl);
             structure->egressParserDeclarations.push_back(decl);
@@ -819,7 +856,7 @@ class AnalyzeProgram : public Inspector {
         {
             auto type = new IR::Type_Name("ParserPriority");
             auto decl = new IR::Declaration_Instance(
-                "ig_prsr_ctrl_priority", type, new IR::Vector<IR::Argument>());
+                "ig_prsr_ctrl_priority"_cs, type, new IR::Vector<IR::Argument>());
             structure->ingressParserDeclarations.push_back(decl);
             structure->egressParserDeclarations.push_back(decl);
         }
@@ -893,14 +930,14 @@ class ConstructSymbolTable : public Inspector {
             auto fields = new IR::IndexedVector<IR::StructField>();
             int index = 0;
             for (auto t : *components) {
-                cstring fname = "__field_" + std::to_string(index);
+                cstring fname = "__field_"_cs + std::to_string(index);
                 auto *fieldAnnotations = new IR::Annotations();
                 if (index != 0)
                     fieldAnnotations->annotations.push_back(
                             new IR::Annotation(IR::ID("flexible"), {}));
                 if (auto nestedTuple = t->to<IR::Type_BaseList>()) {
                     convertTupleTypeToHeaderType(prefix + fname, &nestedTuple->components, false);
-                    cstring stName = prefix + fname + "_struct_t";
+                    cstring stName = prefix + fname + "_struct_t"_cs;
                     auto ttype = new IR::Type_Name(stName);
                     fields->push_back(new IR::StructField(IR::ID(fname), fieldAnnotations, ttype));
                 } else if (t->is<IR::Type_Name>()) {
@@ -911,17 +948,17 @@ class ConstructSymbolTable : public Inspector {
                 }
                 index++;
             }
-            cstring hdName = prefix + "_header_t";
+            cstring hdName = prefix + "_header_t"_cs;
             auto type = new IR::Type_Header(hdName, *fields);
             return type;
         } else {
             auto fields = new IR::IndexedVector<IR::StructField>();
             int index = 0;
             for (auto t : *components) {
-                cstring fname = "__field_" + std::to_string(index);
+                cstring fname = "__field_"_cs + std::to_string(index);
                 if (auto nestedTuple = t->to<IR::Type_BaseList>()) {
                     convertTupleTypeToHeaderType(prefix + fname, &nestedTuple->components, false);
-                    cstring stName = prefix + fname + "_struct_t";
+                    cstring stName = prefix + fname + "_struct_t"_cs;
                     auto *fieldAnnotations = new IR::Annotations({
                             new IR::Annotation(IR::ID("flexible"), {})});
                     fields->push_back(new IR::StructField(IR::ID(fname),
@@ -934,7 +971,7 @@ class ConstructSymbolTable : public Inspector {
                 }
                 index++;
             }
-            cstring stName = prefix + "_struct_t";
+            cstring stName = prefix + "_struct_t"_cs;
             auto type = new IR::Type_Struct(stName, *fields);
             structure->targetTypes.push_back(type);
         }
@@ -943,18 +980,18 @@ class ConstructSymbolTable : public Inspector {
 
     const IR::Type_Header* convertTypeNameToHeaderType(cstring prefix, const IR::Type_Name* st,
             const IR::Type_BaseList* fixedPositionTypes) {
-        cstring hdName = prefix + "_header_t";
+        cstring hdName = prefix + "_header_t"_cs;
         auto fields = new IR::IndexedVector<IR::StructField>();
         int index = 0;
         for (auto t : fixedPositionTypes->components) {
-            cstring fname = "__field_" + std::to_string(index);
+            cstring fname = "__field_"_cs + std::to_string(index);
             auto ttype = IR::Type::Bits::get(t->width_bits());
             auto *fieldAnnotations = new IR::Annotations({
                     new IR::Annotation(IR::ID("flexible"), {})});
             fields->push_back(new IR::StructField(IR::ID(fname), fieldAnnotations, ttype));
             index++;
         }
-        cstring fname = "__field_" + std::to_string(index);
+        cstring fname = "__field_"_cs + std::to_string(index);
         fields->push_back(new IR::StructField(IR::ID(fname), st));
         return new IR::Type_Header(hdName, *fields);
     }
@@ -988,7 +1025,7 @@ class ConstructSymbolTable : public Inspector {
                 auto digestFieldsFromTuple = new std::vector<DigestFieldInfo>();
                 int index = 0;
                 for (auto em : list->components) {
-                    cstring fname = "__field_" + std::to_string(index);
+                    cstring fname = "__field_"_cs + std::to_string(index);
                     DigestFieldInfo info = std::make_tuple(fname, em->type, em);
                     digestFieldsFromTuple->push_back(info);
                     index++;
@@ -1004,7 +1041,7 @@ class ConstructSymbolTable : public Inspector {
                 initializer->push_back(elem);
             }
         }
-        cstring headerTypeName = prefix + (isHeader ? "_header_t" : "_struct_t");
+        cstring headerTypeName = prefix + (isHeader ? "_header_t"_cs : "_struct_t"_cs);
         return new IR::StructExpression(new IR::Type_Name(headerTypeName), *initializer);
     }
 
@@ -1046,7 +1083,7 @@ class ConstructSymbolTable : public Inspector {
         auto *typeName = typeArg->to<IR::Type_Name>();
         ERROR_CHECK(typeName != nullptr, "Expected type T in digest to be a typeName %1%", typeArg);
         auto fieldList = refMap->getDeclaration(typeName->path);
-        auto declAnno = fieldList->getAnnotation("name");
+        auto declAnno = fieldList->getAnnotation("name"_cs);
 
         ERROR_CHECK(typeName != nullptr, "Wrong argument type for %1%", typeArg);
         /*
@@ -1074,7 +1111,7 @@ class ConstructSymbolTable : public Inspector {
 
         if (field_list->expression->is<IR::Type_BaseList>() ||
                 field_list->expression->is<IR::Type_Name>()) {
-            cstring uniqName = genUniqueName("__digest");
+            cstring uniqName = genUniqueName("__digest"_cs);
             // createNewType
             // createNewFieldList
 
@@ -1148,7 +1185,7 @@ class ConstructSymbolTable : public Inspector {
         auto mem = new IR::Member(IR::Type::Bits::get(3), path, "digest_type");
         auto stmt = new IR::MethodCallStatement(node->srcInfo,
             new IR::MethodCallExpression(node->srcInfo,
-                new IR::PathExpression(IR::ID(node->srcInfo, "invalidate")),
+                new IR::PathExpression(IR::ID(node->srcInfo, "invalidate"_cs)),
                 new IR::Vector<IR::Type>({ mem->type }),
                 new IR::Vector<IR::Argument>({ new IR::Argument(mem) })));
         structure->_map.emplace(node, stmt);
@@ -1172,9 +1209,9 @@ class ConstructSymbolTable : public Inspector {
                 auto parser = parserChecksums->parserGraphs.get_parser(checsksumState);
                 cstring cloneEntry;
                 if (cloneType == "E2E") {
-                    cloneEntry = "start_e2e_mirrored";
+                    cloneEntry = "start_e2e_mirrored"_cs;
                 } else {
-                    cloneEntry = "start_i2e_mirrored";
+                    cloneEntry = "start_i2e_mirrored"_cs;
                 }
                 auto cloneEntryPoint = parserChecksums->parserGraphs.get_state(parser, cloneEntry);
                 if (cloneEntryPoint) {
@@ -1183,7 +1220,7 @@ class ConstructSymbolTable : public Inspector {
                         continue;
                     }
                 }
-                cstring fieldName = "__field_" + std::to_string(idx);
+                cstring fieldName = "__field_"_cs + std::to_string(idx);
                 fields->push_back(new IR::StructField(IR::ID(fieldName), IR::Type::Bits::get(16)));
                 auto tpl = std::make_tuple(fieldName, IR::Type::Bits::get(16),
                             parserChecksums->residualChecksums.at(gressToStateMap.first));
@@ -1257,7 +1294,7 @@ class ConstructSymbolTable : public Inspector {
             auto *source =
                     new IR::Constant(IR::Type::Bits::get(8), sourceIdx | isMirroredTag | gressTag);
             block->components.push_back(new IR::AssignmentStatement(mirrorSource, source));
-            auto tpl = std::make_tuple("__field_0", IR::Type::Bits::get(8), mirrorSource);
+            auto tpl = std::make_tuple("__field_0"_cs, IR::Type::Bits::get(8), mirrorSource);
             digestFieldsGeneratedByCompiler->push_back(tpl);
 
             // Set `mirror_type`, which is used as the digest selector in the
@@ -1296,13 +1333,13 @@ class ConstructSymbolTable : public Inspector {
         };
 
         const IR::Declaration* mirrorDeclared = isIngress ?
-            findDecl(structure->ingressDeparserDeclarations, "mirror") :
-            findDecl(structure->egressDeparserDeclarations, "mirror");
+            findDecl(structure->ingressDeparserDeclarations, "mirror"_cs) :
+            findDecl(structure->egressDeparserDeclarations, "mirror"_cs);
 
         if (mirrorDeclared == nullptr) {
             auto declArgs = new IR::Vector<IR::Argument>({});
             auto declType = new IR::Type_Name("Mirror");
-            auto decl = new IR::Declaration_Instance("mirror", declType, declArgs);
+            auto decl = new IR::Declaration_Instance("mirror"_cs, declType, declArgs);
             if (isIngress)
                 structure->ingressDeparserDeclarations.push_back(decl);
             else
@@ -1314,7 +1351,7 @@ class ConstructSymbolTable : public Inspector {
         else
             dedupCloneIndex.insert(std::make_pair(gress, cloneId));
 
-        cstring generatedCloneHeaderTypeName = genUniqueName("__clone");
+        cstring generatedCloneHeaderTypeName = genUniqueName("__clone"_cs);
         cstring cloneHeaderName;
         cstring cloneType = mce->arguments->at(0)->expression->to<IR::Member>()->member;
         auto digestFieldsFromSource = new std::vector<DigestFieldInfo>();
@@ -1337,7 +1374,7 @@ class ConstructSymbolTable : public Inspector {
                         // generate a struct initializer for the header type
                         int index = 1;  // first element was used for mirror_source
                         for (auto elem : list->components) {
-                            cstring fname = "__field_" + std::to_string(index);
+                            cstring fname = "__field_"_cs + std::to_string(index);
                             LOG3("name " << fname << " type " << elem->type << " expr " << elem);
                             DigestFieldInfo info = std::make_tuple(fname, elem->type, elem);
                             digestFieldsFromSource->push_back(info);
@@ -1363,12 +1400,12 @@ class ConstructSymbolTable : public Inspector {
             // Look into the third argument (field list index)
             auto arg = mce->arguments->at(2)->to<IR::Argument>();
             BUG_CHECK(arg != nullptr, "invalid clone_preserving_field_list method argument");
-            convertPreservingFieldList(arg, control, "clone",
+            convertPreservingFieldList(arg, control, "clone"_cs,
                                        generatedCloneHeaderTypeName, &cloneHeaderName,
                                        digestFieldsFromSource);
         } else {
             // has no data
-            cstring hdName = generatedCloneHeaderTypeName + "_header_t";
+            cstring hdName = generatedCloneHeaderTypeName + "_header_t"_cs;
             auto fields = new IR::IndexedVector<IR::StructField>();
             fields->push_back(new IR::StructField(IR::ID("__field_0"), IR::Type::Bits::get(8)));
             auto type = new IR::Type_Header(hdName, *fields);
@@ -1443,12 +1480,12 @@ class ConstructSymbolTable : public Inspector {
         auto method = new IR::Member(node->srcInfo, pathExpr, "execute");
         auto args = new IR::Vector<IR::Argument>();
         auto index_arg = mce->arguments->at(1);
-        args->push_back(new IR::Argument(index_arg->srcInfo, "index", index_arg->expression));
+        args->push_back(new IR::Argument(index_arg->srcInfo, "index"_cs, index_arg->expression));
         auto pre_color_arg = mce->arguments->at(3);
         auto pre_color_size = pre_color_arg->expression->type->width_bits();
         auto pre_color_expr = pre_color_arg->expression;
         auto castedExpr = cast_if_needed(pre_color_expr, pre_color_size, 8);
-        args->push_back(new IR::Argument(pre_color_arg->srcInfo, "color",
+        args->push_back(new IR::Argument(pre_color_arg->srcInfo, "color"_cs,
             new IR::Cast(new IR::Type_Name("MeterColor_t"), castedExpr)));
         auto methodCall = new IR::MethodCallExpression(node->srcInfo, method, args);
 
@@ -1535,7 +1572,7 @@ class ConstructSymbolTable : public Inspector {
         }
 
         auto hashType = new IR::Type_Specialized(new IR::Type_Name("Hash"), typeArgs);
-        auto hashName = cstring::make_unique(structure->unique_names, "hash", '_');
+        auto hashName = cstring::make_unique(structure->unique_names, "hash"_cs, '_');
         structure->unique_names.insert(hashName);
         convertHashPrimitive(node, hashName, hashWidth);
 
@@ -1608,17 +1645,17 @@ class ConstructSymbolTable : public Inspector {
             return nullptr;
         };
         const IR::Declaration* resubmitDeclared =
-            findDecl(structure->ingressDeparserDeclarations, "resubmit");
+            findDecl(structure->ingressDeparserDeclarations, "resubmit"_cs);
 
         if (resubmitDeclared == nullptr) {
             auto declArgs = new IR::Vector<IR::Argument>({});
             auto declType = new IR::Type_Name("Resubmit");
-            auto decl = new IR::Declaration_Instance("resubmit",
+            auto decl = new IR::Declaration_Instance("resubmit"_cs,
                     declType, declArgs);
             structure->ingressDeparserDeclarations.push_back(decl);
         }
 
-        cstring generatedResubmitHeaderTypeName = genUniqueName("__resubmit");
+        cstring generatedResubmitHeaderTypeName = genUniqueName("__resubmit"_cs);
 
         auto digestFieldsGeneratedByCompiler = new std::vector<DigestFieldInfo>();
         /**
@@ -1626,7 +1663,7 @@ class ConstructSymbolTable : public Inspector {
          * issue in the backend. This might be sub-optimal as the padding bit
          * could be overlayed with other fields.
          */
-        auto info = std::make_tuple("__field_0", IR::Type::Bits::get(8),
+        auto info = std::make_tuple("__field_0"_cs, IR::Type::Bits::get(8),
                 new IR::Cast(IR::Type::Bits::get(8), mem));
         digestFieldsGeneratedByCompiler->push_back(info);
 
@@ -1648,7 +1685,7 @@ class ConstructSymbolTable : public Inspector {
                         // generate a struct initializer for the header type
                         int index = 1;  // first element was used for mirror_source
                         for (auto elem : list->components) {
-                            cstring fname = "__field_" + std::to_string(index);
+                            cstring fname = "__field_"_cs + std::to_string(index);
                             LOG3("name " << fname << " type " << elem->type << " expr " << elem);
                             DigestFieldInfo info = std::make_tuple(fname, elem->type, elem);
                             digestFieldsFromSource->push_back(info);
@@ -1664,12 +1701,12 @@ class ConstructSymbolTable : public Inspector {
             // Look into the first argument (field list index)
             auto arg = mce->arguments->at(0)->to<IR::Argument>();
             BUG_CHECK(arg != nullptr, "invalid resubmit_preserving_field_list method argument");
-            convertPreservingFieldList(arg, control, "resubmit",
+            convertPreservingFieldList(arg, control, "resubmit"_cs,
                                        generatedResubmitHeaderTypeName, nullptr,
                                        digestFieldsFromSource);
         } else {
             // has no data
-            cstring hdName = generatedResubmitHeaderTypeName + "_header_t";
+            cstring hdName = generatedResubmitHeaderTypeName + "_header_t"_cs;
             auto fields = new IR::IndexedVector<IR::StructField>();
             fields->push_back(new IR::StructField(IR::ID("__field_0"), IR::Type::Bits::get(8)));
             auto type = new IR::Type_Header(hdName, *fields);
@@ -1738,7 +1775,7 @@ class ConstructSymbolTable : public Inspector {
         auto typeArgs = new IR::Vector<IR::Type>({baseType->type});
         auto type = new IR::Type_Specialized(new IR::Type_Name("Random"), typeArgs);
         auto param = new IR::Vector<IR::Argument>();
-        auto randName = cstring::make_unique(structure->unique_names, "random", '_');
+        auto randName = cstring::make_unique(structure->unique_names, "random"_cs, '_');
         structure->unique_names.insert(randName);
         convertRandomPrimitive(node, randName);
 
@@ -1859,7 +1896,7 @@ class ConstructSymbolTable : public Inspector {
         auto block = findContext<IR::BlockStatement>();
         std::vector<gress_t> deparserUpdateLocations =
             getChecksumUpdateLocations(call->methodCall->to<IR::MethodCallExpression>(),
-                                       block, "calculated_field_update_location");
+                                       block, "calculated_field_update_location"_cs);
         bool zerosAsOnes = getZerosAsOnes(block, call);
         if (analyzeChecksumCall(call, which))
             implementUpdateChecksum(call, which, deparserUpdateLocations, zerosAsOnes);
@@ -1868,17 +1905,17 @@ class ConstructSymbolTable : public Inspector {
     /// build up a table for all metadata member that need to be translated.
     void postorder(const IR::Member *node) override {
         /// header/struct names appeared in p4_14_include/tofino/intrinsic_metadata.p4
-        ordered_set<cstring> toTranslateInControl = {"standard_metadata",
-                                                     "ig_intr_md_for_tm",
-                                                     "ig_intr_md",
-                                                     "ig_pg_md",
-                                                     "ig_intr_md_for_mb",
-                                                     "ig_intr_md_from_parser_aux",
-                                                     "eg_intr_md",
-                                                     "eg_intr_md_for_mb",
-                                                     "eg_intr_md_from_parser_aux",
-                                                     "eg_intr_md_for_oport"};
-        ordered_set<cstring> toTranslateInParser = {"standard_metadata", "ig_prsr_ctrl"};
+        ordered_set<cstring> toTranslateInControl = {"standard_metadata"_cs,
+                                                     "ig_intr_md_for_tm"_cs,
+                                                     "ig_intr_md"_cs,
+                                                     "ig_pg_md"_cs,
+                                                     "ig_intr_md_for_mb"_cs,
+                                                     "ig_intr_md_from_parser_aux"_cs,
+                                                     "eg_intr_md"_cs,
+                                                     "eg_intr_md_for_mb"_cs,
+                                                     "eg_intr_md_from_parser_aux"_cs,
+                                                     "eg_intr_md_for_oport"_cs};
+        ordered_set<cstring> toTranslateInParser = {"standard_metadata"_cs, "ig_prsr_ctrl"_cs};
         auto gress = findOrigCtxt<IR::P4Control>();
         if (gress) {
             if (auto member = node->expr->to<IR::Member>()) {
@@ -2054,7 +2091,7 @@ class ConstructSymbolTable : public Inspector {
         // selector_mode
         auto sel_mode = new IR::Member(
             new IR::TypeNameExpression("SelectorMode_t"), "FAIR");
-        if (auto anno = node->annotations->getSingle("mode")) {
+        if (auto anno = node->annotations->getSingle("mode"_cs)) {
             auto mode = anno->expr.at(0)->to<IR::StringLiteral>();
             if (mode->value == "resilient")
                 sel_mode->member = IR::ID("RESILIENT");
@@ -2074,7 +2111,7 @@ class ConstructSymbolTable : public Inspector {
     void cvtCounterDecl(const IR::Declaration_Instance* node) {
         auto typeArgs = new IR::Vector<IR::Type>();
         // type<W>
-        if (auto anno = node->annotations->getSingle("min_width")) {
+        if (auto anno = node->annotations->getSingle("min_width"_cs)) {
             auto min_width = anno->expr.at(0)->as<IR::Constant>().asInt();
             typeArgs->push_back(IR::Type::Bits::get(min_width));
         } else {
@@ -2116,7 +2153,7 @@ class ConstructSymbolTable : public Inspector {
 
     void cvtDirectCounterDecl(const IR::Declaration_Instance *node) {
         auto typeArgs = new IR::Vector<IR::Type>();
-        if (auto anno = node->annotations->getSingle("min_width")) {
+        if (auto anno = node->annotations->getSingle("min_width"_cs)) {
             auto min_width = anno->expr.at(0)->as<IR::Constant>().asInt();
             typeArgs->push_back(IR::Type::Bits::get(min_width));
         } else {
@@ -2242,7 +2279,7 @@ class ConstructSymbolTable : public Inspector {
 
     void postorder(const IR::Property *node) override {
         if (node->name == "support_timeout") {
-            auto idle_timeout = new IR::Property("idle_timeout", node->annotations,
+            auto idle_timeout = new IR::Property("idle_timeout"_cs, node->annotations,
                     node->value, node->isConstant);
             structure->_map.emplace(node, idle_timeout);
         }
@@ -2281,7 +2318,7 @@ class ConstructSymbolTable : public Inspector {
                 findFieldList(nestedSt, index, fl, nexp);
             } else {
                 // Check the field_list annotation
-                auto anno = f->getAnnotations()->getSingle("field_list");
+                auto anno = f->getAnnotations()->getSingle("field_list"_cs);
                 if (anno == nullptr)
                     continue;
                 for (auto e : anno->expr) {
@@ -2348,7 +2385,7 @@ class ConstructSymbolTable : public Inspector {
         // generate a struct initializer for the header type
         int i = 1;  // first element was used for mirror_source
         for (auto f : *fl) {
-            cstring fname = "__field_" + std::to_string(i);
+            cstring fname = "__field_"_cs + std::to_string(i);
             LOG3("name " << fname << " type " << f->type << " expr " << f);
             DigestFieldInfo info = std::make_tuple(fname, f->type, f);
             digestFields->push_back(info);
@@ -2443,7 +2480,7 @@ class LoweringType : public Transform {
         auto ctxt = findOrigCtxt<IR::Type_StructLike>();
         if (!ctxt)
             return node;
-        if (!ctxt->annotations->getSingle("__intrinsic_metadata"))
+        if (!ctxt->annotations->getSingle("__intrinsic_metadata"_cs))
             return node;
         if (!node->type->is<IR::Type_Boolean>())
             return node;
@@ -2526,7 +2563,7 @@ bool AddAdjustByteCount::preorder(IR::Declaration_Instance* decl) {
                     new IR::Vector<IR::Type>({
                         new IR::Type_Name("__bfp4c_bridged_metadata_header") }),
                     new IR::Vector<IR::Argument>({ new IR::Argument(new_abc_member) }));
-                decl->annotations = decl->annotations->addAnnotation("adjust_byte_count",
+                decl->annotations = decl->annotations->addAnnotation("adjust_byte_count"_cs,
                                                                         new_abc_expr);
                 LOG3("Adding annotation "
                     "'@adjust_byte_count(sizeInBytes(meta.__bfp4c_bridge_metadata))' to decl: "
@@ -2560,8 +2597,8 @@ SimpleSwitchTranslation::SimpleSwitchTranslation(P4::ReferenceMap* refMap,
     auto collect_pragma = new CollectGlobalPragma();
     addPasses({
         collect_pragma,
-        new P4::ValidateTableProperties({"implementation", "size", "counters", "meters",
-                                         "support_timeout"}),
+        new P4::ValidateTableProperties({"implementation"_cs, "size"_cs, "counters"_cs, "meters"_cs,
+                                         "support_timeout"_cs}),
         new P4::LocalCopyPropagation(refMap, typeMap, typeChecking, V1::skipCond),
         new BFN::TypeChecking(refMap, typeMap, true),
         new RemoveExternMethodCallsExcludedByAnnotation,

@@ -95,7 +95,7 @@ void Container::toJSON(JSONGenerator& json) const {
 }
 
 cstring FieldUse::toString(unsigned dark) const {
-        if (use_ == 0) return "";
+        if (use_ == 0) return ""_cs;
         std::stringstream ss;
         bool checkLiveness = true;
         if (use_ & READ) {

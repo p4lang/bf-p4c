@@ -11,7 +11,6 @@ namespace BFN {
 /// metadata.
 class TnaControl : P4Control {
     toString { return P4Control::toString() + " on " + cstring::to_cstring(thread); }
-    dbprint { out << toString(); }
 
     /// A map from standard TNA parameter names to the names actually used in
     /// the P4 program. For example, a TNA control prototype may include a
@@ -25,6 +24,7 @@ class TnaControl : P4Control {
 
     /// The pipe name this control belongs to
     optional NullOK cstring pipeName;
+#nodbprint
 }
 
 /// A P4Deparser produced by TNA translation; contains some additional useful
@@ -74,7 +74,7 @@ class TnaParser : P4Parser {
 /// Used to identify the parser/mau/deparser block from
 /// architecture PackageBlock.
 class P4Thread {
-    toString { return "P4Thread"; }
+    toString { return "P4Thread"_cs; }
     dbprint { out << toString(); }
 #noconstructor
     P4Thread() = default;

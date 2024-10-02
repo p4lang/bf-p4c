@@ -98,17 +98,17 @@ class AnalyzeProgram : public Inspector {
 
     bool preorder(const IR::P4Program*) override {
         analyzeArchBlock<IR::P4Parser, IR::ParserBlock>(
-            "ingress", "ip", PSA::ProgramStructure::INGRESS_PARSER);
+            "ingress"_cs, "ip"_cs, PSA::ProgramStructure::INGRESS_PARSER);
         analyzeArchBlock<IR::P4Control, IR::ControlBlock>(
-            "ingress", "ig", PSA::ProgramStructure::INGRESS);
+            "ingress"_cs, "ig"_cs, PSA::ProgramStructure::INGRESS);
         analyzeArchBlock<IR::P4Control, IR::ControlBlock>(
-            "ingress", "id", PSA::ProgramStructure::INGRESS_DEPARSER);
+            "ingress"_cs, "id"_cs, PSA::ProgramStructure::INGRESS_DEPARSER);
         analyzeArchBlock<IR::P4Parser, IR::ParserBlock>(
-            "egress", "ep", PSA::ProgramStructure::EGRESS_PARSER);
+            "egress"_cs, "ep"_cs, PSA::ProgramStructure::EGRESS_PARSER);
         analyzeArchBlock<IR::P4Control, IR::ControlBlock>(
-            "egress", "eg", PSA::ProgramStructure::EGRESS);
+            "egress"_cs, "eg"_cs, PSA::ProgramStructure::EGRESS);
         analyzeArchBlock<IR::P4Control, IR::ControlBlock>(
-            "egress", "ed", PSA::ProgramStructure::EGRESS_DEPARSER);
+            "egress"_cs, "ed"_cs, PSA::ProgramStructure::EGRESS_DEPARSER);
         return true;
     }
     void postorder(const IR::Type_Action* node) override {
@@ -167,7 +167,7 @@ class AnalyzeProgram : public Inspector {
         cgm->fields.push_back(new IR::StructField("clone_i2e", IR::Type::Boolean::get()));
         cgm->fields.push_back(new IR::StructField("clone_e2e", IR::Type::Boolean::get()));
 
-        structure->type_declarations.emplace("compiler_generated_metadata_t", cgm);
+        structure->type_declarations.emplace("compiler_generated_metadata_t"_cs, cgm);
     }
 
     // program structure keeps a map from architecture param name to user-provided param name
@@ -175,43 +175,43 @@ class AnalyzeProgram : public Inspector {
     void process_packet_path_params(const IR::P4Parser* node) {
         if (node->name == structure->getBlockName(PSA::ProgramStructure::INGRESS_PARSER)) {
             auto param = node->getApplyParameters()->getParameter(1);
-            structure->ingress_parser.psaParams.emplace("hdr", param->name);
+            structure->ingress_parser.psaParams.emplace("hdr"_cs, param->name);
             param = node->getApplyParameters()->getParameter(2);
-            structure->ingress_parser.psaParams.emplace("metadata", param->name);
+            structure->ingress_parser.psaParams.emplace("metadata"_cs, param->name);
             structure->metadataType = typeMap->getTypeType(param->type, true);
             param = node->getApplyParameters()->getParameter(3);
             structure->ingress_parser.psaParams.emplace(PSA::INP_INTR_MD, param->name);
             param = node->getApplyParameters()->getParameter(4);
             structure->resubmit.paramNameInParser = param->name;
-            create_metadata_header(param, "__resubmit_data", INGRESS, structure->resubmit);
-            structure->ingress_parser.psaParams.emplace("resubmit_metadata", param->name);
+            create_metadata_header(param, "__resubmit_data"_cs, INGRESS, structure->resubmit);
+            structure->ingress_parser.psaParams.emplace("resubmit_metadata"_cs, param->name);
             param = node->getApplyParameters()->getParameter(5);
             structure->recirculate.paramNameInParser = param->name;
-            create_metadata_header(param, "__recirculate_data", INGRESS, structure->recirculate);
-            structure->ingress_parser.psaParams.emplace("recirc_metadata", param->name);
+            create_metadata_header(param, "__recirculate_data"_cs, INGRESS, structure->recirculate);
+            structure->ingress_parser.psaParams.emplace("recirc_metadata"_cs, param->name);
         } else if (node->name == structure->getBlockName(PSA::ProgramStructure::EGRESS_PARSER)) {
             auto param = node->getApplyParameters()->getParameter(1);
-            structure->egress_parser.psaParams.emplace("hdr", param->name);
+            structure->egress_parser.psaParams.emplace("hdr"_cs, param->name);
             param = node->getApplyParameters()->getParameter(2);
-            structure->egress_parser.psaParams.emplace("metadata", param->name);
+            structure->egress_parser.psaParams.emplace("metadata"_cs, param->name);
             structure->metadataType = typeMap->getTypeType(param->type, true);
             param = node->getApplyParameters()->getParameter(3);
             structure->egress_parser.psaParams.emplace(PSA::INP_INTR_MD, param->name);
             param = node->getApplyParameters()->getParameter(4);
             structure->bridge.paramNameInParser = param->name;
-            structure->egress_parser.psaParams.emplace("normal_metadata", param->name);
+            structure->egress_parser.psaParams.emplace("normal_metadata"_cs, param->name);
             // add translation for bridged metadata
             // In PSA, bridge structure can be a struct or header or empty. Creating
             // a new header for bridged fields no matter what the original structure is
             create_metadata_header(param, BFN::BRIDGED_MD, EGRESS, structure->bridge);
             param = node->getApplyParameters()->getParameter(5);
             structure->clone_i2e.paramNameInParser = param->name;
-            create_metadata_header(param, "__clone_i2e_data", EGRESS, structure->clone_i2e);
-            structure->egress_parser.psaParams.emplace("clone_i2e_metadata", param->name);
+            create_metadata_header(param, "__clone_i2e_data"_cs, EGRESS, structure->clone_i2e);
+            structure->egress_parser.psaParams.emplace("clone_i2e_metadata"_cs, param->name);
             param = node->getApplyParameters()->getParameter(6);
             structure->clone_e2e.paramNameInParser = param->name;
-            create_metadata_header(param, "__clone_e2e_data", EGRESS, structure->clone_e2e);
-            structure->egress_parser.psaParams.emplace("clone_e2e_metadata", param->name);
+            create_metadata_header(param, "__clone_e2e_data"_cs, EGRESS, structure->clone_e2e);
+            structure->egress_parser.psaParams.emplace("clone_e2e_metadata"_cs, param->name);
         }
     }
 
@@ -219,7 +219,8 @@ class AnalyzeProgram : public Inspector {
                                 gress_t gress, PacketPathInfo& packetStructure) {
         auto md_type = typeMap->getTypeType(param->type, true);
         if (auto t = md_type->to<IR::Type_StructLike>()) {
-            cstring typeName = headername == BFN::BRIDGED_MD ? "__bridge_metadata_t" : t->name;
+            cstring typeName =
+                headername == BFN::BRIDGED_MD ? "__bridge_metadata_t"_cs : t->name.name;
             auto header = new IR::Type_Header(typeName, t->annotations, t->fields);
             structure->type_declarations[typeName] = header;
             for (auto f : header->to<IR::Type_StructLike>()->fields) {
@@ -272,17 +273,17 @@ class AnalyzeProgram : public Inspector {
         if (node->name == structure->getBlockName(ProgramStructure::INGRESS_DEPARSER)) {
             auto param = node->getApplyParameters()->getParameter(1);
             structure->clone_i2e.paramNameInDeparser = param->name;
-            create_metadata_header(param, "__clone_i2e_data", INGRESS, structure->clone_i2e);
+            create_metadata_header(param, "__clone_i2e_data"_cs, INGRESS, structure->clone_i2e);
             param = node->getApplyParameters()->getParameter(2);
             structure->resubmit.paramNameInDeparser = param->name;
-            create_metadata_header(param, "__resubmit_data", INGRESS, structure->resubmit);
+            create_metadata_header(param, "__resubmit_data"_cs, INGRESS, structure->resubmit);
             param = node->getApplyParameters()->getParameter(3);
             structure->bridge.paramNameInDeparser = param->name;
             create_metadata_header(param, BFN::BRIDGED_MD, INGRESS, structure->bridge);
             param = node->getApplyParameters()->getParameter(4);
-            structure->ingress_deparser.psaParams.emplace("hdr", param->name);
+            structure->ingress_deparser.psaParams.emplace("hdr"_cs, param->name);
             param = node->getApplyParameters()->getParameter(5);
-            structure->ingress_deparser.psaParams.emplace("metadata", param->name);
+            structure->ingress_deparser.psaParams.emplace("metadata"_cs, param->name);
             structure->metadataType = typeMap->getTypeType(param->type, true);
             param = node->getApplyParameters()->getParameter(6);
             structure->ingress_deparser.psaParams.emplace(PSA::INP_INTR_MD, param->name);
@@ -290,25 +291,25 @@ class AnalyzeProgram : public Inspector {
         } else if (node->name == structure->getBlockName(ProgramStructure::EGRESS_DEPARSER)) {
             auto param = node->getApplyParameters()->getParameter(1);
             structure->clone_e2e.paramNameInDeparser = param->name;
-            create_metadata_header(param, "__clone_e2e_data", EGRESS, structure->clone_e2e);
+            create_metadata_header(param, "__clone_e2e_data"_cs, EGRESS, structure->clone_e2e);
             param = node->getApplyParameters()->getParameter(2);
             structure->recirculate.paramNameInDeparser = param->name;
-            create_metadata_header(param, "__recirculate_data", EGRESS, structure->recirculate);
+            create_metadata_header(param, "__recirculate_data"_cs, EGRESS, structure->recirculate);
             param = node->getApplyParameters()->getParameter(3);
-            structure->egress_deparser.psaParams.emplace("hdr", param->name);
+            structure->egress_deparser.psaParams.emplace("hdr"_cs, param->name);
             param = node->getApplyParameters()->getParameter(4);
-            structure->egress_deparser.psaParams.emplace("metadata", param->name);
+            structure->egress_deparser.psaParams.emplace("metadata"_cs, param->name);
             structure->metadataType = typeMap->getTypeType(param->type, true);
             param = node->getApplyParameters()->getParameter(5);
             structure->egress_deparser.psaParams.emplace(PSA::INP_INTR_MD, param->name);
             param = node->getApplyParameters()->getParameter(6);
-            structure->egress_deparser.psaParams.emplace("edstd", param->name);
+            structure->egress_deparser.psaParams.emplace("edstd"_cs, param->name);
             collectPacketPathInfo(node);
         } else if (node->name == structure->getBlockName(ProgramStructure::INGRESS)) {
             auto param = node->getApplyParameters()->getParameter(0);
-            structure->ingress.psaParams.emplace("hdr", param->name);
+            structure->ingress.psaParams.emplace("hdr"_cs, param->name);
             param = node->getApplyParameters()->getParameter(1);
-            structure->ingress.psaParams.emplace("metadata", param->name);
+            structure->ingress.psaParams.emplace("metadata"_cs, param->name);
             structure->metadataType = typeMap->getTypeType(param->type, true);
             param = node->getApplyParameters()->getParameter(2);
             structure->ingress.psaParams.emplace(PSA::INP_INTR_MD, param->name);
@@ -316,9 +317,9 @@ class AnalyzeProgram : public Inspector {
             structure->ingress.psaParams.emplace(PSA::OUT_INTR_MD, param->name);
         } else if (node->name == structure->getBlockName(ProgramStructure::EGRESS)) {
             auto param = node->getApplyParameters()->getParameter(0);
-            structure->egress.psaParams.emplace("hdr", param->name);
+            structure->egress.psaParams.emplace("hdr"_cs, param->name);
             param = node->getApplyParameters()->getParameter(1);
-            structure->egress.psaParams.emplace("metadata", param->name);
+            structure->egress.psaParams.emplace("metadata"_cs, param->name);
             structure->metadataType = typeMap->getTypeType(param->type, true);
             param = node->getApplyParameters()->getParameter(2);
             structure->egress.psaParams.emplace(PSA::INP_INTR_MD, param->name);
@@ -389,8 +390,8 @@ class TranslateProgram : public Inspector {
         CHECK_NULL(equ);
         Pattern::Match<IR::Expression> member;
         Pattern::Match<IR::MethodCallExpression> expr;
-        cstring metaParam = gress == INGRESS ? "ig_intr_md_from_prsr" :
-                                                "eg_intr_md_from_prsr";
+        cstring metaParam = gress == INGRESS ? "ig_intr_md_from_prsr"_cs :
+                                                "eg_intr_md_from_prsr"_cs;
         int error_idx = getErrorIdx(err->member);
         if ((expr == member).match(equ)) {
             auto miExpr = P4::MethodInstance::resolve(expr, refMap, typeMap);
@@ -434,12 +435,12 @@ class TranslateProgram : public Inspector {
         auto mce = new IR::MethodCallExpression(
                       new IR::Member(new IR::PathExpression(declName), "get"));
         if (gress == INGRESS) {
-              auto metaparam = structure->ingress_parser.psaParams.at("metadata");
+              auto metaparam = structure->ingress_parser.psaParams.at("metadata"_cs);
               auto residual = new IR::Member(new IR::PathExpression(metaparam), member->member);
               auto get = new IR::AssignmentStatement(residual, mce);
               structure->_map.emplace(stmt, get);
         } else if (gress == EGRESS) {
-             auto metaparam = structure->egress_parser.psaParams.at("metadata");
+             auto metaparam = structure->egress_parser.psaParams.at("metadata"_cs);
              auto residual = new IR::Member(new IR::PathExpression(metaparam), member->member);
              auto get = new IR::AssignmentStatement(residual, mce);
              structure->_map.emplace(stmt, get);
@@ -715,7 +716,7 @@ class TranslateProgram : public Inspector {
         // selector_mode
         auto sel_mode = new IR::Member(
             new IR::TypeNameExpression("SelectorMode_t"), "FAIR");
-        if (auto anno = node->annotations->getSingle("mode")) {
+        if (auto anno = node->annotations->getSingle("mode"_cs)) {
             auto mode = anno->expr.at(0)->to<IR::StringLiteral>();
             if (mode->value == "resilient")
                 sel_mode->member = IR::ID("RESILIENT");
@@ -844,56 +845,57 @@ class LoadTargetArchitecture : public Inspector {
 
     void setup_metadata_map() {
         structure->addMetadata(INGRESS,
-                               MetadataField{PSA::INP_INTR_MD, "ingress_port", 9},
-                               MetadataField{"ig_intr_md", "ingress_port", 9});
+                               MetadataField{PSA::INP_INTR_MD, "ingress_port"_cs, 9},
+                               MetadataField{"ig_intr_md"_cs, "ingress_port"_cs, 9});
         structure->addMetadata(EGRESS,
-                               MetadataField{PSA::INP_INTR_MD, "ingress_port", 9},
-                               MetadataField{"eg_intr_md", "ingress_port", 9});
+                               MetadataField{PSA::INP_INTR_MD, "ingress_port"_cs, 9},
+                               MetadataField{"eg_intr_md"_cs, "ingress_port"_cs, 9});
 
         structure->addMetadata(INGRESS,
-                               MetadataField{PSA::INP_INTR_MD, "ingress_timestamp", 48},
-                               MetadataField{"ig_intr_md", "ingress_mac_tstamp", 48});
+                               MetadataField{PSA::INP_INTR_MD, "ingress_timestamp"_cs, 48},
+                               MetadataField{"ig_intr_md"_cs, "ingress_mac_tstamp"_cs, 48});
         structure->addMetadata(INGRESS,
-                               MetadataField{PSA::INP_INTR_MD, "parser_error", 16},
-                               MetadataField{"ig_intr_md_from_parser", "parser_err", 16});
+                               MetadataField{PSA::INP_INTR_MD, "parser_error"_cs, 16},
+                               MetadataField{"ig_intr_md_from_parser"_cs, "parser_err"_cs, 16});
         structure->addMetadata(INGRESS,
-                               MetadataField{PSA::OUT_INTR_MD, "class_of_service", 3},
-                               MetadataField{"ig_intr_md_for_tm", "ingress_cos", 3});
+                               MetadataField{PSA::OUT_INTR_MD, "class_of_service"_cs, 3},
+                               MetadataField{"ig_intr_md_for_tm"_cs, "ingress_cos"_cs, 3});
         structure->addMetadata(INGRESS,
-                               MetadataField{PSA::OUT_INTR_MD, "drop", 1},
-                               MetadataField{COMPILER_META, "drop", 1});
-        structure->addMetadata(INGRESS, MetadataField{PSA::OUT_INTR_MD, "multicast_group", 16},
-                               MetadataField{"ig_intr_md_for_tm", "mcast_grp_a", 16});
+                               MetadataField{PSA::OUT_INTR_MD, "drop"_cs, 1},
+                               MetadataField{COMPILER_META, "drop"_cs, 1});
+        structure->addMetadata(INGRESS, MetadataField{PSA::OUT_INTR_MD, "multicast_group"_cs, 16},
+                               MetadataField{"ig_intr_md_for_tm"_cs, "mcast_grp_a"_cs, 16});
         structure->addMetadata(INGRESS,
-                               MetadataField{PSA::OUT_INTR_MD, "egress_port", 9},
-                               MetadataField{"ig_intr_md_for_tm", "ucast_egress_port", 9});
-        structure->addMetadata(INGRESS, MetadataField{PSA::OUT_INTR_MD, "resubmit", 1},
-                               MetadataField{COMPILER_META, "resubmit", 1});
-        structure->addMetadata(INGRESS, MetadataField{PSA::OUT_INTR_MD, "clone", 1},
-                               MetadataField{COMPILER_META, "clone_i2e", 1});
+                               MetadataField{PSA::OUT_INTR_MD, "egress_port"_cs, 9},
+                               MetadataField{"ig_intr_md_for_tm"_cs, "ucast_egress_port"_cs, 9});
+        structure->addMetadata(INGRESS, MetadataField{PSA::OUT_INTR_MD, "resubmit"_cs, 1},
+                               MetadataField{COMPILER_META, "resubmit"_cs, 1});
+        structure->addMetadata(INGRESS, MetadataField{PSA::OUT_INTR_MD, "clone"_cs, 1},
+                               MetadataField{COMPILER_META, "clone_i2e"_cs, 1});
         structure->addMetadata(INGRESS,
-                               MetadataField{PSA::INP_INTR_MD, "packet_path", 0},
-                               MetadataField{COMPILER_META, "packet_path", 0});
+                               MetadataField{PSA::INP_INTR_MD, "packet_path"_cs, 0},
+                               MetadataField{COMPILER_META, "packet_path"_cs, 0});
 
         structure->addMetadata(EGRESS,
-                               MetadataField{PSA::INP_INTR_MD, "egress_port", 9},
-                               MetadataField{"eg_intr_md", "egress_port", 9});
+                               MetadataField{PSA::INP_INTR_MD, "egress_port"_cs, 9},
+                               MetadataField{"eg_intr_md"_cs, "egress_port"_cs, 9});
         structure->addMetadata(EGRESS,
-                               MetadataField{PSA::INP_INTR_MD, "egress_timestamp", 48},
-                               MetadataField{"eg_intr_md_for_dprsr", "egress_global_tstamp", 48});
+                               MetadataField{PSA::INP_INTR_MD, "egress_timestamp"_cs, 48},
+                               MetadataField{"eg_intr_md_for_dprsr"_cs,
+                                             "egress_global_tstamp"_cs, 48});
         structure->addMetadata(EGRESS,
-                               MetadataField{PSA::INP_INTR_MD, "parser_error", 16},
-                               MetadataField{"eg_intr_md_from_parser", "parser_err", 16});
+                               MetadataField{PSA::INP_INTR_MD, "parser_error"_cs, 16},
+                               MetadataField{"eg_intr_md_from_parser"_cs, "parser_err"_cs, 16});
         structure->addMetadata(EGRESS,
-                               MetadataField{PSA::OUT_INTR_MD, "drop", 1},
-                               MetadataField{COMPILER_META, "drop", 1});
-        structure->addMetadata(EGRESS, MetadataField{PSA::OUT_INTR_MD, "clone", 1},
-                               MetadataField{COMPILER_META, "clone_e2e", 1});
+                               MetadataField{PSA::OUT_INTR_MD, "drop"_cs, 1},
+                               MetadataField{COMPILER_META, "drop"_cs, 1});
+        structure->addMetadata(EGRESS, MetadataField{PSA::OUT_INTR_MD, "clone"_cs, 1},
+                               MetadataField{COMPILER_META, "clone_e2e"_cs, 1});
         structure->addMetadata(EGRESS,
-                               MetadataField{PSA::INP_INTR_MD, "packet_path", 0},
-                               MetadataField{COMPILER_META, "packet_path", 0});
-        structure->addMetadata(MetadataField{PSA::OUT_INTR_MD, "clone_session_id", 10},
-                               MetadataField{COMPILER_META, "mirror_id", 10});
+                               MetadataField{PSA::INP_INTR_MD, "packet_path"_cs, 0},
+                               MetadataField{COMPILER_META, "packet_path"_cs, 0});
+        structure->addMetadata(MetadataField{PSA::OUT_INTR_MD, "clone_session_id"_cs, 10},
+                               MetadataField{COMPILER_META, "mirror_id"_cs, 10});
     }
 
     void analyzeTofinoModel() {
@@ -913,7 +915,7 @@ class LoadTargetArchitecture : public Inspector {
     void postorder(const IR::P4Program*) override {
         setup_metadata_map();
         char* drvP4IncludePath = getenv("P4C_16_INCLUDE_PATH");
-        Util::PathName path(drvP4IncludePath ? drvP4IncludePath : p4includePath);
+        std::filesystem::path path(drvP4IncludePath ? drvP4IncludePath : p4includePath);
         LOG1("path " << p4includePath << " " << drvP4IncludePath);
         char tempPath[PATH_MAX];
         snprintf(tempPath, PATH_MAX-1, "/tmp/arch_XXXXXX.p4");
@@ -947,20 +949,20 @@ class LoadTargetArchitecture : public Inspector {
             return;
         }
         for (auto f : filenames) {
-            Util::PathName fPath = path.join(f);
-            std::ifstream inFile(fPath.toString(), std::ios::in);
+            std::filesystem::path fPath = path / f;
+            std::ifstream inFile(fPath, std::ios::in);
             if (inFile.is_open()) {
                 result << inFile.rdbuf();
                 inFile.close();
             } else {
-                ::error("Failed to open architecture include file %1%", fPath.toString());
+                ::error("Failed to open architecture include file %1%", fPath);
                 result.close();
                 unlink(tempPath);
                 return;
             }
         }
         result.close();
-        structure->include(tempPath, &structure->targetTypes);
+        structure->include(cstring(tempPath), &structure->targetTypes);
         unlink(tempPath);
 
         analyzeTofinoModel();
@@ -1020,8 +1022,8 @@ struct CreateErrorStates : public Transform {
             auto err = (*stmt->arguments)[1]->expression->to<IR::Member>();
             Pattern::Match<IR::Member> member;
             Pattern::Match<IR::Constant> constant;
-            cstring metaParam = parser->thread == INGRESS ? "ig_intr_md_from_prsr" :
-                                                   "eg_intr_md_from_prsr";
+            cstring metaParam = parser->thread == INGRESS ? "ig_intr_md_from_prsr"_cs :
+                                                   "eg_intr_md_from_prsr"_cs;
             int error_idx = structure->error_to_constant.at(err->member);
             if (expr->is<IR::Equ>()) {
                 (member == constant).match(expr);
@@ -1091,9 +1093,9 @@ PortableSwitchTranslation::PortableSwitchTranslation(
     auto structure = new PSA::ProgramStructure;
 
     addPasses({
-        new P4::ValidateTableProperties({"psa_implementation", "psa_direct_counter",
-                                         "psa_direct_meter", "psa_idle_timeout",
-                                         "psa_empty_group_action"}),
+        new P4::ValidateTableProperties({"psa_implementation"_cs, "psa_direct_counter"_cs,
+                                         "psa_direct_meter"_cs, "psa_idle_timeout"_cs,
+                                         "psa_empty_group_action"_cs}),
         new P4::ConvertEnums(refMap, typeMap, new PSA::PacketPathTo8Bits),
         new P4::CopyStructures(refMap, typeMap),
         new BFN::TypeChecking(refMap, typeMap, true),

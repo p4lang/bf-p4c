@@ -73,7 +73,7 @@ class BFN_Options : public CompilerOptions {
     // allocated to a CLOT.
     bool allow_pov_aliasing = false;
 
-    cstring bfRtSchema = "";
+    cstring bfRtSchema = ""_cs;
     bool p4RuntimeForceStdExterns = false;
     cstring programName;
     cstring outputDir = nullptr;    // output directory, default "programName.device"

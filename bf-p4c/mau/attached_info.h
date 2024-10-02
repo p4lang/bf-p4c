@@ -90,10 +90,10 @@ class ValidateAttachedOfSingleTable : public MauInspector {
 
     cstring addr_type_name(addr_type_t type) {
         switch (type) {
-            case STATS: return "stats";
-            case METER: return "meter";
-            case ACTIONDATA: return "action";
-            default: return "";
+            case STATS: return "stats"_cs;
+            case METER: return "meter"_cs;
+            case ACTIONDATA: return "action"_cs;
+            default: return ""_cs;
         }
     }
 

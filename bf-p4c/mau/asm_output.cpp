@@ -45,7 +45,7 @@ static int teop = 0;
 namespace {
 // Create the key name that will be output to the assembler & context.json files.
 cstring keyAnnotationName(const IR::MAU::TableKey* table_key, cstring table_name = nullptr) {
-    cstring annName = "";
+    cstring annName = ""_cs;
     if (auto ann = table_key->getAnnotation(IR::Annotation::nameAnnotation)) {
         annName = ann->getName();
         // P4_14-->P4_16 translation names valid matches with a
@@ -247,7 +247,7 @@ class ExtractKeyDetails {
             // atcam_partition_index and this information is conveyed to low-level driver
             // via the 'partition_field_name' attribute under the algorithm tcam node.
             if ((*key)->match_type.name == "atcam_partition_index")
-                return "exact";
+                return "exact"_cs;
             return (*key)->match_type.name;
         }
         int start_bit() const {
@@ -437,7 +437,7 @@ std::ostream &operator<<(std::ostream &out, const MauAsmOutput &mauasm) {
     return out;
 }
 
-void MauAsmOutput::emit_single_alias(std::ostream &out, cstring &sep,
+void MauAsmOutput::emit_single_alias(std::ostream &out, std::string &sep,
         const ActionData::Parameter *param, le_bitrange adt_range, cstring alias,
         safe_vector<ActionData::Argument> &full_args, cstring action_name) const {
     LOG3("Emitting single alias for " << param << " in action : " << action_name);
@@ -525,7 +525,7 @@ void MauAsmOutput::emit_action_data_alias(std::ostream &out, indent_t indent,
     }
 
     out << indent << "- { ";
-    cstring sep = "";
+    std::string sep = "";
     for (auto alu_pos : all_alu_positions) {
         cstring alias_name = alu_pos.alu_op->alias();
         le_bitrange slot_bits = { alu_pos.alu_op->slot_bits().min().index(),
@@ -624,7 +624,7 @@ void MauAsmOutput::emit_action_data_format(std::ostream &out, indent_t indent,
         return;
 
     out << indent << "format " << canon_name(af->name) << ": { ";
-    cstring sep = "";
+    std::string sep = "";
     single_placements.clear();
     for (auto &alu_pos : alu_pos_vec) {
         auto single_placement = std::make_pair(alu_pos.start_byte, alu_pos.alu_op->size());
@@ -1004,34 +1004,34 @@ void MauAsmOutput::emit_memory(std::ostream &out, indent_t indent, const Memorie
 
 cstring format_name(int type) {
     if (type == TableFormat::MATCH)
-        return "match";
+        return "match"_cs;
     if (type == TableFormat::NEXT)
-        return "next";
+        return "next"_cs;
     if (type == TableFormat::ACTION)
-        return "action";
+        return "action"_cs;
     if (type == TableFormat::IMMEDIATE)
-        return "immediate";
+        return "immediate"_cs;
     if (type == TableFormat::VERS)
-        return "version";
+        return "version"_cs;
     if (type == TableFormat::COUNTER)
-        return "counter_addr";
+        return "counter_addr"_cs;
     if (type == TableFormat::COUNTER_PFE)
-        return "counter_pfe";
+        return "counter_pfe"_cs;
     if (type == TableFormat::METER)
-        return "meter_addr";
+        return "meter_addr"_cs;
     if (type == TableFormat::METER_PFE)
-        return "meter_pfe";
+        return "meter_pfe"_cs;
     if (type == TableFormat::METER_TYPE)
-        return "meter_type";
+        return "meter_type"_cs;
     if (type == TableFormat::INDIRECT_ACTION)
-        return "action_addr";
+        return "action_addr"_cs;
     if (type == TableFormat::SEL_LEN_MOD)
-        return "sel_len_mod";
+        return "sel_len_mod"_cs;
     if (type == TableFormat::SEL_LEN_SHIFT)
-        return "sel_len_shift";
+        return "sel_len_shift"_cs;
     if (type == TableFormat::VALID)
-        return "valid";
-    return "";
+        return "valid"_cs;
+    return ""_cs;
 }
 
 /**
@@ -1226,13 +1226,13 @@ class MauAsmOutput::NextTableSet {
         if (nxt.tables.size() != 1) out << (sep+1) << ']';
         return out; }
     bool isEND() const {
-        return tables.size() == 0 || (tables.size() == 1 && tables.front() == UniqueId("END")); }
+        return tables.size() == 0 || (tables.size() == 1 && tables.front() == UniqueId("END"_cs)); }
 };
 
 MauAsmOutput::NextTableSet MauAsmOutput::next_for(const IR::MAU::Table *tbl, cstring what) const {
     NextTableSet rv = nxt_tbl->next_for(tbl, what);
     if (rv.empty())
-        rv.insert(UniqueId("END"));
+        rv.insert(UniqueId("END"_cs));
     return rv;
 }
 
@@ -1265,7 +1265,7 @@ class MauAsmOutput::EmitAction : public Inspector, public TofinoWriteContext {
             if (act->exitAction)
                 out << "END" << std::endl;
             else
-                out << self.next_for(table, "$miss") << std::endl;
+                out << self.next_for(table, "$miss"_cs) << std::endl;
             if (act->miss_only())
                 return;
         }
@@ -1319,13 +1319,13 @@ class MauAsmOutput::EmitAction : public Inspector, public TofinoWriteContext {
         if (mod_cond_map.empty())
             return;
         out << indent << "- mod_cond_value: {";
-        cstring sep = "";
+        std::string sep = "";
         for (auto entry : mod_cond_map) {
             out << sep << entry.first << ": [ ";
-            cstring sep2 = "";
+            std::string sep2 = "";
             for (int i = 0; i < ActionData::AD_LOCATIONS; i++) {
-                cstring location = i == ActionData::ACTION_DATA_TABLE ? "action_data_table"
-                                                                      : "immediate";
+                cstring location = i == ActionData::ACTION_DATA_TABLE ? "action_data_table"_cs
+                                                                      : "immediate"_cs;
                 for (auto br : bitranges(entry.second.at(i))) {
                     out << sep2 << location << "(" << br.first << ".." << br.second << ")";
                     sep2 = ", ";
@@ -2060,7 +2060,7 @@ bool MauAsmOutput::emit_gateway(std::ostream &out, indent_t gw_indent,
                         if (auto act = tbl->gateway_payload.at(line.second).first) {
                             out << gw_indent << "  action: " << act << std::endl;
                             if (tbl->actions.at(act)->exitAction)
-                                nxt_tbl = UniqueId("END");
+                                nxt_tbl = UniqueId("END"_cs);
                         }
                         out << gw_indent << "  next: " << nxt_tbl << std::endl;
                     } else {
@@ -2079,7 +2079,7 @@ bool MauAsmOutput::emit_gateway(std::ostream &out, indent_t gw_indent,
             } else {
                 if (!tbl->gateway_payload.empty()) {
                    out << gw_indent << "  run_table: true" << std::endl;
-                   gw_miss = nxt_tbl = next_for(tbl, "$miss");
+                   gw_miss = nxt_tbl = next_for(tbl, "$miss"_cs);
                    gw_can_miss = true;
                 } else if (no_match) {
                     out << gw_indent << "  next: " << next_hit << std::endl;
@@ -2092,7 +2092,7 @@ bool MauAsmOutput::emit_gateway(std::ostream &out, indent_t gw_indent,
             }
             bool split_gateway = (line.second == "$gwcont");
             auto cond = (line.second.isNullOrEmpty() || split_gateway) ?
-                "$torf" : line.second;
+                "$torf"_cs : line.second;
             cond_tables[cond] = nxt_tbl;
         }
         if (tbl->gateway_rows.back().first) {
@@ -2104,14 +2104,14 @@ bool MauAsmOutput::emit_gateway(std::ostream &out, indent_t gw_indent,
         if (tbl->gateway_cond) {
             out << gw_indent++ << "condition: " << std::endl;
             out << gw_indent << "expression: \"(" << tbl->gateway_cond << ")\"" << std::endl;
-            if (cond_tables.count("$true"))
-                out << gw_indent << "true: " << cond_tables["$true"] << std::endl;
-            else if (cond_tables.count("$torf"))
-                out << gw_indent << "true: " << cond_tables["$torf"] << std::endl;
-            if (cond_tables.count("$false"))
-                out << gw_indent << "false: " << cond_tables["$false"] << std::endl;
-            else if (cond_tables.count("$torf"))
-                out << gw_indent << "false: " << cond_tables["$torf"] << std::endl; }
+            if (cond_tables.count("$true"_cs))
+                out << gw_indent << "true: " << cond_tables["$true"_cs] << std::endl;
+            else if (cond_tables.count("$torf"_cs))
+                out << gw_indent << "true: " << cond_tables["$torf"_cs] << std::endl;
+            if (cond_tables.count("$false"_cs))
+                out << gw_indent << "false: " << cond_tables["$false"_cs] << std::endl;
+            else if (cond_tables.count("$torf"_cs))
+                out << gw_indent << "false: " << cond_tables["$torf"_cs] << std::endl; }
     } else {
         LOG1("WARNING: Failed to fit gateway expression for " << tbl->name);
     }
@@ -2125,7 +2125,7 @@ bool MauAsmOutput::emit_gateway(std::ostream &out, indent_t gw_indent,
 void MauAsmOutput::emit_no_match_gateway(std::ostream &out, indent_t gw_indent,
         const IR::MAU::Table *tbl) const {
     BUG_CHECK(tbl->actions.size() <= 1, "not an always hit hash_action table");
-    cstring act_name = tbl->actions.empty() ? "" : tbl->actions.begin()->first;
+    cstring act_name = tbl->actions.empty() ? ""_cs : tbl->actions.begin()->first;
     auto nxt_tbl = next_for(tbl, act_name);
     out << gw_indent << "0x0: " << nxt_tbl << std::endl;
     out << gw_indent << "miss: " << nxt_tbl << std::endl;
@@ -2141,7 +2141,7 @@ void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
     if (tbl->match_table) {
         auto p4Name = cstring::to_cstring(canon_name(tbl->match_table->externalName()));
         out << indent << "p4: { name: " << p4Name;
-        if (auto k = tbl->match_table->getConstantProperty("size"))
+        if (auto k = tbl->match_table->getConstantProperty("size"_cs))
             out << ", size: " << k->asInt();
     }
     if (tbl->layout.pre_classifier || tbl->layout.alpm)
@@ -2158,7 +2158,7 @@ void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
     // into the context json for the driver. COMPILER-944
     if (tbl->match_table) {
         bool disable_atomic_modify;
-        tbl->getAnnotation("disable_atomic_modify", disable_atomic_modify);
+        tbl->getAnnotation("disable_atomic_modify"_cs, disable_atomic_modify);
 
         // Similar check in table_placement.cpp -> initial_stage_and_entries()
         if (tbl->layout.alpm && tbl->layout.atcam) {
@@ -2390,8 +2390,8 @@ void MauAsmOutput::emit_atcam_match(std::ostream &out, indent_t indent,
     if (tbl->layout.alpm) {
         out << indent << "subtrees_per_partition: "
             << tbl->layout.subtrees_per_partition << std::endl;
-        auto tbl_entries = tbl->match_table->getConstantProperty("size") ?
-                            tbl->match_table->getConstantProperty("size")->asInt() : 0;
+        auto tbl_entries = tbl->match_table->getConstantProperty("size"_cs) ?
+                            tbl->match_table->getConstantProperty("size"_cs)->asInt() : 0;
         /* table size is optional in p4-14. first check if it comes from p4, otherwise
          * figure it out based on allocation */
         if (tbl_entries == 0) {
@@ -2663,7 +2663,7 @@ void MauAsmOutput::emit_table_hitmap(std::ostream &out, indent_t indent, const I
             nt_sep = ", ";
         }
         out << " ]" << std::endl;
-        out << indent << "miss: " << next_for(tbl, "$miss") << std::endl;
+        out << indent << "miss: " << next_for(tbl, "$miss"_cs) << std::endl;
     }
 }
 
@@ -2747,7 +2747,7 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
                       "and non-exit actions in table %1%", tbl);
             next_hit = next_for(tbl, tbl->get_exit_actions().at(0)->name.originalName);
         } else {
-            next_hit = next_for(tbl, "$hit");
+            next_hit = next_for(tbl, "$hit"_cs);
         }
     }
 
@@ -2800,7 +2800,7 @@ void MauAsmOutput::emit_table(std::ostream &out, const IR::MAU::Table *tbl, int 
                 auto &payload_map = tbl->resources->table_format.payload_map;
                 if (!payload_map.empty()) {
                     out << gw_indent << "payload_map: [";
-                    cstring sep = "";
+                    std::string sep = "";
                     for (int i = 0; i <= FindPayloadCandidates::GATEWAY_ROWS_FOR_ENTRIES; i++) {
                         out << sep;
                         if (payload_map.count(i))
@@ -3235,7 +3235,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Counter *counter) {
         self.emit_memory(out, indent, tbl->resources->memuse.at(unique_id));
     else
         INTERNAL_WARNING("No resource named %s found on table %s", unique_id, tbl->name);
-    cstring count_type;
+    std::string count_type;
     switch (counter->type) {
         case IR::MAU::DataAggregation::PACKETS:
             count_type = "packets"; break;
@@ -3296,7 +3296,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Meter *meter) {
     else
         INTERNAL_WARNING("No resource named %s found on table %s", unique_id, tbl->name);
 
-    cstring imp_type;
+    std::string imp_type;
     if (!meter->implementation.name)
         imp_type = "standard";
     else
@@ -3358,7 +3358,7 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Meter *meter) {
     }
 
 
-    cstring count_type;
+    std::string count_type;
     switch (meter->type) {
         case IR::MAU::DataAggregation::PACKETS:
             count_type = "packets"; break;

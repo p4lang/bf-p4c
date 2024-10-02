@@ -10,7 +10,7 @@ namespace Test {
 
 class ContainerSizeExtractorTest : public TofinoBackendTest, public ContainerSizeExtractor {
  protected:
-    ConstrainedField field = ConstrainedField("dummy");
+    ConstrainedField field = ConstrainedField("dummy"_cs);
     const std::vector<ConstrainedSlice> &slices = field.getSlices();
 };
 

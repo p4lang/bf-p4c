@@ -12,12 +12,12 @@
 
 namespace BFN {
 
-const cstring ParserEnforceDepthReq::pad_hdr_name = "min_parse_depth_padding";
-const cstring ParserEnforceDepthReq::pad_hdr_type_name = "min_parse_depth_padding_t";
-const cstring ParserEnforceDepthReq::pad_hdr_field = "packet_payload";
-const cstring ParserEnforceDepthReq::pad_ctr_name = "min_parse_depth_counter";
-const cstring ParserEnforceDepthReq::pad_state_name = "min_parse_depth";
-const cstring ParserEnforceDepthReq::non_struct_pad_suf = "_padded";
+const cstring ParserEnforceDepthReq::pad_hdr_name = "min_parse_depth_padding"_cs;
+const cstring ParserEnforceDepthReq::pad_hdr_type_name = "min_parse_depth_padding_t"_cs;
+const cstring ParserEnforceDepthReq::pad_hdr_field = "packet_payload"_cs;
+const cstring ParserEnforceDepthReq::pad_ctr_name = "min_parse_depth_counter"_cs;
+const cstring ParserEnforceDepthReq::pad_state_name = "min_parse_depth"_cs;
+const cstring ParserEnforceDepthReq::non_struct_pad_suf = "_padded"_cs;
 
 /**
  * \brief Verify parse depth requirements and identify any "pad" required.
@@ -489,12 +489,12 @@ class AddParserPad : public Modifier {
 
     // Tofino1-like architectures
     std::set<cstring> tofArch = {
-        "tna",
+        "tna"_cs,
 #if HAVE_JBAY
-        "t2na",
+        "t2na"_cs,
 #endif /* HAVE_JBAY */
 #if HAVE_CLOUDBREAK
-        "t3na",
+        "t3na"_cs,
 #endif /* HAVE_CLOUDBREAK */
     };
 
@@ -570,9 +570,10 @@ class AddParserPad : public Modifier {
         // Generate the state names
         for (auto &dst : {IR::ParserState::accept, IR::ParserState::reject}) {
             prsrInitialCheckState[dst] =
-                std::string(ParserEnforceDepthReq::pad_state_name + "_" + dst + "_initial").c_str();
-            prsrCheckLoopState[dst] =
-                std::string(ParserEnforceDepthReq::pad_state_name + "_" + dst + "_loop").c_str();
+                cstring(std::string(ParserEnforceDepthReq::pad_state_name + "_" + dst + "_initial")
+                            .c_str());
+            prsrCheckLoopState[dst] = cstring(
+                std::string(ParserEnforceDepthReq::pad_state_name + "_" + dst + "_loop").c_str());
         }
 
         // Record the names of all parsers requiring padding
@@ -709,7 +710,7 @@ class AddParserPad : public Modifier {
             std::string ctr_name = ParserEnforceDepthReq::pad_ctr_name + "_" +
                                    std::to_string(ctr_id++) + "/" +
                                    ParserEnforceDepthReq::pad_ctr_name;
-            prsrCtrName = ctr_name.c_str();
+            prsrCtrName = cstring(ctr_name.c_str());
             // Different Declaration_Instances based on the ParserCounter extern
             IR::Declaration_Instance *di;
             if (prsrCtrExtern->typeParameters && prsrCtrExtern->typeParameters->size()) {
@@ -727,7 +728,7 @@ class AddParserPad : public Modifier {
             LOG5("Added counter to parser " << prsr->externalName() << ": " << di);
         } else {
             prsrNumPadStates = 0;
-            prsrPadInstName = "";
+            prsrPadInstName = ""_cs;
             prsrHasPadStack = false;
             replacedTPrsr[prsr->name] = nullptr;
         }
@@ -772,7 +773,7 @@ class AddParserPad : public Modifier {
                         if (pipeIdx < di->arguments->size()) {
                             auto *pipe =
                                 di->arguments->at(pipeIdx)->expression->to<IR::PathExpression>();
-                            cstring pipeName = (pipe ? pipe->path->name : "");
+                            cstring pipeName = (pipe ? cstring(pipe->path->name) : ""_cs);
                             if (pipe && pipeReplacements.count(pipeName)) {
                                 if (pipeReplacements.at(pipeName).count(paramIdx)) {
                                     tn->path = hdrNameToNewPath.at(tn->path->name);

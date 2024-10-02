@@ -60,8 +60,8 @@ bool PragmaBytePack::preorder(const IR::BFN::Pipe* pipe) {
         }
 
         if (!PHV::Pragmas::checkNumberArgs(annotation, required_arguments, min_required_arguments,
-                                           false, PragmaBytePack::name,
-                                           "gress, [\"field_name\"|integer]+")) {
+                                           false, cstring(PragmaBytePack::name),
+                                           "gress, [\"field_name\"|integer]+"_cs)) {
             continue;
         }
 
@@ -78,7 +78,7 @@ bool PragmaBytePack::preorder(const IR::BFN::Pipe* pipe) {
         gress_arg->value >> pack.packing.gress;
         for (; expr_index < exprs.size(); ++expr_index) {
             if (const auto* field_ir = exprs[expr_index]->to<IR::StringLiteral>()) {
-                cstring field_name = gress_arg->value + "::" + field_ir->value;
+                cstring field_name = gress_arg->value + "::"_cs + field_ir->value;
                 const auto* field = phv_i.field(field_name);
                 if (!field) {
                     PHV::Pragmas::reportNoMatchingPHV(pipe, field_ir, field_name);

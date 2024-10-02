@@ -62,13 +62,13 @@ class BackendTest : public ::testing::Test {
 /// A GTest fixture for Tofino tests.
 class TofinoBackendTest : public BackendTest {
  public:
-    TofinoBackendTest() { Device::init("Tofino"); }
+    TofinoBackendTest() { Device::init("Tofino"_cs); }
 };
 
 /// A GTest fixture for JBay tests.
 class JBayBackendTest : public BackendTest {
  public:
-    JBayBackendTest() { Device::init("Tofino2"); }
+    JBayBackendTest() { Device::init("Tofino2"_cs); }
 };
 
 }  // namespace Test

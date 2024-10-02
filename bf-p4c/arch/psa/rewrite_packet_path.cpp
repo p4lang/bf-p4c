@@ -34,19 +34,19 @@ struct TranslatePacketPathIfStatement : public Transform {
         if (auto expr = mce->method->to<IR::PathExpression>()) {
             if (auto path = expr->path->to<IR::Path>()) {
                 if (path->name == "psa_resubmit") {
-                    generated_metadata = "__resubmit_data";
+                    generated_metadata = "__resubmit_data"_cs;
                     condition = create_condition(path->name);
                     return condition;
                 } else if (path->name == "psa_clone_i2e") {
-                    generated_metadata = "__clone_i2e_data";
+                    generated_metadata = "__clone_i2e_data"_cs;
                     condition = create_condition(path->name);
                     return condition;
                 } else if (path->name == "psa_clone_e2e") {
-                    generated_metadata = "__clone_e2e_data";
+                    generated_metadata = "__clone_e2e_data"_cs;
                     condition = create_condition(path->name);
                     return condition;
                 } else if (path->name == "psa_recirculate") {
-                    generated_metadata = "__recirculate_data";
+                    generated_metadata = "__recirculate_data"_cs;
                     condition = create_condition(path->name);
                     return condition;
                 }
@@ -71,7 +71,7 @@ struct TranslatePacketPathIfStatement : public Transform {
             auto drop = new IR::LNot(new IR::Member(
                          new IR::PathExpression(COMPILER_META), IR::ID("drop")));
             auto recircPort = new IR::Equ(new IR::Member(new IR::PathExpression(
-                                                  IR::ID("eg_intr_md")), "egress_port"),
+                                                  IR::ID("eg_intr_md")), "egress_port"_cs),
                                                   new IR::Constant(IR::Type::Bits::get(9), 68));
             expr = new IR::LAnd(drop, recircPort);
         }
@@ -99,22 +99,22 @@ struct TranslatePacketPathIfStatement : public Transform {
         }
 
         if (gress == INGRESS) {
-            if (pathname == structure->ingress_deparser.psaParams.at("metadata")) {
-                auto path = new IR::PathExpression(structure->ingress.psaParams.at("metadata"));
+            if (pathname == structure->ingress_deparser.psaParams.at("metadata"_cs)) {
+                auto path = new IR::PathExpression(structure->ingress.psaParams.at("metadata"_cs));
                 auto member = new IR::Member(path, membername);
                 return member;
-            } else if (pathname == structure->ingress_deparser.psaParams.at("hdr")) {
-                auto path = new IR::PathExpression(structure->ingress.psaParams.at("hdr"));
+            } else if (pathname == structure->ingress_deparser.psaParams.at("hdr"_cs)) {
+                auto path = new IR::PathExpression(structure->ingress.psaParams.at("hdr"_cs));
                 auto member = new IR::Member(path, membername);
                 return member;
             }
         } else if (gress == EGRESS) {
-             if (pathname == structure->egress_deparser.psaParams.at("metadata")) {
-                auto path = new IR::PathExpression(structure->egress.psaParams.at("metadata"));
+             if (pathname == structure->egress_deparser.psaParams.at("metadata"_cs)) {
+                auto path = new IR::PathExpression(structure->egress.psaParams.at("metadata"_cs));
                 auto member = new IR::Member(path, membername);
                 return member;
-            } else if (pathname == structure->egress_deparser.psaParams.at("hdr")) {
-                auto path = new IR::PathExpression(structure->egress.psaParams.at("hdr"));
+            } else if (pathname == structure->egress_deparser.psaParams.at("hdr"_cs)) {
+                auto path = new IR::PathExpression(structure->egress.psaParams.at("hdr"_cs));
                 auto member = new IR::Member(path, membername);
                 return member;
             }
@@ -223,7 +223,7 @@ struct PacketPath : public Transform {
     // Add assignment statement to copy packet data to metadata
     void copyToMetadata(IR::ParserState* state, const PacketPathInfo& packetPath,
                         const IR::Member* packetMeta) {
-        auto pathname = structure->egress_parser.psaParams.at("metadata");
+        auto pathname = structure->egress_parser.psaParams.at("metadata"_cs);
         auto path = new IR::PathExpression(pathname);
         for (auto& pf : packetPath.structType->to<IR::Type_StructLike>()->fields) {
             auto leftMember = new IR::Member(path, pf->name);
@@ -241,9 +241,9 @@ struct PacketPath : public Transform {
 
     void addExtract(IR::ParserState* state, const IR::Member* extractMember,
                     const IR::BFN::TnaParser* parser) {
-        auto packetInParam = parser->tnaParams.at("pkt");
+        auto packetInParam = parser->tnaParams.at("pkt"_cs);
         auto *method = new IR::Member(new IR::PathExpression(packetInParam),
-                                      IR::ID("extract"));
+                                      IR::ID("extract"_cs));
         auto *typeArgs = new IR::Vector<IR::Type>({ extractMember->type });
         auto *args = new IR::Vector<IR::Argument>({ new IR::Argument(extractMember) });
         auto *callExpr = new IR::MethodCallExpression(method, typeArgs, args);
@@ -277,7 +277,7 @@ struct PacketPath : public Transform {
         BUG_CHECK(tnaContext, "Parser state %1% not within translated parser?",
                   state->name);
         if (tnaContext->thread != INGRESS) return;
-        auto intMeta = tnaContext->tnaParams.at("ig_intr_md");
+        auto intMeta = tnaContext->tnaParams.at("ig_intr_md"_cs);
         auto member = new IR::Member(new IR::PathExpression(intMeta),
                                          IR::ID("ingress_port"));
         auto selectCases = new IR::Vector<IR::SelectCase>();
@@ -305,7 +305,7 @@ struct PacketPath : public Transform {
         state->components.clear();
 
         auto cgMeta = tnaContext->tnaParams.at(BFN::COMPILER_META);
-        auto packetInParam = tnaContext->tnaParams.at("pkt");
+        auto packetInParam = tnaContext->tnaParams.at("pkt"_cs);
         auto *member = new IR::Member(structure->resubmit.p4Type,
                                       new IR::PathExpression(cgMeta),
                                       IR::ID("__resubmit_data"));
@@ -337,7 +337,7 @@ struct PacketPath : public Transform {
 
     void updateMirrorState(IR::ParserState* state) {
         auto *tnaContext = findContext<IR::BFN::TnaParser>();
-        auto packetInParam = tnaContext->tnaParams.at("pkt");
+        auto packetInParam = tnaContext->tnaParams.at("pkt"_cs);
         if (!structure->clone_i2e.exists && !structure->clone_e2e.exists) {
             auto *method = new IR::Member(new IR::PathExpression(packetInParam),
                                       IR::ID("advance"));
@@ -373,7 +373,7 @@ struct PacketPath : public Transform {
 
     void skip_to_packet(IR::ParserState* state, const IR::BFN::TnaParser* parser) {
         auto statements = new IR::IndexedVector<IR::StatOrDecl>();
-        auto packetInParam = parser->tnaParams.at("pkt");
+        auto packetInParam = parser->tnaParams.at("pkt"_cs);
         auto select = new IR::PathExpression("__skip_to_packet");
         state->selectExpression = select;
         auto method = new IR::Member(new IR::PathExpression(packetInParam),
@@ -421,7 +421,7 @@ struct PacketPath : public Transform {
     }
 
     IR::ParserState* create_mirror_state(IR::BFN::TnaParser* tnaContext, gress_t gress) {
-        cstring gress_str = gress ? "egress" : "ingress";
+        cstring gress_str = gress ? "egress"_cs : "ingress"_cs;
         auto statements = new IR::IndexedVector<IR::StatOrDecl>();
         auto cgMeta = tnaContext->tnaParams.at(BFN::COMPILER_META);
         auto *member = new IR::Member(
@@ -468,7 +468,7 @@ struct PacketPath : public Transform {
     // egress deparser.
     IR::BFN::TnaDeparser*
     deparseRecirculate(IR::BFN::TnaDeparser* control) {
-        auto packetOutParam = control->tnaParams.at("pkt");
+        auto packetOutParam = control->tnaParams.at("pkt"_cs);
         auto* method = new IR::Member(new IR::PathExpression(packetOutParam),
                                       IR::ID("emit"));
 
@@ -508,7 +508,7 @@ struct PacketPath : public Transform {
         auto typeArgs = new IR::Vector<IR::Type>({structure->resubmit.p4Type});
         auto* callExpr = new IR::MethodCallExpression(method, typeArgs, args);
         // Add if(resubmit_type == 0) to emit
-        auto ig_dprsr = control->tnaParams.at("ig_intr_md_for_dprsr");
+        auto ig_dprsr = control->tnaParams.at("ig_intr_md_for_dprsr"_cs);
         IR::IndexedVector<IR::StatOrDecl> components;
         components.push_back(new IR::MethodCallStatement(callExpr));
         auto resubmit = new IR::Member(new IR::PathExpression(ig_dprsr), "resubmit_type");
@@ -550,8 +550,8 @@ struct PacketPath : public Transform {
         typeArgs->push_back(cloneMetaType);
         auto* callExpr = new IR::MethodCallExpression(method, typeArgs, args);
         // Add if(mirror_type == 0) to emit
-        auto ig_dprsr = control->tnaParams.at(control->thread ? "eg_intr_md_for_dprsr"
-                                              : "ig_intr_md_for_dprsr");
+        auto ig_dprsr = control->tnaParams.at(control->thread ? "eg_intr_md_for_dprsr"_cs
+                                              : "ig_intr_md_for_dprsr"_cs);
         IR::IndexedVector<IR::StatOrDecl> components;
         components.push_back(new IR::MethodCallStatement(callExpr));
         auto mirror  = new IR::Member(new IR::PathExpression(ig_dprsr), "mirror_type");
@@ -589,9 +589,9 @@ struct MoveAssignment : public Transform {
         auto* compilerCloneHeader = new IR::Member(
                 clone == "clone_i2e" ? structure->clone_i2e.p4Type : structure->clone_e2e.p4Type,
                 new IR::PathExpression(compilerMeta),
-                IR::ID(clone == "clone_i2e" ? "__clone_i2e_data" : "__clone_e2e_data"));
-        auto intr_dprsr = control->tnaParams.at(clone == "clone_i2e" ? "ig_intr_md_for_dprsr" :
-                                                "eg_intr_md_for_dprsr");
+                IR::ID(clone == "clone_i2e" ? "__clone_i2e_data"_cs : "__clone_e2e_data"_cs));
+        auto intr_dprsr = control->tnaParams.at(clone == "clone_i2e" ? "ig_intr_md_for_dprsr"_cs :
+                                                "eg_intr_md_for_dprsr"_cs);
         auto mirrorType = new IR::Member(new IR::PathExpression(intr_dprsr),
                                            IR::ID("mirror_type"));
         IR::IndexedVector<IR::StatOrDecl> components;
@@ -608,7 +608,7 @@ struct MoveAssignment : public Transform {
                 components.push_back(ifStmt->to<IR::IfStatement>()->ifTrue);
             }
             auto block = new IR::BlockStatement(components);
-            newifStmt = new IR::IfStatement(cvt_clone_i2e.create_condition("psa_clone_i2e"),
+            newifStmt = new IR::IfStatement(cvt_clone_i2e.create_condition("psa_clone_i2e"_cs),
                                              block, nullptr);
         } else {
             TranslatePacketPathIfStatement cvt_clone_e2e(structure->clone_e2e, structure, EGRESS);
@@ -617,7 +617,7 @@ struct MoveAssignment : public Transform {
                 components.push_back(ifStmt->to<IR::IfStatement>()->ifTrue);
             }
             auto block = new IR::BlockStatement(components);
-            newifStmt = new IR::IfStatement(cvt_clone_e2e.create_condition("psa_clone_e2e"),
+            newifStmt = new IR::IfStatement(cvt_clone_e2e.create_condition("psa_clone_e2e"_cs),
                                              block, nullptr);
         }
         auto* body = control->body->clone();
@@ -649,7 +649,7 @@ struct MoveAssignment : public Transform {
             control->body = body;
         } else if (control->thread == INGRESS && structure->resubmit.exists) {
             IR::IndexedVector<IR::StatOrDecl> components;
-            auto ig_dprsr = control->tnaParams.at("ig_intr_md_for_dprsr");
+            auto ig_dprsr = control->tnaParams.at("ig_intr_md_for_dprsr"_cs);
             auto resubmitType = new IR::Member(new IR::PathExpression(ig_dprsr),
                                                IR::ID("resubmit_type"));
             components.push_back(new IR::AssignmentStatement(resubmitType,
@@ -663,15 +663,15 @@ struct MoveAssignment : public Transform {
                 components.push_back(ifStmt->to<IR::IfStatement>()->ifTrue);
             }
             auto block = new IR::BlockStatement(components);
-            auto newifStmt = new IR::IfStatement(cvt_resubmit.create_condition("psa_resubmit"),
+            auto newifStmt = new IR::IfStatement(cvt_resubmit.create_condition("psa_resubmit"_cs),
                                                  block, nullptr);
             auto* body = control->body->clone();
             body->components.push_back(newifStmt);
             control->body = body;
         } else if (control->thread == EGRESS && structure->clone_e2e.exists) {
-            add_clone_data("clone_e2e", cgMetadataParam, control);
+            add_clone_data("clone_e2e"_cs, cgMetadataParam, control);
         } else if (control->thread == INGRESS && structure->clone_i2e.exists) {
-            add_clone_data("clone_i2e", cgMetadataParam, control);
+            add_clone_data("clone_i2e"_cs, cgMetadataParam, control);
         }
         return control;
     }

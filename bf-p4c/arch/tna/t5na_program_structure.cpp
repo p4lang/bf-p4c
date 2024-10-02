@@ -23,7 +23,7 @@
 
 namespace BFN {
 
-const cstring T5naProgramStructure::EXTRA_METADATA_STRING = "_extra_bridged_metadata";
+const cstring T5naProgramStructure::EXTRA_METADATA_STRING = "_extra_bridged_metadata"_cs;
 
 const IR::Type_Name* getTypeFromParam(const IR::Parameter* param) {
     return param->type->to<IR::Type_Name>();

@@ -85,7 +85,7 @@ class DropPacketWithMirrorEngine : public PassManager {
                 new DropPacketWithMirrorEngine_(),
                 new P4::ClearTypeMap(typeMap),
                 new P4::ResolveReferences(refMap),
-                new BFN::TypeInference(refMap, typeMap, false), /* extended P4::TypeInference */
+                new BFN::TypeInference(typeMap, false), /* extended P4::TypeInference */
                 new P4::ApplyTypesToExpressions(typeMap),
                 new P4::ResolveReferences(refMap) })
         });

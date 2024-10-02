@@ -75,7 +75,7 @@ static void split_shl_instruction(IR::Vector<IR::MAU::Primitive> *split,
         if (shift_val > slice.hi) {
             const IR::Expression* zero = new IR::Constant(
                                             IR::Type_Bits::get(alloc_slice.width()), 0);
-            auto* prim = new IR::MAU::Instruction("set", { slice_expr, zero });
+            auto* prim = new IR::MAU::Instruction("set"_cs, { slice_expr, zero });
             split->push_back(prim);
         // Shifting with a value equal to a container boundary result in a set instruction with
         // shifted slices. e.g.:
@@ -93,7 +93,7 @@ static void split_shl_instruction(IR::Vector<IR::MAU::Primitive> *split,
             le_bitrange src_range = slices_q.front();
             slices_q.pop();
             const IR::Expression* slice_src = new IR::Slice(src_expr, src_range.hi, src_range.lo);
-            auto* prim = new IR::MAU::Instruction("set", { slice_expr, slice_src });
+            auto* prim = new IR::MAU::Instruction("set"_cs, { slice_expr, slice_src });
             split->push_back(prim);
         // First container to be shifted normally. e.g.:
         // bit<64> tmp0 = 0;
@@ -113,7 +113,7 @@ static void split_shl_instruction(IR::Vector<IR::MAU::Primitive> *split,
             const IR::Expression* shift_adj = new IR::Constant(shift_val % container_size);
             le_bitrange src_range = slices_q.front();
             const IR::Expression* slice_src = new IR::Slice(src_expr, src_range.hi, src_range.lo);
-            auto* prim = new IR::MAU::Instruction("shl", { slice_expr, slice_src, shift_adj });
+            auto* prim = new IR::MAU::Instruction("shl"_cs, { slice_expr, slice_src, shift_adj });
             split->push_back(prim);
         // Following container to be shifted normally. e.g.:
         // bit<64> tmp0 = 0;
@@ -139,7 +139,7 @@ static void split_shl_instruction(IR::Vector<IR::MAU::Primitive> *split,
                                                              src_range_hi.lo);
             const IR::Expression* slice_src1 = new IR::Slice(src_expr, src_range_lo.hi,
                                                              src_range_lo.lo);
-            auto* prim = new IR::MAU::Instruction("funnel-shift",
+            auto* prim = new IR::MAU::Instruction("funnel-shift"_cs,
                                                 { slice_expr, slice_src2, slice_src1, shift_adj });
             split->push_back(prim);
         }
@@ -221,12 +221,13 @@ static void split_shr_instruction(IR::Vector<IR::MAU::Primitive> *split,
                 le_bitrange src_range = slices_q.front();
                 const IR::Expression* slice_src = new IR::Slice(src_expr, src_range.hi,
                                                                 src_range.lo);
-                auto* prim = new IR::MAU::Instruction("shrs", { slice_expr, slice_src, shift_adj });
+                auto *prim =
+                    new IR::MAU::Instruction("shrs"_cs, {slice_expr, slice_src, shift_adj});
                 split->push_back(prim);
             } else {
                 const IR::Expression *zero = new IR::Constant(
                                                 IR::Type_Bits::get(alloc_slice.width()), 0);
-                auto* prim = new IR::MAU::Instruction("set", { slice_expr, zero });
+                auto* prim = new IR::MAU::Instruction("set"_cs, { slice_expr, zero });
                 split->push_back(prim);
             }
         // Shifting with a value equal to a container boundary result in a set instruction with
@@ -245,7 +246,7 @@ static void split_shr_instruction(IR::Vector<IR::MAU::Primitive> *split,
             le_bitrange src_range = slices_q.front();
             slices_q.pop();
             const IR::Expression* slice_src = new IR::Slice(src_expr, src_range.hi, src_range.lo);
-            auto* prim = new IR::MAU::Instruction("set", { slice_expr, slice_src });
+            auto* prim = new IR::MAU::Instruction("set"_cs, { slice_expr, slice_src });
             split->push_back(prim);
         // First container to be shifted normally. e.g.:
         // bit<64> tmp0 = 0;
@@ -265,7 +266,7 @@ static void split_shr_instruction(IR::Vector<IR::MAU::Primitive> *split,
             const IR::Expression* shift_adj = new IR::Constant(shift_val % container_size);
             le_bitrange src_range = slices_q.front();
             const IR::Expression* slice_src = new IR::Slice(src_expr, src_range.hi, src_range.lo);
-            auto* prim = new IR::MAU::Instruction(signed_opcode ? "shrs" : "shru",
+            auto* prim = new IR::MAU::Instruction(signed_opcode ? "shrs"_cs : "shru"_cs,
                                                   { slice_expr, slice_src, shift_adj });
             split->push_back(prim);
         // Following container to be shifted normally. e.g.:
@@ -291,7 +292,7 @@ static void split_shr_instruction(IR::Vector<IR::MAU::Primitive> *split,
                                                              src_range_hi.lo);
             const IR::Expression* slice_src1 = new IR::Slice(src_expr, src_range_lo.hi,
                                                              src_range_lo.lo);
-            auto* prim = new IR::MAU::Instruction("funnel-shift",
+            auto* prim = new IR::MAU::Instruction("funnel-shift"_cs,
                                                 { slice_expr, slice_src2, slice_src1, shift_adj });
             split->push_back(prim);
         }
@@ -393,7 +394,7 @@ const IR::Node *AdjustShiftInstructions::preorder(IR::MAU::Instruction *inst) {
     if ((offset % dst_cont_size) == 0 && (offset < src_field->size)) {
         const IR::Expression *new_src_expr = new IR::Slice(src_slice->e0,
                                                            offset + dst_cont_size - 1, offset);
-        adjust = new IR::MAU::Instruction("set", { dest_expr, new_src_expr });
+        adjust = new IR::MAU::Instruction("set"_cs, { dest_expr, new_src_expr });
 
     // Translating instruction:shrs(ingress::my_header.a[7:0], ingress::my_md.a[7:0], 25);
     // ******|-->  instruction:shrs(ingress::my_header.a[7:0], ingress::my_md.a[31:24], 1);
@@ -405,7 +406,7 @@ const IR::Node *AdjustShiftInstructions::preorder(IR::MAU::Instruction *inst) {
         const IR::Expression* shift_adj = new IR::Constant(shift_val);
         const IR::Expression *new_src_expr = new IR::Slice(src_slice->e0, src_field->size - 1,
                                                            src_field->size - dst_cont_size);
-        adjust = new IR::MAU::Instruction("shrs", { dest_expr, new_src_expr, shift_adj });
+        adjust = new IR::MAU::Instruction("shrs"_cs, { dest_expr, new_src_expr, shift_adj });
 
     // Translating instruction:shrs(ingress::my_header.a[7:0], ingress::my_md.a[7:0], 9);
     // ******|-->  instruction:funnel-shift(ingress::my_header.a[7:0], ingress::my_md.a[23:16],
@@ -419,7 +420,7 @@ const IR::Node *AdjustShiftInstructions::preorder(IR::MAU::Instruction *inst) {
         const IR::Expression* slice_src1 = new IR::Slice(src_slice->e0, high_bit, low_bit);
         const IR::Expression* slice_src2 = new IR::Slice(src_slice->e0, high_bit + dst_cont_size,
                                                          low_bit + dst_cont_size);
-        adjust = new IR::MAU::Instruction("funnel-shift",
+        adjust = new IR::MAU::Instruction("funnel-shift"_cs,
                                           { dest_expr, slice_src2, slice_src1, shift_adj });
     }
 
@@ -1072,7 +1073,7 @@ const IR::Expression *MergeInstructions::fill_out_rand_operand(PHV::Container co
     int unit = tbl->resources->rng_unit();
     auto *rn = new IR::MAU::RandomNumber(tbl->srcInfo,
                                           IR::Type::Bits::get(ActionData::Format::IMMEDIATE_BITS),
-                                          "hw_rng");
+                                          "hw_rng"_cs);
     rn->rng_unit = unit;
 
     int wrapped_lo = 0;  int wrapped_hi = 0;
@@ -1402,11 +1403,11 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
 
     cstring instr_name = cont_action.name;
     if (cont_action.convert_instr_to_bitmasked_set)
-        instr_name = "bitmasked-set";
+        instr_name = "bitmasked-set"_cs;
     else if (cont_action.convert_instr_to_deposit_field)
-        instr_name = "deposit-field";
+        instr_name = "deposit-field"_cs;
     else if (cont_action.convert_instr_to_byte_rotate_merge)
-        instr_name = "byte-rotate-merge";
+        instr_name = "byte-rotate-merge"_cs;
 
     IR::MAU::Instruction *merged_instr = new IR::MAU::Instruction(instr_name);
     merged_instr->operands.push_back(dst);
@@ -1610,7 +1611,7 @@ const IR::Expression *AdjustStatefulInstructions::preorder(IR::Expression *expr)
     auto *salu_ixbar = dynamic_cast<const Tofino::IXBar::Use *>(tbl->resources->salu_ixbar.get());
     bool is_hi = false;
     const IR::Expression *pos_expr;
-    cstring name = "";
+    cstring name = ""_cs;
     if (auto *neg = expr->to<IR::Neg>()) {
         pos_expr = neg->expr;
         name += "-phv";
@@ -1684,7 +1685,7 @@ class RewriteReductionOr : public MauModifier {
     bool preorder(IR::MAU::Instruction *inst) {
         if (reduction_or.count(getOriginal<IR::MAU::Instruction>())) {
             BUG_CHECK(inst->name == "or" && inst->operands.size() == 3, "not an or: %s", inst);
-            inst->name = "set";
+            inst->name = "set"_cs;
             auto op2 = inst->operands.at(2);
             if (!ignoreSlice(op2)->to<IR::MAU::AttachedOutput>()) op2 = nullptr;
             inst->operands.resize(2);

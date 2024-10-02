@@ -58,7 +58,7 @@ const IR::Node* DisableAutoInitMetadata::preorder(IR::BFN::Pipe* pipe) {
         if (field->is_intrinsic()) {
             bool found = false;
             for (auto f_name : init_by_arch_fields) {
-                if (field->name.endsWith(f_name)) {
+                if (field->name.endsWith(f_name.string())) {
                     found = true;
                     break;
                 }

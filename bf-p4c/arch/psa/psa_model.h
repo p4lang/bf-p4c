@@ -10,11 +10,11 @@ namespace PSA {
 
 // The following should be kept in sync with tna.p4
 struct PacketPathType_Model : public ::Model::Enum_Model {
-    PacketPathType_Model() : ::Model::Enum_Model("PSA_PacketPath_t"),
-    normal("NORMAL"), normal_unicast("NORMAL_UNICAST"),
-    normal_multicast("NORMAL_MULTICAST"),
-    clone_i2e("CLONE_I2E"), clone_e2e("CLONE_E2E"), resubmit("RESUBMIT"),
-    recirculate("RECIRCULATE") { }
+    PacketPathType_Model() : ::Model::Enum_Model("PSA_PacketPath_t"_cs),
+    normal("NORMAL"_cs), normal_unicast("NORMAL_UNICAST"_cs),
+    normal_multicast("NORMAL_MULTICAST"_cs),
+    clone_i2e("CLONE_I2E"_cs), clone_e2e("CLONE_E2E"_cs), resubmit("RESUBMIT"_cs),
+    recirculate("RECIRCULATE"_cs) { }
     ::Model::Elem normal;
     ::Model::Elem normal_unicast;
     ::Model::Elem normal_multicast;
@@ -25,36 +25,36 @@ struct PacketPathType_Model : public ::Model::Enum_Model {
 };
 
 struct MeterType_Model : public ::Model::Enum_Model {
-    MeterType_Model() : ::Model::Enum_Model("PSA_MeterType_t"),
-                        packets("PACKETS"), bytes("PACKETS") {}
+    MeterType_Model() : ::Model::Enum_Model("PSA_MeterType_t"_cs),
+                        packets("PACKETS"_cs), bytes("PACKETS"_cs) {}
     ::Model::Elem packets;
     ::Model::Elem bytes;
 };
 
 struct MeterColor_Model : public ::Model::Enum_Model {
-    MeterColor_Model() : ::Model::Enum_Model("PSA_MeterColor_t"),
-                        green("GREEN"), yellow("YELLOW"), red("RED") {}
+    MeterColor_Model() : ::Model::Enum_Model("PSA_MeterColor_t"_cs),
+                        green("GREEN"_cs), yellow("YELLOW"_cs), red("RED"_cs) {}
     ::Model::Elem green;
     ::Model::Elem yellow;
     ::Model::Elem red;
 };
 
 struct CounterType_Model : public ::Model::Enum_Model {
-    CounterType_Model() : ::Model::Enum_Model("PSA_CounterType_t"),
-                          packets("PACKETS"), bytes("BYTES"),
-                          both("PACKETS_AND_BYTES") {}
+    CounterType_Model() : ::Model::Enum_Model("PSA_CounterType_t"_cs),
+                          packets("PACKETS"_cs), bytes("BYTES"_cs),
+                          both("PACKETS_AND_BYTES"_cs) {}
     ::Model::Elem packets;
     ::Model::Elem bytes;
     ::Model::Elem both;
 };
 
 struct HashAlgorithmType_Model : public ::Model::Enum_Model {
-    HashAlgorithmType_Model() : ::Model::Enum_Model("PSA_HashAlgorithm_t"),
-                                identify("IDENTITY"),
-                                crc16("CRC16"), crc16_custom("CRC16_CUSTOM"),
-                                crc32("CRC32"), crc32_custom("CRC32_CUSTOM"),
-                                ones_complement16("ONES_COMPLEMENT16"),
-                                target_default("TARGET_DEFAULT") { }
+    HashAlgorithmType_Model() : ::Model::Enum_Model("PSA_HashAlgorithm_t"_cs),
+                                identify("IDENTITY"_cs),
+                                crc16("CRC16"_cs), crc16_custom("CRC16_CUSTOM"_cs),
+                                crc32("CRC32"_cs), crc32_custom("CRC32_CUSTOM"_cs),
+                                ones_complement16("ONES_COMPLEMENT16"_cs),
+                                target_default("TARGET_DEFAULT"_cs) { }
     ::Model::Elem identify;
     ::Model::Elem crc16;
     ::Model::Elem crc16_custom;
@@ -66,28 +66,28 @@ struct HashAlgorithmType_Model : public ::Model::Enum_Model {
 
 struct IngressParserInputMetaType_Model : public ::Model::Type_Model {
     IngressParserInputMetaType_Model() :
-        ::Model::Type_Model("psa_ingress_parser_input_metadata_t"),
-        ingress_port("ingress_port"),
-        packet_path("packet_path") {}
+        ::Model::Type_Model("psa_ingress_parser_input_metadata_t"_cs),
+        ingress_port("ingress_port"_cs),
+        packet_path("packet_path"_cs) {}
     ::Model::Elem ingress_port;
     ::Model::Elem packet_path;
 };
 
 struct EgressParserInputMetaType_Model : public ::Model::Type_Model {
     EgressParserInputMetaType_Model() :
-        ::Model::Type_Model("psa_egress_parser_input_metadata_t"),
-        egress_port("egress_port"),
-        packet_path("packet_path") {}
+        ::Model::Type_Model("psa_egress_parser_input_metadata_t"_cs),
+        egress_port("egress_port"_cs),
+        packet_path("packet_path"_cs) {}
     ::Model::Elem egress_port;
     ::Model::Elem packet_path;
 };
 
 struct IngressInputMetaType_Model : public ::Model::Type_Model {
     IngressInputMetaType_Model() :
-        ::Model::Type_Model("psa_ingress_input_metadata_t"),
-        ingress_port("ingress_port"),
-        packet_path("packet_path"), ingress_timestamp("ingress_timestamp"),
-        parser_error("parser_error") {}
+        ::Model::Type_Model("psa_ingress_input_metadata_t"_cs),
+        ingress_port("ingress_port"_cs),
+        packet_path("packet_path"_cs), ingress_timestamp("ingress_timestamp"_cs),
+        parser_error("parser_error"_cs) {}
     ::Model::Elem ingress_port;
     ::Model::Elem packet_path;
     ::Model::Elem ingress_timestamp;
@@ -96,11 +96,11 @@ struct IngressInputMetaType_Model : public ::Model::Type_Model {
 
 struct IngressOutputMetaType_Model : public ::Model::Type_Model {
     IngressOutputMetaType_Model() :
-        ::Model::Type_Model("psa_ingress_output_metadata_t"),
-        class_of_service("class_of_service"),
-        clone("clone"), clone_session_id("clone_session_id"),
-        drop("drop"), resubmit("resubmit"),
-        multicast_group("multicast_group"), egress_port("egress_port") { }
+        ::Model::Type_Model("psa_ingress_output_metadata_t"_cs),
+        class_of_service("class_of_service"_cs),
+        clone("clone"_cs), clone_session_id("clone_session_id"_cs),
+        drop("drop"_cs), resubmit("resubmit"_cs),
+        multicast_group("multicast_group"_cs), egress_port("egress_port"_cs) { }
     ::Model::Elem class_of_service;
     ::Model::Elem clone;
     ::Model::Elem clone_session_id;
@@ -112,11 +112,11 @@ struct IngressOutputMetaType_Model : public ::Model::Type_Model {
 
 struct EgressInputMetaType_Model : public ::Model::Type_Model {
     EgressInputMetaType_Model() :
-        ::Model::Type_Model("psa_egress_input_metadata_t"),
-        class_of_service("class_of_service"),
-        egress_port("egress_port"), packet_path("packet_path"),
-        instance("instance"), egress_timestamp("egress_timestamp"),
-        parser_error("parser_error") { }
+        ::Model::Type_Model("psa_egress_input_metadata_t"_cs),
+        class_of_service("class_of_service"_cs),
+        egress_port("egress_port"_cs), packet_path("packet_path"_cs),
+        instance("instance"_cs), egress_timestamp("egress_timestamp"_cs),
+        parser_error("parser_error"_cs) { }
     ::Model::Elem class_of_service;
     ::Model::Elem egress_port;
     ::Model::Elem packet_path;
@@ -127,15 +127,15 @@ struct EgressInputMetaType_Model : public ::Model::Type_Model {
 
 struct EgressDeparserInputMetaType_Model : public ::Model::Type_Model {
     EgressDeparserInputMetaType_Model() :
-        ::Model::Type_Model("psa_egress_deparser_input_metadata_t"),
-        egress_port("egress_port") { }
+        ::Model::Type_Model("psa_egress_deparser_input_metadata_t"_cs),
+        egress_port("egress_port"_cs) { }
     ::Model::Elem egress_port;
 };
 
 struct EgressOutputMetaType_Model : public ::Model::Type_Model {
     EgressOutputMetaType_Model() :
-        ::Model::Type_Model("psa_egress_output_metadata_t"),
-        clone("clone"), clone_session_id("clone_session_id"), drop("drop") { }
+        ::Model::Type_Model("psa_egress_output_metadata_t"_cs),
+        clone("clone"_cs), clone_session_id("clone_session_id"_cs), drop("drop"_cs) { }
     ::Model::Elem clone;
     ::Model::Elem clone_session_id;
     ::Model::Elem drop;
@@ -143,10 +143,10 @@ struct EgressOutputMetaType_Model : public ::Model::Type_Model {
 
 struct CompilerGeneratedMetaType_Model : public ::Model::Type_Model {
      explicit CompilerGeneratedMetaType_Model(cstring name) :
-        ::Model::Type_Model("compiler_generated_metadata_t"),
+        ::Model::Type_Model("compiler_generated_metadata_t"_cs),
         instance_name(name),
-        mirror_id("mirror_id"), mirror_source("mirror_source"),
-        clone_src("clone_src"), clone_digest_id("clone_digest_id") { }
+        mirror_id("mirror_id"_cs), mirror_source("mirror_source"_cs),
+        clone_src("clone_src"_cs), clone_digest_id("clone_digest_id"_cs) { }
     ::Model::Elem instance_name;
     ::Model::Elem mirror_id;
     ::Model::Elem mirror_source;
@@ -155,9 +155,9 @@ struct CompilerGeneratedMetaType_Model : public ::Model::Type_Model {
 };
 
 struct Checksum_Model : public ::Model::Extern_Model {
-    Checksum_Model() : Extern_Model("Checksum"),
-                       clear("clear"), update("update"),
-                       get("get") { }
+    Checksum_Model() : Extern_Model("Checksum"_cs),
+                       clear("clear"_cs), update("update"_cs),
+                       get("get"_cs) { }
     HashAlgorithmType_Model algorithm;
     ::Model::Elem clear;
     ::Model::Elem update;
@@ -165,10 +165,10 @@ struct Checksum_Model : public ::Model::Extern_Model {
 };
 
 struct InternetChecksum_Model : public ::Model::Extern_Model {
-    InternetChecksum_Model() : Extern_Model("InternetChecksum"),
-                               clear("clear"), add("add"),
-                               subtract("subtract"), get("get"),
-                               get_state("get_state"), set_state("set_state") { }
+    InternetChecksum_Model() : Extern_Model("InternetChecksum"_cs),
+                               clear("clear"_cs), add("add"_cs),
+                               subtract("subtract"_cs), get("get"_cs),
+                               get_state("get_state"_cs), set_state("set_state"_cs) { }
     HashAlgorithmType_Model algorithm;
     ::Model::Elem clear;
     ::Model::Elem add;
@@ -180,8 +180,8 @@ struct InternetChecksum_Model : public ::Model::Extern_Model {
 
 struct Hash_Model : public ::Model::Extern_Model {
     Hash_Model() :
-        Extern_Model("Hash"), get("get"),
-        get_with_base("get") { }
+        Extern_Model("Hash"_cs), get("get"_cs),
+        get_with_base("get"_cs) { }
     HashAlgorithmType_Model algorithm;
     ::Model::Elem get;
     ::Model::Elem get_with_base;
@@ -189,43 +189,43 @@ struct Hash_Model : public ::Model::Extern_Model {
 
 struct Random_Model : public ::Model::Extern_Model {
     Random_Model() :
-        Extern_Model("Random"), get("get") {}
+        Extern_Model("Random"_cs), get("get"_cs) {}
     ::Model::Elem get;
 };
 
 struct Counter_Model : public ::Model::Extern_Model {
     Counter_Model() :
-        Extern_Model("Counter"), counterType(), count("count") {}
+        Extern_Model("Counter"_cs), counterType(), count("count"_cs) {}
     CounterType_Model counterType;
     ::Model::Elem count;
 };
 
 struct DirectCounter_Model : public ::Model::Extern_Model {
     DirectCounter_Model() :
-        Extern_Model("DirectCounter"), counterType(), count("count") {}
+        Extern_Model("DirectCounter"_cs), counterType(), count("count"_cs) {}
     CounterType_Model counterType;
     ::Model::Elem count;
 };
 
 struct Meter_Model : public ::Model::Extern_Model {
     Meter_Model() :
-        Extern_Model("Meter"), meterType(), execute("execute") {}
+        Extern_Model("Meter"_cs), meterType(), execute("execute"_cs) {}
     MeterType_Model meterType;
     ::Model::Elem execute;
 };
 
 struct DirectMeter_Model : public ::Model::Extern_Model {
     DirectMeter_Model() :
-        Extern_Model("DirectMeter"), meterType(), execute("execute") {}
+        Extern_Model("DirectMeter"_cs), meterType(), execute("execute"_cs) {}
     MeterType_Model meterType;
     ::Model::Elem execute;
 };
 
 struct Register_Model : public ::Model::Extern_Model {
     Register_Model() :
-        Extern_Model("Register"),
-        sizeParam("size"), size_type(IR::Type_Bits::get(32)),
-        read("read"), write("write") { }
+        Extern_Model("Register"_cs),
+        sizeParam("size"_cs), size_type(IR::Type_Bits::get(32)),
+        read("read"_cs), write("write"_cs) { }
     ::Model::Elem sizeParam;
     const IR::Type* size_type;
     ::Model::Elem read;
@@ -233,18 +233,18 @@ struct Register_Model : public ::Model::Extern_Model {
 };
 
 struct ActionProfile_Model : public ::Model::Extern_Model {
-    ActionProfile_Model() : Extern_Model("ActionProfile"),
-                            sizeType(IR::Type_Bits::get(32)), sizeParam("size") {}
+    ActionProfile_Model() : Extern_Model("ActionProfile"_cs),
+                            sizeType(IR::Type_Bits::get(32)), sizeParam("size"_cs) {}
     const IR::Type* sizeType;
     ::Model::Elem sizeParam;
 };
 
 struct ActionSelector_Model : public ::Model::Extern_Model {
-    ActionSelector_Model() : Extern_Model("ActionSelector"),
+    ActionSelector_Model() : Extern_Model("ActionSelector"_cs),
                              hashType(),
-                             sizeType(IR::Type_Bits::get(32)), sizeParam("size"),
+                             sizeType(IR::Type_Bits::get(32)), sizeParam("size"_cs),
                              outputWidthType(IR::Type_Bits::get(32)),
-                             outputWidthParam("outputWidth") { }
+                             outputWidthParam("outputWidth"_cs) { }
     HashAlgorithmType_Model hashType;
     const IR::Type* sizeType;
     ::Model::Elem sizeParam;
@@ -253,15 +253,15 @@ struct ActionSelector_Model : public ::Model::Extern_Model {
 };
 
 struct Digest_Model: public ::Model::Extern_Model {
-    Digest_Model() : Extern_Model("Digest"), pack("pack") { }
+    Digest_Model() : Extern_Model("Digest"_cs), pack("pack"_cs) { }
     ::Model::Elem pack;
 };
 
 struct TableAttributes_Model {
-    TableAttributes_Model() : tableImplementation("implementation"),
-                              counters("counters"),
-                              meters("meters"), size("size"),
-                              supportTimeout("support_timeout") {}
+    TableAttributes_Model() : tableImplementation("implementation"_cs),
+                              counters("counters"_cs),
+                              meters("meters"_cs), size("size"_cs),
+                              supportTimeout("support_timeout"_cs) {}
     ::Model::Elem       tableImplementation;
     ::Model::Elem       counters;
     ::Model::Elem       meters;
@@ -274,13 +274,13 @@ struct IngressParserModel : public ::Model::Elem {
     IngressParserModel(Model::Type_Model headersType, Model::Type_Model userMetaType,
                        Model::Type_Model istdType, Model::Type_Model resubmitMetaType,
                        Model::Type_Model recircMetaType) :
-        Model::Elem("IngressParser"),
-        packetParam("buffer", P4::P4CoreLibrary::instance().packetIn, 0),
-        headersParam("parsed_hdr", headersType, 1),
-        metadataParam("user_meta", userMetaType, 2),
-        istdParam("istd", istdType, 3),
-        resubmitParam("resubmit_meta", resubmitMetaType, 4),
-        recircParam("recirculate_meta", recircMetaType, 5) { /* empty */ }
+        Model::Elem("IngressParser"_cs),
+        packetParam("buffer"_cs, P4::P4CoreLibrary::instance().packetIn, 0),
+        headersParam("parsed_hdr"_cs, headersType, 1),
+        metadataParam("user_meta"_cs, userMetaType, 2),
+        istdParam("istd"_cs, istdType, 3),
+        resubmitParam("resubmit_meta"_cs, resubmitMetaType, 4),
+        recircParam("recirculate_meta"_cs, recircMetaType, 5) { /* empty */ }
     ::Model::Param_Model packetParam;
     ::Model::Param_Model headersParam;
     ::Model::Param_Model metadataParam;
@@ -292,11 +292,11 @@ struct IngressParserModel : public ::Model::Elem {
 struct IngressModel : public ::Model::Elem {
     IngressModel(Model::Type_Model headersType, Model::Type_Model userMetaType,
                  Model::Type_Model istdType, Model::Type_Model ostdType):
-        Model::Elem("Ingress"),
-        headersParam("hdr", headersType, 0),
-        metadataParam("user_meta", userMetaType, 1),
-        istdParam("istd", istdType, 2),
-        ostdParam("ostd", ostdType, 3)
+        Model::Elem("Ingress"_cs),
+        headersParam("hdr"_cs, headersType, 0),
+        metadataParam("user_meta"_cs, userMetaType, 1),
+        istdParam("istd"_cs, istdType, 2),
+        ostdParam("ostd"_cs, ostdType, 3)
         { /* empty */ }
     ::Model::Param_Model headersParam;
     ::Model::Param_Model metadataParam;
@@ -308,14 +308,14 @@ struct IngressDeparserModel : public ::Model::Elem {
     IngressDeparserModel(Model::Type_Model cloneType, Model::Type_Model resubmitMetaType,
                  Model::Type_Model bridgeMetaType, Model::Type_Model headersType,
                  Model::Type_Model userMetaType, Model::Type_Model istdType) :
-        Model::Elem("IngressDeparser"),
-        packetParam("buffer", P4::P4CoreLibrary::instance().packetIn, 0),
-        cloneParam("clone_i2e_meta", cloneType, 1),
-        resubmitParam("resubmit_meta", resubmitMetaType, 2),
-        normalMetaParam("normal_meta", bridgeMetaType, 3),
-        headersParam("hdr", headersType, 4),
-        metadataParam("meta", userMetaType, 5),
-        istdParam("istd", istdType, 6)
+        Model::Elem("IngressDeparser"_cs),
+        packetParam("buffer"_cs, P4::P4CoreLibrary::instance().packetIn, 0),
+        cloneParam("clone_i2e_meta"_cs, cloneType, 1),
+        resubmitParam("resubmit_meta"_cs, resubmitMetaType, 2),
+        normalMetaParam("normal_meta"_cs, bridgeMetaType, 3),
+        headersParam("hdr"_cs, headersType, 4),
+        metadataParam("meta"_cs, userMetaType, 5),
+        istdParam("istd"_cs, istdType, 6)
     { /* empty */ }
     ::Model::Param_Model packetParam;
     ::Model::Param_Model cloneParam;
@@ -330,14 +330,14 @@ struct EgressParserModel : public ::Model::Elem {
     EgressParserModel(Model::Type_Model headersType, Model::Type_Model userMetaType,
                       Model::Type_Model istdMetaType, Model::Type_Model bridgeMetaType,
                       Model::Type_Model cloneI2EMetaType, Model::Type_Model cloneE2EMetaType) :
-        Model::Elem("EgressParser"),
-        packetParam("buffer", P4::P4CoreLibrary::instance().packetIn, 0),
-        headersParam("parsed_hdr", headersType, 1),
-        metadataParam("user_meta", userMetaType, 2),
-        istdMetaParam("istd", istdMetaType, 3),
-        normalMetaParam("normal_meta", bridgeMetaType, 4),
-        cloneI2EMetaParam("clone_i2e_meta", cloneI2EMetaType, 5),
-        cloneE2EMetaParam("clone_e2e_meta", cloneE2EMetaType, 6) { /* empty */ }
+        Model::Elem("EgressParser"_cs),
+        packetParam("buffer"_cs, P4::P4CoreLibrary::instance().packetIn, 0),
+        headersParam("parsed_hdr"_cs, headersType, 1),
+        metadataParam("user_meta"_cs, userMetaType, 2),
+        istdMetaParam("istd"_cs, istdMetaType, 3),
+        normalMetaParam("normal_meta"_cs, bridgeMetaType, 4),
+        cloneI2EMetaParam("clone_i2e_meta"_cs, cloneI2EMetaType, 5),
+        cloneE2EMetaParam("clone_e2e_meta"_cs, cloneE2EMetaType, 6) { /* empty */ }
     ::Model::Param_Model packetParam;
     ::Model::Param_Model headersParam;
     ::Model::Param_Model metadataParam;
@@ -350,11 +350,11 @@ struct EgressParserModel : public ::Model::Elem {
 struct EgressModel : public ::Model::Elem {
     EgressModel(Model::Type_Model headersType, Model::Type_Model userMetaType,
                 Model::Type_Model istdType, Model::Type_Model ostdType) :
-        Model::Elem("Egress"),
-        headersParam("hdr", headersType, 0),
-        metadataParam("user_meta", userMetaType, 1),
-        istdParam("istd", istdType, 2),
-        ostdParam("ostd", ostdType, 3)
+        Model::Elem("Egress"_cs),
+        headersParam("hdr"_cs, headersType, 0),
+        metadataParam("user_meta"_cs, userMetaType, 1),
+        istdParam("istd"_cs, istdType, 2),
+        ostdParam("ostd"_cs, ostdType, 3)
     { /* empty */ }
     ::Model::Param_Model headersParam;
     ::Model::Param_Model metadataParam;
@@ -369,14 +369,14 @@ struct EgressDeparserModel : public ::Model::Elem {
                         Model::Type_Model userMetaType,
                         Model::Type_Model istdType,
                         Model::Type_Model edstdType) :
-        Model::Elem("EgressDeparser"),
-        packetParam("buffer", P4::P4CoreLibrary::instance().packetIn, 0),
-        cloneE2EMetaParam("clone_e2e_meta", cloneE2EMetaType, 1),
-        recircMetaParam("recirculate_meta", recircMetaType, 2),
-        headersParam("hdr", headersType, 3),
-        metadataParam("meta", userMetaType, 4),
-        istdParam("istd", istdType, 5),
-        edstdParam("edstd", edstdType, 6)
+        Model::Elem("EgressDeparser"_cs),
+        packetParam("buffer"_cs, P4::P4CoreLibrary::instance().packetIn, 0),
+        cloneE2EMetaParam("clone_e2e_meta"_cs, cloneE2EMetaType, 1),
+        recircMetaParam("recirculate_meta"_cs, recircMetaType, 2),
+        headersParam("hdr"_cs, headersType, 3),
+        metadataParam("meta"_cs, userMetaType, 4),
+        istdParam("istd"_cs, istdType, 5),
+        edstdParam("edstd"_cs, edstdType, 6)
     { /* empty */ }
     ::Model::Param_Model packetParam;
     ::Model::Param_Model cloneE2EMetaParam;
@@ -390,14 +390,14 @@ struct EgressDeparserModel : public ::Model::Elem {
 struct Pipeline : public ::Model::Elem {
     explicit Pipeline(cstring name) :
         Model::Elem(name),
-        ingressParser("ingress_parser"),
-        ingress("ingress"),
-        ingressDeparser("ingress_deparser"),
-        packetReplicationEngine("pre"),
-        egressParser("egress_parser"),
-        egress("egress"),
-        egressDeparser("egress_deparser"),
-        bufferingQueueingEngine("bqe") { /* empty */ }
+        ingressParser("ingress_parser"_cs),
+        ingress("ingress"_cs),
+        ingressDeparser("ingress_deparser"_cs),
+        packetReplicationEngine("pre"_cs),
+        egressParser("egress_parser"_cs),
+        egress("egress"_cs),
+        egressDeparser("egress_deparser"_cs),
+        bufferingQueueingEngine("bqe"_cs) { /* empty */ }
     ::Model::Elem ingressParser;
     ::Model::Elem ingress;
     ::Model::Elem ingressDeparser;
@@ -412,13 +412,13 @@ struct Pipeline : public ::Model::Elem {
 class PsaModel : public ::Model::Model {
  protected:
     PsaModel() :
-        Model::Model(), file("psa.p4"),
-        headersType("headers"),
-        metadataType("metadata"),
-        resubmitMetaType("resubmit_meta"), recircMetaType("recirc_meta"),
-        cloneI2EMetaType("clone_i2e_meta"),
-        cloneE2EMetaType("clone_e2e_meta"), bridgeMetaType("bridge_meta"),
-        compilerGeneratedType("compiler_generated_meta"),
+        Model::Model(), file("psa.p4"_cs),
+        headersType("headers"_cs),
+        metadataType("metadata"_cs),
+        resubmitMetaType("resubmit_meta"_cs), recircMetaType("recirc_meta"_cs),
+        cloneI2EMetaType("clone_i2e_meta"_cs),
+        cloneE2EMetaType("clone_e2e_meta"_cs), bridgeMetaType("bridge_meta"_cs),
+        compilerGeneratedType("compiler_generated_meta"_cs),
         ingress_parser(headersType, metadataType, igParserInputMetaType, resubmitMetaType,
                        recircMetaType),
         ingress(headersType, metadataType, igInputMetaType, igOutputMetaType),
@@ -429,7 +429,7 @@ class PsaModel : public ::Model::Model {
         egress(headersType, metadataType, egInputMetaType, egOutputMetaType),
         egress_deparser(cloneE2EMetaType, recircMetaType, headersType, metadataType,
                         egOutputMetaType, egDeparserInputMetaType),
-        sw("Switch")
+        sw("Switch"_cs)
     { /* empty */ }
 
  public:

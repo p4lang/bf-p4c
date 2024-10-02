@@ -33,9 +33,9 @@ const IR::Node* PhvAllocation::apply_visitor(const IR::Node* root_, const char *
 
     const MauBacktracker* mau = kit_i.settings.physical_stage_trivial ? &kit_i.mau : nullptr;
 
-    AllocatorMetrics trivial_alloc_metrics("TrivialAllocator");
-    AllocatorMetrics greedy_alloc_metrics("GreedyAllocator");
-    AllocatorMetrics ixbar_pack_metrics("IXbarPackingTrivialAllocator");
+    AllocatorMetrics trivial_alloc_metrics("TrivialAllocator"_cs);
+    AllocatorMetrics greedy_alloc_metrics("GreedyAllocator"_cs);
+    AllocatorMetrics ixbar_pack_metrics("IXbarPackingTrivialAllocator"_cs);
 
     // apply table-layout-friendly packing on super clusters.
     auto trivial_allocator = new PHV::v2::TrivialAllocator(kit_i, phv_i, pipe_id_i);

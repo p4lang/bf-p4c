@@ -133,8 +133,8 @@ const switch_pkt_type_t FABRIC_PKT_TYPE_IP = 0x05;
 
     auto& options = BackendOptions();
     options.langVersion = CompilerOptions::FrontendVersion::P4_16;
-    options.target = "tofino";
-    options.arch = "v1model";
+    options.target = "tofino"_cs;
+    options.arch = "v1model"_cs;
     options.disable_parse_min_depth_limit = true;
     return TofinoPipeTestCase::createWithThreadLocalInstances(source);
 }
@@ -181,7 +181,7 @@ TEST_F(StaticEntriesConstPropTest, TestUniqueConstEntry) {
     auto actions = table_to_check->actions;
 
     // Check fabric_unicast_eth action.
-    auto *action_eth = actions["fabric_unicast_eth"];
+    auto *action_eth = actions["fabric_unicast_eth"_cs];
     auto *instr_eth = action_eth->action[0];
     EXPECT_EQ(instr_eth->name, "set");
     EXPECT_EQ(instr_eth->operands[0]->toString(), "ingress::hdr.data.version");
@@ -190,7 +190,7 @@ TEST_F(StaticEntriesConstPropTest, TestUniqueConstEntry) {
     EXPECT_EQ(instr_eth->operands[1]->to<IR::Constant>()->value, FABRIC_PKT_TYPE_ETH);
 
     // Check fabric_unicast_ip action.
-    auto *action_ip = actions["fabric_unicast_ip"];
+    auto *action_ip = actions["fabric_unicast_ip"_cs];
     auto *instr_ip = action_ip->action[0];
     EXPECT_EQ(instr_ip->name, "set");
     EXPECT_EQ(instr_ip->operands[0]->toString(), "ingress::hdr.data.version");
@@ -227,7 +227,7 @@ TEST_F(StaticEntriesConstPropTest, TestMultipleConstEntry) {
     auto actions = table_to_check->actions;
 
     // Check fabric_unicast_eth action
-    auto *action_eth = actions["fabric_unicast_eth"];
+    auto *action_eth = actions["fabric_unicast_eth"_cs];
     auto *instr_eth = action_eth->action[0];
     EXPECT_EQ(instr_eth->name, "set");
     EXPECT_EQ(instr_eth->operands[0]->toString(), "ingress::hdr.data.version");
@@ -236,7 +236,7 @@ TEST_F(StaticEntriesConstPropTest, TestMultipleConstEntry) {
     EXPECT_EQ(instr_eth->operands[1]->to<IR::Constant>()->value, FABRIC_PKT_TYPE_ETH);
 
     // Check fabric_unicast_ip action
-    auto *action_ip = actions["fabric_unicast_ip"];
+    auto *action_ip = actions["fabric_unicast_ip"_cs];
     auto *instr_ip = action_ip->action[0];
     EXPECT_EQ(instr_ip->name, "set");
     EXPECT_EQ(instr_ip->operands[0]->toString(), "ingress::hdr.data.version");
@@ -271,7 +271,7 @@ TEST_F(StaticEntriesConstPropTest, TestUniqueConstEntryIsDefaultAction) {
     auto actions = table_to_check->actions;
 
     // Check fabric_unicast_eth action
-    auto *action_eth = actions["fabric_unicast_eth"];
+    auto *action_eth = actions["fabric_unicast_eth"_cs];
     auto *instr_eth = action_eth->action[0];
     EXPECT_EQ(instr_eth->name, "set");
     EXPECT_EQ(instr_eth->operands[0]->toString(), "ingress::hdr.data.version");
@@ -280,7 +280,7 @@ TEST_F(StaticEntriesConstPropTest, TestUniqueConstEntryIsDefaultAction) {
     EXPECT_EQ(instr_eth->operands[1]->toString(), "ingress::md_version_0");
 
     // Check fabric_unicast_ip action
-    auto *action_ip = actions["fabric_unicast_ip"];
+    auto *action_ip = actions["fabric_unicast_ip"_cs];
     auto *instr_ip = action_ip->action[0];
     EXPECT_EQ(instr_ip->name, "set");
     EXPECT_EQ(instr_ip->operands[0]->toString(), "ingress::hdr.data.version");

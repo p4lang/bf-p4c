@@ -74,7 +74,7 @@ IR::BFN::Digest *AddMetadataPOV::postorder(IR::BFN::Digest *digest) {
 }
 
 IR::MAU::Primitive *AddMetadataPOV::create_pov_write(const IR::Expression *povBit, bool validate) {
-    return new IR::MAU::Primitive("modify_field", povBit,
+    return new IR::MAU::Primitive("modify_field"_cs, povBit,
                                   new IR::Constant(IR::Type::Bits::get(1), (unsigned)validate));
 }
 

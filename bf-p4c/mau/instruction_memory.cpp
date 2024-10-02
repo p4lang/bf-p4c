@@ -244,10 +244,10 @@ bool InstructionMemory::alloc_always_run_instr(const IR::MAU::Table *tbl, Use &a
     if (!(reserved & current_bv).empty())
         return false;
     int ar_color = Device::alwaysRunIMemAddr() % 2;
-    use[row][ar_color] = "$always_run_action";
+    use[row][ar_color] = "$always_run_action"_cs;
     slot_in_use[row][ar_color] |= current_bv;
     Use::VLIW_Instruction single_instr(current_bv, row, ar_color);
-    alloc.all_instrs.emplace("$always_run_action", single_instr);
+    alloc.all_instrs.emplace("$always_run_action"_cs, single_instr);
     return true;
 }
 
@@ -359,7 +359,7 @@ void InstructionMemory::update_always_run(const Use &alloc, gress_t gress) {
 
     BUG_CHECK(alloc.all_instrs.size() == 1, "Always run instruction can only have one instruction");
     for (auto &entry : alloc.all_instrs) {
-        auto a_name = "$always_run_action";
+        auto a_name = "$always_run_action"_cs;
         auto instr = entry.second;
         BUG_CHECK(static_cast<int>(instr.gen_addr()) == Device::alwaysRunIMemAddr(),
                   "Always Run Table Misassigned");

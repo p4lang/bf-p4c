@@ -5,33 +5,33 @@
 #include "lib/log.h"
 
 const ordered_set<cstring> PHV_Field_Operations::BITWISE_OPS = {
-    "set",
-    "conditionally-set",
-    "and",
-    "or",
-    "not",
-    "nor",
-    "andca",
-    "andcb",
-    "nand",
-    "orca",
-    "orcb",
-    "xnor",
-    "xor"
+    "set"_cs,
+    "conditionally-set"_cs,
+    "and"_cs,
+    "or"_cs,
+    "not"_cs,
+    "nor"_cs,
+    "andca"_cs,
+    "andcb"_cs,
+    "nand"_cs,
+    "orca"_cs,
+    "orcb"_cs,
+    "xnor"_cs,
+    "xor"_cs
 };
 
 const ordered_set<cstring> PHV_Field_Operations::SHIFT_OPS = {
-    "shl",
-    "shru",
-    "shrs",
-    "funnel-shift"
+    "shl"_cs,
+    "shru"_cs,
+    "shrs"_cs,
+    "funnel-shift"_cs
 };
 
 const ordered_set<cstring> PHV_Field_Operations::SATURATE_OPS = {
-    "saddu",
-    "sadds",
-    "ssubu",
-    "ssubs"
+    "saddu"_cs,
+    "sadds"_cs,
+    "ssubu"_cs,
+    "ssubs"_cs
 };
 
 bool PHV_Field_Operations::Find_Salu_Sources::preorder(const IR::MAU::SaluAction *a) {

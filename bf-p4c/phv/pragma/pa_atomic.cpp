@@ -29,8 +29,8 @@ const char *PragmaAtomic::help =
 // but because intrinsic metadata name may be changed during translation
 // stashing these here for now
 static const std::unordered_set<cstring> pa_atomic_from_arch = {
-    "ingress::ig_intr_md_from_prsr.parser_err",
-    "egress::eg_intr_md_from_prsr.parser_err"
+    "ingress::ig_intr_md_from_prsr.parser_err"_cs,
+    "egress::eg_intr_md_from_prsr.parser_err"_cs
 };
 
 bool PragmaAtomic::add_constraint(const IR::BFN::Pipe* pipe,
@@ -81,8 +81,8 @@ bool PragmaAtomic::preorder(const IR::BFN::Pipe* pipe) {
         }
 
         if (!PHV::Pragmas::checkNumberArgs(annotation, required_arguments,
-                min_required_arguments, true, PragmaAtomic::name,
-                "`gress', `field'")) {
+                min_required_arguments, true, cstring(PragmaAtomic::name),
+                "`gress', `field'"_cs)) {
             continue;
         }
 
@@ -92,7 +92,7 @@ bool PragmaAtomic::preorder(const IR::BFN::Pipe* pipe) {
 
         auto field_ir = exprs[expr_index++]->to<IR::StringLiteral>();
 
-        cstring field_name = gress_arg->value + "::" + field_ir->value;
+        cstring field_name = gress_arg->value + "::"_cs + field_ir->value;
         add_constraint(pipe, field_ir, field_name);
     }
 

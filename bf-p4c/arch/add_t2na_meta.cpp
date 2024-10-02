@@ -8,7 +8,7 @@ void AddT2naMeta::postorder(IR::Type_StructLike* typeStructLike) {
     cstring typeStructLikeName = typeStructLike->name;
     if (typeStructLikeName == "ingress_intrinsic_metadata_for_deparser_t" ||
         typeStructLikeName == "egress_intrinsic_metadata_for_deparser_t") {
-        if (typeStructLike->fields.getDeclaration("mirror_io_select")) {
+        if (typeStructLike->fields.getDeclaration("mirror_io_select"_cs)) {
             LOG3("AddT2naMeta : " << typeStructLikeName << " already complete");
             return;
         }
@@ -48,7 +48,7 @@ void AddT2naMeta::postorder(IR::Type_StructLike* typeStructLike) {
         for (const auto* structField : typeStructLike->fields) {
             lastStructField = structField;
         };
-        if (lastStructField && lastStructField->annotations->getSingle("padding")) {
+        if (lastStructField && lastStructField->annotations->getSingle("padding"_cs)) {
             LOG3("AddT2naMeta : " << typeStructLikeName << " already complete");
             return;
         }

@@ -197,8 +197,8 @@ class OptionalToTernaryMatchTypeConverter: public Transform {
  */
 class EnumOn32Bits : public P4::ChooseEnumRepresentation {
     std::set<cstring> reserved_enums = {
-            "MeterType_t", "MeterColor_t", "CounterType_t", "SelectorMode_t", "HashAlgorithm_t",
-            "MathOp_t", "CloneType", "ChecksumAlgorithm_t" };
+        "MeterType_t"_cs,     "MeterColor_t"_cs, "CounterType_t"_cs, "SelectorMode_t"_cs,
+        "HashAlgorithm_t"_cs, "MathOp_t"_cs,     "CloneType"_cs,     "ChecksumAlgorithm_t"_cs};
 
     bool convert(const IR::Type_Enum* type) const override {
         LOG1("convert ? " << type->name);
@@ -293,7 +293,7 @@ bool skipRegisterActionOutput(const Visitor::Context *ctxt, const IR::Expression
 }
 
 bool skipFlexibleHeader(const Visitor::Context *, const IR::Type_StructLike* e) {
-    if (e->getAnnotation("flexible"))
+    if (e->getAnnotation("flexible"_cs))
         return false;
     return true;
 }
@@ -336,10 +336,10 @@ MidEnd::MidEnd(BFN_Options& options) {
     setName("MidEnd");
     refMap.setIsV1(true);
     auto typeChecking = new BFN::TypeChecking(&refMap, &typeMap);
-    auto typeInference = new BFN::TypeInference(&refMap, &typeMap, false);
+    auto typeInference = new BFN::TypeInference(&typeMap, false);
     auto evaluator = new BFN::EvaluatorPass(&refMap, &typeMap);
     auto skip_controls = new std::set<cstring>();
-    cstring args_to_skip[] = { "ingress_deparser", "egress_deparser"};
+    cstring args_to_skip[] = { "ingress_deparser"_cs, "egress_deparser"_cs};
     auto *enum_policy = new EnumOn32Bits;
 
     sourceInfoLogging = new CollectSourceInfoLogging(refMap);
@@ -364,24 +364,24 @@ MidEnd::MidEnd(BFN_Options& options) {
         new P4::ConvertEnums(&refMap, &typeMap, enum_policy, typeChecking),
         new P4::ConstantFolding(&refMap, &typeMap, true, typeChecking),
         new P4::EliminateTypedef(&refMap, &typeMap, typeChecking),
-        new P4::SimplifyControlFlow(&refMap, &typeMap, typeChecking),
+        new P4::SimplifyControlFlow(&typeMap, typeChecking),
         new P4::SimplifyKey(&refMap, &typeMap,
             BFN::KeyIsSimple::getPolicy(refMap, typeMap), typeChecking),
         Device::currentDevice() != Device::TOFINO || options.disable_direct_exit ?
-            new P4::RemoveExits(&refMap, &typeMap, typeChecking) : nullptr,
+            new P4::RemoveExits(&typeMap, typeChecking) : nullptr,
         new P4::ConstantFolding(&refMap, &typeMap, true, typeChecking),
         new BFN::ElimCasts(&refMap, &typeMap),
         new BFN::AlpmImplementation(&refMap, &typeMap),
         new BFN::TypeChecking(&refMap, &typeMap, true),
         // has to be early enough for setValid to still not be lowered
         new BFN::CheckVarbitAccess(),
-        new P4::StrengthReduction(&refMap, &typeMap, typeChecking),
+        new P4::StrengthReduction(&typeMap, typeChecking),
         new P4::SimplifySelectCases(&refMap, &typeMap, true, typeChecking),  // constant keysets
         new P4::ExpandLookahead(&refMap, &typeMap, typeChecking),
         new P4::ExpandEmit(&refMap, &typeMap, typeChecking),
         new P4::SimplifyParsers(&refMap),
         new P4::ReplaceSelectRange(&refMap, &typeMap),
-        new P4::StrengthReduction(&refMap, &typeMap, typeChecking),
+        new P4::StrengthReduction(&typeMap, typeChecking),
         // Eliminate Tuples might need to preserve HashListExpressions
         // Therefore we use our own
         new BFN::EliminateTuples(&refMap, &typeMap, typeChecking, typeInference),
@@ -400,11 +400,11 @@ MidEnd::MidEnd(BFN_Options& options) {
         new P4::SimplifyBitwise(),
         new P4::LocalCopyPropagation(&refMap, &typeMap, typeChecking, skipRegisterActionOutput),
         new P4::ConstantFolding(&refMap, &typeMap, true, typeChecking),
-        new P4::StrengthReduction(&refMap, &typeMap, typeChecking),
+        new P4::StrengthReduction(&typeMap, typeChecking),
         new P4::MoveDeclarations(),
         new NormalizeHashList(&refMap, &typeMap, typeChecking),
         new P4::SimplifyNestedIf(&refMap, &typeMap, typeChecking),
-        new P4::SimplifyControlFlow(&refMap, &typeMap, typeChecking),
+        new P4::SimplifyControlFlow(&typeMap, typeChecking),
         new CompileTimeOperations(),
         new P4::TableHit(&refMap, &typeMap, typeChecking),
 #if BAREFOOT_INTERNAL
@@ -432,7 +432,7 @@ MidEnd::MidEnd(BFN_Options& options) {
         new P4::SynthesizeActions(&refMap, &typeMap,
                 new ActionSynthesisPolicy(skip_controls, &refMap, &typeMap), typeChecking),
         new P4::MoveActionsToTables(&refMap, &typeMap, typeChecking),
-        new CopyBlockPragmas(&refMap, &typeMap, typeChecking, {"stage"}),
+        new CopyBlockPragmas(&refMap, &typeMap, typeChecking, {"stage"_cs}),
         (options.egress_intr_md_opt) ?
             new RewriteEgressIntrinsicMetadataHeader(&refMap, &typeMap) : nullptr,
         new DesugarVarbitExtract(&refMap, &typeMap),

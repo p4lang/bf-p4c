@@ -27,7 +27,7 @@ std::tuple<bool, cstring, int, int> get_key_slice_info(const cstring &input) {
         int lo = std::atoi(match[2].str().c_str());
         return std::make_tuple(true, match.prefix().str(), hi, lo);
     }
-    return std::make_tuple(false, "", -1, -1);
+    return std::make_tuple(false, ""_cs, -1, -1);
 }
 
 std::pair<cstring, cstring>
@@ -37,7 +37,7 @@ get_key_and_mask(const cstring &input) {
     std::regex maskRegex(R"([\s]*&[\s]*(0x[a-fA-F0-9]+))");
     std::regex_search(k, match, maskRegex);
     cstring key = input;
-    cstring mask = "";
+    cstring mask = ""_cs;
     if (match.size() >= 2) {
         key = match.prefix().str();
         mask = match[1].str();

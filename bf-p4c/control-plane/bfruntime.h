@@ -28,6 +28,8 @@
 #include "p4/config/v1/p4types.pb.h"
 #pragma GCC diagnostic pop
 
+using namespace P4::literals;
+
 namespace p4configv1 = ::p4::config::v1;
 
 namespace P4 {
@@ -81,7 +83,7 @@ static Util::JsonObject* transformAnnotation(const std::string& annotation) {
     auto* annotationJson = new Util::JsonObject();
     // TODO: annotation string will need to be parsed so we can have it
     // in key/value format here.
-    annotationJson->emplace("name", escapeJson(annotation));
+    annotationJson->emplace("name"_cs, escapeJson(annotation));
     return annotationJson;
 }
 
@@ -133,15 +135,15 @@ const p4configv1::DirectMeter* findDirectMeter(const p4configv1::P4Info& p4info,
 
 }  // namespace Standard
 
-Util::JsonObject* makeTypeInt(cstring type, cstring mask = "");
+Util::JsonObject* makeTypeInt(cstring type, cstring mask = ""_cs);
 
 template <typename T, typename std::enable_if<std::is_integral<T>::value, int>::type = 0>
-static Util::JsonObject* makeTypeInt(cstring type, T defaultValue, cstring mask = "") {
+static Util::JsonObject* makeTypeInt(cstring type, T defaultValue, cstring mask = ""_cs) {
     auto* typeObj = new Util::JsonObject();
-    typeObj->emplace("type", type);
-    typeObj->emplace("default_value", defaultValue);
+    typeObj->emplace("type"_cs, type);
+    typeObj->emplace("default_value"_cs, defaultValue);
     if (!mask.isNullOrEmpty())
-        typeObj->emplace("mask", mask);
+        typeObj->emplace("mask"_cs, mask);
     return typeObj;
 }
 
@@ -149,7 +151,7 @@ Util::JsonObject* makeTypeBool(std::optional<bool> defaultValue = std::nullopt);
 
 Util::JsonObject* makeTypeBytes(int width,
                                        std::optional<int64_t> defaultValue = std::nullopt,
-                                       cstring mask = "");
+                                       cstring mask = ""_cs);
 
 Util::JsonObject* makeTypeEnum(const std::vector<cstring>& choices,
                                std::optional<cstring> defaultValue = std::nullopt);
@@ -192,8 +194,8 @@ class TypeSpecParser {
                                cstring instanceType,
                                cstring instanceName,
                                const std::vector<cstring> *fieldNames = nullptr,
-                               cstring prefix = "",
-                               cstring suffix = "",
+                               cstring prefix = ""_cs,
+                               cstring suffix = ""_cs,
                                P4Id idOffset = 1);
 
     iterator begin() { return fields.begin(); }
@@ -368,8 +370,8 @@ class BFRuntimeGenerator {
                                        cstring instanceType,
                                        cstring instanceName,
                                        const std::vector<cstring> *fieldNames = nullptr,
-                                       cstring prefix = "",
-                                       cstring suffix = "",
+                                       cstring prefix = ""_cs,
+                                       cstring suffix = ""_cs,
                                        P4Id idOffset = 1) const;
 
     static void addMeterDataFields(Util::JsonArray* dataJson, const Meter& meter);

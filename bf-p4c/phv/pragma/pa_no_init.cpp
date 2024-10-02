@@ -66,8 +66,8 @@ bool PragmaNoInit::preorder(const IR::BFN::Pipe* pipe) {
         }
 
         if (!PHV::Pragmas::checkNumberArgs(annotation, required_arguments,
-                min_required_arguments, true, PragmaNoInit::name,
-                "`gress', `field'")) {
+                min_required_arguments, true, cstring(PragmaNoInit::name),
+                "`gress', `field'"_cs)) {
             continue;
         }
 

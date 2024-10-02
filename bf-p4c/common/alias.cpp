@@ -17,7 +17,8 @@ bool FindExpressionsForFields::preorder(const IR::HeaderOrMetadata* h) {
             for (int i = 0; i < hs->size; i++) {
                 // add every header in header stack
                 cstring name = h->name + "[" + cstring::to_cstring(i)  + "]." + f->name;
-                if (name.endsWith("$always_deparse") || name.endsWith(BFN::BRIDGED_MD_INDICATOR))
+                if (name.endsWith("$always_deparse") ||
+                    name.endsWith(BFN::BRIDGED_MD_INDICATOR.string_view()))
                     continue;
                 const IR::Type *ftype = nullptr;
                 auto field = hs->type->getField(f->name);
@@ -35,9 +36,10 @@ bool FindExpressionsForFields::preorder(const IR::HeaderOrMetadata* h) {
                 LOG5("  Added field: " << name << ", " << mem);
             }
         } else {
-            cstring name = h->name + "." + f->name;
+            cstring name = h->name + "."_cs + f->name;
             // Ignore compiler generated metadata fields that belong to different headers.
-            if (name.endsWith("$always_deparse") || name.endsWith(BFN::BRIDGED_MD_INDICATOR))
+            if (name.endsWith("$always_deparse") ||
+                name.endsWith(BFN::BRIDGED_MD_INDICATOR.string_view()))
                 continue;
             IR::Member* mem = gen_fieldref(h, f->name);
             if (!mem) continue;
@@ -58,7 +60,7 @@ bool FindExpressionsForFields::preorder(const IR::HeaderOrMetadata* h) {
             }
         }
     } else if (h->type->is<IR::Type_Header>()) {
-        cstring name = h->name + ".$valid";
+        cstring name = h->name + ".$valid"_cs;
         IR::Member* mem = new IR::Member(IR::Type_Bits::get(1),
                 new IR::ConcreteHeaderRef(h), "$valid");
         if (mem) {
@@ -187,7 +189,7 @@ IR::Node* AddValidityBitSets::postorder(IR::MAU::Action* action) {
             continue;
         }
         auto* oneExpr = new IR::Constant(IR::Type_Bits::get(pov->type->width_bits()), 1);
-        auto* prim = new IR::MAU::Instruction("set", { pov, oneExpr });
+        auto* prim = new IR::MAU::Instruction("set"_cs, { pov, oneExpr });
         LOG1("\t  Add to action " << action->name << " : " << prim);
         action->action.push_back(prim);
     }

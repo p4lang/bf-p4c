@@ -117,8 +117,8 @@ Switch(pipe) main;
 
     auto& options = BackendOptions();
     options.langVersion = CompilerOptions::FrontendVersion::P4_16;
-    options.target = "tofino";
-    options.arch = "tna";
+    options.target = "tofino"_cs;
+    options.arch = "tna"_cs;
     options.disable_parse_min_depth_limit = true;
     return TofinoPipeTestCase::createWithThreadLocalInstances(source);
 }
@@ -181,7 +181,7 @@ class GCFTVisitor : public Inspector, public BFN::GatewayControlFlow, public Tof
         } else {
             BUG("not a header? %s", n); }
         if (auto *suffix = rv.findlast('.'))
-            rv = suffix+1;
+            rv = cstring(suffix+1);
         return rv;
     }
     bool compareWith(const IR::Expression *e) {
@@ -266,14 +266,14 @@ TEST_F(GatewayControlFlowTest, Basic) {
     GCFTVisitor test;
     pipe->apply(test);
 
-    EXPECT_TRUE(test.probe_live(0, "h1"));
-    EXPECT_TRUE(test.probe_live(0, "h2"));
-    EXPECT_TRUE(test.probe_live(0, "h3"));
-    EXPECT_TRUE(test.probe_live(0, "h4"));
-    EXPECT_TRUE(test.probe_live(0, "h5"));
-    EXPECT_TRUE(test.probe_live(0, "h6"));
-    EXPECT_FALSE(test.probe_live(2, "h2"));
-    EXPECT_FALSE(test.probe_live(2, "h3"));
+    EXPECT_TRUE(test.probe_live(0, "h1"_cs));
+    EXPECT_TRUE(test.probe_live(0, "h2"_cs));
+    EXPECT_TRUE(test.probe_live(0, "h3"_cs));
+    EXPECT_TRUE(test.probe_live(0, "h4"_cs));
+    EXPECT_TRUE(test.probe_live(0, "h5"_cs));
+    EXPECT_TRUE(test.probe_live(0, "h6"_cs));
+    EXPECT_FALSE(test.probe_live(2, "h2"_cs));
+    EXPECT_FALSE(test.probe_live(2, "h3"_cs));
 }
 
 }  // namespace Test

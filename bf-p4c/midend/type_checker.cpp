@@ -14,7 +14,7 @@ const IR::Type* TypeInference::setTypeType(const IR::Type* type, bool learn) {
     if (canon != nullptr) {
         // Learn the new type
         if (canon != typeToCanonicalize && learn) {
-            TypeInference tc(refMap, typeMap, true);
+            TypeInference tc(typeMap, true);
             unsigned e = ::errorCount();
             (void)canon->apply(tc);
             if (::errorCount() > e)
@@ -93,7 +93,7 @@ const IR::Node* TypeInference::postorder(IR::Member* expression) {
 }
 
 TypeInference* TypeInference::clone() const {
-    return new TypeInference(refMap, typeMap, true); }
+    return new TypeInference(typeMap, true); }
 
 // it might be better to allow frontend TypeChecking class to use
 // custom TypeInference pass.
@@ -103,7 +103,7 @@ TypeChecking::TypeChecking(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
     passes.clear();
     addPasses({
         new P4::ResolveReferences(refMap),
-        new BFN::TypeInference(refMap, typeMap, true), /* extended P4::TypeInference */
+        new BFN::TypeInference(typeMap, true), /* extended P4::TypeInference */
         updateExpressions ? new P4::ApplyTypesToExpressions(typeMap) : nullptr,
         updateExpressions ? new P4::ResolveReferences(refMap) : nullptr });
     setStopOnError(true);

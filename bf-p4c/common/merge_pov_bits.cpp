@@ -263,7 +263,7 @@ class UpdatePovBits : public Transform {
         const IR::HeaderStack *hs = h->to<IR::HeaderStack>();
         if (!hs) hs = h->type->to<IR::HeaderStack>();
         if (hs) {
-            cstring stkvalid_name = h->name + ".$stkvalid";
+            cstring stkvalid_name = h->name + ".$stkvalid"_cs;
             const auto *stkvalid = phv.field(stkvalid_name);
             bool skip = hva.povBitsUpdateActions.count(stkvalid);
             for (int i = 0; i < hs->size; i++) {
@@ -280,7 +280,7 @@ class UpdatePovBits : public Transform {
                 }
             }
         } else if (h->type->is<IR::Type_Header>()) {
-            cstring name = h->name + ".$valid";
+            cstring name = h->name + ".$valid"_cs;
             IR::Member* mem = new IR::Member(IR::Type_Bits::get(1),
                     new IR::ConcreteHeaderRef(h), "$valid");
             if (mem) {

@@ -45,11 +45,11 @@ TEST(TofinoWriteContext, Read) {
         new IR::BFN::Extract(oneLVal, new IR::BFN::PacketRVal(StartLen(1, 2), false)),
         new IR::BFN::Extract(zeroLVal, new IR::BFN::MetadataRVal(StartLen(256, 1)))
     };
-    auto *state = new IR::BFN::ParserState("foo", INGRESS, statements, { }, { });
+    auto *state = new IR::BFN::ParserState("foo"_cs, INGRESS, statements, { }, { });
 
     state->apply(TestRead());
 
-    auto prim = new IR::MAU::TypedPrimitive("foo_prim");
+    auto prim = new IR::MAU::TypedPrimitive("foo_prim"_cs);
     prim->operands = IR::Vector<IR::Expression>({thisVal, zero, one, two});
     prim->method_type =
       new IR::Type_Method(
@@ -58,10 +58,10 @@ TEST(TofinoWriteContext, Read) {
             new IR::Parameter(IR::ID("zero"), IR::Direction::In, IR::Type_Bits::get(8)),
             new IR::Parameter(IR::ID("one"), IR::Direction::Out, IR::Type_Bits::get(8)),
             new IR::Parameter(IR::ID("two"), IR::Direction::InOut, IR::Type_Bits::get(8))})),
-        "foo");
+        "foo"_cs);
     prim->apply(TestRead());
 
-    auto *inst = new IR::MAU::Instruction("foo_inst");
+    auto *inst = new IR::MAU::Instruction("foo_inst"_cs);
     inst->operands = IR::Vector<IR::Expression>({zero, one});
     inst->apply(TestRead());
 }
@@ -88,7 +88,7 @@ TEST(TofinoWriteContext, Write) {
 
     salu->apply(TestWrite());
 
-    auto prim = new IR::MAU::TypedPrimitive("foo_prim");
+    auto prim = new IR::MAU::TypedPrimitive("foo_prim"_cs);
     prim->operands = IR::Vector<IR::Expression>({thisVal, zero, one, two});
     prim->method_type =
       new IR::Type_Method(
@@ -97,10 +97,10 @@ TEST(TofinoWriteContext, Write) {
             new IR::Parameter(IR::ID("zero"), IR::Direction::In, IR::Type_Bits::get(8)),
             new IR::Parameter(IR::ID("one"), IR::Direction::Out, IR::Type_Bits::get(8)),
             new IR::Parameter(IR::ID("two"), IR::Direction::InOut, IR::Type_Bits::get(8))})),
-        "foo");
+        "foo"_cs);
     prim->apply(TestWrite());
 
-    auto *inst = new IR::MAU::Instruction("foo_inst");
+    auto *inst = new IR::MAU::Instruction("foo_inst"_cs);
     inst->operands = IR::Vector<IR::Expression>({zero, one});
     inst->apply(TestWrite());
 }

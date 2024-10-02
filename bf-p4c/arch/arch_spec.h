@@ -6,17 +6,17 @@
 
 struct IntrinsicField {
  public:
-    cstring name;
-    cstring asm_name;
-    explicit IntrinsicField(cstring n) : name(n), asm_name(n) { }
-    IntrinsicField(cstring n, cstring an) : name(n), asm_name(an) { }
+    std::string name;
+    std::string asm_name;
+    explicit IntrinsicField(std::string n) : name(n), asm_name(n) { }
+    IntrinsicField(std::string n, std::string an) : name(n), asm_name(an) { }
 };
 
 struct IntrinsicParam {
  public:
-    cstring type;
-    cstring name;
-    IntrinsicParam(cstring t, cstring n) : type(t), name(n) { }
+    std::string type;
+    std::string name;
+    IntrinsicParam(std::string t, std::string n) : type(t), name(n) { }
 };
 
 /**

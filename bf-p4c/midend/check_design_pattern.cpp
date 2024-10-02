@@ -4,21 +4,21 @@
 bool BFN::CheckExternValidity::preorder(const IR::MethodCallExpression* expr) {
     auto* mi = P4::MethodInstance::resolve(expr, refMap, typeMap, true);
 
-    std::set<cstring> externsToCheck = {"Hash"};
-    std::set<cstring> methodToCheck = {"get"};
+    std::set<cstring> externsToCheck = {"Hash"_cs};
+    std::set<cstring> methodToCheck = {"get"_cs};
 
     // size_t is the number of parameters in emit/pack call that uses field list.
     std::map<cstring, size_t> expectedFieldListPos = {
-        {"Mirror", 2}, {"Resubmit", 1},
-        {"Digest", 1}, {"Pktgen", 1},
-        {"Hash",   1}};
+        {"Mirror"_cs, 2}, {"Resubmit"_cs, 1},
+        {"Digest"_cs, 1}, {"Pktgen"_cs, 1},
+        {"Hash"_cs,   1}};
 
     std::map<cstring, cstring> emitMethod = {
-        {"Mirror", "emit"}, {"Resubmit", "emit"},
-        {"Digest", "pack"}, {"Pktgen", "emit"},
-        {"Hash", "get"}};
+        {"Mirror"_cs, "emit"_cs}, {"Resubmit"_cs, "emit"_cs},
+        {"Digest"_cs, "pack"_cs}, {"Pktgen"_cs, "emit"_cs},
+        {"Hash"_cs, "get"_cs}};
 
-    std::set<cstring> structAllowed = { "Digest", "Hash" };
+    std::set<cstring> structAllowed = { "Digest"_cs, "Hash"_cs };
 
     if (auto *em = mi->to<P4::ExternMethod>()) {
         auto externName = em->actualExternType->name;
@@ -84,11 +84,11 @@ Visitor::profile_t BFN::FindDirectExterns::init_apply(const IR::Node* root) {
 
 typedef BFN::CheckDirectResourceInvocation BFN_CheckDiResIn;
 const std::map<cstring, cstring>  BFN_CheckDiResIn::externsToProperties = {
-     { "DirectCounter"  , "counters"  },
-     { "DirectMeter"    , "meters"    },
-     { "DirectRegister" , "registers" },
-     { "DirectLpf"      , "filters"   },
-     { "DirectWred"     , "filters"   }
+     { "DirectCounter"_cs  , "counters"_cs  },
+     { "DirectMeter"_cs    , "meters"_cs    },
+     { "DirectRegister"_cs , "registers"_cs },
+     { "DirectLpf"_cs      , "filters"_cs   },
+     { "DirectWred"_cs     , "filters"_cs   }
 };
 
 bool BFN::FindDirectExterns::preorder(const IR::MethodCallExpression* expr) {

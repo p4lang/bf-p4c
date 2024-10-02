@@ -209,7 +209,7 @@ class FlattenHeader : public Modifier {
     std::vector<cstring> nameSegments{};
     std::vector<const IR::Annotations*> allAnnotations{};
     std::vector<Util::SourceInfo> srcInfos{};
-    cstring makeName(cstring sep) const;
+    cstring makeName(std::string_view sep) const;
     void flattenType(const IR::Type* type);
     const IR::Annotations* mergeAnnotations() const;
 
@@ -217,17 +217,23 @@ class FlattenHeader : public Modifier {
     std::vector<cstring> memberSegments{};
     std::map<cstring, cstring> fieldNameMap;
     std::map<cstring, std::tuple<const IR::Expression*, cstring>> replacementMap;
-    cstring makeMember(cstring sep) const;
+    cstring makeMember(std::string_view sep) const;
     void flattenMember(const IR::Member* member);
     const IR::Member* doFlattenMember(const IR::Member* member);
 
     std::vector<cstring> pathSegments{};
-    cstring makePath(cstring sep) const;
+    cstring makePath(std::string_view sep) const;
     void flattenStructInitializer(const IR::StructExpression* e,
             IR::IndexedVector<IR::NamedExpression>* c);
     IR::StructExpression* doFlattenStructInitializer(const IR::StructExpression* e);
     IR::ListExpression* flatten_list(const IR::ListExpression* args);
     void explode(const IR::Expression*, IR::Vector<IR::Expression>*);
+    int memberDepth(const IR::Member* m);
+    const IR::Member *getTailMembers(const IR::Member* m, int depth);
+    const IR::PathExpression *replaceSrcInfo(const IR::PathExpression *tgt,
+                                             const IR::PathExpression *src);
+    const IR::Member *replaceSrcInfo(const IR::Member *tgt, const IR::Member *src);
+    const IR::Expression *balancedReplaceSrcInfo(const IR::Expression *tgt, const IR::Member *src);
 
     std::function<bool(const Context*, const IR::Type_StructLike*)> policy;
 

@@ -11,7 +11,6 @@
 #include "ir/ir.h"
 #include "ir/namemap.h"
 #include "ir/pattern.h"
-#include "lib/path.h"
 #include "frontends/common/options.h"
 #include "frontends/p4/typeChecking/typeChecker.h"
 #include "frontends/p4/coreLibrary.h"

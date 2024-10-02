@@ -10,7 +10,7 @@ namespace BFN {
 // wrapper for PARSE, PARSE_PAIR, and PARSE_TRIPLE
 #define BFN_PARSE(pragmaClass, parse, tname, internal) {                                     \
     auto p = new Pragma(pragmaClass::name, pragmaClass::description, pragmaClass::help);     \
-    std::pair<cstring, P4::ParseAnnotations::Handler> h = parse(pragmaClass::name, tname);   \
+    std::pair<std::string, P4::ParseAnnotations::Handler> h = parse(pragmaClass::name, tname);   \
     addHandler(h.first, h.second);                                                           \
     Pragma::registerPragma(p, internal);                                                     \
     }
@@ -20,7 +20,7 @@ namespace BFN {
 // PARSE_SKIP
 #define BFN_PARSE_EMPTY(pragmaClass, parse, internal) {                                      \
     auto p = new Pragma(pragmaClass::name, pragmaClass::description, pragmaClass::help);     \
-    std::pair<cstring, P4::ParseAnnotations::Handler> h = parse(pragmaClass::name);          \
+    std::pair<std::string, P4::ParseAnnotations::Handler> h = parse(pragmaClass::name);          \
     addHandler(h.first, h.second);                                                           \
     Pragma::registerPragma(p, internal);                                                     \
     }
@@ -29,20 +29,20 @@ namespace BFN {
 /** Parses Barefoot-specific annotations. */
 class ParseAnnotations : public P4::ParseAnnotations {
  public:
-    ParseAnnotations() : P4::ParseAnnotations("BFN", true, {
+    ParseAnnotations() : P4::ParseAnnotations("BFN"_cs, true, {
                 // Ignore p4v annotations.
-                PARSE_SKIP("assert"),
-                PARSE_SKIP("assume"),
+                PARSE_SKIP("assert"_cs),
+                PARSE_SKIP("assume"_cs),
 
                 // Ignore p4runtime annotations
-                PARSE_SKIP("brief"),
-                PARSE_SKIP("description"),
+                PARSE_SKIP("brief"_cs),
+                PARSE_SKIP("description"_cs),
 
                 // Ignore unused annotations appearing in headers for v1model.
-                PARSE_SKIP("metadata"),
-                PARSE_SKIP("alias"),
-                PARSE_SKIP("pipeline"),
-                PARSE_SKIP("deparser"),
+                PARSE_SKIP("metadata"_cs),
+                PARSE_SKIP("alias"_cs),
+                PARSE_SKIP("pipeline"_cs),
+                PARSE_SKIP("deparser"_cs),
             }, true) {
         constexpr bool extPragma = false;  // externally supported
         constexpr bool intPragma = true;   // Barefoot internal

@@ -76,7 +76,8 @@ namespace P4V1 {
 // |   subtract_from_field                 |  v  |     |
 // +---------------------------------------+-----+-----+
 
-static const std::set<cstring> tna_architectures = {"tna", "t2na", "TNA", "T2NA", "Tna", "T2na"};
+static const std::set<cstring> tna_architectures = {"tna"_cs,  "t2na"_cs, "TNA"_cs,
+                                                    "T2NA"_cs, "Tna"_cs,  "T2na"_cs};
 
 static bool using_tna_arch() {
     // Don't assume we have Barefoot-specific options, in case the current compiler context is not
@@ -96,7 +97,7 @@ CONVERT_PRIMITIVE(bypass_egress, 1) {
     if (!using_tna_arch()) return nullptr;
     if (primitive->operands.size() != 0) return nullptr;
     (void)structure;  // use the parameter to avoid warning
-    return BFN::createSetMetadata("ig_intr_md_for_tm", "bypass_egress", 1, 1);
+    return BFN::createSetMetadata("ig_intr_md_for_tm"_cs, "bypass_egress"_cs, 1, 1);
 }
 
 /*
@@ -202,8 +203,8 @@ convertClone(ProgramStructure *structure, const IR::Primitive *primitive, gress_
     const unsigned isMirroredTag = 1 << 3;
     const unsigned gressTag = (gress == INGRESS) ? 0 : 1 << 4;
     unsigned mirror_source = index | isMirroredTag | gressTag;
-    block->components.push_back(BFN::createSetMetadata("meta",
-                COMPILER_META, "mirror_source", 8, mirror_source));
+    block->components.push_back(BFN::createSetMetadata("meta"_cs,
+                COMPILER_META, "mirror_source"_cs, 8, mirror_source));
 
     return block;
 }
@@ -250,8 +251,8 @@ convertResubmit(ProgramStructure *structure, const IR::Primitive* primitive) {
     //
     // TODO: reuse the PHV container for `resubmit_type`
     unsigned resubmit_source = index;
-    block->components.push_back(BFN::createSetMetadata("meta",
-                COMPILER_META, "resubmit_source", 8, resubmit_source));
+    block->components.push_back(BFN::createSetMetadata("meta"_cs,
+                COMPILER_META, "resubmit_source"_cs, 8, resubmit_source));
 
     return block;
 }
@@ -270,8 +271,8 @@ convertDrop(ProgramStructure *structure, const IR::Primitive *) {
     auto st = dynamic_cast<TnaProgramStructure*>(structure);
     if (!st)
         return nullptr;
-    cstring meta = (st->currentGress == INGRESS) ? "ig_intr_md_for_dprsr" :
-        "eg_intr_md_for_dprsr";
+    cstring meta = (st->currentGress == INGRESS) ? "ig_intr_md_for_dprsr"_cs :
+        "eg_intr_md_for_dprsr"_cs;
     BUG_CHECK(st != nullptr, "Cannot cast structure to TnaProgramStructure");
     auto path = new IR::Member(new IR::PathExpression(meta), "drop_ctl");
     auto val = new IR::Constant(IR::Type::Bits::get(3), 1);
@@ -291,7 +292,7 @@ CONVERT_PRIMITIVE(invalidate, 1) {
     if (arg->is<IR::Constant>())
         ::error("Expected a field reference %1%", arg);
     return new IR::MethodCallStatement(primitive->srcInfo,
-            IR::ID(primitive->srcInfo, "invalidate"), { new IR::Argument(arg) });
+            IR::ID(primitive->srcInfo, "invalidate"_cs), { new IR::Argument(arg) });
 }
 
 CONVERT_PRIMITIVE(invalidate_digest, 1) {
@@ -299,7 +300,7 @@ CONVERT_PRIMITIVE(invalidate_digest, 1) {
     (void)structure;  // use the parameter to avoid warning
     IR::PathExpression *path = new IR::PathExpression("ig_intr_md_for_dprsr");
     auto mem = new IR::Member(path, "digest_type");
-    auto stmt = new IR::MethodCallStatement(primitive->srcInfo, IR::ID("invalidate"),
+    auto stmt = new IR::MethodCallStatement(primitive->srcInfo, IR::ID("invalidate"_cs),
             { new IR::Argument(mem) } );
     return stmt; }
 
@@ -359,7 +360,7 @@ CONVERT_PRIMITIVE(count_from_hash, 2) {
     if (counter == nullptr) {
         ::error("Expected a counter reference %1%", ref);
         return nullptr; }
-    cstring temp = structure->makeUniqueName("temp");
+    cstring temp = structure->makeUniqueName("temp"_cs);
     auto block = P4V1::generate_hash_block_statement(structure, primitive, temp, conv, 2);
     auto counterref = new IR::PathExpression(structure->counters.get(counter));
     auto method = new IR::Member(counterref, structure->v1model.counter.increment.Id());
@@ -400,7 +401,7 @@ CONVERT_PRIMITIVE(modify_field_with_hash_based_offset, 2) {
     auto st = dynamic_cast<P4V1::TnaProgramStructure*>(structure);
     ExpressionConverter conv(st);
     auto dest = conv.convert(primitive->operands.at(0));
-    return generate_tna_hash_block_statement(st, primitive, "", conv, 4, dest);
+    return generate_tna_hash_block_statement(st, primitive, ""_cs, conv, 4, dest);
 }
 
 // used by p4-14 to tna conversion
@@ -420,7 +421,7 @@ CONVERT_PRIMITIVE(modify_field_rng_uniform, 2) {
 
     auto typeArgs = new IR::Vector<IR::Type>({field->type});
     auto type = new IR::Type_Specialized(new IR::Type_Name("Random"), typeArgs);
-    auto randName = structure->makeUniqueName("random");
+    auto randName = structure->makeUniqueName("random"_cs);
 
     // check hi bound must be 2**W-1
     if (max_value > LONG_MAX)
@@ -492,7 +493,7 @@ CONVERT_PRIMITIVE(swap, 1) {
     if (!using_tna_arch()) return nullptr;
     if (primitive->operands.size() != 2) return nullptr;
     ExpressionConverter conv(structure);
-    auto temp = IR::ID(structure->makeUniqueName("temp"));
+    auto temp = IR::ID(structure->makeUniqueName("temp"_cs));
     auto v1 = primitive->operands.at(0);
     auto v2 = primitive->operands.at(1);
     auto type = v1->type;
@@ -509,7 +510,7 @@ CONVERT_PRIMITIVE(execute_meter_with_or, 1) {
     ExpressionConverter conv(structure);
     auto block = new IR::BlockStatement;
     auto dest = conv.convert(primitive->operands.at(2));
-    cstring temp2 = structure->makeUniqueName("temp");
+    cstring temp2 = structure->makeUniqueName("temp"_cs);
     block->push_back(new IR::Declaration_Variable(temp2, dest->type));
     if (primitive->operands.size() == 3) {
         if (!makeTnaMeterExecCall(primitive->srcInfo, structure, block,
@@ -521,7 +522,7 @@ CONVERT_PRIMITIVE(execute_meter_with_or, 1) {
         // has pre-color, so need TNA specific call
         block->push_back(
             new IR::MethodCallStatement(primitive->srcInfo,
-                IR::ID(primitive->srcInfo, "execute_meter_with_color"), {
+                IR::ID(primitive->srcInfo, "execute_meter_with_color"_cs), {
                     new IR::Argument(conv.convert(primitive->operands.at(0))),
                     new IR::Argument(conv.convert(primitive->operands.at(1))),
                     new IR::Argument(new IR::PathExpression(new IR::Path(temp2))),
@@ -537,7 +538,7 @@ CONVERT_PRIMITIVE(execute_meter_from_hash, 1) {
     if (primitive->operands.size() != 3 && primitive->operands.size() != 4) return nullptr;
     ExpressionConverter conv(structure);
     auto block = new IR::BlockStatement;
-    cstring temp = structure->makeUniqueName("temp");
+    cstring temp = structure->makeUniqueName("temp"_cs);
     block = P4V1::generate_hash_block_statement(structure, primitive, temp, conv, 3);
     if (primitive->operands.size() == 3) {
         if (!makeTnaMeterExecCall(primitive->srcInfo, structure, block,
@@ -549,7 +550,7 @@ CONVERT_PRIMITIVE(execute_meter_from_hash, 1) {
         // has pre-color, so need TNA specific call
         block->push_back(
             new IR::MethodCallStatement(primitive->srcInfo,
-                IR::ID(primitive->srcInfo, "execute_meter_with_color"), {
+                IR::ID(primitive->srcInfo, "execute_meter_with_color"_cs), {
                     new IR::Argument(conv.convert(primitive->operands.at(0))),
                     new IR::Argument(new IR::PathExpression(new IR::Path(temp))),
                     new IR::Argument(conv.convert(primitive->operands.at(2))),
@@ -561,10 +562,10 @@ CONVERT_PRIMITIVE(execute_meter_from_hash_with_or, 1) {
     if (!using_tna_arch()) return nullptr;
     if (primitive->operands.size() != 3 && primitive->operands.size() != 4) return nullptr;
     ExpressionConverter conv(structure);
-    cstring temp = structure->makeUniqueName("idx");
+    cstring temp = structure->makeUniqueName("idx"_cs);
     auto block = P4V1::generate_hash_block_statement(structure, primitive, temp, conv, 3);
     auto dest = conv.convert(primitive->operands.at(2));
-    cstring temp2 = structure->makeUniqueName("temp");
+    cstring temp2 = structure->makeUniqueName("temp"_cs);
     block->push_back(new IR::Declaration_Variable(temp2, dest->type));
     if (primitive->operands.size() == 3) {
         if (!makeTnaMeterExecCall(primitive->srcInfo, structure, block,
@@ -577,7 +578,7 @@ CONVERT_PRIMITIVE(execute_meter_from_hash_with_or, 1) {
         // has pre-color, so need TNA specific call
         block->push_back(
             new IR::MethodCallStatement(primitive->srcInfo,
-                IR::ID(primitive->srcInfo, "execute_meter_with_color"), {
+                IR::ID(primitive->srcInfo, "execute_meter_with_color"_cs), {
                     new IR::Argument(conv.convert(primitive->operands.at(0))),
                     new IR::Argument(new IR::PathExpression(new IR::Path(temp))),
                     new IR::Argument(new IR::PathExpression(new IR::Path(temp2))),

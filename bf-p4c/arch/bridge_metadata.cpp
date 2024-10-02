@@ -116,7 +116,7 @@ struct BridgeIngressToEgress : public Transform {
         forAllMatching<IR::BFN::TnaControl>(root,
                       [&](const IR::BFN::TnaControl* control) {
             if (!metaStructName.isNullOrEmpty()) return;
-            cstring p4ParamName = control->tnaParams.at("md");
+            cstring p4ParamName = control->tnaParams.at("md"_cs);
             auto* params = control->type->getApplyParameters();
             auto* param = params->getParameter(p4ParamName);
             BUG_CHECK(param, "Couldn't find param %1% on control: %2%",
@@ -164,7 +164,7 @@ struct BridgeIngressToEgress : public Transform {
                   state->name);
         if (tnaContext->thread != INGRESS) return state;
 
-        auto metaParam = tnaContext->tnaParams.at("md");
+        auto metaParam = tnaContext->tnaParams.at("md"_cs);
 
         // Add "metadata.^bridged_metadata.^bridged_metadata_indicator = 0;".
         if (!fieldsToBridge.empty() || special_primitives->has_clone()) {
@@ -180,7 +180,7 @@ struct BridgeIngressToEgress : public Transform {
                   state->name);
         if (tnaContext->thread != EGRESS) return state;
 
-        auto packetInParam = tnaContext->tnaParams.at("pkt");
+        auto packetInParam = tnaContext->tnaParams.at("pkt"_cs);
 
         if (fieldsToBridge.empty()) {
             // nothing to bridge, but clone is used, advance one byte.
@@ -191,7 +191,7 @@ struct BridgeIngressToEgress : public Transform {
         }
 
         // Add "pkt.extract(md.^bridged_metadata);"
-        auto metaParam = tnaContext->tnaParams.at("md");
+        auto metaParam = tnaContext->tnaParams.at("md"_cs);
         auto* member = new IR::Member(new IR::PathExpression(metaParam),
                 IR::ID(BRIDGED_MD));
         auto extractCall = createExtractCall(packetInParam, BRIDGED_MD_HEADER, member);
@@ -229,7 +229,7 @@ struct BridgeIngressToEgress : public Transform {
         if (special_primitives->has_bypass_egress()) {
             auto stmt = updateIngressControl(control);
             auto condExprPath = new IR::Member(
-                    new IR::PathExpression(new IR::Path("ig_intr_md_for_tm")), "bypass_egress");
+                    new IR::PathExpression(new IR::Path("ig_intr_md_for_tm")), "bypass_egress"_cs);
             auto condExpr = new IR::Equ(condExprPath, new IR::Constant(IR::Type::Bits::get(1), 0));
             auto cond = new IR::IfStatement(condExpr,
                     new IR::BlockStatement(*stmt), nullptr);
@@ -248,7 +248,7 @@ struct BridgeIngressToEgress : public Transform {
 
     IR::IndexedVector<IR::StatOrDecl>*
     updateIngressControl(const IR::BFN::TnaControl* control) {
-        auto metaParam = control->tnaParams.at("md");
+        auto metaParam = control->tnaParams.at("md"_cs);
 
         // if (ig_intr_md_for_tm.egress == 1) {
         //    add_bridge_metadata;
@@ -314,11 +314,11 @@ struct BridgeIngressToEgress : public Transform {
     updateIngressDeparser(IR::BFN::TnaDeparser* control) {
         // Add "pkt.emit(md.^bridged_metadata);" as the first statement in the
         // ingress deparser.
-        auto packetOutParam = control->tnaParams.at("pkt");
+        auto packetOutParam = control->tnaParams.at("pkt"_cs);
         auto* method = new IR::Member(new IR::PathExpression(packetOutParam),
                                       IR::ID("emit"));
 
-        auto metaParam = control->tnaParams.at("md");
+        auto metaParam = control->tnaParams.at("md"_cs);
         auto* member = new IR::Member(new IR::PathExpression(metaParam),
                         IR::ID(BRIDGED_MD));
         auto* args = new IR::Vector<IR::Argument>({ new IR::Argument(member) });
@@ -343,8 +343,8 @@ struct BridgeIngressToEgress : public Transform {
         auto control = findContext<IR::P4Control>();
         BUG_CHECK(control != nullptr,
                            "bypass_egress() must be used in a control block");
-        auto meta = new IR::PathExpression("ig_intr_md_for_tm");
-        auto flag = new IR::Member(meta, "bypass_egress");
+        auto meta = new IR::PathExpression("ig_intr_md_for_tm"_cs);
+        auto flag = new IR::Member(meta, "bypass_egress"_cs);
         auto ftype = IR::Type::Bits::get(1);
         auto assign = new IR::AssignmentStatement(flag, new IR::Constant(ftype, 1));
         stmts->push_back(assign);

@@ -62,8 +62,8 @@ std::optional<TofinoPipeTestCase> createTPHVSliceTestCase() {
     )");
     auto& options = BackendOptions();
     options.langVersion = CompilerOptions::FrontendVersion::P4_16;
-    options.target = "tofino";
-    options.arch = "v1model";
+    options.target = "tofino"_cs;
+    options.arch = "v1model"_cs;
     options.disable_parse_min_depth_limit = true;
 
     return TofinoPipeTestCase::createWithThreadLocalInstances(source);
@@ -91,10 +91,10 @@ TEST_F(TPHVSliceTest, Basic) {
     PhvUse uses(phv);
     runMockPasses(test->pipe, phv, uses);
 
-    auto* f1 = phv.field("ingress::h1.f1");
-    auto* f2 = phv.field("ingress::h1.f2");
-    auto* f3 = phv.field("ingress::h1.f3");
-    auto* f4 = phv.field("ingress::h1.f4");
+    auto* f1 = phv.field("ingress::h1.f1"_cs);
+    auto* f2 = phv.field("ingress::h1.f2"_cs);
+    auto* f3 = phv.field("ingress::h1.f3"_cs);
+    auto* f4 = phv.field("ingress::h1.f4"_cs);
 
     ASSERT_TRUE(f1);
     ASSERT_TRUE(f2);

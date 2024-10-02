@@ -149,21 +149,21 @@ void ExtractDeparser::processMirrorEmit(const IR::MethodCallExpression* mc,
         const IR::Expression* select, int idx) {
     if (mc->arguments->size() == 1) {
         auto session_id = mc->arguments->at(0)->expression;
-        generateDigest(digests["mirror"], "mirror", session_id, select, idx);
+        generateDigest(digests["mirror"_cs], "mirror"_cs, session_id, select, idx);
     } else if (mc->arguments->size() == 2) {
         auto expr = mc->arguments->at(1)->expression;
         if (auto list = expr->to<IR::StructExpression>()) {
             // field list is StructExpression if source is P4-16
             // Convert session_id, { field_list } --> { session_id, field_list }
             auto components = new IR::IndexedVector<IR::NamedExpression>();
-            auto session_id = new IR::NamedExpression("$session_id",
+            auto session_id = new IR::NamedExpression("$session_id"_cs,
                     mc->arguments->at(0)->expression);
             components->push_back(session_id);
             components->append(list->components);
             auto list_type = typeMap->getTypeType(mc->typeArguments->at(0), true);
             auto mirror_field_list =
                 new IR::StructExpression(list_type, list->structType, *components);
-            generateDigest(digests["mirror"], "mirror", mirror_field_list, select, idx);
+            generateDigest(digests["mirror"_cs], "mirror"_cs, mirror_field_list, select, idx);
         }
     }
 }
@@ -173,7 +173,7 @@ void ExtractDeparser::processResubmitEmit(const IR::MethodCallExpression* mc,
     auto num_args = mc->arguments->size();
     auto expr = (num_args == 0) ? nullptr  /* no argument in resubmit.emit() */
         : mc->arguments->at(0)->expression;
-    generateDigest(digests["resubmit"], "resubmit", expr, select, idx);
+    generateDigest(digests["resubmit"_cs], "resubmit"_cs, expr, select, idx);
 }
 
 void ExtractDeparser::processMirrorEmit(const IR::MethodCallExpression* mc, int idx) {
@@ -188,7 +188,7 @@ void ExtractDeparser::processMirrorEmit(const IR::MethodCallExpression* mc, int 
     auto name = getTnaParamName(deparser, param->name);
     auto meta = new IR::Metadata(name, st);
     auto member = new IR::Member(IR::Type_Bits::get(Device::mirrorTypeWidth()),
-            new IR::ConcreteHeaderRef(meta), "mirror_type");
+            new IR::ConcreteHeaderRef(meta), "mirror_type"_cs);
     processMirrorEmit(mc, member, idx);
 }
 
@@ -204,7 +204,7 @@ void ExtractDeparser::processResubmitEmit(const IR::MethodCallExpression* mc, in
     auto name = getTnaParamName(deparser, param->name);
     auto meta = new IR::Metadata(name, st);
     auto member = new IR::Member(new IR::ConcreteHeaderRef(meta),
-            "resubmit_type");
+            "resubmit_type"_cs);
     processResubmitEmit(mc, member, idx);
 }
 
@@ -221,8 +221,8 @@ void ExtractDeparser::processDigestPack(const IR::MethodCallExpression* mc, int 
     auto name = getTnaParamName(deparser, param->name);
     auto meta = new IR::Metadata(name, st);
     auto member = new IR::Member(new IR::ConcreteHeaderRef(meta),
-            "digest_type");
-    generateDigest(digests["learning"], "learning",
+            "digest_type"_cs);
+    generateDigest(digests["learning"_cs], "learning"_cs,
             mc->arguments->at(0)->expression, member, idx,
             controlPlaneName);
 }
@@ -266,7 +266,7 @@ void ExtractDeparser::postorder(const IR::MethodCallExpression* mc) {
                     "%1%: Unsupported unconditional %2%.emit", mc, inst->externalName());
                 int idx;
                 const IR::Expression* select;
-                std::tie(idx, select) = getDigestIndex(stmt, "Mirror", false);
+                std::tie(idx, select) = getDigestIndex(stmt, "Mirror"_cs, false);
                 processMirrorEmit(mc, select, idx);
             } else {
                 int idx = getDigestIndex(inst);
@@ -283,7 +283,7 @@ void ExtractDeparser::postorder(const IR::MethodCallExpression* mc) {
                     "%1%: Unsupported unconditional %2%.emit", mc, inst->externalName());
                 int idx;
                 const IR::Expression* select;
-                std::tie(idx, select) = getDigestIndex(stmt, "Resubmit", false);
+                std::tie(idx, select) = getDigestIndex(stmt, "Resubmit"_cs, false);
                 processResubmitEmit(mc, select, idx);
             } else {
                 int idx = getDigestIndex(inst);
@@ -299,9 +299,9 @@ void ExtractDeparser::postorder(const IR::MethodCallExpression* mc) {
                     "%1%: Unsupported unconditional %2%.emit", mc, inst->externalName());
             const IR::Expression* select;
             // pktgen_tbl has only one entry, digest_index is always 0.
-            std::tie(std::ignore, select) = getDigestIndex(stmt, "Pktgen", false);
+            std::tie(std::ignore, select) = getDigestIndex(stmt, "Pktgen"_cs, false);
             auto expr = mc->arguments->at(0)->expression;
-            generateDigest(digests["pktgen"], "pktgen", expr, select, 0,
+            generateDigest(digests["pktgen"_cs], "pktgen"_cs, expr, select, 0,
                     em->object->controlPlaneName());
         }
     }
@@ -314,9 +314,9 @@ void ExtractDeparser::postorder(const IR::MethodCallExpression* mc) {
                         "%1%: Unsupported unconditional %2%.emit", mc, inst->externalName());
                 int idx;
                 const IR::Expression* select;
-                std::tie(idx, select) = getDigestIndex(stmt, "Digest", false);
+                std::tie(idx, select) = getDigestIndex(stmt, "Digest"_cs, false);
                 LOG1("index=" << idx <<", select=" << select);
-                generateDigest(digests["learning"], "learning",
+                generateDigest(digests["learning"_cs], "learning"_cs,
                         mc->arguments->at(0)->expression, select, idx,
                         em->object->controlPlaneName());
             } else {

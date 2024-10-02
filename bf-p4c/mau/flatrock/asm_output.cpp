@@ -64,7 +64,7 @@ void IXBar::Use::emit_ixbar_asm(const PhvInfo &phv, std::ostream &out, indent_t 
     typedef std::map<int, std::map<int, Slice>> SortMap;
     SortMap sort_all, sort_word, sort_byte;
     cstring group_type;
-    cstring (*index)(int i) = [](int)->cstring { return ""; };
+    cstring (*index)(int i) = [](int)->cstring { return ""_cs; };
     switch (type) {
     case EXACT_MATCH:
         group_type = "exact";
@@ -230,7 +230,7 @@ bool ActionDataBus::Use::emit_adb_asm(std::ostream &out, const IR::MAU::Table *t
                 // 16 bit hash dist in a 32 bit slot have to determine whether the hash distribution
                 // unit goes in the lo section or the hi section
                 if (slot_hash_dist_units.popcount() == 1) {
-                    cstring lo_hi = slot_hash_dist_units.getbit(0) ? "lo" : "hi";
+                    cstring lo_hi = slot_hash_dist_units.getbit(0) ? "lo"_cs : "hi"_cs;
                     out << ", " << lo_hi;
                 }
                 out << ")";

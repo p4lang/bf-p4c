@@ -52,7 +52,7 @@ class SimplifyIfStatement : public PassManager {
  public:
     SimplifyIfStatement(ReferenceMap* refMap, TypeMap* typeMap) {
         passes.push_back(new ElimCallExprInIfCond(refMap, typeMap));
-        passes.push_back(new SimplifyControlFlow(refMap, typeMap));
+        passes.push_back(new SimplifyControlFlow(typeMap));
     }
 };
 

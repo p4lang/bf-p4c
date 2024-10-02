@@ -29,8 +29,8 @@ class ConstrainedFieldMapBuilderTest : public TofinoBackendTest {
 
     void SetUp() override {
         // Setup fields
-        phv.add("ingress::hdr.test", INGRESS, 32, 0, false, false);
-        phv.add("egress::hdr.test", EGRESS, 32, 0, false, false);
+        phv.add("ingress::hdr.test"_cs, INGRESS, 32, 0, false, false);
+        phv.add("egress::hdr.test"_cs, EGRESS, 32, 0, false, false);
     }
 };
 
@@ -39,8 +39,8 @@ TEST_F(ConstrainedFieldMapBuilderTest, ShouldInitializeFields) {
     fields = ConstrainedFieldMapBuilder::buildMap(phv, superclusters);
 
     // Assertions
-    ASSERT_FALSE(fields.find("ingress::hdr.test") == fields.end());
-    ASSERT_FALSE(fields.find("egress::hdr.test") == fields.end());
+    ASSERT_FALSE(fields.find("ingress::hdr.test"_cs) == fields.end());
+    ASSERT_FALSE(fields.find("egress::hdr.test"_cs) == fields.end());
 }
 
 TEST_F(ConstrainedFieldMapBuilderTest, ShouldInitializeSlices) {
@@ -53,8 +53,8 @@ TEST_F(ConstrainedFieldMapBuilderTest, ShouldInitializeSlices) {
     fields = ConstrainedFieldMapBuilder::buildMap(phv, superclusters);
 
     // Assertions
-    auto slices1 = fields["ingress::hdr.test"].getSlices();
-    auto slices2 = fields["egress::hdr.test"].getSlices();
+    auto slices1 = fields["ingress::hdr.test"_cs].getSlices();
+    auto slices2 = fields["egress::hdr.test"_cs].getSlices();
 
     ASSERT_EQ(slices1.size(), 2U);
     ASSERT_EQ(slices2.size(), 1U);
@@ -63,20 +63,20 @@ TEST_F(ConstrainedFieldMapBuilderTest, ShouldInitializeSlices) {
     auto &slice1 = *(++slices1.begin());
     auto &slice2 = *slices2.begin();
 
-    EXPECT_EQ(slice0.getParent().getName(), "ingress::hdr.test");
+    EXPECT_EQ(slice0.getParent().getName(), "ingress::hdr.test"_cs);
     EXPECT_EQ(slice0.getRange().lo, 0);
     EXPECT_EQ(slice0.getRange().hi, 19);
-    EXPECT_EQ(slice1.getParent().getName(), "ingress::hdr.test");
+    EXPECT_EQ(slice1.getParent().getName(), "ingress::hdr.test"_cs);
     EXPECT_EQ(slice1.getRange().lo, 20);
     EXPECT_EQ(slice1.getRange().hi, 31);
-    EXPECT_EQ(slice2.getParent().getName(), "egress::hdr.test");
+    EXPECT_EQ(slice2.getParent().getName(), "egress::hdr.test"_cs);
     EXPECT_EQ(slice2.getRange().lo, 0);
     EXPECT_EQ(slice2.getRange().hi, 31);
 }
 
 TEST_F(ConstrainedFieldMapBuilderTest, ShouldInitializeFieldConstraints) {
     // Additional setup
-    auto field = phv.field("ingress::hdr.test");
+    auto field = phv.field("ingress::hdr.test"_cs);
     field->set_solitary(1);
     field->updateAlignment(AR::PARSER, FieldAlignment(le_bitrange(4, 4)), Util::SourceInfo());
 
@@ -84,7 +84,7 @@ TEST_F(ConstrainedFieldMapBuilderTest, ShouldInitializeFieldConstraints) {
     fields = ConstrainedFieldMapBuilder::buildMap(phv, superclusters);
 
     // Assertions
-    auto &cf = fields.at("ingress::hdr.test");
+    auto &cf = fields.at("ingress::hdr.test"_cs);
     EXPECT_TRUE(cf.getSolitary().hasConstraint());
     EXPECT_TRUE(cf.getAlignment().hasConstraint());
     EXPECT_EQ(cf.getAlignment().getAlignment(), 4u);
@@ -97,14 +97,14 @@ TEST_F(ConstrainedFieldMapBuilderTest, ShouldInitializeSliceConstraints) {
     superclusters.push_back(*sc1);
 
     // Additional setup
-    auto field = phv.field("ingress::hdr.test");
+    auto field = phv.field("ingress::hdr.test"_cs);
     field->updateAlignment(AR::PARSER, FieldAlignment(le_bitrange(4, 4)), Util::SourceInfo());
 
     // Compute map
     fields = ConstrainedFieldMapBuilder::buildMap(phv, superclusters);
 
     // Assertions
-    auto slices = fields["ingress::hdr.test"].getSlices();
+    auto slices = fields["ingress::hdr.test"_cs].getSlices();
 
     auto slice = *(++slices.begin());
     EXPECT_TRUE(slice.getAlignment().hasConstraint());

@@ -155,7 +155,7 @@ class MauAsmOutput : public MauInspector {
             const IR::MAU::TernaryIndirect *ti) const;
     void emit_action_data_format(std::ostream &out, indent_t, const IR::MAU::Table *tbl,
             const IR::MAU::Action *af) const;
-    void emit_single_alias(std::ostream &out, cstring &sep, const ActionData::Parameter *param,
+    void emit_single_alias(std::ostream &out, std::string &sep, const ActionData::Parameter *param,
             le_bitrange adt_range, cstring alias,
             safe_vector<ActionData::Argument> &full_args, cstring action_name) const;
     void emit_action_data_alias(std::ostream &out, indent_t, const IR::MAU::Table *tbl,

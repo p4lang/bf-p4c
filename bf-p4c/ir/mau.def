@@ -290,7 +290,7 @@ class Table : BFN::Unit, IAnnotated  {
 #emit
     Table(cstring n, gress_t gr, const Expression *gw)
     : BFN::Unit(gw->srcInfo), name(n), gress(gr),
-      gateway_rows{ std::make_pair(gw, "$true"), std::make_pair(nullptr, "$false") } {}
+      gateway_rows{ std::make_pair(gw, "$true"_cs), std::make_pair(nullptr, "$false"_cs) } {}
     // ir-generator can't parse {}-initializer (thinks it is the ctor body
 #end
 
@@ -337,7 +337,7 @@ class Table : BFN::Unit, IAnnotated  {
         return false; }
     int stage() const override { return stage_ ? *stage_ : -1; }
     gress_t thread() const override { return gress; }
-    toString { return "table " + externalName(); }
+    toString { return "table "_cs + externalName(); }
     validate {
         std::set<cstring> gw_next;
         if (always_run == AlwaysRun::ACTION) {
@@ -394,7 +394,7 @@ class Table : BFN::Unit, IAnnotated  {
                 BUG("%s next on table with no such action or gw result", nxt.first);
             }
             if (!conditional_gateway_only() && !layout.gateway_match) {
-                if (next.count("$hit") || next.count("$miss")) {
+                if (next.count("$hit"_cs) || next.count("$miss"_cs)) {
                     BUG_CHECK(!action_chain() && !has_default_path(),
                               "Somehow have a hit/miss table combined with an action chain");
                 }
@@ -498,7 +498,7 @@ class Counter : Synth2Port {
 #nodbprint
     const Type *getType() const override { return Type_Counter::get(); }
     UniqueAttachedId::type_t get_id_type() const override { return UniqueAttachedId::COUNTER; }
-    cstring externType() const override { return direct ? "DirectCounter" : "Counter"; }
+    cstring externType() const override { return direct ? "DirectCounter"_cs : "Counter"_cs; }
     bool usesStatsBus() const override { return true; }
 }
 
@@ -534,7 +534,7 @@ class Meter : MeterBus2Port {
     bool mapram_possible(IR::MAU::ColorMapramAddress cma) const {
         return possible_mapram_address & (1U << static_cast<int>(cma));
     }
-    cstring externType() const override { return direct ? "DirectMeter" : "Meter"; }
+    cstring externType() const override { return direct ? "DirectMeter"_cs : "Meter"_cs; }
 
 #nodbprint
 }
@@ -598,7 +598,7 @@ class StatefulAlu : MeterBus2Port {
 
     int source_width() const;
     int alu_width() const { return std::min(32, source_width()); }
-    cstring externType() const override { return direct ? "DirectRegister" : "Register"; }
+    cstring externType() const override { return direct ? "DirectRegister"_cs : "Register"_cs; }
 }
 
 class Selector : AttachedMemory {
@@ -611,7 +611,7 @@ class Selector : AttachedMemory {
     int max_pool_size = 0;
     bool sps_scramble = true;  // Indicates if non-linear hash (SPS scramble) should be used.
     NullOK HashDist hash_mod = nullptr;
-    cstring externType() const override { return "ActionSelector"; }
+    cstring externType() const override { return "ActionSelector"_cs; }
     bool usesMeterBus() const override { return true; }
 #nodbprint
 }
@@ -624,12 +624,12 @@ class Selector : AttachedMemory {
 class TernaryIndirect : AttachedMemory {
 #noconstructor
 #nodbprint
-    TernaryIndirect(cstring tbl_name) { name = IR::ID(tbl_name + "$tind"); direct = true; }
+    TernaryIndirect(cstring tbl_name) { name = IR::ID(tbl_name + "$tind"_cs); direct = true; }
     const char *kind() const override { return "indirect"; }
     UniqueAttachedId::type_t get_id_type() const override {
         return UniqueAttachedId::TERNARY_INDIRECT;
     }
-    cstring externType() const override { return "ternary indirect"; }
+    cstring externType() const override { return "ternary indirect"_cs; }
 }
 
 /** Action data table used to hold action parameters */
@@ -640,23 +640,25 @@ class ActionData : AttachedMemory {
     UniqueAttachedId::type_t get_id_type() const override {
         return UniqueAttachedId::ACTION_DATA;
     }
-    cstring externType() const override { return "ActionProfile"; }
+    cstring externType() const override { return "ActionProfile"_cs; }
 }
 
 /** Idletime table **/
 class IdleTime : AttachedMemory {
     int precision = 3;
     int interval = 7;
-    cstring two_way_notification = "enable";
+#emit
+    cstring two_way_notification = "enable"_cs;
+#end
     bool per_flow_idletime = true;
 #noconstructor
 #nodbprint
-    IdleTime(cstring tbl_name) { name = IR::ID(tbl_name + "$idletime"); direct = true; }
+    IdleTime(cstring tbl_name) { name = IR::ID(tbl_name + "$idletime"_cs); direct = true; }
     const char *kind() const override { return "idletime"; }
     UniqueAttachedId::type_t get_id_type() const override {
         return UniqueAttachedId::IDLETIME;
     }
-    cstring externType() const override { return "idletime"; }
+    cstring externType() const override { return "idletime"_cs; }
 }
 
 // a sequence of tables -- may be reordered if deps allow.
@@ -830,8 +832,10 @@ class Action : VLIWInstruction, IAnnotated {
     // could be different than being table_only, and thus it is left out of the
     // visit_children of the table.
     bool hit_path_imp_only = false;
-    cstring hit_disallowed_reason = "none";
-    cstring disallowed_reason = "none";
+#emit
+    cstring hit_disallowed_reason = "none"_cs;
+    cstring disallowed_reason = "none"_cs;
+#end
     inline Vector<Argument> default_params = {};
     bool exitAction = false;  // should exit pipeline after action (next == EOP)
     bool parallel = false;    // visit children parallelly?

@@ -174,7 +174,7 @@ class RewriteConcatToSlices : public IgnoreKeyElementTransform {
         return dprsr; }
 
     const IR::BlockStatement *preorder(IR::BlockStatement *blk) override {
-        if (blk->getAnnotation("in_hash")) prune();
+        if (blk->getAnnotation("in_hash"_cs)) prune();
         return blk;
     }
     const IR::Node* preorder(IR::AssignmentStatement* stmt) override;
@@ -224,7 +224,7 @@ class ElimCasts : public PassManager {
            new RewriteConcatToSlices(),
            new P4::ClearTypeMap(typeMap),
            new BFN::TypeChecking(refMap, typeMap, true),
-           new P4::SimplifyControlFlow(refMap, typeMap),
+           new P4::SimplifyControlFlow(typeMap),
            new P4::ClearTypeMap(typeMap),
            new BFN::TypeChecking(refMap, typeMap, true),
         });

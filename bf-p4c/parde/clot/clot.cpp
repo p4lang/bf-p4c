@@ -193,7 +193,7 @@ void Clot::toJSON(JSONGenerator& json) const {
 
 /* static */ Clot* Clot::fromJSON(JSONLoader& json) {
     if (auto* v = json.json->to<JsonString>())
-        return new Clot(v->c_str());
+        return new Clot(cstring(v->c_str()));
     BUG("Couldn't decode JSON value to clot");
     return new Clot();
 }

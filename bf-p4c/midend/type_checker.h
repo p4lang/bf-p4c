@@ -13,14 +13,13 @@ namespace BFN {
  * @sa P4::TypeInference
  */
 class TypeInference : public P4::TypeInference {
-    P4::ReferenceMap *refMap;
     P4::TypeMap *typeMap;
 
  public:
-    TypeInference(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
+    TypeInference(P4::TypeMap* typeMap,
                   bool readOnly = false) :
-            P4::TypeInference(refMap, typeMap, readOnly),
-            refMap(refMap), typeMap(typeMap) { }
+            P4::TypeInference(typeMap, readOnly),
+            typeMap(typeMap) { }
 
     const IR::Node* postorder(IR::BFN::ReinterpretCast*) override;
     const IR::Node* postorder(IR::BFN::SignExtend*) override;

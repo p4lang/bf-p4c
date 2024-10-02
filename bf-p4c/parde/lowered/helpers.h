@@ -79,7 +79,7 @@ cstring debugInfoFor(const IR::BFN::Extract* extract, const PHV::AllocSlice& sli
  * field, the container, and POV state/flags bits read by the `Extract`.
  */
 cstring debugInfoFor(const IR::BFN::Extract* extract, const PHV::AllocSlice& slice,
-        const le_bitrange& pov_range, const cstring pov_type_string = "");
+        const le_bitrange& pov_range, const cstring pov_type_string = ""_cs);
 
 /// Maps a POV bit field to a single bit within a container, represented as a
 /// ContainerBitRef. Checks that the allocation for the POV bit field is sane.

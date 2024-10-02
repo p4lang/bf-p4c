@@ -70,11 +70,11 @@ namespace Helpers {
 /// CounterlikeTraits<> specialization for CounterExtern
 template <>
 struct CounterlikeTraits<::BFN::CounterExtern<BFN::Arch::TNA>> {
-    static const cstring name() { return "counter"; }
-    static const cstring directPropertyName() { return "counters"; }
-    static const cstring typeName() { return "Counter"; }
-    static const cstring directTypeName() { return "DirectCounter"; }
-    static const cstring sizeParamName() { return "size"; }
+    static const cstring name() { return "counter"_cs; }
+    static const cstring directPropertyName() { return "counters"_cs; }
+    static const cstring typeName() { return "Counter"_cs; }
+    static const cstring directTypeName() { return "DirectCounter"_cs; }
+    static const cstring sizeParamName() { return "size"_cs; }
     static ::barefoot::CounterSpec::Unit mapUnitName(const cstring name) {
         using ::barefoot::CounterSpec;
         if (name == "PACKETS")
@@ -91,11 +91,11 @@ struct CounterlikeTraits<::BFN::CounterExtern<BFN::Arch::TNA>> {
 /// CounterlikeTraits specialization for BFN::CounterExtern for PSA
 template <>
 struct CounterlikeTraits<::BFN::CounterExtern<BFN::Arch::PSA>> {
-    static const cstring name() { return "counter"; }
-    static const cstring directPropertyName() { return "psa_direct_counter"; }
-    static const cstring typeName() { return "Counter"; }
-    static const cstring directTypeName() { return "DirectCounter"; }
-    static const cstring sizeParamName() { return "n_counters"; }
+    static const cstring name() { return "counter"_cs; }
+    static const cstring directPropertyName() { return "psa_direct_counter"_cs; }
+    static const cstring typeName() { return "Counter"_cs; }
+    static const cstring directTypeName() { return "DirectCounter"_cs; }
+    static const cstring sizeParamName() { return "n_counters"_cs; }
     static ::barefoot::CounterSpec::Unit mapUnitName(const cstring name) {
         using ::barefoot::CounterSpec;
         if (name == "PACKETS")
@@ -114,11 +114,11 @@ struct CounterlikeTraits<::BFN::CounterExtern<BFN::Arch::PSA>> {
 /// CounterlikeTraits<> specialization for MeterExtern
 template <>
 struct CounterlikeTraits<::BFN::MeterExtern<BFN::Arch::TNA>> {
-    static const cstring name() { return "meter"; }
-    static const cstring directPropertyName() { return "meters"; }
-    static const cstring typeName() { return "Meter"; }
-    static const cstring directTypeName() { return "DirectMeter"; }
-    static const cstring sizeParamName() { return "size"; }
+    static const cstring name() { return "meter"_cs; }
+    static const cstring directPropertyName() { return "meters"_cs; }
+    static const cstring typeName() { return "Meter"_cs; }
+    static const cstring directTypeName() { return "DirectMeter"_cs; }
+    static const cstring sizeParamName() { return "size"_cs; }
     static ::barefoot::MeterSpec::Unit mapUnitName(const cstring name) {
         using ::barefoot::MeterSpec;
         if (name == "PACKETS")
@@ -133,11 +133,11 @@ struct CounterlikeTraits<::BFN::MeterExtern<BFN::Arch::TNA>> {
 /// CounterlikeTraits specialization for BFN::MeterExtern for PSA
 template <>
 struct CounterlikeTraits<::BFN::MeterExtern<BFN::Arch::PSA>> {
-    static const cstring name() { return "meter"; }
-    static const cstring directPropertyName() { return "psa_direct_meter"; }
-    static const cstring typeName() { return "Meter"; }
-    static const cstring directTypeName() { return "DirectMeter"; }
-    static const cstring sizeParamName() { return "n_meters"; }
+    static const cstring name() { return "meter"_cs; }
+    static const cstring directPropertyName() { return "psa_direct_meter"_cs; }
+    static const cstring typeName() { return "Meter"_cs; }
+    static const cstring directTypeName() { return "DirectMeter"_cs; }
+    static const cstring sizeParamName() { return "n_meters"_cs; }
     static ::barefoot::MeterSpec::Unit mapUnitName(const cstring name) {
         using ::barefoot::MeterSpec;
         if (name == "PACKETS")
@@ -235,7 +235,7 @@ struct ActionProfile {
                                         // profile declaration.
 
     p4rt_id_t getId(const P4RuntimeSymbolTableIface &symbols,
-                    const cstring blockPrefix = "") const {
+                    const cstring blockPrefix = ""_cs) const {
         auto symName = prefix(blockPrefix, name);
         return symbols.getId(SymbolType::P4RT_ACTION_PROFILE(), symName);
     }
@@ -255,7 +255,7 @@ struct ActionSelector {
     bool selSuffix;
 
     p4rt_id_t getId(const P4RuntimeSymbolTableIface &symbols,
-                    const cstring blockPrefix = "") const {
+                    const cstring blockPrefix = ""_cs) const {
         auto symName = prefix(blockPrefix, name);
         auto symSelectorName = (selSuffix) ? symName + "_sel" : symName;
         if (actionProfileName) {
@@ -334,7 +334,7 @@ struct Register {
         CHECK_NULL(instance);
         auto declaration = instance->node->to<IR::Declaration_Instance>();
 
-        auto size = instance->getParameterValue("size");
+        auto size = instance->getParameterValue("size"_cs);
 
         // retrieve type parameter for the register instance and convert it to P4DataTypeSpec
         BUG_CHECK(declaration->type->is<IR::Type_Specialized>(), "%1%: expected Type_Specialized",
@@ -397,7 +397,7 @@ struct RegisterParam {
         CHECK_NULL(instance);
         auto declaration = instance->node->to<IR::Declaration_Instance>();
 
-        auto initial_value = instance->getParameterValue("initial_value");
+        auto initial_value = instance->getParameterValue("initial_value"_cs);
 
         // retrieve type parameter for the register parameter instance
         // and convert it to P4DataTypeSpec
@@ -431,7 +431,7 @@ struct Lpf {
     static std::optional<Lpf> from(const IR::ExternBlock *instance) {
         CHECK_NULL(instance);
         auto declaration = instance->node->to<IR::Declaration_Instance>();
-        auto size = instance->getParameterValue("size");
+        auto size = instance->getParameterValue("size"_cs);
         return Lpf{declaration->controlPlaneName(), size->to<IR::Constant>()->asInt(), std::nullopt,
                    declaration->to<IR::IAnnotated>()};
     }
@@ -463,9 +463,9 @@ struct Wred {
         CHECK_NULL(instance);
         auto declaration = instance->node->to<IR::Declaration_Instance>();
 
-        auto size = instance->getParameterValue("size");
-        auto dropValue = instance->getParameterValue("drop_value");
-        auto noDropValue = instance->getParameterValue("no_drop_value");
+        auto size = instance->getParameterValue("size"_cs);
+        auto dropValue = instance->getParameterValue("drop_value"_cs);
+        auto noDropValue = instance->getParameterValue("no_drop_value"_cs);
 
         return Wred{declaration->controlPlaneName(),
                     static_cast<uint8_t>(dropValue->to<IR::Constant>()->asUnsigned()),
@@ -482,9 +482,9 @@ struct Wred {
         CHECK_NULL(table);
         BUG_CHECK(instance.name != std::nullopt, "Caller should've ensured we have a name");
 
-        auto dropValue = instance.substitution.lookupByName("drop_value")->expression;
+        auto dropValue = instance.substitution.lookupByName("drop_value"_cs)->expression;
         BUG_CHECK(dropValue->to<IR::Constant>(), "Non-constant drop_value");
-        auto noDropValue = instance.substitution.lookupByName("no_drop_value")->expression;
+        auto noDropValue = instance.substitution.lookupByName("no_drop_value"_cs)->expression;
         BUG_CHECK(noDropValue->to<IR::Constant>(), "Non-constant no_drop_value");
 
         return Wred{*instance.name,
@@ -498,7 +498,7 @@ struct Wred {
 
 struct PortMetadata {
     const p4configv1::P4DataTypeSpec *typeSpec;  // format of port metadata
-    static const cstring name() { return "$PORT_METADATA"; }
+    static const cstring name() { return "$PORT_METADATA"_cs; }
 };
 
 /// The information required for each field in order to generate the Snapshot
@@ -591,7 +591,7 @@ class SnapshotFieldFinder : public Inspector {
         LOG4("SnapshotFinder preorder Type_Header: " << type << indent);
         auto flattenedType = P4::ControlPlaneAPI::FlattenHeader::flatten(typeMap, type);
         if (includeValid) {
-            prefixList.push_back("$valid");
+            prefixList.push_back("$valid"_cs);
             addField(1);  // valid field (POV) has bitwidth of 1
             prefixList.pop_back();
         }
@@ -677,7 +677,7 @@ class BFRuntimeArchHandlerCommon : public P4::ControlPlaneAPI::P4RuntimeArchHand
     }
 
     cstring getControlPlaneName(const IR::Block *block, const IR::IDeclaration *decl) {
-        auto declName = decl ? decl->controlPlaneName() : "";
+        auto declName = decl ? decl->controlPlaneName() : ""_cs;
         return getFullyQualifiedName(block, declName);
     }
 
@@ -699,8 +699,8 @@ class BFRuntimeArchHandlerCommon : public P4::ControlPlaneAPI::P4RuntimeArchHand
     // CTXT JSON : ig_pipe0.prsr0
     cstring getFullyQualifiedName(const IR::Block *block, const cstring name,
                                   bool skip_control_plane_name = false) {
-        cstring block_name = "";
-        cstring control_plane_name = "";
+        cstring block_name = ""_cs;
+        cstring control_plane_name = ""_cs;
         cstring full_name = getBlockNamePrefix(block);
         if (!skip_control_plane_name) {
             if (auto cont = block->getContainer()) {
@@ -734,7 +734,7 @@ class BFRuntimeArchHandlerCommon : public P4::ControlPlaneAPI::P4RuntimeArchHand
             auto table = tableBlock->container;
             LOG2("Collecting Table Properties on block " << table->name);
             auto action_profile = getExternInstanceFromPropertyByTypeName(
-                table, implementationString, "ActionProfile", refMap, typeMap,
+                table, implementationString, "ActionProfile"_cs, refMap, typeMap,
                 &isConstructedInPlace);
             if (action_profile) {
                 cstring tableName = *action_profile->name;
@@ -743,12 +743,12 @@ class BFRuntimeArchHandlerCommon : public P4::ControlPlaneAPI::P4RuntimeArchHand
                     symbols->add(SymbolType::P4RT_ACTION_PROFILE(), tableName);
             }
             auto action_selector = getExternInstanceFromPropertyByTypeName(
-                table, implementationString, "ActionSelector", refMap, typeMap,
+                table, implementationString, "ActionSelector"_cs, refMap, typeMap,
                 &isConstructedInPlace);
             if (action_selector) {
                 cstring tableName = *action_selector->name;
                 tableName = prefix(getBlockNamePrefix(tableBlock), tableName);
-                if (action_selector->substitution.lookupByName("size")) {
+                if (action_selector->substitution.lookupByName("size"_cs)) {
                     std::string selectorName(tableName + "_sel");
                     symbols->add(SymbolType::P4RT_ACTION_SELECTOR(), selectorName);
                     symbols->add(SymbolType::P4RT_ACTION_PROFILE(), tableName);
@@ -784,7 +784,7 @@ class BFRuntimeArchHandlerCommon : public P4::ControlPlaneAPI::P4RuntimeArchHand
         } else if (externBlock->type->name == "ActionProfile") {
             symbols->add(SymbolType::P4RT_ACTION_PROFILE(), symName);
         } else if (externBlock->type->name == "ActionSelector") {
-            if (externBlock->findParameterValue("size")) {
+            if (externBlock->findParameterValue("size"_cs)) {
                 std::string selectorName(symName + "_sel");
                 symbols->add(SymbolType::P4RT_ACTION_SELECTOR(), selectorName);
                 symbols->add(SymbolType::P4RT_ACTION_PROFILE(), symName);
@@ -908,7 +908,7 @@ class BFRuntimeArchHandlerCommon : public P4::ControlPlaneAPI::P4RuntimeArchHand
     /// @return true if @p table's 'idle_timeout' property exists and is
     /// true. This indicates that @p table supports entry ageing.
     static bool getSupportsTimeout(const IR::P4Table *table) {
-        auto timeout = table->properties->getProperty("idle_timeout");
+        auto timeout = table->properties->getProperty("idle_timeout"_cs);
         if (timeout == nullptr) return false;
         if (!timeout->value->is<IR::ExpressionValue>()) {
             ::error("Unexpected value %1% for idle_timeout on table %2%", timeout, table);
@@ -933,7 +933,7 @@ class BFRuntimeArchHandlerCommon : public P4::ControlPlaneAPI::P4RuntimeArchHand
                                                        ReferenceMap *refMap, TypeMap *typeMap,
                                                        p4configv1::P4TypeInfo *p4RtTypeInfo) {
         auto directRegisterInstance =
-            Helpers::getExternInstanceFromProperty(table, "registers", refMap, typeMap);
+            Helpers::getExternInstanceFromProperty(table, "registers"_cs, refMap, typeMap);
         if (!directRegisterInstance) return std::nullopt;
         return Register::fromDirect(*directRegisterInstance, table, refMap, typeMap, p4RtTypeInfo);
     }
@@ -943,7 +943,7 @@ class BFRuntimeArchHandlerCommon : public P4::ControlPlaneAPI::P4RuntimeArchHand
 
     void addExternInstanceCommon(const P4RuntimeSymbolTableIface &symbols,
                                  p4configv1::P4Info *p4info, const IR::ExternBlock *externBlock,
-                                 cstring pipeName = "") {
+                                 cstring pipeName = ""_cs) {
         Log::TempIndent indent;
         LOG1("Adding Extern Instances for pipe " << pipeName << indent);
         auto decl = externBlock->node->to<IR::Declaration_Instance>();
@@ -989,7 +989,7 @@ class BFRuntimeArchHandlerCommon : public P4::ControlPlaneAPI::P4RuntimeArchHand
         ::barefoot::ValueSet valueSet;
         valueSet.set_size(valueSetInstance.size);
         valueSet.mutable_type_spec()->CopyFrom(*valueSetInstance.typeSpec);
-        addP4InfoExternInstance(symbols, SymbolType::P4RT_VALUE_SET(), "ValueSet",
+        addP4InfoExternInstance(symbols, SymbolType::P4RT_VALUE_SET(), "ValueSet"_cs,
                                 valueSetInstance.name, valueSetInstance.annotations, valueSet,
                                 p4info);
         LOG2("Added Instance - Value Set " << valueSetInstance.name);
@@ -1120,7 +1120,7 @@ class BFRuntimeArchHandlerCommon : public P4::ControlPlaneAPI::P4RuntimeArchHand
         auto instance = getExternInstanceFromProperty(table, implementationString, refMap, typeMap);
         if (!instance) return std::nullopt;
         if (instance->type->name != "ActionProfile") return std::nullopt;
-        auto size = instance->substitution.lookupByName("size")->expression;
+        auto size = instance->substitution.lookupByName("size"_cs)->expression;
         // size is a bit<32> compile-time value
         BUG_CHECK(size->template is<IR::Constant>(), "Non-constant size");
         return ActionProfile{*instance->name, size->template to<IR::Constant>()->asInt(),
@@ -1130,7 +1130,7 @@ class BFRuntimeArchHandlerCommon : public P4::ControlPlaneAPI::P4RuntimeArchHand
     /// @return the action profile corresponding to @p instance.
     static std::optional<ActionProfile> getActionProfile(const IR::ExternBlock *instance) {
         auto decl = instance->node->to<IR::IDeclaration>();
-        auto size = instance->getParameterValue("size");
+        auto size = instance->getParameterValue("size"_cs);
         BUG_CHECK(size->is<IR::Constant>(), "Non-constant size");
         return ActionProfile{decl->controlPlaneName(), size->to<IR::Constant>()->asInt(),
                              decl->to<IR::IAnnotated>()};
@@ -1142,12 +1142,12 @@ class BFRuntimeArchHandlerCommon : public P4::ControlPlaneAPI::P4RuntimeArchHand
                                                       ReferenceMap *refMap, TypeMap *typeMap) {
         using BFN::getExternInstanceFromPropertyByTypeName;
         auto action_selector = getExternInstanceFromPropertyByTypeName(
-            table, implementationString, "ActionSelector", refMap, typeMap);
+            table, implementationString, "ActionSelector"_cs, refMap, typeMap);
         if (!action_selector) return std::nullopt;
         // TODO: remove legacy code
         // used to support deprecated ActionSelector constructor.
-        if (action_selector->substitution.lookupByName("size")) {
-            auto size = action_selector->substitution.lookupByName("size")->expression;
+        if (action_selector->substitution.lookupByName("size"_cs)) {
+            auto size = action_selector->substitution.lookupByName("size"_cs)->expression;
             BUG_CHECK(size->template is<IR::Constant>(), "Non-constant size");
             return ActionSelector{*action_selector->name,
                                   std::nullopt,
@@ -1158,8 +1158,8 @@ class BFRuntimeArchHandlerCommon : public P4::ControlPlaneAPI::P4RuntimeArchHand
                                   true /* _sel suffix */};
         }
         auto maxGroupSize =
-            action_selector->substitution.lookupByName("max_group_size")->expression;
-        auto numGroups = action_selector->substitution.lookupByName("num_groups")->expression;
+            action_selector->substitution.lookupByName("max_group_size"_cs)->expression;
+        auto numGroups = action_selector->substitution.lookupByName("num_groups"_cs)->expression;
         // size is a bit<32> compile-time value
         BUG_CHECK(maxGroupSize->template is<IR::Constant>(), "Non-constant max group size");
         BUG_CHECK(numGroups->template is<IR::Constant>(), "Non-constant num groups");
@@ -1175,8 +1175,8 @@ class BFRuntimeArchHandlerCommon : public P4::ControlPlaneAPI::P4RuntimeArchHand
     std::optional<ActionSelector> getActionSelector(const IR::ExternBlock *instance) {
         auto actionSelDecl = instance->node->to<IR::IDeclaration>();
         // to be deleted, used to support deprecated ActionSelector constructor.
-        if (instance->findParameterValue("size")) {
-            auto size = instance->getParameterValue("size");
+        if (instance->findParameterValue("size"_cs)) {
+            auto size = instance->getParameterValue("size"_cs);
             BUG_CHECK(size->is<IR::Constant>(), "Non-constant size");
             return ActionSelector{actionSelDecl->controlPlaneName(),
                                   std::nullopt,
@@ -1186,11 +1186,11 @@ class BFRuntimeArchHandlerCommon : public P4::ControlPlaneAPI::P4RuntimeArchHand
                                   actionSelDecl->to<IR::IAnnotated>(),
                                   false /* sel suffix */};
         }
-        auto maxGroupSize = instance->getParameterValue("max_group_size");
-        auto numGroups = instance->getParameterValue("num_groups");
+        auto maxGroupSize = instance->getParameterValue("max_group_size"_cs);
+        auto numGroups = instance->getParameterValue("num_groups"_cs);
         BUG_CHECK(maxGroupSize->is<IR::Constant>(), "Non-constant max group size");
         BUG_CHECK(numGroups->is<IR::Constant>(), "Non-constant num groups");
-        auto action_profile = instance->getParameterValue("action_profile");
+        auto action_profile = instance->getParameterValue("action_profile"_cs);
         auto action_profile_decl =
             action_profile->to<IR::ExternBlock>()->node->to<IR::IDeclaration>();
         return ActionSelector{actionSelDecl->controlPlaneName(),
@@ -1235,7 +1235,7 @@ class BFRuntimeArchHandlerCommon : public P4::ControlPlaneAPI::P4RuntimeArchHand
         ::barefoot::Digest digest;
         digest.mutable_type_spec()->CopyFrom(*digestInstance.typeSpec);
         auto digestName = prefix(pipeName, digestInstance.name);
-        addP4InfoExternInstance(symbols, SymbolType::P4RT_DIGEST(), "Digest", digestName,
+        addP4InfoExternInstance(symbols, SymbolType::P4RT_DIGEST(), "Digest"_cs, digestName,
                                 digestInstance.annotations, digest, p4Info);
         LOG2("Added Instance - Digest " << digestName);
     }
@@ -1251,7 +1251,7 @@ class BFRuntimeArchHandlerCommon : public P4::ControlPlaneAPI::P4RuntimeArchHand
             newF->set_field_name(f.hashFieldName);
             newF->set_is_constant(f.isConstant);
         }
-        addP4InfoExternInstance(symbols, SymbolType::P4RT_HASH(), "DynHash", dynHashName,
+        addP4InfoExternInstance(symbols, SymbolType::P4RT_HASH(), "DynHash"_cs, dynHashName,
                                 dynHashInstance.annotations, dynHash, p4Info);
         LOG2("Added Instance - DynHash " << dynHashName);
     }
@@ -1265,16 +1265,17 @@ class BFRuntimeArchHandlerCommon : public P4::ControlPlaneAPI::P4RuntimeArchHand
             ::barefoot::DirectRegister register_;
             register_.mutable_type_spec()->CopyFrom(*registerInstance.typeSpec);
             register_.set_data_field_name(registerInstance.name);
-            addP4InfoExternInstance(symbols, SymbolType::P4RT_DIRECT_REGISTER(), "DirectRegister",
-                                    registerName, registerInstance.annotations, register_, p4Info);
+            addP4InfoExternInstance(symbols, SymbolType::P4RT_DIRECT_REGISTER(),
+                                    "DirectRegister"_cs, registerName, registerInstance.annotations,
+                                    register_, p4Info);
             LOG2("Added Instance - DirectRegister " << registerName);
         } else {
             ::barefoot::Register register_;
             register_.set_size(registerInstance.size);
             register_.mutable_type_spec()->CopyFrom(*registerInstance.typeSpec);
             register_.set_data_field_name(registerInstance.name);
-            addP4InfoExternInstance(symbols, SymbolType::P4RT_REGISTER(), "Register", registerName,
-                                    registerInstance.annotations, register_, p4Info);
+            addP4InfoExternInstance(symbols, SymbolType::P4RT_REGISTER(), "Register"_cs,
+                                    registerName, registerInstance.annotations, register_, p4Info);
             LOG2("Added Instance - Register " << registerName);
         }
     }
@@ -1368,7 +1369,7 @@ class BFRuntimeArchHandlerCommon : public P4::ControlPlaneAPI::P4RuntimeArchHand
                     P4::ControlPlaneAPI::P4RuntimeSymbolType::P4RT_TABLE(), tableName));
             }
         }
-        addP4InfoExternInstance(symbols, SymbolType::P4RT_ACTION_PROFILE(), "ActionProfile",
+        addP4InfoExternInstance(symbols, SymbolType::P4RT_ACTION_PROFILE(), "ActionProfile"_cs,
                                 actionProfileName, actionProfile.annotations, profile, p4Info);
         LOG2("Added Extern Instance - Action Profile " << actionProfileName);
     }
@@ -1392,9 +1393,9 @@ class BFRuntimeArchHandlerCommon : public P4::ControlPlaneAPI::P4RuntimeArchHand
                         P4::ControlPlaneAPI::P4RuntimeSymbolType::P4RT_TABLE(), tableName));
                 }
             }
-            addP4InfoExternInstance(symbols, SymbolType::P4RT_ACTION_SELECTOR(), "ActionSelector",
-                                    actionSelectorName, actionSelector.annotations, selector,
-                                    p4Info);
+            addP4InfoExternInstance(symbols, SymbolType::P4RT_ACTION_SELECTOR(),
+                                    "ActionSelector"_cs, actionSelectorName,
+                                    actionSelector.annotations, selector, p4Info);
             LOG2("Added Extern Instance - Action Selector " << actionSelectorName);
         } else {
             ::barefoot::ActionProfile profile;
@@ -1413,13 +1414,14 @@ class BFRuntimeArchHandlerCommon : public P4::ControlPlaneAPI::P4RuntimeArchHand
             // We use the ActionSelector name for the action profile, and add a "_sel" suffix for
             // the action selector.
             cstring profileName = actionSelectorName;
-            addP4InfoExternInstance(symbols, SymbolType::P4RT_ACTION_PROFILE(), "ActionProfile",
+            addP4InfoExternInstance(symbols, SymbolType::P4RT_ACTION_PROFILE(), "ActionProfile"_cs,
                                     profileName, actionSelector.annotations, profile, p4Info);
             selector.set_action_profile_id(
                 symbols.getId(SymbolType::P4RT_ACTION_PROFILE(), profileName));
             cstring selectorName = profileName + "_sel";
-            addP4InfoExternInstance(symbols, SymbolType::P4RT_ACTION_SELECTOR(), "ActionSelector",
-                                    selectorName, actionSelector.annotations, selector, p4Info);
+            addP4InfoExternInstance(symbols, SymbolType::P4RT_ACTION_SELECTOR(),
+                                    "ActionSelector"_cs, selectorName, actionSelector.annotations,
+                                    selector, p4Info);
             LOG2("Added Extern Instance - Action Selector " << selectorName);
         }
     }
@@ -1488,7 +1490,7 @@ class BFRuntimeArchHandlerCommon : public P4::ControlPlaneAPI::P4RuntimeArchHand
     std::unordered_set<cstring> colorAwareMeters;
 
     cstring implementationString;
-    cstring defaultPipeName = "pipe";
+    cstring defaultPipeName = "pipe"_cs;
 
     static constexpr int64_t defaultMaxGroupSize = 120;
 
@@ -1536,7 +1538,7 @@ class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<
         if (!main) ::fatal_error("Program does not contain a `main` module");
         if (main->type->name == "MultiParserSwitch") {
             int numParsersPerPipe = Device::numParsersPerPipe();
-            auto parsersName = "ig_prsr";
+            auto parsersName = "ig_prsr"_cs;
             forAllPipeBlocks(evaluatedProgram, [&](cstring, const IR::PackageBlock *pkg) {
                 auto parsers = pkg->findParameterValue(parsersName);
                 BUG_CHECK(parsers, "Expected Block");
@@ -1562,7 +1564,7 @@ class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<
                 }
             });
         } else {
-            auto parserName = "ingress_parser";
+            auto parserName = "ingress_parser"_cs;
             forAllPipeBlocks(evaluatedProgram, [&](cstring, const IR::PackageBlock *pkg) {
                 auto *block = pkg->findParameterValue(parserName);
                 if (!block) return;
@@ -1582,7 +1584,7 @@ class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<
         : BFRuntimeArchHandlerCommon<Arch::TNA>(refMap, typeMap, evaluatedProgram) {
         Log::TempIndent indent;
         LOG1("BFRuntimeArchHandlerTofino" << indent);
-        implementationString = "implementation";
+        implementationString = "implementation"_cs;
 
         std::set<cstring> pipes;
         LOG2("Populating blockNamePrefixMap" << Log::indent);
@@ -1606,7 +1608,7 @@ class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<
         LOG2_UNINDENT;
 
         // Update multi parser names
-        static std::vector<cstring> gressNames = {"ig", "eg"};
+        static std::vector<cstring> gressNames = {"ig"_cs, "eg"_cs};
         int numParsersPerPipe = Device::numParsersPerPipe();
 
         auto main = evaluatedProgram->getMain();
@@ -1644,7 +1646,7 @@ class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<
 
     cstring getBlockNamePrefix(const IR::Block *blk) override {
         if (blockNamePrefixMap.count(blk) > 0) return blockNamePrefixMap[blk];
-        return "";
+        return ""_cs;
     }
 
     void collectExternInstance(P4RuntimeSymbolTableIface *symbols,
@@ -1753,14 +1755,14 @@ class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<
     /// Looks at all control objects relevant to snapshot (based on architecture
     /// knowledge) and populates the snapshotInfo map.
     void getSnapshotControls() {
-        static std::vector<cstring> gressNames = {"ingress", "egress"};
+        static std::vector<cstring> gressNames = {"ingress"_cs, "egress"_cs};
         forAllPipeBlocks(evaluatedProgram, [&](cstring pipeName, const IR::PackageBlock *pkg) {
             for (auto gressName : gressNames) {
                 auto gress = pkg->findParameterValue(gressName);
                 BUG_CHECK(gress->is<IR::ControlBlock>(), "Expected control");
                 auto control = gress->to<IR::ControlBlock>();
                 if (blockNamePrefixMap.count(control) > 0) pipeName = blockNamePrefixMap[control];
-                snapshotInfo.emplace(control, SnapshotInfo{pipeName, gressName, 0u, "", {}});
+                snapshotInfo.emplace(control, SnapshotInfo{pipeName, gressName, 0u, ""_cs, {}});
                 LOG3("Adding SnapshotInfo for " << control->getName() << " " << gressName
                                                 << " on pipe " << pipeName);
             }
@@ -1815,7 +1817,7 @@ class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<
     /// the "architecture name", the "P4 type name" and the "user-provided name"
     /// (if applicable, i.e. if the P4 programmer used a declaration).
     void collectParserChoices(P4RuntimeSymbolTableIface *symbols) {
-        static std::vector<cstring> gressNames = {"ig", "eg"};
+        static std::vector<cstring> gressNames = {"ig"_cs, "eg"_cs};
         int numParsersPerPipe = Device::numParsersPerPipe();
 
         auto main = evaluatedProgram->getMain();
@@ -1932,7 +1934,7 @@ class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<
             if (selectorExternBlock->type->name != "ActionSelector") return;
             auto selectorDecl = selectorExternBlock->node->to<IR::Declaration_Instance>();
             CHECK_NULL(selectorDecl);
-            auto profile = selectorExternBlock->getParameterValue("action_profile");
+            auto profile = selectorExternBlock->getParameterValue("action_profile"_cs);
             if (profile) {
                 auto profileExternBlock = profile->to<IR::ExternBlock>();
                 auto profileDecl = profileExternBlock->node->to<IR::Declaration_Instance>();
@@ -1991,12 +1993,12 @@ class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<
                 auto *reg_param = method->object->to<IR::Declaration_Instance>();
                 if (reg_param == nullptr)  // packet_in packet
                     return true;
-                if (!checkExtern(reg_param, "RegisterParam")) return true;
+                if (!checkExtern(reg_param, "RegisterParam"_cs)) return true;
                 // Find the declaration of RegisterAction
                 auto *reg_action = findContext<IR::Declaration_Instance>();
                 if (reg_action == nullptr) return true;
-                if (!checkExtern(reg_action, "DirectRegisterAction") &&
-                    !checkExtern(reg_action, "RegisterAction"))
+                if (!checkExtern(reg_action, "DirectRegisterAction"_cs) &&
+                    !checkExtern(reg_action, "RegisterAction"_cs))
                     return true;
                 BUG_CHECK(reg_action->arguments->size() > 0, "%1%: Missing argument", reg_action);
                 auto *rap = reg_action->arguments->at(0)->expression->to<IR::PathExpression>();
@@ -2004,17 +2006,17 @@ class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<
                 // Find the declaration of Register or DirectRegister
                 auto *rap_decl = getDeclInst(self.refMap, rap);
                 if (rap_decl == nullptr) return true;
-                if (checkExtern(rap_decl, "Register"))
+                if (checkExtern(rap_decl, "Register"_cs))
                     self.registerParam2register[reg_param->controlPlaneName()] =
                         rap_decl->controlPlaneName();
-                if (checkExtern(rap_decl, "DirectRegister"))
+                if (checkExtern(rap_decl, "DirectRegister"_cs))
                     self.registerParam2table[reg_param->controlPlaneName()] =
                         rap_decl->controlPlaneName();
                 return true;
             }
             void postorder(const IR::P4Table *table) override {
                 // Find the M/A table with attached direct register that uses a register parameter
-                auto *registers = table->properties->getProperty("registers");
+                auto *registers = table->properties->getProperty("registers"_cs);
                 if (registers == nullptr) return;
                 auto *registers_value = registers->value->to<IR::ExpressionValue>();
                 CHECK_NULL(registers_value);
@@ -2064,7 +2066,7 @@ class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<
     static std::optional<T> getDirectFilter(const IR::P4Table *table, ReferenceMap *refMap,
                                               TypeMap *typeMap, cstring filterType) {
         auto directFilterInstance =
-            Helpers::getExternInstanceFromProperty(table, "filters", refMap, typeMap);
+            Helpers::getExternInstanceFromProperty(table, "filters"_cs, refMap, typeMap);
         if (!directFilterInstance) return std::nullopt;
         CHECK_NULL(directFilterInstance->type);
         if (directFilterInstance->type->name != filterType) return std::nullopt;
@@ -2075,14 +2077,14 @@ class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<
     /// or std::nullopt otherwise.
     static std::optional<Lpf> getDirectLpf(const IR::P4Table *table, ReferenceMap *refMap,
                                              TypeMap *typeMap) {
-        return getDirectFilter<Lpf>(table, refMap, typeMap, "DirectLpf");
+        return getDirectFilter<Lpf>(table, refMap, typeMap, "DirectLpf"_cs);
     }
 
     /// @return the direct Wred instance associated with @p table, if it has one,
     /// or std::nullopt otherwise.
     static std::optional<Wred> getDirectWred(const IR::P4Table *table, ReferenceMap *refMap,
                                                TypeMap *typeMap) {
-        return getDirectFilter<Wred>(table, refMap, typeMap, "DirectWred");
+        return getDirectFilter<Wred>(table, refMap, typeMap, "DirectWred"_cs);
     }
 
     void addExternInstance(const P4RuntimeSymbolTableIface &symbols, p4configv1::P4Info *p4info,
@@ -2217,7 +2219,7 @@ class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<
                   "%1%: Name of the intrinsic metadata not found for this parser block",
                   parser->getName());
         portMetadata.set_key_name(ingressIntrinsicMdParamName[parserBlock]);
-        addP4InfoExternInstance(symbols, SymbolType::P4RT_PORT_METADATA(), "PortMetadata", name,
+        addP4InfoExternInstance(symbols, SymbolType::P4RT_PORT_METADATA(), "PortMetadata"_cs, name,
                                 nullptr, portMetadata, p4Info);
     }
 
@@ -2237,7 +2239,7 @@ class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<
             portMetadata.set_key_name(DP0TKN);
         }
 
-        addP4InfoExternInstance(symbols, SymbolType::P4RT_PORT_METADATA(), "PortMetadata", name,
+        addP4InfoExternInstance(symbols, SymbolType::P4RT_PORT_METADATA(), "PortMetadata"_cs, name,
                                 nullptr, portMetadata, p4Info);
     }
 
@@ -2257,14 +2259,14 @@ class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<
             newF->set_name(f.name);
             newF->set_bitwidth(f.bitwidth);
         }
-        addP4InfoExternInstance(symbols, SymbolType::P4RT_SNAPSHOT(), "Snapshot",
+        addP4InfoExternInstance(symbols, SymbolType::P4RT_SNAPSHOT(), "Snapshot"_cs,
                                 snapshotInstance.name, nullptr, snapshot, p4Info);
     }
 
     void addParserChoices(const P4RuntimeSymbolTableIface &symbols, p4configv1::P4Info *p4Info,
                           cstring name, const ::barefoot::ParserChoices &parserChoices) {
-        addP4InfoExternInstance(symbols, SymbolType::P4RT_PARSER_CHOICES(), "ParserChoices", name,
-                                nullptr, parserChoices, p4Info);
+        addP4InfoExternInstance(symbols, SymbolType::P4RT_PARSER_CHOICES(), "ParserChoices"_cs,
+                                name, nullptr, parserChoices, p4Info);
     }
 
     void addLpf(const P4RuntimeSymbolTableIface &symbols, p4configv1::P4Info *p4Info,
@@ -2276,13 +2278,13 @@ class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<
             auto tableId =
                 symbols.getId(P4::ControlPlaneAPI::P4RuntimeSymbolType::P4RT_TABLE(), tableName);
             lpf.set_direct_table_id(tableId);
-            addP4InfoExternInstance(symbols, SymbolType::P4RT_DIRECT_LPF(), "DirectLpf", lpfName,
+            addP4InfoExternInstance(symbols, SymbolType::P4RT_DIRECT_LPF(), "DirectLpf"_cs, lpfName,
                                     lpfInstance.annotations, lpf, p4Info);
             LOG2("Added Instance - Direct LPF " << lpfName);
         } else {
             ::barefoot::Lpf lpf;
             lpf.set_size(lpfInstance.size);
-            addP4InfoExternInstance(symbols, SymbolType::P4RT_LPF(), "Lpf", lpfName,
+            addP4InfoExternInstance(symbols, SymbolType::P4RT_LPF(), "Lpf"_cs, lpfName,
                                     lpfInstance.annotations, lpf, p4Info);
             LOG2("Added Instance - LPF " << lpfName);
         }
@@ -2307,14 +2309,14 @@ class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<
             auto tableId =
                 symbols.getId(P4::ControlPlaneAPI::P4RuntimeSymbolType::P4RT_TABLE(), tableName);
             wred.set_direct_table_id(tableId);
-            addP4InfoExternInstance(symbols, SymbolType::P4RT_DIRECT_WRED(), "DirectWred", wredName,
-                                    wredInstance.annotations, wred, p4Info);
+            addP4InfoExternInstance(symbols, SymbolType::P4RT_DIRECT_WRED(), "DirectWred"_cs,
+                                    wredName, wredInstance.annotations, wred, p4Info);
             LOG2("Added Instance - Direct WRED " << wredName);
         } else {
             ::barefoot::Wred wred;
             setWredCommon(&wred, wredInstance);
             wred.set_size(wredInstance.size);
-            addP4InfoExternInstance(symbols, SymbolType::P4RT_WRED(), "Wred", wredName,
+            addP4InfoExternInstance(symbols, SymbolType::P4RT_WRED(), "Wred"_cs, wredName,
                                     wredInstance.annotations, wred, p4Info);
             LOG2("Added Instance - WRED " << wredName);
         }
@@ -2323,7 +2325,7 @@ class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<
     // For RegisterParams, the table name should have the associated pipe prefix but
     // the data field names should not since they have local scope.
     void addRegisterParam(const P4RuntimeSymbolTableIface &symbols, p4configv1::P4Info *p4Info,
-                          const RegisterParam &registerParamInstance, cstring pipeName = "") {
+                          const RegisterParam &registerParamInstance, cstring pipeName = ""_cs) {
         p4rt_id_t tableId = 0;
         if (registerParam2register.count(registerParamInstance.name) > 0)
             tableId =
@@ -2340,7 +2342,7 @@ class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<
         register_param_.set_initial_value(registerParamInstance.initial_value);
         register_param_.set_data_field_name(registerParamInstance.name);
         auto registerParamName = prefix(pipeName, registerParamInstance.name);
-        addP4InfoExternInstance(symbols, SymbolType::P4RT_REGISTER_PARAM(), "RegisterParam",
+        addP4InfoExternInstance(symbols, SymbolType::P4RT_REGISTER_PARAM(), "RegisterParam"_cs,
                                 registerParamName, registerParamInstance.annotations,
                                 register_param_, p4Info);
         LOG2("Added Instance - RegisterParam " << registerParamName);
@@ -2379,7 +2381,7 @@ class BFRuntimeArchHandlerPSA final : public BFRuntimeArchHandlerCommon<Arch::PS
     BFRuntimeArchHandlerPSA(ReferenceMap *refMap, TypeMap *typeMap,
                             const IR::ToplevelBlock *evaluatedProgram)
         : BFRuntimeArchHandlerCommon<Arch::PSA>(refMap, typeMap, evaluatedProgram) {
-        implementationString = "psa_implementation";
+        implementationString = "psa_implementation"_cs;
     }
 
     void postCollect(const P4RuntimeSymbolTableIface &symbols) {

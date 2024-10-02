@@ -43,45 +43,45 @@ namespace {
 using MetricName = AllocScore::MetricName;
 
 // general
-const MetricName n_tphv_on_phv_bits = "tphv_on_phv_bits";
-const MetricName n_mocha_on_phv_bits = "mocha_on_phv_bits";
-const MetricName n_dark_on_phv_bits = "dark_on_phv_bits";
-const MetricName n_dark_on_mocha_bits = "dark_on_mocha_bits";
+const MetricName n_tphv_on_phv_bits = "tphv_on_phv_bits"_cs;
+const MetricName n_mocha_on_phv_bits = "mocha_on_phv_bits"_cs;
+const MetricName n_dark_on_phv_bits = "dark_on_phv_bits"_cs;
+const MetricName n_dark_on_mocha_bits = "dark_on_mocha_bits"_cs;
 /// Number of bitmasked-set operations introduced by this transaction.
 // Opt for the AllocScore, which minimizes the number of bitmasked-set instructions.
 // This helps action data packing and gives table placement a better shot
 // at fitting within the number of stages available on the device.
 
-const MetricName n_bitmasked_set = "n_bitmasked_set";
+const MetricName n_bitmasked_set = "n_bitmasked_set"_cs;
 /// Number of container bits wasted because POV slice lists/slices
 /// do not fill the container wholly.
-const MetricName n_wasted_pov_bits = "wasted_pov_bits";
-const MetricName parser_extractor_balance = "parser_extractor_balance";
-const MetricName n_inc_tphv_collections = "n_inc_tphv_collections";
-const MetricName n_prefer_bits = "n_prefer_bits";
+const MetricName n_wasted_pov_bits = "wasted_pov_bits"_cs;
+const MetricName parser_extractor_balance = "parser_extractor_balance"_cs;
+const MetricName n_inc_tphv_collections = "n_inc_tphv_collections"_cs;
+const MetricName n_prefer_bits = "n_prefer_bits"_cs;
 
 // by kind
-const MetricName n_set_gress = "n_set_gress";
-const MetricName n_set_parser_group_gress = "n_set_parser_group_gress";
-const MetricName n_set_deparser_group_gress = "n_set_deparser_group_gress";
-const MetricName n_set_parser_extract_group_source = "n_set_parser_extract_group_source";
-const MetricName n_overlay_bits = "n_overlay_bits";
-const MetricName n_field_packing_score = "n_field_packing_score";
+const MetricName n_set_gress = "n_set_gress"_cs;
+const MetricName n_set_parser_group_gress = "n_set_parser_group_gress"_cs;
+const MetricName n_set_deparser_group_gress = "n_set_deparser_group_gress"_cs;
+const MetricName n_set_parser_extract_group_source = "n_set_parser_extract_group_source"_cs;
+const MetricName n_overlay_bits = "n_overlay_bits"_cs;
+const MetricName n_field_packing_score = "n_field_packing_score"_cs;
 // how many wasted bits in partial container get used.
-const MetricName n_packing_bits = "n_packing_bits";
+const MetricName n_packing_bits = "n_packing_bits"_cs;
 // smaller, better.
-const MetricName n_packing_priority = "n_packing_priority";
-const MetricName n_inc_containers = "n_inc_containers";
+const MetricName n_packing_priority = "n_packing_priority"_cs;
+const MetricName n_inc_containers = "n_inc_containers"_cs;
 // if solitary but taking a container larger than it.
-const MetricName n_wasted_bits = "n_wasted_bits";
+const MetricName n_wasted_bits = "n_wasted_bits"_cs;
 // use of 8/16 bit containers
-const MetricName n_inc_small_containers = "n_inc_small_containers";
+const MetricName n_inc_small_containers = "n_inc_small_containers"_cs;
 // The number of CLOT-eligible bits that have been allocated to PHV
 // (JBay only).
-const MetricName n_clot_bits = "n_clot_bits";
+const MetricName n_clot_bits = "n_clot_bits"_cs;
 // The number of containers in a deparser group allocated to
 // non-deparsed fields of a different gress than the deparser group.
-const MetricName n_mismatched_deparser_gress = "n_mismatched_deparser_gress";
+const MetricName n_mismatched_deparser_gress = "n_mismatched_deparser_gress"_cs;
 
 void log_packing_opportunities(
     const FieldPackingOpportunity* p, const std::list<PHV::SuperCluster*> sc) {
@@ -109,7 +109,7 @@ std::string str_supercluster_alignments(PHV::SuperCluster& sc, const AllocAlignm
     ss << "slicelist alignments: " << "\n";
     for (const auto* sl : sc.slice_lists()) {
         ss << "[";
-        cstring sep = "";
+        std::string sep = "";
         for (const auto& fs : *sl) {
             ss << sep << "{" << fs << ", " << align.slice_alignment.at(fs) << "}";
             sep = ", ";
@@ -171,7 +171,7 @@ std::pair<bool, cstring> prioritized_cmp(std::vector<AllocScoreCmpCond> conds) {
         case CondIsBetter::no:    { return {false, c.name}; }
         }
     }
-    return {false, "equal"};
+    return {false, "equal"_cs};
 }
 
 ordered_map<MetricName, int> weighted_sum(const AllocScore& delta,
@@ -226,7 +226,7 @@ bool default_alloc_score_is_better(const AllocScore& left, const AllocScore& rig
             {n_clot_bits, weighted_delta[n_clot_bits], false},
             {n_prefer_bits, delta.general[n_prefer_bits], true},
             {n_overlay_bits, weighted_delta[n_overlay_bits], true},  // if !tofino
-            {"container_type_score",
+            {"container_type_score"_cs,
              // TODO:
              // The code below simply wants to reproduce:
              // allocate_phv.cpp#L235 at 405005d67b1bb0e31c36cbb274518780bf86f1aa.
@@ -252,7 +252,7 @@ bool default_alloc_score_is_better(const AllocScore& left, const AllocScore& rig
             {parser_extractor_balance, delta.general[parser_extractor_balance], true},
             {n_clot_bits, weighted_delta[n_clot_bits], false},
             {n_prefer_bits, delta.general[n_prefer_bits], true},
-            {"container_type_score", container_type_score, false},
+            {"container_type_score"_cs, container_type_score, false},
             {n_inc_tphv_collections, delta.general[n_inc_tphv_collections], false},
             {n_bitmasked_set, delta.general[n_bitmasked_set], false},
             {n_inc_containers, weighted_delta[n_inc_containers], false},
@@ -319,7 +319,7 @@ bool less_fragment_alloc_score_is_better(const AllocScore& left, const AllocScor
                                    delta.general[n_dark_on_mocha_bits];
         conds = {
             {n_clot_bits, weighted_delta[n_clot_bits], false},
-            {"bad_container_bits", bad_container_bits, false},
+            {"bad_container_bits"_cs, bad_container_bits, false},
             {n_prefer_bits, delta.general[n_prefer_bits], true},
             {n_wasted_pov_bits, delta.general[n_wasted_pov_bits], false},
             {n_wasted_bits, weighted_delta[n_wasted_bits], false},
@@ -3674,7 +3674,7 @@ CoreAllocation::find_first_unallocated_slicelist(
     const PHV::Allocation& alloc, const std::list<PHV::ContainerGroup*>& container_groups,
     const PHV::SuperCluster& sc) const {
     ScoreContext score_ctx(
-            "dummy", true, [](const AllocScore&, const AllocScore&) { return false; });
+            "dummy"_cs, true, [](const AllocScore&, const AllocScore&) { return false; });
     ordered_set<const PHV::SuperCluster::SliceList*> never_allocated;
     for (const PHV::SuperCluster::SliceList* slice_list : sc.slice_lists()) {
         never_allocated.insert(slice_list);
@@ -4074,7 +4074,7 @@ AllocResult AllocatePHV::brute_force_alloc(
     const std::list<PHV::ContainerGroup*>& container_groups,
     const int pipe_id) const {
     BruteForceStrategyConfig default_config {
-        /*.name:*/                   "default_alloc_config",
+        /*.name:*/                   "default_alloc_config"_cs,
         /*.is_better:*/              default_alloc_score_is_better,
         /*.max_failure_retry:*/      0,
         /*.max_slicing:*/            128,
@@ -4084,7 +4084,7 @@ AllocResult AllocatePHV::brute_force_alloc(
         /*.enable_ara_in_overlays:*/ PhvInfo::darkSpillARA
     };
     BruteForceStrategyConfig less_fragment_backup_config {
-        /*.name:*/                   "less_fragment_alloc_config",
+        /*.name:*/                   "less_fragment_alloc_config"_cs,
         /*.is_better:*/              less_fragment_alloc_score_is_better,
         /*.max_failure_retry:*/      0,
         /*.max_slicing:*/            256,
@@ -4100,7 +4100,7 @@ AllocResult AllocatePHV::brute_force_alloc(
     if (!utils_i.settings.no_code_change &&
         PhvInfo::darkSpillARA && Device::currentDevice() != Device::TOFINO) {
         BruteForceStrategyConfig no_ara_config {
-            /*.name:*/                   "disable_ara_alloc_config",
+            /*.name:*/                   "disable_ara_alloc_config"_cs,
             /*.is_better:*/              default_alloc_score_is_better,
             /*.max_failure_retry:*/      0,
             /*.max_slicing:*/            128,
@@ -4157,7 +4157,7 @@ AllocResult AllocatePHV::brute_force_alloc(
             LOG_DEBUG1("Pre-slicing validation is enabled for " << unallocatable_lists.front());
             // create a config that validate pre_slicing results.
             BruteForceStrategyConfig config{
-                /*.name:*/                   "less_fragment_validate_pre_slicing",
+                /*.name:*/                   "less_fragment_validate_pre_slicing"_cs,
                 /*.is_better:*/              less_fragment_alloc_score_is_better,
                 /*.max_failure_retry:*/      0,
                 /*.max_slicing:*/            256,
@@ -4258,7 +4258,7 @@ const IR::Node *AllocatePHV::apply_visitor(const IR::Node* root_, const char *) 
 
     // Redirect all following LOG*s into summary file
     // Print summaries
-    auto logfile = createFileLog(pipeId, "phv_allocation_summary_", 1);
+    auto logfile = createFileLog(pipeId, "phv_allocation_summary_"_cs, 1);
     if (result.status == AllocResultCode::SUCCESS) {
         LOG_DEBUG1("PHV ALLOCATION SUCCESSFUL");
         LOG1(*alloc);  // Not emitting to EventLog on purpose
@@ -4916,7 +4916,7 @@ BruteForceAllocationStrategy::tryAllocation(
     ordered_set<const PHV::Field*> failed;
     AllocResult rst(
         AllocResultCode::UNKNOWN, alloc.makeTransaction(), {});
-    cstring log_prefix = "allocation(" + name + "): ";
+    cstring log_prefix = "allocation("_cs + name + "): "_cs;
     bool succ = false;
     int max_try = config_i.max_failure_retry + 1;
     for (int i = 0; i < max_try; i++) {
@@ -5257,7 +5257,7 @@ std::optional<const PHV::SuperCluster::SliceList*> BruteForceAllocationStrategy:
     const std::list<PHV::SuperCluster*>& slicing,
     const std::list<PHV::ContainerGroup*>& container_groups) const {
     ScoreContext score_ctx(
-            "dummy", true, [](const AllocScore&, const AllocScore&) { return false; });
+            "dummy"_cs, true, [](const AllocScore&, const AllocScore&) { return false; });
     LOG_DEBUG3("diagnose_slicing starts");
     auto tx = empty_alloc_i.makeTransaction();
     for (auto* sc : slicing) {
@@ -5709,7 +5709,7 @@ BruteForceAllocationStrategy::allocLoop(
     for (auto cluster_group : allocated)
         cluster_groups.remove(cluster_group);
 
-    auto logfile = createFileLog(pipe_id_i, "phv_allocation_history_", 1);
+    auto logfile = createFileLog(pipe_id_i, "phv_allocation_history_"_cs, 1);
     LOG1("Allocation history of config " << config_i.name);
     LOG1(alloc_history.str());
     Logging::FileLog::close(logfile);
@@ -5832,7 +5832,7 @@ const IR::Node* IncrementalPHVAllocation::apply_visitor(const IR::Node* root, co
             {}));
     }
     BruteForceStrategyConfig config {
-        /*.name:*/                   "default_incremental_alloc",
+        /*.name:*/                   "default_incremental_alloc"_cs,
         /*.is_better:*/              default_alloc_score_is_better,
         /*.max_failure_retry:*/      0,
         /*.max_slicing:*/            1,
@@ -5857,7 +5857,7 @@ const IR::Node* IncrementalPHVAllocation::apply_visitor(const IR::Node* root, co
         PHV::AllocUtils::sort_and_merge_alloc_slices(phv_i);
     }
 
-    auto logfile = createFileLog(pipeId, "phv_allocation_incremental_summary_", 1);
+    auto logfile = createFileLog(pipeId, "phv_allocation_incremental_summary_"_cs, 1);
     if (result.status == AllocResultCode::SUCCESS) {
         LOG1("PHV ALLOCATION SUCCESSFUL");
         LOG2(alloc);

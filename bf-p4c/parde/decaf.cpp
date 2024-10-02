@@ -70,10 +70,10 @@ void CollectWeakFields::add_weak_assign(const PHV::Field* dst,
     field_to_weak_assigns[dst].insert(assign);
 }
 
-void CollectWeakFields::add_strong_field(const PHV::Field* f, cstring reason) {
+void CollectWeakFields::add_strong_field(const PHV::Field* f, std::string reason) {
     strong_fields.insert(f);
     field_to_weak_assigns.erase(f);
-    if (reason != cstring())
+    if (reason != "")
         LOG2(f->name << " is not a candidate (" << reason << ")");
 }
 
@@ -727,7 +727,7 @@ static IR::TempVar* create_bit(cstring name, bool is_pov = false) {
 }
 
 static IR::MAU::Instruction* create_set_bit_instr(const IR::TempVar* dst) {
-    return new IR::MAU::Instruction("set",
+    return new IR::MAU::Instruction("set"_cs,
             { dst, new IR::Constant(IR::Type::Bits::get(1), 1) });
 }
 
@@ -928,7 +928,7 @@ SynthesizePovEncoder::create_version_bit_for_value(const PHV::Field* f,
 
     std::string pov_bit_name = f->name + "_v" + std::to_string(version) + ".$valid";
 
-    auto pov_bit = create_bit(pov_bit_name.c_str(), true);
+    auto pov_bit = create_bit(pov_bit_name, true);
 
     if (version == 0) {  // 0 for default
         BUG_CHECK(!default_pov_bit.count(f), "default valid bit already exists?");
@@ -1392,8 +1392,8 @@ Visitor::profile_t SynthesizePovEncoder::init_apply(const IR::Node* root) {
 
     for (auto& gm : match_actions) {
         for (auto& ma : gm.second) {
-            cstring table_name = "_decaf_pov_encoder_";
-            cstring action_name = "__soap__";
+            cstring table_name = "_decaf_pov_encoder_"_cs;
+            cstring action_name = "__soap__"_cs;
             auto table = create_pov_encoder(gm.first, table_name, action_name, *ma);
 
             tables_to_insert[table->gress].push_back(table);
@@ -1425,7 +1425,7 @@ void CreateConstants::create_temp_var_for_parser_constant_bytes(gress_t gress,
             } else if (!byte_to_temp_var[gress].count(l_s_byte)) {
                 std::string name = "$constant_" + std::to_string(cid++);
 
-                auto temp_var = create_temp_var(name.c_str(), 8);
+                auto temp_var = create_temp_var(cstring(name), 8);
                 byte_to_temp_var[gress][l_s_byte] = temp_var;
 
                 LOG4("created temp var " << name << " " << (void*)c
@@ -1472,7 +1472,7 @@ void CreateConstants::insert_init_consts_state(IR::BFN::Parser* parser) {
     auto transition = new IR::BFN::Transition(match_t(), 0, parser->start);
 
     auto init_consts = new IR::BFN::ParserState(
-                             createThreadName(parser->gress, "$init_consts"),
+                             createThreadName(parser->gress, "$init_consts"_cs),
                              parser->gress, { }, { }, { transition });
 
     for (auto& kv : const_to_bytes[parser->gress]) {

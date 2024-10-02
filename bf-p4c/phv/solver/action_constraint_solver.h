@@ -9,6 +9,8 @@
 #include "lib/ordered_map.h"
 #include "bf-p4c/phv/solver/symbolic_bitvec.h"
 
+using namespace P4::literals;
+
 namespace solver {
 
 /// ContainerID is a cstring that uniquely represents a container.
@@ -41,7 +43,7 @@ class DepositField : public Instruction {
     DepositField(ContainerID dest, ContainerID src1, int left_rotate, bitvec mask,
                  ContainerID src2)
         : dest(dest), src1(src1), left_rotate(left_rotate), mask(mask), src2(src2) {}
-    cstring name() const override { return "deposit-field"; };
+    cstring name() const override { return "deposit-field"_cs; };
     cstring to_cstring() const override;
 };
 
@@ -55,7 +57,7 @@ class BitmaskedSet : public Instruction {
     bitvec mask;
     BitmaskedSet(ContainerID dest, ContainerID src1, ContainerID src2, bitvec mask)
         : dest(dest), src1(src1), src2(src2), mask(mask) {}
-    cstring name() const override { return "bitmasked-set"; };
+    cstring name() const override { return "bitmasked-set"_cs; };
     cstring to_cstring() const override;
 };
 
@@ -72,7 +74,7 @@ class ByteRotateMerge : public Instruction {
     ByteRotateMerge(ContainerID dest, ContainerID src1, int shift1, ContainerID src2, int shift2,
                     bitvec mask)
         : dest(dest), src1(src1), shift1(shift1), src2(src2), shift2(shift2), mask(mask) {}
-    cstring name() const override { return "byte-rotate-merge"; };
+    cstring name() const override { return "byte-rotate-merge"_cs; };
     cstring to_cstring() const override;
 };
 
@@ -85,7 +87,7 @@ class ContainerSet : public Instruction {
     ContainerID src;
     ContainerSet(ContainerID dest, ContainerID src)
         : dest(dest), src(src) {}
-    cstring name() const override { return "set"; };
+    cstring name() const override { return "set"_cs; };
     cstring to_cstring() const override;
 };
 

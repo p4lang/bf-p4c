@@ -177,15 +177,15 @@ class SimplifyNestedIf : public PassManager {
     SimplifyNestedIf(ReferenceMap* refMap, TypeMap* typeMap,
                      TypeChecking* typeChecking = nullptr) {
         std::set<cstring> valid_fields;
-        valid_fields = {"digest_type", "resubmit_type", "mirror_type"};
+        valid_fields = {"digest_type"_cs, "resubmit_type"_cs, "mirror_type"_cs};
         auto policy = new UniqueAndValidDest(refMap, typeMap, &valid_fields);
         auto skip = new ProcessDeparser();
         if (!typeChecking)
             typeChecking = new TypeChecking(refMap, typeMap);
         passes.push_back(typeChecking);
         passes.push_back(new DoSimplifyNestedIf(skip));
-        passes.push_back(new StrengthReduction(refMap, typeMap, typeChecking));
-        passes.push_back(new SimplifyControlFlow(refMap, typeMap, typeChecking));
+        passes.push_back(new StrengthReduction(typeMap, typeChecking));
+        passes.push_back(new SimplifyControlFlow(typeMap, typeChecking));
         passes.push_back(new DoSimplifyComplexCondition(policy, skip));
         passes.push_back(new BFN::TypeChecking(refMap, typeMap, true));
         setName("SimplifyNestedIf");

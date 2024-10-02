@@ -81,7 +81,7 @@ struct DumpTableFlowGraph : public Visitor {
         }
     };
 
-    std::ofstream* open_file(gress_t gress, int pipe_id, cstring directory = "graphs") {
+    std::ofstream* open_file(gress_t gress, int pipe_id, cstring directory = "graphs"_cs) {
         auto outdir = BFNContext::get().getOutputDirectory(directory, pipe_id);
         if (!outdir)
             return nullptr;

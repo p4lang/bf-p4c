@@ -3,19 +3,21 @@
 #include <lib/exceptions.h>
 #include <boost/optional/optional_io.hpp>
 
+using namespace P4::literals;
+
 cstring toString(gress_t gress) {
   switch (gress) {
-    case INGRESS: return "ingress";
-    case EGRESS: return "egress";
-    case GHOST: return "ghost";
+    case INGRESS: return "ingress"_cs;
+    case EGRESS: return "egress"_cs;
+    case GHOST: return "ghost"_cs;
     default: BUG("Unexpected *gress value"); }
 }
 
 cstring toSymbol(gress_t gress) {
   switch (gress) {
-    case INGRESS: return "I";
-    case EGRESS: return "E";
-    case GHOST: return "G";
+    case INGRESS: return "I"_cs;
+    case EGRESS: return "E"_cs;
+    case GHOST: return "G"_cs;
     default: BUG("Unexpected *gress value"); }
 }
 

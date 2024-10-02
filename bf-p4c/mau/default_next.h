@@ -71,9 +71,9 @@ class DefaultNext : public MauInspector, public NextTable, BFN::ControlFlowVisit
         return MauInspector::init_apply(root); }
 
     bool preorder(const IR::BFN::Pipe *pipe) override {
-        LOG5(TableTree("ingress", pipe->thread[INGRESS].mau) <<
-             TableTree("egress", pipe->thread[EGRESS].mau) <<
-             TableTree("ghost", pipe->ghost_thread.ghost_mau) );
+        LOG5(TableTree("ingress"_cs, pipe->thread[INGRESS].mau) <<
+             TableTree("egress"_cs, pipe->thread[EGRESS].mau) <<
+             TableTree("ghost"_cs, pipe->ghost_thread.ghost_mau) );
         possible_nexts.clear();
         prev_tbls.clear();
         return true; }
@@ -125,7 +125,7 @@ class DefaultNext : public MauInspector, public NextTable, BFN::ControlFlowVisit
         if (auto *n = next(t))
             if (n->gress == t->gress)
                 return n->unique_id();
-        return UniqueId("END");
+        return UniqueId("END"_cs);
     }
 
     std::set<UniqueId> possible_next_uniq_id(const IR::MAU::Table *t) const {
@@ -134,13 +134,13 @@ class DefaultNext : public MauInspector, public NextTable, BFN::ControlFlowVisit
            if (n->gress == t->gress)
                rv.insert(n->unique_id());
         if (rv.empty())
-            rv.insert(UniqueId("END"));
+            rv.insert(UniqueId("END"_cs));
         return rv;
     }
 
     ordered_set<UniqueId> next_for(const IR::MAU::Table *tbl, cstring what) const override {
-        if (what == "$miss" && tbl->next.count("$try_next_stage"))
-            what = "$try_next_stage";
+        if (what == "$miss" && tbl->next.count("$try_next_stage"_cs))
+            what = "$try_next_stage"_cs;
         if (tbl->actions.count(what) && tbl->actions.at(what)->exitAction) {
             if (run_before_exit_tables.count(tbl->gress) && !tbl->run_before_exit)
                 return { (*run_before_exit_tables.at(tbl->gress).begin())->unique_id() };
@@ -148,7 +148,7 @@ class DefaultNext : public MauInspector, public NextTable, BFN::ControlFlowVisit
                 return {};
         }
         if (!tbl->next.count(what))
-            what = "$default";
+            what = "$default"_cs;
         if (tbl->next.count(what) && !tbl->next.at(what)->empty())
             return { tbl->next.at(what)->front()->unique_id() };
         auto *nt = next_in_thread(tbl);

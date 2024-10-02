@@ -24,7 +24,7 @@ class RemoveNoopGateway : public MauTransform {
             return seq; }
         seq->tables.pop_back();         // toss the gateway;
         auto *clone = prev->clone();    // clone the last table
-        clone->next["$default"] = last->next.begin()->second;
+        clone->next["$default"_cs] = last->next.begin()->second;
         // move the dependent sequence to the last table as default next
         seq->tables.back() = clone;
         return seq;

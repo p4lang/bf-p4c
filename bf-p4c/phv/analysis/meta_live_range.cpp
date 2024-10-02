@@ -2,10 +2,10 @@
 
 cstring MetadataLiveRange::printAccess(int access) {
     switch (access) {
-        case 1: return "R";
-        case 2: return "W";
-        case 3: return "RW";
-        default: return "U";
+        case 1: return "R"_cs;
+        case 2: return "W"_cs;
+        case 3: return "RW"_cs;
+        default: return "U"_cs;
     }
 }
 

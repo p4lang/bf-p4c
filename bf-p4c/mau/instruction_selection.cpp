@@ -51,16 +51,16 @@ const IR::Expression *ToFunnelShiftInstruction::preorder(IR::Cast *e) {
                 if (auto *concat = shift->left->to<IR::Concat>()) {
                     if (shift->right->to<IR::Constant>()->value ==
                             concat->right->type->width_bits()) {
-                        return new IR::MAU::Instruction(e->srcInfo, "set",
+                        return new IR::MAU::Instruction(e->srcInfo, "set"_cs,
                                 { new IR::TempVar(shift->type), concat->left });
                     } else {
-                        return new IR::MAU::Instruction(e->srcInfo, "funnel-shift",
+                        return new IR::MAU::Instruction(e->srcInfo, "funnel-shift"_cs,
                                 { new IR::TempVar(shift->type), concat->left, concat->right,
                                 shift->right });
                     }
                 }
             } else if (auto *concat = e->expr->to<IR::Concat>()) {
-                    return new IR::MAU::Instruction(e->srcInfo, "funnel-shift",
+                    return new IR::MAU::Instruction(e->srcInfo, "funnel-shift"_cs,
                         { new IR::TempVar(concat->type), concat->left, concat->right,
                           new IR::Constant(0) });
             }
@@ -76,7 +76,7 @@ const IR::Expression *ConvertFunnelShiftExtern::preorder(IR::Primitive* prim) {
     const auto* src1 = prim->operands[1];
     const auto* src2 = prim->operands[2];
     const auto* n_shift = prim->operands[3];
-    return new IR::MAU::Instruction(prim->srcInfo, "funnel-shift", {dst, src1, src2, n_shift});
+    return new IR::MAU::Instruction(prim->srcInfo, "funnel-shift"_cs, {dst, src1, src2, n_shift});
 }
 
 bool HashGenSetup::CreateHashGenExprs::preorder(const IR::BFN::SignExtend *se) {
@@ -363,7 +363,7 @@ const IR::Expression *HashGenSetup::UpdateHashDists::postorder(IR::Expression *e
     if (hdi != self.hash_dist_injections.end()) {
         auto tv = new IR::TempVar(e->type);
         auto hd2 = new IR::MAU::HashDist(rv->srcInfo, rv->type, rv);
-        auto inst = new IR::MAU::Instruction(e->srcInfo, "set", tv, hd2);
+        auto inst = new IR::MAU::Instruction(e->srcInfo, "set"_cs, tv, hd2);
         rv = inst;
     }
     return rv;
@@ -458,12 +458,12 @@ const IR::Node *Synth2PortSetup::postorder(IR::MAU::Primitive *prim) {
             int dest_size = dest->type->width_bits();
             if (output_size < dest_size) {
                 created_instrs.push_back(new IR::MAU::Instruction(
-                    prim->srcInfo, "set", MakeSlice(dest, output_size, dest_size - 1),
+                    prim->srcInfo, "set"_cs, MakeSlice(dest, output_size, dest_size - 1),
                     new IR::Constant(IR::Type_Bits::get(dest_size - output_size), 0)));
                 dest = MakeSlice(dest, 0, output_size - 1);
             } else
                 output_size = dest_size;
-            return new IR::MAU::Instruction(prim->srcInfo, "set", dest,
+            return new IR::MAU::Instruction(prim->srcInfo, "set"_cs, dest,
                                             MakeSlice(ao, bit, bit+output_size - 1));
         };
 
@@ -503,7 +503,7 @@ const IR::Node *Synth2PortSetup::postorder(IR::MAU::Primitive *prim) {
         BUG_CHECK(mtr != nullptr, "%s: Cannot find associated meter for the method call %s",
                   prim->srcInfo, *prim);
         stateful.push_back(prim);
-        rv = new IR::MAU::Instruction(prim->srcInfo, "set", new IR::TempVar(prim->type),
+        rv = new IR::MAU::Instruction(prim->srcInfo, "set"_cs, new IR::TempVar(prim->type),
                                       new IR::MAU::AttachedOutput(prim->type, mtr));
     } else if (prim->name == "DirectCounter.count") {
         glob = prim->operands.at(0)->to<IR::GlobalRef>();
@@ -513,7 +513,7 @@ const IR::Node *Synth2PortSetup::postorder(IR::MAU::Primitive *prim) {
         glob = prim->operands.at(0)->to<IR::GlobalRef>();
         auto mtr = glob->obj->to<IR::MAU::Meter>();
         stateful.push_back(prim);
-        rv = new IR::MAU::Instruction(prim->srcInfo, "set", new IR::TempVar(prim->type),
+        rv = new IR::MAU::Instruction(prim->srcInfo, "set"_cs, new IR::TempVar(prim->type),
                                       new IR::MAU::AttachedOutput(IR::Type::Bits::get(8), mtr));
     }
 
@@ -808,7 +808,7 @@ const IR::Expression *DoInstructionSelection::postorder(IR::BoolLiteral *bl) {
 const IR::Expression *DoInstructionSelection::postorder(IR::BAnd *e) {
     if (!af) return e;
     auto *left = e->left, *right = e->right;
-    const char *op = "and";
+    std::string op = "and";
     auto *l = left->to<IR::MAU::Instruction>();
     auto *r = right->to<IR::MAU::Instruction>();
     if (l && l->name == "not" && r && r->name == "not") {
@@ -821,13 +821,13 @@ const IR::Expression *DoInstructionSelection::postorder(IR::BAnd *e) {
     } else if (r && r->name == "not") {
         right = r->operands[1];
         op = "andcb"; }
-    return new IR::MAU::Instruction(e->srcInfo, op, new IR::TempVar(e->type), left, right);
+    return new IR::MAU::Instruction(e->srcInfo, cstring(op), new IR::TempVar(e->type), left, right);
 }
 
 const IR::Expression *DoInstructionSelection::postorder(IR::BOr *e) {
     if (!af) return e;
     auto *left = e->left, *right = e->right;
-    const char *op = "or";
+    std::string op = "or";
     auto *l = left->to<IR::MAU::Instruction>();
     auto *r = right->to<IR::MAU::Instruction>();
     if (l && l->name == "not" && r && r->name == "not") {
@@ -840,13 +840,13 @@ const IR::Expression *DoInstructionSelection::postorder(IR::BOr *e) {
     } else if (r && r->name == "not") {
         right = r->operands[1];
         op = "orcb"; }
-    return new IR::MAU::Instruction(e->srcInfo, op, new IR::TempVar(e->type), left, right);
+    return new IR::MAU::Instruction(e->srcInfo, cstring(op), new IR::TempVar(e->type), left, right);
 }
 
 const IR::Expression *DoInstructionSelection::postorder(IR::BXor *e) {
     if (!af) return e;
     auto *left = e->left, *right = e->right;
-    const char *op = "xor";
+    std::string op = "xor";
     auto *l = left->to<IR::MAU::Instruction>();
     auto *r = right->to<IR::MAU::Instruction>();
     if (l && l->name == "not" && r && r->name == "not") {
@@ -858,26 +858,26 @@ const IR::Expression *DoInstructionSelection::postorder(IR::BXor *e) {
     } else if (r && r->name == "not") {
         right = r->operands[1];
         op = "xnor"; }
-    return new IR::MAU::Instruction(e->srcInfo, op, new IR::TempVar(e->type), left, right);
+    return new IR::MAU::Instruction(e->srcInfo, cstring(op), new IR::TempVar(e->type), left, right);
 }
 
 const IR::Expression *DoInstructionSelection::postorder(IR::Cmpl *e) {
     if (!af) return e;
     if (auto *fold = ::clone(e->expr->to<IR::MAU::Instruction>())) {
-        if (fold->name == "and") fold->name = "nand";
-        else if (fold->name == "andca") fold->name = "orcb";
-        else if (fold->name == "andcb") fold->name = "orca";
-        else if (fold->name == "nand") fold->name = "and";
-        else if (fold->name == "nor") fold->name = "or";
-        else if (fold->name == "or") fold->name = "nor";
-        else if (fold->name == "orca") fold->name = "andcb";
-        else if (fold->name == "orcb") fold->name = "andca";
-        else if (fold->name == "xnor") fold->name = "xor";
-        else if (fold->name == "xor") fold->name = "xnor";
+        if (fold->name == "and") fold->name = "nand"_cs;
+        else if (fold->name == "andca") fold->name = "orcb"_cs;
+        else if (fold->name == "andcb") fold->name = "orca"_cs;
+        else if (fold->name == "nand") fold->name = "and"_cs;
+        else if (fold->name == "nor") fold->name = "or"_cs;
+        else if (fold->name == "or") fold->name = "nor"_cs;
+        else if (fold->name == "orca") fold->name = "andcb"_cs;
+        else if (fold->name == "orcb") fold->name = "andca"_cs;
+        else if (fold->name == "xnor") fold->name = "xor"_cs;
+        else if (fold->name == "xor") fold->name = "xnor"_cs;
         else
             fold = nullptr;
         if (fold) return fold; }
-    return new IR::MAU::Instruction(e->srcInfo, "not", new IR::TempVar(e->type), e->expr);
+    return new IR::MAU::Instruction(e->srcInfo, "not"_cs, new IR::TempVar(e->type), e->expr);
 }
 
 const IR::Expression *DoInstructionSelection::postorder(IR::Add *e) {
@@ -888,14 +888,15 @@ const IR::Expression *DoInstructionSelection::postorder(IR::Add *e) {
     if (auto concat = e->right->to<IR::Concat>()) {
         if (concat->left->is<IR::Constant>()) {
             operand = concat->right; } }
-    return new IR::MAU::Instruction(e->srcInfo, "add", new IR::TempVar(e->type), e->left, operand);
+    return new IR::MAU::Instruction(e->srcInfo, "add"_cs, new IR::TempVar(e->type), e->left,
+                                    operand);
 }
 
 const IR::Expression *DoInstructionSelection::postorder(IR::AddSat *e) {
     if (!af) return e;
-    auto opName = "saddu";
+    auto opName = "saddu"_cs;
     if (e->type->is<IR::Type_Bits>() && e->type->to<IR::Type_Bits>()->isSigned)
-        opName = "sadds";
+        opName = "sadds"_cs;
     limitWidth(e);
     return new IR::MAU::Instruction(e->srcInfo, opName,
                                         new IR::TempVar(e->type), e->left, e->right);
@@ -943,7 +944,7 @@ const IR::Expression *DoInstructionSelection::postorder(IR::SubSat *e) {
         if (this->ts == nullptr) {
             this->ts = findContext<IR::MAU::TableSeq>();
         }
-        cstring temp_name = "const_to_phv_" + cstring::to_cstring(bits->width_bits()) + "w" +
+        cstring temp_name = "const_to_phv_"_cs + cstring::to_cstring(bits->width_bits()) + "w"_cs +
                             cstring::to_cstring(eRight->to<IR::Constant>()->asLong());
 
         const IR::MAU::Instruction *temp_inst;
@@ -954,26 +955,28 @@ const IR::Expression *DoInstructionSelection::postorder(IR::SubSat *e) {
             temp_var = temp_inst->operands[0]->to<IR::TempVar>();
         } else {
             temp_var = new IR::TempVar(IR::Type::Bits::get(bits->width_bits()), false, temp_name);
-            temp_inst = new IR::MAU::Instruction(e->srcInfo, "set", temp_var, eRight);
+            temp_inst = new IR::MAU::Instruction(e->srcInfo, "set"_cs, temp_var, eRight);
             const_to_phv[temp_name] = temp_inst;
         }
-        return new IR::MAU::Instruction(e->srcInfo, opName, new IR::TempVar(e->type),
+        return new IR::MAU::Instruction(e->srcInfo, cstring(opName), new IR::TempVar(e->type),
                                         eLeft, temp_var);
     }
 
-    return new IR::MAU::Instruction(e->srcInfo, opName, new IR::TempVar(e->type), eLeft, eRight);
+    return new IR::MAU::Instruction(e->srcInfo, cstring(opName), new IR::TempVar(e->type), eLeft,
+                                    eRight);
 }
 
 const IR::Expression *DoInstructionSelection::postorder(IR::Sub *e) {
     if (!af) return e;
     if (auto *k = e->right->to<IR::Constant>())
-        return new IR::MAU::Instruction(e->srcInfo, "add", new IR::TempVar(e->type),
+        return new IR::MAU::Instruction(e->srcInfo, "add"_cs, new IR::TempVar(e->type),
                                         new IR::Constant(k->type, -k->value), e->left);
-    return new IR::MAU::Instruction(e->srcInfo, "sub", new IR::TempVar(e->type), e->left, e->right);
+    return new IR::MAU::Instruction(e->srcInfo, "sub"_cs, new IR::TempVar(e->type), e->left,
+                                    e->right);
 }
 const IR::Expression *DoInstructionSelection::postorder(IR::Neg *e) {
     if (!af) return e;
-    return new IR::MAU::Instruction(e->srcInfo, "sub", new IR::TempVar(e->type),
+    return new IR::MAU::Instruction(e->srcInfo, "sub"_cs, new IR::TempVar(e->type),
                                     new IR::Constant(e->srcInfo, e->type, 0), e->expr);
 }
 
@@ -981,17 +984,19 @@ const IR::Expression *DoInstructionSelection::postorder(IR::Shl *e) {
     if (!af) return e;
     if (!e->right->is<IR::Constant>())
         error("%s: shift count must be a constant in %s", e->srcInfo, e);
-    return new IR::MAU::Instruction(e->srcInfo, "shl", new IR::TempVar(e->type), e->left, e->right);
+    return new IR::MAU::Instruction(e->srcInfo, "shl"_cs, new IR::TempVar(e->type), e->left,
+                                    e->right);
 }
 
 const IR::Expression *DoInstructionSelection::postorder(IR::Shr *e) {
     if (!af) return e;
     if (!e->right->is<IR::Constant>())
         error("%s: shift count must be a constant in %s", e->srcInfo, e);
-    const char *shr = "shru";
+    std::string shr = "shru";
     if (e->type->is<IR::Type_Bits>() && e->type->to<IR::Type_Bits>()->isSigned)
         shr = "shrs";
-    return new IR::MAU::Instruction(e->srcInfo, shr, new IR::TempVar(e->type), e->left, e->right);
+    return new IR::MAU::Instruction(e->srcInfo, cstring(shr), new IR::TempVar(e->type), e->left,
+                                    e->right);
 }
 
 const IR::Expression *DoInstructionSelection::postorder(IR::Operation_Relation *e) {
@@ -1022,7 +1027,7 @@ const IR::Expression *DoInstructionSelection::postorder(IR::Operation_Relation *
             error("%1%: Unknown relational operator",
                     e, e->node_type_name());
         }
-        return new IR::MAU::Instruction(e->srcInfo, opName,
+        return new IR::MAU::Instruction(e->srcInfo, cstring(opName),
                 new IR::TempVar(e->type), e->left, e->right);
     } else {
         return e;
@@ -1040,10 +1045,10 @@ const IR::Expression *DoInstructionSelection::postorder(IR::Mux *e) {
             isMin = !isMin;
         else if (!equiv(r->left, e->e1) || !equiv(r->right, e->e2))
             return e;
-        cstring op = isMin ? "minu" : "maxu";
+        cstring op = isMin ? "minu"_cs : "maxu"_cs;
         if (auto t = r->left->type->to<IR::Type::Bits>())
             if (t->isSigned)
-                op = isMin ? "mins" : "maxs";
+                op = isMin ? "mins"_cs : "maxs"_cs;
         return new IR::MAU::Instruction(e->srcInfo, op, new IR::TempVar(e->type), e->e1, e->e2); }
     return e;
 }
@@ -1159,9 +1164,9 @@ const IR::Node *DoInstructionSelection::postorder(IR::MAU::Primitive *prim) {
              */
             auto *cc = prim->operands[1]->to<IR::BFN::ReinterpretCast>()->expr->to<IR::Concat>();
             auto *k = cc->left;
-            auto *inst_phv = new IR::MAU::Instruction(prim->srcInfo, "set",
+            auto *inst_phv = new IR::MAU::Instruction(prim->srcInfo, "set"_cs,
                 MakeSlice(dest, 0, cc->right->type->width_bits() - 1), cc->right);
-            auto *inst_const = new IR::MAU::Instruction(prim->srcInfo, "set",
+            auto *inst_const = new IR::MAU::Instruction(prim->srcInfo, "set"_cs,
                 MakeSlice(dest, cc->right->type->width_bits(), dest->type->width_bits() - 1), k);
             return new IR::Vector<IR::MAU::Primitive>({inst_const, inst_phv});
         } else if (!checkSrc1(prim->operands[1])) {
@@ -1184,10 +1189,10 @@ const IR::Node *DoInstructionSelection::postorder(IR::MAU::Primitive *prim) {
                           "out of the action and into a control apply block, or making it part "
                           "of the table key", prim->srcInfo);
                     return prim; }
-                cstring cond_arg_name = "$cond_arg" + std::to_string(synth_arg_num++);
+                cstring cond_arg_name = "$cond_arg"_cs + std::to_string(synth_arg_num++);
                 auto cond_arg = new IR::MAU::ConditionalArg(mux->e0->srcInfo, type, af->name,
                                                             cond_arg_name, arg);
-                cstring instr_name = "conditionally-set";
+                cstring instr_name = "conditionally-set"_cs;
                 IR::MAU::Instruction *rv = nullptr;
                 if (checkActionBus(mux->e1) && checkPHV(mux->e2)) {
                     rv = new IR::MAU::Instruction(prim->srcInfo, instr_name,
@@ -1209,15 +1214,15 @@ const IR::Node *DoInstructionSelection::postorder(IR::MAU::Primitive *prim) {
                 error("%s: source of %s invalid", prim->srcInfo, prim->name);
             }
         } else if (prim->operands.size() == 2) {
-            return new IR::MAU::Instruction(prim->srcInfo, "set", &prim->operands);
+            return new IR::MAU::Instruction(prim->srcInfo, "set"_cs, &prim->operands);
         } else if (!checkConst(prim->operands[2], mask)) {
             error(ErrorType::ERR_INVALID, "mask of %1% must be a constant", prim);
         } else if (dest && (1L << dest->type->width_bits() == mask + 1)) {
-            return new IR::MAU::Instruction(prim->srcInfo, "set", dest, prim->operands[1]);
+            return new IR::MAU::Instruction(prim->srcInfo, "set"_cs, dest, prim->operands[1]);
         } else if (isDepositMask(mask)) {
             return makeDepositField(prim, mask);
         } else {
-            return new IR::MAU::Instruction(prim->srcInfo, "bitmasked-set", &prim->operands); }
+            return new IR::MAU::Instruction(prim->srcInfo, "bitmasked-set"_cs, &prim->operands); }
         return prim; }
 
     // get rid of introduced tempvars
@@ -1235,9 +1240,9 @@ const IR::Node *DoInstructionSelection::postorder(IR::MAU::Primitive *prim) {
         auto decl = glob->obj->to<IR::Declaration_Instance>();
         auto rn = new IR::MAU::RandomNumber(prim->srcInfo, prim->type, decl->name);
         auto next_type = prim->type;
-        return new IR::MAU::Instruction(prim->srcInfo, "set", new IR::TempVar(next_type), rn);
+        return new IR::MAU::Instruction(prim->srcInfo, "set"_cs, new IR::TempVar(next_type), rn);
     } else if (prim->name == "invalidate") {
-        return new IR::MAU::Instruction(prim->srcInfo, "invalidate", prim->operands[0]);
+        return new IR::MAU::Instruction(prim->srcInfo, "invalidate"_cs, prim->operands[0]);
     } else if (prim->name == "min" || prim->name == "max") {
         if (prim->operands.size() != 2) {
             error(ErrorType::ERR_INVALID, "wrong number of operands to %1%", prim);
@@ -2382,7 +2387,7 @@ const IR::Expression *BackendCopyPropagation::propagate(const IR::MAU::Instructi
         } else if (instr->name == "set") {
             if (!split_set) split_set = new IR::Vector<IR::MAU::Primitive>;
             le_bitrange range = replacement.dest_bits.intersectWith(bits);
-            split_set->push_back(new IR::MAU::Instruction(instr->srcInfo, "set",
+            split_set->push_back(new IR::MAU::Instruction(instr->srcInfo, "set"_cs,
                 MakeSlice(instr->operands.at(0), range.shiftedByBits(-bits.lo)),
                 replacement.getSlice(isSalu, range)));
             mask_bits.clrrange(range.lo, range.size());
@@ -2398,7 +2403,7 @@ const IR::Expression *BackendCopyPropagation::propagate(const IR::MAU::Instructi
         while (!mask_bits.empty()) {
             int lo = mask_bits.ffs();
             le_bitrange range(lo, mask_bits.ffz(lo)-1);
-            split_set->push_back(new IR::MAU::Instruction(instr->srcInfo, "set",
+            split_set->push_back(new IR::MAU::Instruction(instr->srcInfo, "set"_cs,
                 MakeSlice(instr->operands.at(0), range.shiftedByBits(-bits.lo)),
                 MakeSlice(instr->operands.at(1), range.shiftedByBits(-bits.lo))));
             mask_bits.clrrange(range.lo, range.size());
@@ -2743,7 +2748,7 @@ const IR::Node *EliminateAllButLastWrite::Update::preorder(IR::MAU::Instruction 
           le_bitrange range(lo, mask_bits.ffz(lo)-1);
 
           if (!split_overlap_set) split_overlap_set = new IR::Vector<IR::MAU::Primitive>;
-          split_overlap_set->push_back(new IR::MAU::Instruction(instr->srcInfo, "set",
+          split_overlap_set->push_back(new IR::MAU::Instruction(instr->srcInfo, "set"_cs,
               MakeSlice(instr->operands.at(0), range.shiftedByBits(-bits.lo)),
               MakeSlice(instr->operands.at(1), range.shiftedByBits(-bits.lo))));
           mask_bits.clrrange(range.lo, range.size());
@@ -3178,7 +3183,7 @@ class ExpandInstructions : public MauTransform {
         m_preload.erase(it);
 
         auto temp_var = new IR::TempVar(orig_expr->type);
-        auto preload_inst = new IR::MAU::Instruction("set", {temp_var, orig_expr});
+        auto preload_inst = new IR::MAU::Instruction("set"_cs, {temp_var, orig_expr});
         m_precompute.push_back(preload_inst);
 
         return temp_var;

@@ -6,6 +6,8 @@
 #include "lib/big_int_util.h"
 #include "bf-p4c/mau/hash_function.h"
 
+using namespace P4::literals;
+
 /**
  * The list of currently supported crc strings, and their corresponding conversion to the
  * dynamic_hash algorithms.  The strings need to be matched exactly from the P4 program
@@ -14,53 +16,53 @@
  * to the programmer if a simple spelling mistake is found.
  */
 static std::map<cstring, bfn_crc_alg_t> standard_crcs_t = {
-    { "crc8", CRC_8 },
-    { "crc_8", CRC_8 },
-    { "crc_8_darc", CRC_8_DARC },
-    { "crc_8_i_code", CRC_8_I_CODE },
-    { "crc_8_itu", CRC_8_ITU },
-    { "crc_8_maxim", CRC_8_MAXIM },
-    { "crc_8_rohc", CRC_8_ROHC },
-    { "crc_8_wcdma", CRC_8_WCDMA },
-    { "crc_16", CRC_16 },
-    { "crc16", CRC_16 },  // Note multiple entries
-    { "crc_16_custom", CRC_16 },
-    { "crc_16_bypass", CRC_16_BYPASS },
-    { "crc_16_dds_110", CRC_16_DDS_110 },
-    { "crc_16_dect", CRC_16_DECT },
-    { "crc_16_dect_r", CRC_16_DECT_R },
-    { "crc_16_dect_x", CRC_16_DECT_X },
-    { "crc_16_dnp", CRC_16_DNP },
-    { "crc_16_en_13757", CRC_16_EN_13757 },
-    { "crc_16_genibus", CRC_16_GENIBUS },
-    { "crc_16_maxim", CRC_16_MAXIM },
-    { "crc_16_mcrf4xx", CRC_16_MCRF4XX },
-    { "crc_16_riello", CRC_16_RIELLO },
-    { "crc_16_t10_dif", CRC_16_T10_DIF },
-    { "crc_16_teledisk", CRC_16_TELEDISK },
-    { "crc_16_usb", CRC_16_USB },
-    { "x_25", X_25 },
-    { "xmodem", XMODEM },
-    { "modbus", MODBUS },
-    { "kermit", KERMIT },
-    { "crc_ccitt_false", CRC_CCITT_FALSE },
-    { "crc_aug_ccitt", CRC_AUG_CCITT },
-    { "crc_32", CRC_32 },
-    { "crc32", CRC_32 },  // Repeated value
-    { "crc_32_custom", CRC_32 },
-    { "crc_32_bzip2", CRC_32_BZIP2 },
-    { "crc_32c", CRC_32C },
-    { "crc_32d", CRC_32D },
-    { "crc_32_mpeg", CRC_32_MPEG },
-    { "posix", POSIX },
-    { "crc_32q", CRC_32Q },
-    { "jamcrc", JAMCRC },
-    { "xfer", XFER },
-    { "crc64", CRC_64 },
-    { "crc_64", CRC_64 },
-    { "crc_64", CRC_64_GO_ISO },
-    { "crc_64_we", CRC_64_WE },
-    { "crc_64_jones", CRC_64_JONES }
+    { "crc8"_cs, CRC_8 },
+    { "crc_8"_cs, CRC_8 },
+    { "crc_8_darc"_cs, CRC_8_DARC },
+    { "crc_8_i_code"_cs, CRC_8_I_CODE },
+    { "crc_8_itu"_cs, CRC_8_ITU },
+    { "crc_8_maxim"_cs, CRC_8_MAXIM },
+    { "crc_8_rohc"_cs, CRC_8_ROHC },
+    { "crc_8_wcdma"_cs, CRC_8_WCDMA },
+    { "crc_16"_cs, CRC_16 },
+    { "crc16"_cs, CRC_16 },  // Note multiple entries
+    { "crc_16_custom"_cs, CRC_16 },
+    { "crc_16_bypass"_cs, CRC_16_BYPASS },
+    { "crc_16_dds_110"_cs, CRC_16_DDS_110 },
+    { "crc_16_dect"_cs, CRC_16_DECT },
+    { "crc_16_dect_r"_cs, CRC_16_DECT_R },
+    { "crc_16_dect_x"_cs, CRC_16_DECT_X },
+    { "crc_16_dnp"_cs, CRC_16_DNP },
+    { "crc_16_en_13757"_cs, CRC_16_EN_13757 },
+    { "crc_16_genibus"_cs, CRC_16_GENIBUS },
+    { "crc_16_maxim"_cs, CRC_16_MAXIM },
+    { "crc_16_mcrf4xx"_cs, CRC_16_MCRF4XX },
+    { "crc_16_riello"_cs, CRC_16_RIELLO },
+    { "crc_16_t10_dif"_cs, CRC_16_T10_DIF },
+    { "crc_16_teledisk"_cs, CRC_16_TELEDISK },
+    { "crc_16_usb"_cs, CRC_16_USB },
+    { "x_25"_cs, X_25 },
+    { "xmodem"_cs, XMODEM },
+    { "modbus"_cs, MODBUS },
+    { "kermit"_cs, KERMIT },
+    { "crc_ccitt_false"_cs, CRC_CCITT_FALSE },
+    { "crc_aug_ccitt"_cs, CRC_AUG_CCITT },
+    { "crc_32"_cs, CRC_32 },
+    { "crc32"_cs, CRC_32 },  // Repeated value
+    { "crc_32_custom"_cs, CRC_32 },
+    { "crc_32_bzip2"_cs, CRC_32_BZIP2 },
+    { "crc_32c"_cs, CRC_32C },
+    { "crc_32d"_cs, CRC_32D },
+    { "crc_32_mpeg"_cs, CRC_32_MPEG },
+    { "posix"_cs, POSIX },
+    { "crc_32q"_cs, CRC_32Q },
+    { "jamcrc"_cs, JAMCRC },
+    { "xfer"_cs, XFER },
+    { "crc64"_cs, CRC_64 },
+    { "crc_64"_cs, CRC_64 },
+    { "crc_64"_cs, CRC_64_GO_ISO },
+    { "crc_64_we"_cs, CRC_64_WE },
+    { "crc_64_jones"_cs, CRC_64_JONES }
 };
 
 /**
@@ -204,7 +206,7 @@ const IR::Expression *IR::MAU::HashFunction::convertHashAlgorithmExtern(Util::So
 const IR::Expression *IR::MAU::HashFunction::convertHashAlgorithmInner(
     Util::SourceInfo srcInfo, IR::ID algorithm, bool msb, bool extend, bool extension_set,
     const std::string &alg_name) {
-    cstring mc_name = "unknown";
+    cstring mc_name = "unknown"_cs;
     enum {
         CRC,
         XOR,
@@ -263,14 +265,14 @@ const IR::Expression *IR::MAU::HashFunction::convertHashAlgorithmInner(
             args->push_back(new IR::Argument(new IR::Constant(typeT, init)));
             args->push_back(new IR::Argument(new IR::Constant(typeT, final_xor)));
             args->push_back(new IR::Argument(new IR::BoolLiteral(hash_alg.reverse)));
-            mc_name = "crc_poly";
+            mc_name = "crc_poly"_cs;
         } break;
         case XOR: {
             auto typeT(IR::Type::Bits::get(8));
             args->push_back(new IR::Argument(new IR::BoolLiteral(extend)));
             args->push_back(
                 new IR::Argument(new IR::Constant(typeT, static_cast<big_int>(xor_alg.width))));
-            mc_name = "xor_hash";
+            mc_name = "xor_hash"_cs;
         } break;
         case OTHER:
             args->push_back(new IR::Argument(new IR::BoolLiteral(extend)));
@@ -305,47 +307,47 @@ const IR::MethodCallExpression *IR::MAU::HashFunction::hash_to_mce(const IR::Exp
         switch (k->asInt()) {
         case 0:
             conv_e = convertHashAlgorithmBFN(srcInfo, IR::ID("identity"));
-            error_alg_name = "identity";
+            error_alg_name = "identity"_cs;
             break;
         case 1:
             conv_e = convertHashAlgorithmBFN(srcInfo, IR::ID("random"));
-            error_alg_name = "random";
+            error_alg_name = "random"_cs;
             break;
         case 2:
             conv_e = convertHashAlgorithmBFN(srcInfo, IR::ID("xor8"));
-            error_alg_name = "xor8";
+            error_alg_name = "xor8"_cs;
             break;
         case 3:
             conv_e = convertHashAlgorithmBFN(srcInfo, IR::ID("xor16"));
-            error_alg_name = "xor16";
+            error_alg_name = "xor16"_cs;
             break;
         case 4:
             conv_e = convertHashAlgorithmBFN(srcInfo, IR::ID("xor32"));
-            error_alg_name = "xor32";
+            error_alg_name = "xor32"_cs;
             break;
         case 5:
             conv_e = convertHashAlgorithmBFN(srcInfo, IR::ID("crc_8"));
-            error_alg_name = "crc_8";
+            error_alg_name = "crc_8"_cs;
             break;
         case 6:
             conv_e = convertHashAlgorithmBFN(srcInfo, IR::ID("crc_16"));
-            error_alg_name = "crc_16";
+            error_alg_name = "crc_16"_cs;
             break;
         case 7:
             conv_e = convertHashAlgorithmBFN(srcInfo, IR::ID("crc_32"));
-            error_alg_name = "crc_32";
+            error_alg_name = "crc_32"_cs;
             break;
         case 8:
             conv_e = convertHashAlgorithmBFN(srcInfo, IR::ID("crc_64"));
-            error_alg_name = "crc_64";
+            error_alg_name = "crc_64"_cs;
             break;
         case 9:
             conv_e = convertHashAlgorithmBFN(srcInfo, IR::ID("csum16"));
-            error_alg_name = "csum16";
+            error_alg_name = "csum16"_cs;
             break;
         default:
             conv_e = nullptr;
-            error_alg_name = "unknown";
+            error_alg_name = "unknown"_cs;
         }
     // According to the current setup, if something was converted to a MethodCallExpression
     // or TypedPrimitive from the conversion, then it is an identity/random/crc function,
@@ -395,7 +397,7 @@ bool IR::MAU::HashFunction::setup(const Expression *e) {
     cstring alg_name;
     if (auto meth = mce->method->to<IR::PathExpression>()) {
         alg_name = meth->path->name.name;
-        // name = mce->getAnnotations()->getSingle("name");
+        // name = mce->getAnnotations()->getSingle("name"_cs);
     } else {
         BUG("%s: Cannot properly set up the hash function", mce->srcInfo);
     }

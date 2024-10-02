@@ -507,7 +507,7 @@ class WarnTernaryMatchFields : public MauInspector {
 LowerParser::LowerParser(const PhvInfo& phv, ClotInfo& clot, const FieldDefUse &defuse,
         const ParserHeaderSequences &parserHeaderSeqs,
         PhvLogging::CollectDefUseInfo *defuseInfo) :
-    Logging::PassManager("parser", Logging::Mode::AUTO) {
+    Logging::PassManager("parser"_cs, Logging::Mode::AUTO) {
     using namespace Parde::Lowered;
 
     auto pragma_no_init = new PragmaNoInit(phv);

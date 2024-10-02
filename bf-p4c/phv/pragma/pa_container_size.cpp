@@ -108,8 +108,8 @@ bool PragmaContainerSize::preorder(const IR::BFN::Pipe* pipe) {
         }
 
         if (!PHV::Pragmas::checkNumberArgs(annotation, required_arguments, min_required_arguments,
-                                           false, PragmaContainerSize::name,
-                                           "`gress', `field', `size1'")) {
+                                           false, cstring(PragmaContainerSize::name),
+                                           "`gress', `field', `size1'"_cs)) {
             continue;
         }
 

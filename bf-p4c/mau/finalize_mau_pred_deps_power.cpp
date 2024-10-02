@@ -25,7 +25,7 @@ FinalizeMauPredDepsPower::FinalizeMauPredDepsPower(const PhvInfo& phv,
   addPasses({
     // Get final dependency graph
     // Populates dep_graph_.
-    new FindDependencyGraph(phv_, dep_graph_, &options_, "power_graph", "Power Calculation"),
+    new FindDependencyGraph(phv_, dep_graph_, &options_, "power_graph"_cs, "Power Calculation"_cs),
 
     // Construct final control flow graphs that will be utilized
     // to estimate power and compute MPR settings.

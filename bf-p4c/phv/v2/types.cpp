@@ -4,7 +4,7 @@ namespace PHV {
 namespace v2 {
 
 std::ostream& operator<<(std::ostream& out, const FieldSliceAllocStartMap& fs) {
-    cstring sep = "";
+    std::string sep = "";
     for (const auto& kv : fs) {
         const auto& index = kv.second;
         const auto& fs = kv.first;

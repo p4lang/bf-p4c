@@ -1,4 +1,5 @@
 #include "copy_block_pragmas.h"
+#include "frontends/p4/methodInstance.h"
 
 class CopyBlockPragmas::FindPragmasFromApply : public Inspector {
     CopyBlockPragmas &self;

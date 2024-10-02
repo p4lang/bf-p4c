@@ -83,8 +83,8 @@ V1Switch(parse(), verifyChecksum(), mau(), mau(),
 
     auto& options = BackendOptions();
     options.langVersion = CompilerOptions::FrontendVersion::P4_16;
-    options.target = "tofino";
-    options.arch = "v1model";
+    options.target = "tofino"_cs;
+    options.arch = "v1model"_cs;
     options.disable_parse_min_depth_limit = true;
 
     return TofinoPipeTestCase::createWithThreadLocalInstances(source);
@@ -300,21 +300,21 @@ apply {
     auto* dom_tree = new BuildDominatorTree(fg);
     test->pipe->apply(*dom_tree);
 
-    EXPECT_EQ(dom_tree->hasImmediateDominator(INGRESS, "SINK"), "t10_0");
-    EXPECT_EQ(dom_tree->hasImmediateDominator(EGRESS, "SINK"), "t10_0");
-    EXPECT_EQ(dom_tree->hasImmediateDominator(INGRESS, "t11_0"), "t11_0");
-    EXPECT_EQ(dom_tree->hasImmediateDominator(EGRESS, "t11_0"), "t11_0");
-    EXPECT_EQ(dom_tree->hasImmediateDominator(INGRESS, "t7_0"), "t4_0");
-    EXPECT_EQ(dom_tree->hasImmediateDominator(EGRESS, "t3_0"), "t1_0");
+    EXPECT_EQ(dom_tree->hasImmediateDominator(INGRESS, "SINK"_cs), "t10_0"_cs);
+    EXPECT_EQ(dom_tree->hasImmediateDominator(EGRESS, "SINK"_cs), "t10_0"_cs);
+    EXPECT_EQ(dom_tree->hasImmediateDominator(INGRESS, "t11_0"_cs), "t11_0"_cs);
+    EXPECT_EQ(dom_tree->hasImmediateDominator(EGRESS, "t11_0"_cs), "t11_0"_cs);
+    EXPECT_EQ(dom_tree->hasImmediateDominator(INGRESS, "t7_0"_cs), "t4_0"_cs);
+    EXPECT_EQ(dom_tree->hasImmediateDominator(EGRESS, "t3_0"_cs), "t1_0"_cs);
 
-    EXPECT_EQ(dom_tree->strictlyDominates("t1_0", "t2_0", INGRESS), true);
-    EXPECT_EQ(dom_tree->strictlyDominates("t11_0", "t8_0", INGRESS), true);
-    EXPECT_EQ(dom_tree->strictlyDominates("t1_0", "t1_0", INGRESS), false);
-    EXPECT_EQ(dom_tree->strictlyDominates("t7_0", "t11_0", INGRESS), false);
-    EXPECT_EQ(dom_tree->strictlyDominates("t1_0", "t10_0", INGRESS), false);
+    EXPECT_EQ(dom_tree->strictlyDominates("t1_0"_cs, "t2_0"_cs, INGRESS), true);
+    EXPECT_EQ(dom_tree->strictlyDominates("t11_0"_cs, "t8_0"_cs, INGRESS), true);
+    EXPECT_EQ(dom_tree->strictlyDominates("t1_0"_cs, "t1_0"_cs, INGRESS), false);
+    EXPECT_EQ(dom_tree->strictlyDominates("t7_0"_cs, "t11_0"_cs, INGRESS), false);
+    EXPECT_EQ(dom_tree->strictlyDominates("t1_0"_cs, "t10_0"_cs, INGRESS), false);
 
-    EXPECT_EQ(dom_tree->isDominator("t2_0", INGRESS, "t11_0"), true);
-    EXPECT_EQ(dom_tree->isDominator("t2_0", INGRESS, "t1_0"), true);
-    EXPECT_EQ(dom_tree->isDominator("t2_0", INGRESS, "t7_0"), false);
+    EXPECT_EQ(dom_tree->isDominator("t2_0"_cs, INGRESS, "t11_0"_cs), true);
+    EXPECT_EQ(dom_tree->isDominator("t2_0"_cs, INGRESS, "t1_0"_cs), true);
+    EXPECT_EQ(dom_tree->isDominator("t2_0"_cs, INGRESS, "t7_0"_cs), false);
 }
 }  // namespace Test

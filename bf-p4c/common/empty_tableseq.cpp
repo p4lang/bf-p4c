@@ -14,13 +14,13 @@ void AddEmptyTableSeqs::postorder(IR::MAU::Table* tbl) {
     }
 
     if (tbl->hit_miss_p4()) {
-        for (auto key : { "$hit", "$miss" }) {
+        for (auto key : { "$hit"_cs, "$miss"_cs }) {
             if (tbl->next.count(key) == 0) tbl->next[key] = new IR::MAU::TableSeq();
         }
     } else if (tbl->has_default_path()) {
         // Nothing to do.
     } else if (tbl->action_chain() && tbl->next.size() < tbl->actions.size()) {
-        tbl->next["$default"] = new IR::MAU::TableSeq();
+        tbl->next["$default"_cs] = new IR::MAU::TableSeq();
     }
 
     for (auto& row : tbl->gateway_rows) {

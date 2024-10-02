@@ -153,9 +153,9 @@ class AddResubmitParser : public Transform {
         // Add a state that skips over any padding between the phase 0 data and the
         // beginning of the packet.
         const auto bitSkip = Device::pardeSpec().bitResubmitSize();
-        auto packetInParam = parser->tnaParams.at("pkt");
+        auto packetInParam = parser->tnaParams.at("pkt"_cs);
         auto *skipToPacketState =
-            createGeneratedParserState("resubmit", {
+            createGeneratedParserState("resubmit"_cs, {
                 createAdvanceCall(packetInParam, bitSkip)
             }, new IR::PathExpression(IR::ID("__skip_to_packet")));
         return skipToPacketState;
@@ -176,12 +176,12 @@ class AddResubmitParser : public Transform {
         }
 
         IR::Vector<IR::Expression> selectOn = {
-            createLookaheadExpr(parser->tnaParams.at("pkt"), 8)
+            createLookaheadExpr(parser->tnaParams.at("pkt"_cs), 8)
         };
 
         auto* resubmitState =
             createGeneratedParserState(
-                "resubmit", { },
+                "resubmit"_cs, { },
                 new IR::SelectExpression(new IR::ListExpression(selectOn), *selectCases));
         states->push_back(resubmitState);
         return states;
@@ -195,10 +195,10 @@ class AddResubmitParser : public Transform {
          * T tmp;
          * pkt.extract(tmp);
          */
-        cstring tmp = "__resubmit_tmp_" + std::to_string(idx);
+        cstring tmp = "__resubmit_tmp_"_cs + std::to_string(idx);
         auto decl = new IR::Declaration_Variable(IR::ID(tmp), new IR::Type_Name(header));
         statements->push_back(decl);
-        statements->push_back(createExtractCall(parser->tnaParams.at("pkt"), header,
+        statements->push_back(createExtractCall(parser->tnaParams.at("pkt"_cs), header,
                     new IR::PathExpression(tmp)));
 
         /**
@@ -215,7 +215,7 @@ class AddResubmitParser : public Transform {
             statements->push_back(createSetMetadata(s->apply(cloner), tmp, field));
         }
 
-        cstring name = "resubmit_" + std::to_string(idx);
+        cstring name = "resubmit_"_cs + std::to_string(idx);
         auto select = new IR::PathExpression(IR::ID("__skip_to_packet"));
         auto newStateName = IR::ID(cstring("__") + name);
         auto *newState = new IR::ParserState(newStateName, *statements, select);

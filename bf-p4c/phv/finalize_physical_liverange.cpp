@@ -524,7 +524,7 @@ void FinalizePhysicalLiverange::end_apply() {
             const cstring table = kv.first;
             std::stringstream ss;
             ss << table << ": ";
-            cstring sep = "";
+            std::string sep = "";
             for (const auto& v : kv.second) {
                 ss << sep << v;
                 sep = ", ";

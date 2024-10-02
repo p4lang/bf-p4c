@@ -38,7 +38,7 @@ class CreateAliasesForVarbitHeaders : public ParserInspector {
         auto state_name = stripThreadPrefix(state->name);
 
         if (state_name.startsWith("parse_")) {
-            auto field_slice = state_name.substr(6);
+            auto field_slice = state_name.substr(6).string();
 
             if (isVarbitHeaderPattern(h->name) && h->name.name.endsWith(field_slice)) {
                 std::stringstream ss;

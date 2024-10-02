@@ -38,10 +38,10 @@ void CollectPipelines::Pipe::set(unsigned count, unsigned idx, const IR::IDeclar
         // TODO This will need to change when T5NA gets ghost support
         BUG_CHECK(count == 4, "Cannot process pipelines with %1% arguments on Tofino 5", count);
         switch (idx) {
-            case 0: _setPipe(this, dec, &Pipe::ingress, &Gress::parser, "parser"); break;
-            case 1: _setPipe(this, dec, &Pipe::ingress, &Gress::control, "control"); break;
-            case 2: _setPipe(this, dec, &Pipe::egress, &Gress::control, "control"); break;
-            case 3: _setPipe(this, dec, &Pipe::egress, &Gress::deparser, "deparser"); break;
+            case 0: _setPipe(this, dec, &Pipe::ingress, &Gress::parser, "parser"_cs); break;
+            case 1: _setPipe(this, dec, &Pipe::ingress, &Gress::control, "control"_cs); break;
+            case 2: _setPipe(this, dec, &Pipe::egress, &Gress::control, "control"_cs); break;
+            case 3: _setPipe(this, dec, &Pipe::egress, &Gress::deparser, "deparser"_cs); break;
         }
     } else {
 #endif  // HAVE_FLATROCK
@@ -54,9 +54,9 @@ void CollectPipelines::Pipe::set(unsigned count, unsigned idx, const IR::IDeclar
             auto gress = idx < 3 ? &Pipe::ingress : &Pipe::egress;
             idx %= 3;
             switch (idx) {
-                case 0: _setPipe(this, dec, gress, &Gress::parser, "parser"); break;
-                case 1: _setPipe(this, dec, gress, &Gress::control, "control"); break;
-                case 2: _setPipe(this, dec, gress, &Gress::deparser, "deparser"); break;
+                case 0: _setPipe(this, dec, gress, &Gress::parser, "parser"_cs); break;
+                case 1: _setPipe(this, dec, gress, &Gress::control, "control"_cs); break;
+                case 2: _setPipe(this, dec, gress, &Gress::deparser, "deparser"_cs); break;
             }
         }
 #if HAVE_FLATROCK

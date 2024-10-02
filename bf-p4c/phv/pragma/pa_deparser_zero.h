@@ -12,7 +12,7 @@ class PragmaDeparserZero : public Inspector {
     PhvInfo&    phv_i;
 
     /// Vector of all PHV pragmas handled by this class.
-    static const std::vector<cstring> *supported_pragmas;
+    static const std::vector<std::string> *supported_pragmas;
 
     /// List of fields for which the pragma not_parsed has been specified.
     ordered_set<const PHV::Field*> notParsedFields;

@@ -38,7 +38,7 @@ class Edge {
      * Only multi-line edges (one-to-many connections) will be colors other
      * than black.
      */
-    cstring get_edge_color() const;
+    std::string get_edge_color() const;
 
     explicit Edge(size_t id, cstring name, std::vector<Node *> &child_nodes)
         : id_(id), name_(name) {
@@ -112,7 +112,7 @@ class SimplePowerGraph {
 
     explicit SimplePowerGraph(cstring gress) : name_(gress), running_id_(1) {
         UniqueId root_uid;
-        root_uid.name = "$root";
+        root_uid.name = "$root"_cs;
         root_ = new Node(root_uid, 0);
         nodes_.emplace(root_uid, root_);
     }

@@ -5,7 +5,7 @@
 #include <boost/iostreams/stream.hpp>
 
 #include "ir/ir.h"
-#include "lib/path.h"
+// #include "lib/path.h"
 #include "lib/big_int_util.h"
 
 #include "frontends/common/options.h"
@@ -23,12 +23,12 @@
 
 namespace BFN {
 
-const cstring ProgramStructure::INGRESS_PARSER = "ingress_parser";
-const cstring ProgramStructure::INGRESS = "ingress";
-const cstring ProgramStructure::INGRESS_DEPARSER = "ingress_deparser";
-const cstring ProgramStructure::EGRESS_PARSER = "egress_parser";
-const cstring ProgramStructure::EGRESS = "egress";
-const cstring ProgramStructure::EGRESS_DEPARSER = "egress_deparser";
+const cstring ProgramStructure::INGRESS_PARSER = "ingress_parser"_cs;
+const cstring ProgramStructure::INGRESS = "ingress"_cs;
+const cstring ProgramStructure::INGRESS_DEPARSER = "ingress_deparser"_cs;
+const cstring ProgramStructure::EGRESS_PARSER = "egress_parser"_cs;
+const cstring ProgramStructure::EGRESS = "egress"_cs;
+const cstring ProgramStructure::EGRESS_DEPARSER = "egress_deparser"_cs;
 
 // append target architecture to declaration
 void ProgramStructure::include(cstring filename, IR::Vector<IR::Node> *vector) {
@@ -36,13 +36,13 @@ void ProgramStructure::include(cstring filename, IR::Vector<IR::Node> *vector) {
     // paths.  check the environment and add these to the command
     // line for the preprocessor
     char *drvP4IncludePath = getenv("P4C_16_INCLUDE_PATH");
-    Util::PathName path(drvP4IncludePath ? drvP4IncludePath : p4includePath);
+    std::filesystem::path path(drvP4IncludePath ? drvP4IncludePath : p4includePath);
 
     CompilerOptions options;
     if (filename.startsWith("/"))
-        options.file = filename;
+        options.file = filename.string();
     else
-        options.file = path.join(filename).toString();
+        options.file = path / filename.string();
 
     options.langVersion = CompilerOptions::FrontendVersion::P4_16;
 
@@ -59,7 +59,7 @@ void ProgramStructure::include(cstring filename, IR::Vector<IR::Node> *vector) {
             return;
         }
 
-        auto code = P4::P4ParserDriver::parse(file, options.file);
+        auto code = P4::P4ParserDriver::parse(file, options.file.string());
         if (code == nullptr || ::errorCount() > 0) {
             ::error("Failed to load architecture file %1%", options.file);
             options.closePreprocessedInput(file);

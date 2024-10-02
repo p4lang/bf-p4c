@@ -78,8 +78,8 @@ V1Switch(parse(), verifyChecksum(), ingress(), egress(), computeChecksum(), depa
 
     auto& options = BackendOptions();
     options.langVersion = CompilerOptions::FrontendVersion::P4_16;
-    options.target = "tofino";
-    options.arch = "v1model";
+    options.target = "tofino"_cs;
+    options.arch = "v1model"_cs;
     options.disable_parse_min_depth_limit = true;
 
     return TofinoPipeTestCase::createWithThreadLocalInstances(source);
@@ -203,20 +203,20 @@ TEST_F(MetadataLiveRangeTest, BasicControlFlow) {
     pipe = runMockPasses(pipe, phv, defuse, deps, uses, pragmas, entry, metaLive);
     ASSERT_TRUE(pipe);
 
-    EXPECT_EQ(defuse.hasUninitializedRead(phv.field("ingress::meta.f1")->id), true);
-    EXPECT_EQ(defuse.hasUninitializedRead(phv.field("ingress::meta.f2")->id), true);
+    EXPECT_EQ(defuse.hasUninitializedRead(phv.field("ingress::meta.f1"_cs)->id), true);
+    EXPECT_EQ(defuse.hasUninitializedRead(phv.field("ingress::meta.f2"_cs)->id), true);
 
     const auto& livemap = metaLive.getMetadataLiveMap();
-    auto meta_f1_map = livemap.at(phv.field("ingress::meta.f1")->id);
+    auto meta_f1_map = livemap.at(phv.field("ingress::meta.f1"_cs)->id);
     EXPECT_EQ(meta_f1_map.first, 2);
     EXPECT_EQ(meta_f1_map.second, 4);
-    auto meta_f2_map = livemap.at(phv.field("ingress::meta.f2")->id);
+    auto meta_f2_map = livemap.at(phv.field("ingress::meta.f2"_cs)->id);
     EXPECT_EQ(meta_f2_map.first, 1);
     EXPECT_EQ(meta_f2_map.second, 4);
-    auto meta_f3_map = livemap.at(phv.field("ingress::meta.f3")->id);
+    auto meta_f3_map = livemap.at(phv.field("ingress::meta.f3"_cs)->id);
     EXPECT_EQ(meta_f3_map.first, 1);
     EXPECT_EQ(meta_f3_map.second, 4);
-    auto meta_f4_map = livemap.at(phv.field("ingress::meta.f4")->id);
+    auto meta_f4_map = livemap.at(phv.field("ingress::meta.f4"_cs)->id);
     EXPECT_EQ(meta_f4_map.first, 4);
     EXPECT_EQ(meta_f4_map.second, 4);
 }

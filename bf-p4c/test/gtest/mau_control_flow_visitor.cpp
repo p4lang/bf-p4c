@@ -55,18 +55,18 @@ struct CollectCFGPaths : public ControlFlowVisitor, public Inspector {
 }  // anon namespace
 
 TEST(MauControlFlowVisit, GatewayRunTableAndNext) {
-    auto t1 = new IR::MAU::Table("t1", INGRESS);
-    auto a1 = new IR::MAU::Action("a1");
-    t1->actions["a1"] = a1;
+    auto t1 = new IR::MAU::Table("t1"_cs, INGRESS);
+    auto a1 = new IR::MAU::Action("a1"_cs);
+    t1->actions["a1"_cs] = a1;
 
-    auto t2 = new IR::MAU::Table("t2", INGRESS);
-    auto a2 = new IR::MAU::Action("a2");
-    t2->actions["a2"] = a2;
+    auto t2 = new IR::MAU::Table("t2"_cs, INGRESS);
+    auto a2 = new IR::MAU::Action("a2"_cs);
+    t2->actions["a2"_cs] = a2;
 
     t1->gateway_rows.emplace_back(new IR::Constant(0), /* run table */ nullptr);
     t1->gateway_rows.emplace_back(/* miss */ nullptr, "$false");
 
-    t1->next["$false"] = new IR::MAU::TableSeq(t2);
+    t1->next["$false"_cs] = new IR::MAU::TableSeq(t2);
     t1->match_key.push_back(new IR::MAU::TableKey(
                                 new IR::Constant(0),
                                 IR::ID()));
@@ -82,13 +82,13 @@ TEST(MauControlFlowVisit, GatewayRunTableAndNext) {
 }
 
 TEST(MauControlFlowVisit, GatewayRunTableAndFallthrough) {
-    auto t1 = new IR::MAU::Table("t1", INGRESS);
-    auto a1 = new IR::MAU::Action("a1");
-    t1->actions["a1"] = a1;
+    auto t1 = new IR::MAU::Table("t1"_cs, INGRESS);
+    auto a1 = new IR::MAU::Action("a1"_cs);
+    t1->actions["a1"_cs] = a1;
 
-    auto t2 = new IR::MAU::Table("t2", INGRESS);
-    auto a2 = new IR::MAU::Action("a2");
-    t2->actions["a2"] = a2;
+    auto t2 = new IR::MAU::Table("t2"_cs, INGRESS);
+    auto a2 = new IR::MAU::Action("a2"_cs);
+    t2->actions["a2"_cs] = a2;
 
     t1->gateway_rows.emplace_back(new IR::Constant(0), /* run table */ nullptr);
     t1->gateway_rows.emplace_back(/* miss */ nullptr, "$false");  // falls through

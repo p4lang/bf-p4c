@@ -2,13 +2,13 @@
 #include "programStructure.h"
 
 P4V1::LpfConverter::LpfConverter() {
-    addConverter("lpf", this);
+    addConverter("lpf"_cs, this);
 }
 
 const IR::Type_Extern *P4V1::LpfConverter::convertExternType(P4V1::ProgramStructure *structure,
                                                              const IR::Type_Extern *, cstring) {
     if (use_v1model())
-        structure->include("tofino/lpf.p4");
+        structure->include("tofino/lpf.p4"_cs);
     return nullptr;
 }
 
@@ -70,7 +70,7 @@ const IR::Statement *P4V1::LpfConverter::convertExternCall(P4V1::ProgramStructur
     BUG_CHECK(prim->operands.size() >= 2 && prim->operands.size() <= 3,
               "Expected 2 or 3 operands for %s", prim->name);
     const IR::Type *filt_type = nullptr;
-    if (auto prop = ext->properties.get<IR::Property>("filter_input")) {
+    if (auto prop = ext->properties.get<IR::Property>("filter_input"_cs)) {
         if (auto ev = prop->value->to<IR::ExpressionValue>()) {
             filt_type = ev->expression->type;
             args->push_back(new IR::Argument(conv.convert(ev->expression)));
@@ -81,7 +81,7 @@ const IR::Statement *P4V1::LpfConverter::convertExternCall(P4V1::ProgramStructur
         error("No filter_input in %s", ext); }
     IR::BlockStatement *block = nullptr;
     if (prim->name == "execute_from_hash") {
-        cstring temp = structure->makeUniqueName("temp");
+        cstring temp = structure->makeUniqueName("temp"_cs);
         block = P4V1::generate_hash_block_statement(structure, prim, temp, conv, 3);
         args->push_back(new IR::Argument(new IR::Cast(IR::Type_Bits::get(32),
                         new IR::PathExpression(new IR::Path(temp)))));
@@ -92,7 +92,7 @@ const IR::Statement *P4V1::LpfConverter::convertExternCall(P4V1::ProgramStructur
         BUG("Unknown method %s in lpf", prim->name);
     }
     auto extref = new IR::PathExpression(structure->externs.get(ext));
-    auto method = new IR::Member(prim->srcInfo, extref, "execute");
+    auto method = new IR::Member(prim->srcInfo, extref, "execute"_cs);
     auto mc = new IR::MethodCallExpression(prim->srcInfo, filt_type, method, args);
     auto dest = conv.convert(prim->operands.at(1));
     rv = structure->assign(prim->srcInfo, dest, mc, dest->type);

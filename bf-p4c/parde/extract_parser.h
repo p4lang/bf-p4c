@@ -42,7 +42,7 @@ class ExtractParser : public ParserInspector {
 
     profile_t init_apply(const IR::Node *root) override {
         if (BackendOptions().verbose > 0)
-            parserLog = new Logging::FileLog(rv->canon_id(), "parser.log");
+            parserLog = new Logging::FileLog(rv->canon_id(), "parser.log"_cs);
         return ParserInspector::init_apply(root);
     }
 

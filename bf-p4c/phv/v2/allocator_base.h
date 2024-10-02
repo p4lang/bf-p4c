@@ -21,7 +21,7 @@ struct ContScopeAllocResult : public AllocResult {
     ActionSourceCoPackMap action_hints;
     Container c;
     bool is_packing = false;
-    ContScopeAllocResult(): AllocResult(new AllocError(ErrorCode::NOT_ENOUGH_SPACE, "")) {}
+    ContScopeAllocResult(): AllocResult(new AllocError(ErrorCode::NOT_ENOUGH_SPACE, ""_cs)) {}
     explicit ContScopeAllocResult(const AllocError* err)
         : AllocResult(err) {}
     ContScopeAllocResult(const Transaction& tx, const ActionSourceCoPackMap& hints, Container c,

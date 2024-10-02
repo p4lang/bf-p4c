@@ -76,8 +76,8 @@ class ComputeDefUse::SetupJoinPoints : public ControlFlowVisitor::SetupJoinPoint
         IndentCtl::TempIndent indent;
         LOG6("SetupJoinPoints(P4Parser " << p->name << ")" << indent);
         LOG8("    " << Log::indent << Log::indent << *p << Log::unindent << Log::unindent);
-        if (auto start = p->states.getDeclaration<IR::ParserState>("start"))
-            visit(start, "start");
+        if (auto start = p->states.getDeclaration<IR::ParserState>("start"_cs))
+            visit(start, "start"_cs);
         return false; }
     bool preorder(const IR::P4Control *) override { return false; }
     bool preorder(const IR::Type *) override { return false; }
@@ -183,7 +183,7 @@ bool ComputeDefUse::preorder(const IR::P4Control *c) {
         if (p->direction == IR::Direction::In || p->direction == IR::Direction::InOut)
             def_info[p].defs.insert(getLoc(p));
     state = NORMAL;
-    visit(c->body, "body");  // just visit the body; tables/actions will be visited when applied
+    visit(c->body, "body"_cs);  // just visit the body; tables/actions will be visited when applied
     for (auto *p : c->getApplyParameters()->parameters)
         if (p->direction == IR::Direction::Out || p->direction == IR::Direction::InOut)
             add_uses(getLoc(p), def_info[p]);
@@ -197,7 +197,7 @@ bool ComputeDefUse::preorder(const IR::P4Table *tbl) {
     IndentCtl::TempIndent indent;
     LOG5("ComputeDefUse(P4Table " << tbl->name << ")" << indent);
     if (auto key = tbl->getKey())
-        visit(key, "key");
+        visit(key, "key"_cs);
     if (auto actions = tbl->getActionList()) {
         parallel_visit(actions->actionList, "actions");
     } else {
@@ -211,7 +211,7 @@ bool ComputeDefUse::preorder(const IR::P4Action *act) {
         def_info[p].defs.insert(getLoc(p));
     IndentCtl::TempIndent indent;
     LOG5("ComputeDefUse(P4Action " << act->name << ")" << indent);
-    visit(act->body, "body");
+    visit(act->body, "body"_cs);
     return false;
 }
 
@@ -223,8 +223,8 @@ bool ComputeDefUse::preorder(const IR::P4Parser *p) {
         if (a->direction == IR::Direction::In || a->direction == IR::Direction::InOut)
             def_info[a].defs.insert(getLoc(a));
     state = NORMAL;
-    if (auto start = p->states.getDeclaration<IR::ParserState>("start")) {
-        visit(start, "start");
+    if (auto start = p->states.getDeclaration<IR::ParserState>("start"_cs)) {
+        visit(start, "start"_cs);
     } else {
         BUG("No start state in %s", p); }
     for (auto *a : p->getApplyParameters()->parameters)

@@ -228,6 +228,7 @@ add_subdirectory(p4c)
 if (ENABLE_GTESTS)
   target_include_directories(gtestp4c
     PRIVATE "${BFN_P4C_SOURCE_DIR}/p4c/test/frameworks/gtest/googlemock/include"
+    PRIVATE "${BFN_P4C_SOURCE_DIR}/p4c/test/frameworks/gtest/googletest/include"
     PRIVATE "${P4C_BINARY_DIR}/extensions/bf-p4c/logging"
     PRIVATE "bf-p4c/logging"
     PRIVATE "${P4C_BINARY_DIR}/control-plane/"

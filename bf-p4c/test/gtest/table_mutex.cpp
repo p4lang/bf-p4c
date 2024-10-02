@@ -71,8 +71,8 @@ V1Switch(parse(), verifyChecksum(), igrs(), egrs(),
 
     auto& options = BackendOptions();
     options.langVersion = CompilerOptions::FrontendVersion::P4_16;
-    options.target = "tofino";
-    options.arch = "v1model";
+    options.target = "tofino"_cs;
+    options.arch = "v1model"_cs;
     options.disable_parse_min_depth_limit = true;
     return TofinoPipeTestCase::createWithThreadLocalInstances(source);
 }
@@ -118,9 +118,9 @@ TEST_F(TableMutexTest, BasicMutex) {
     test->pipe = test->pipe->apply(mutex);
     auto &names = mutex.name_to_tables;
 
-    EXPECT_FALSE(mutex(names.at("igrs.t1"), names.at("igrs.t2")));
-    EXPECT_FALSE(mutex(names.at("igrs.t1"), names.at("igrs.t3")));
-    EXPECT_TRUE(mutex(names.at("igrs.t2"), names.at("igrs.t3")));
+    EXPECT_FALSE(mutex(names.at("igrs.t1"_cs), names.at("igrs.t2"_cs)));
+    EXPECT_FALSE(mutex(names.at("igrs.t1"_cs), names.at("igrs.t3"_cs)));
+    EXPECT_TRUE(mutex(names.at("igrs.t2"_cs), names.at("igrs.t3"_cs)));
 }
 
 TEST_F(TableMutexTest, TwoActionsSameNextTable) {
@@ -173,9 +173,9 @@ TEST_F(TableMutexTest, TwoActionsSameNextTable) {
     test->pipe = test->pipe->apply(mutex);
     auto &names = mutex.name_to_tables;
 
-    EXPECT_FALSE(mutex(names.at("igrs.t1"), names.at("igrs.t2")));
-    EXPECT_FALSE(mutex(names.at("igrs.t1"), names.at("igrs.t3")));
-    EXPECT_TRUE(mutex(names.at("igrs.t2"), names.at("igrs.t3")));
+    EXPECT_FALSE(mutex(names.at("igrs.t1"_cs), names.at("igrs.t2"_cs)));
+    EXPECT_FALSE(mutex(names.at("igrs.t1"_cs), names.at("igrs.t3"_cs)));
+    EXPECT_TRUE(mutex(names.at("igrs.t2"_cs), names.at("igrs.t3"_cs)));
 }
 
 TEST_F(TableMutexTest, SharedNextTable) {
@@ -234,12 +234,12 @@ TEST_F(TableMutexTest, SharedNextTable) {
     test->pipe = test->pipe->apply(mutex);
     auto &names = mutex.name_to_tables;
 
-    EXPECT_FALSE(mutex(names.at("igrs.t1"), names.at("igrs.t2")));
-    EXPECT_FALSE(mutex(names.at("igrs.t1"), names.at("igrs.t3")));
-    EXPECT_FALSE(mutex(names.at("igrs.t1"), names.at("igrs.t4")));
-    EXPECT_FALSE(mutex(names.at("igrs.t2"), names.at("igrs.t3")));
-    EXPECT_TRUE(mutex(names.at("igrs.t2"), names.at("igrs.t4")));
-    EXPECT_TRUE(mutex(names.at("igrs.t3"), names.at("igrs.t4")));
+    EXPECT_FALSE(mutex(names.at("igrs.t1"_cs), names.at("igrs.t2"_cs)));
+    EXPECT_FALSE(mutex(names.at("igrs.t1"_cs), names.at("igrs.t3"_cs)));
+    EXPECT_FALSE(mutex(names.at("igrs.t1"_cs), names.at("igrs.t4"_cs)));
+    EXPECT_FALSE(mutex(names.at("igrs.t2"_cs), names.at("igrs.t3"_cs)));
+    EXPECT_TRUE(mutex(names.at("igrs.t2"_cs), names.at("igrs.t4"_cs)));
+    EXPECT_TRUE(mutex(names.at("igrs.t3"_cs), names.at("igrs.t4"_cs)));
 }
 
 TEST_F(TableMutexTest, DifferingNextTableChains) {
@@ -308,16 +308,16 @@ TEST_F(TableMutexTest, DifferingNextTableChains) {
     test->pipe = test->pipe->apply(mutex);
     auto &names = mutex.name_to_tables;
 
-    EXPECT_FALSE(mutex(names.at("igrs.t1"), names.at("igrs.t2")));
-    EXPECT_FALSE(mutex(names.at("igrs.t1"), names.at("igrs.t3")));
-    EXPECT_FALSE(mutex(names.at("igrs.t1"), names.at("igrs.t4")));
-    EXPECT_FALSE(mutex(names.at("igrs.t1"), names.at("igrs.t5")));
-    EXPECT_FALSE(mutex(names.at("igrs.t2"), names.at("igrs.t3")));
-    EXPECT_TRUE(mutex(names.at("igrs.t2"), names.at("igrs.t4")));
-    EXPECT_TRUE(mutex(names.at("igrs.t2"), names.at("igrs.t5")));
-    EXPECT_TRUE(mutex(names.at("igrs.t3"), names.at("igrs.t4")));
-    EXPECT_TRUE(mutex(names.at("igrs.t3"), names.at("igrs.t5")));
-    EXPECT_FALSE(mutex(names.at("igrs.t4"), names.at("igrs.t5")));
+    EXPECT_FALSE(mutex(names.at("igrs.t1"_cs), names.at("igrs.t2"_cs)));
+    EXPECT_FALSE(mutex(names.at("igrs.t1"_cs), names.at("igrs.t3"_cs)));
+    EXPECT_FALSE(mutex(names.at("igrs.t1"_cs), names.at("igrs.t4"_cs)));
+    EXPECT_FALSE(mutex(names.at("igrs.t1"_cs), names.at("igrs.t5"_cs)));
+    EXPECT_FALSE(mutex(names.at("igrs.t2"_cs), names.at("igrs.t3"_cs)));
+    EXPECT_TRUE(mutex(names.at("igrs.t2"_cs), names.at("igrs.t4"_cs)));
+    EXPECT_TRUE(mutex(names.at("igrs.t2"_cs), names.at("igrs.t5"_cs)));
+    EXPECT_TRUE(mutex(names.at("igrs.t3"_cs), names.at("igrs.t4"_cs)));
+    EXPECT_TRUE(mutex(names.at("igrs.t3"_cs), names.at("igrs.t5"_cs)));
+    EXPECT_FALSE(mutex(names.at("igrs.t4"_cs), names.at("igrs.t5"_cs)));
 }
 
 
@@ -378,12 +378,12 @@ TEST_F(TableMutexTest, OneChainFromTwoActions) {
     test->pipe = test->pipe->apply(mutex);
     auto &names = mutex.name_to_tables;
 
-    EXPECT_FALSE(mutex(names.at("igrs.t1"), names.at("igrs.t2")));
-    EXPECT_FALSE(mutex(names.at("igrs.t1"), names.at("igrs.t3")));
-    EXPECT_FALSE(mutex(names.at("igrs.t1"), names.at("igrs.t4")));
-    EXPECT_FALSE(mutex(names.at("igrs.t2"), names.at("igrs.t3")));
-    EXPECT_TRUE(mutex(names.at("igrs.t2"), names.at("igrs.t4")));
-    EXPECT_TRUE(mutex(names.at("igrs.t3"), names.at("igrs.t4")));
+    EXPECT_FALSE(mutex(names.at("igrs.t1"_cs), names.at("igrs.t2"_cs)));
+    EXPECT_FALSE(mutex(names.at("igrs.t1"_cs), names.at("igrs.t3"_cs)));
+    EXPECT_FALSE(mutex(names.at("igrs.t1"_cs), names.at("igrs.t4"_cs)));
+    EXPECT_FALSE(mutex(names.at("igrs.t2"_cs), names.at("igrs.t3"_cs)));
+    EXPECT_TRUE(mutex(names.at("igrs.t2"_cs), names.at("igrs.t4"_cs)));
+    EXPECT_TRUE(mutex(names.at("igrs.t3"_cs), names.at("igrs.t4"_cs)));
 }
 
 
@@ -437,9 +437,9 @@ TEST_F(TableMutexTest, MultiLevelNextTableChain) {
     test->pipe = test->pipe->apply(mutex);
     auto &names = mutex.name_to_tables;
 
-    EXPECT_FALSE(mutex(names.at("igrs.t1"), names.at("igrs.t2")));
-    EXPECT_FALSE(mutex(names.at("igrs.t1"), names.at("igrs.t3")));
-    EXPECT_FALSE(mutex(names.at("igrs.t2"), names.at("igrs.t3")));
+    EXPECT_FALSE(mutex(names.at("igrs.t1"_cs), names.at("igrs.t2"_cs)));
+    EXPECT_FALSE(mutex(names.at("igrs.t1"_cs), names.at("igrs.t3"_cs)));
+    EXPECT_FALSE(mutex(names.at("igrs.t2"_cs), names.at("igrs.t3"_cs)));
 }
 
 TEST_F(TableMutexTest, Tofino2MultiApplyChain) {
@@ -523,13 +523,13 @@ TEST_F(TableMutexTest, Tofino2MultiApplyChain) {
     test->pipe = test->pipe->apply(mutex);
     auto &names = mutex.name_to_tables;
 
-    EXPECT_TRUE(mutex(names.at("igrs.t2"), names.at("igrs.t4")));
-    EXPECT_TRUE(mutex(names.at("igrs.t2"), names.at("igrs.t5")));
-    EXPECT_TRUE(mutex(names.at("igrs.t3"), names.at("igrs.t5")));
-    EXPECT_FALSE(mutex(names.at("igrs.t2"), names.at("igrs.t3")));
-    EXPECT_FALSE(mutex(names.at("igrs.t1_0"), names.at("igrs.t2")));
-    EXPECT_FALSE(mutex(names.at("igrs.t2"), names.at("igrs.t6")));
-    EXPECT_FALSE(mutex(names.at("igrs.t5"), names.at("igrs.t6")));
+    EXPECT_TRUE(mutex(names.at("igrs.t2"_cs), names.at("igrs.t4"_cs)));
+    EXPECT_TRUE(mutex(names.at("igrs.t2"_cs), names.at("igrs.t5"_cs)));
+    EXPECT_TRUE(mutex(names.at("igrs.t3"_cs), names.at("igrs.t5"_cs)));
+    EXPECT_FALSE(mutex(names.at("igrs.t2"_cs), names.at("igrs.t3"_cs)));
+    EXPECT_FALSE(mutex(names.at("igrs.t1_0"_cs), names.at("igrs.t2"_cs)));
+    EXPECT_FALSE(mutex(names.at("igrs.t2"_cs), names.at("igrs.t6"_cs)));
+    EXPECT_FALSE(mutex(names.at("igrs.t5"_cs), names.at("igrs.t6"_cs)));
 }
 
 const IR::BFN::Pipe *runInitialPassManager(const IR::BFN::Pipe* pipe,
@@ -638,10 +638,10 @@ TEST_F(TableMutexTest, IndirectAttachedActionAnalysis) {
     post_pm_pipe = post_pm_pipe->apply(ignore);
     post_pm_pipe = post_pm_pipe->apply(sia);
     auto &names = mutex.name_to_tables;
-    EXPECT_TRUE(sia.if_table_share_attach(names.at("igrs.t1"), names.at("igrs.t2")));
-    EXPECT_FALSE(sia.if_table_share_attach(names.at("igrs.t3"), names.at("igrs.t4")));
-    EXPECT_TRUE(sia.if_table_share_attach(names.at("igrs.t1"), names.at("igrs.t3")));
-    EXPECT_TRUE(sia.if_table_share_attach(names.at("igrs.t6"), names.at("igrs.t7")));
+    EXPECT_TRUE(sia.if_table_share_attach(names.at("igrs.t1"_cs), names.at("igrs.t2"_cs)));
+    EXPECT_FALSE(sia.if_table_share_attach(names.at("igrs.t3"_cs), names.at("igrs.t4"_cs)));
+    EXPECT_TRUE(sia.if_table_share_attach(names.at("igrs.t1"_cs), names.at("igrs.t3"_cs)));
+    EXPECT_TRUE(sia.if_table_share_attach(names.at("igrs.t6"_cs), names.at("igrs.t7"_cs)));
 }
 
 TEST_F(TableMutexTest, ExitTableMutex1) {
@@ -725,12 +725,12 @@ TEST_F(TableMutexTest, ExitTableMutex1) {
     TablesMutuallyExclusive mutex;
     test->pipe = test->pipe->apply(mutex);
     auto &names = mutex.name_to_tables;
-    EXPECT_FALSE(mutex(names.at("igrs.t2"), names.at("igrs.t3")));
-    EXPECT_TRUE(mutex(names.at("igrs.t4"), names.at("igrs.t8")));
-    EXPECT_TRUE(mutex(names.at("igrs.t3"), names.at("igrs.t8")));
-    EXPECT_TRUE(mutex(names.at("igrs.t7"), names.at("igrs.t8")));
-    EXPECT_FALSE(mutex(names.at("igrs.t9"), names.at("igrs.t4")));
-    EXPECT_FALSE(mutex(names.at("igrs.t5"), names.at("igrs.t8")));
+    EXPECT_FALSE(mutex(names.at("igrs.t2"_cs), names.at("igrs.t3"_cs)));
+    EXPECT_TRUE(mutex(names.at("igrs.t4"_cs), names.at("igrs.t8"_cs)));
+    EXPECT_TRUE(mutex(names.at("igrs.t3"_cs), names.at("igrs.t8"_cs)));
+    EXPECT_TRUE(mutex(names.at("igrs.t7"_cs), names.at("igrs.t8"_cs)));
+    EXPECT_FALSE(mutex(names.at("igrs.t9"_cs), names.at("igrs.t4"_cs)));
+    EXPECT_FALSE(mutex(names.at("igrs.t5"_cs), names.at("igrs.t8"_cs)));
 }
 
 }  // namespace Test

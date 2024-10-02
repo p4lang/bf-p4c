@@ -32,8 +32,8 @@ bool AssignActionHandle::ActionProfileImposedConstraints::preorder(const IR::MAU
     }
 
     if (!difference.empty()) {
-        cstring sep = "";
-        cstring non_shared_actions = "";
+        std::string sep = "";
+        std::string non_shared_actions = "";
         for (auto entry : difference) {
             non_shared_actions += sep + entry;
             sep = ", ";

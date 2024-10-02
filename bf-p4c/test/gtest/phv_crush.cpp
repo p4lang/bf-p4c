@@ -259,7 +259,7 @@ TEST_F(TofinoPhvCrush, Transaction) {
     PHV::Field f0;
     f0.id = 0;
     f0.size = 8;
-    f0.name = "foo.bar";
+    f0.name = "foo.bar"_cs;
     f0.gress = EGRESS;
     f0.offset = 0;
     f0.metadata = true;
@@ -270,7 +270,7 @@ TEST_F(TofinoPhvCrush, Transaction) {
     PHV::Field f1;
     f1.id = 1;
     f1.size = 8;
-    f1.name = "foo.bar";
+    f1.name = "foo.bar"_cs;
     f1.gress = INGRESS;
     f1.offset = 0;
     f1.metadata = true;
@@ -331,7 +331,7 @@ TEST_F(TofinoPhvCrush, Transaction) {
     PHV::Field f2;
     f2.id = 2;
     f2.size = 8;
-    f2.name = "foo.baz";
+    f2.name = "foo.baz"_cs;
     f2.gress = INGRESS;
     f2.offset = 0;
     f2.metadata = true;
@@ -423,14 +423,14 @@ TEST_F(TofinoPhvCrush, slicesByLiveness) {
     PHV::Field f1;
     f1.id = 1;
     f1.size = 8;
-    f1.name = "foo.bar";
+    f1.name = "foo.bar"_cs;
     f1.gress = INGRESS;
     PHV::AllocSlice s1(&f1, c1, 0, 0, 8);
 
     PHV::Field f2;
     f2.id = 2;
     f2.size = 8;
-    f2.name = "foo.baz";
+    f2.name = "foo.baz"_cs;
     f2.gress = INGRESS;
     PHV::AllocSlice s2(&f2, c1, 0, 0, 8);
 

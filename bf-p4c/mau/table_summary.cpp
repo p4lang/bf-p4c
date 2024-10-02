@@ -64,20 +64,20 @@
 #include "lib/map.h"
 using namespace State;
 static std::vector<cstring> state_name = {
-    "INITIAL",
-    "NOCC_TRY1",
-    "REDO_PHV1",
-    "NOCC_TRY2",
-    "REDO_PHV2",
-    "FINAL_PLACEMENT",
-    "FAILURE",
-    "SUCCESS",
-    "ALT_INITIAL",
-    "ALT_RETRY_ENHANCED_TP",
-    "ALT_FINALIZE_TABLE_SAME_ORDER",
-    "ALT_FINALIZE_TABLE_SAME_ORDER_TABLE_FIXED",
-    "ALT_FINALIZE_TABLE",
-    "FINAL"  // Should never reach this state
+    "INITIAL"_cs,
+    "NOCC_TRY1"_cs,
+    "REDO_PHV1"_cs,
+    "NOCC_TRY2"_cs,
+    "REDO_PHV2"_cs,
+    "FINAL_PLACEMENT"_cs,
+    "FAILURE"_cs,
+    "SUCCESS"_cs,
+    "ALT_INITIAL"_cs,
+    "ALT_RETRY_ENHANCED_TP"_cs,
+    "ALT_FINALIZE_TABLE_SAME_ORDER"_cs,
+    "ALT_FINALIZE_TABLE_SAME_ORDER_TABLE_FIXED"_cs,
+    "ALT_FINALIZE_TABLE"_cs,
+    "FINAL"_cs  // Should never reach this state
 };
 
 void TableSummary::FinalizePlacement() {
@@ -102,7 +102,7 @@ ordered_map<cstring, std::set<const IR::MAU::Table*>> TableSummary::tblName2IRpt
 Visitor::profile_t TableSummary::init_apply(const IR::Node *root) {
     if (BackendOptions().verbose > 0) {
         const IR::BFN::Pipe *pipe = root->to<IR::BFN::Pipe>();
-        tsLog = new Logging::FileLog(pipe->canon_id(), "table_summary.log");
+        tsLog = new Logging::FileLog(pipe->canon_id(), "table_summary.log"_cs);
     }
 
     auto rv = MauInspector::init_apply(root);
@@ -913,7 +913,7 @@ cstring TableSummary::ixbarUsagesStr(const PhvInfo *phv_i) const {
             const auto& bytesOnIxbar = ixbar_alloc.second;
             if (bytesOnIxbar.size() > 0) {
                 std::vector<std::string> row;
-                row.push_back(std::string(stripThreadPrefix(f.first.c_str())));
+                row.push_back(std::string(stripThreadPrefix(f.first)));
                 row.push_back(
                     std::string("(" + std::to_string(fr.hi) + ":" + std::to_string(fr.lo) + ")"));
                 row.push_back(std::string(toSymbol(f.second.gress).c_str()));
@@ -1027,7 +1027,7 @@ TableSummary::PlacedTable::PlacedTable(const IR::MAU::Table *t, state_t state,
     key_size    = t->get_match_key_width();
     entries_req = entries;  // To be overwritten by table size if available
     if (t->match_table) {
-        if (auto size = t->match_table->getConstantProperty("size"))
+        if (auto size = t->match_table->getConstantProperty("size"_cs))
             entries_req = size->asInt();
     }
     // Choose lesser value as this could be a split table or overallocation

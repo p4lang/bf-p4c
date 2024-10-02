@@ -12,6 +12,8 @@ class cstring;
 class JSONGenerator;
 class JSONLoader;
 
+using namespace P4::literals;
+
 namespace PHV {
 
 /// all possible PHV container kinds in BFN devices
@@ -26,10 +28,10 @@ enum class Kind : unsigned short {
 const Kind KINDS[] = { Kind::tagalong, Kind::dark, Kind::mocha, Kind::normal };
 
 const std::map<Kind, cstring> STR_OF_KIND = {
-  { Kind::tagalong, "tagalong" },
-  { Kind::dark, "dark" },
-  { Kind::mocha, "mocha" },
-  { Kind::normal, "normal" }
+  { Kind::tagalong, "tagalong"_cs },
+  { Kind::dark, "dark"_cs },
+  { Kind::mocha, "mocha"_cs },
+  { Kind::normal, "normal"_cs }
 };
 
 // all possible contexts a PHV container can participate in

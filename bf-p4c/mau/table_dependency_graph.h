@@ -325,7 +325,7 @@ struct DependencyGraph {
             max_min_stage_per_gress[i] = -1;
         display_min_edges = false;
         vertex_rst.clear();
-        passContext = "";
+        passContext = ""_cs;
         placed = false;
         containers_write_.clear();
         containers_read_xbar_.clear();
@@ -617,8 +617,8 @@ class TableGraphEdge {
     int source                  = -1;
     int target                  = -1;
     int phv_number              = -1;
-    cstring action_name         = "";
-    cstring exit_action_name    = "";
+    cstring action_name         = ""_cs;
+    cstring exit_action_name    = ""_cs;
     bool is_critical            = false;
 
     std::vector<TableGraphField> dep_fields;
@@ -651,35 +651,35 @@ class TableGraphEdge {
         if (dep_fields.size() > 0) {
             for (auto field : dep_fields) {
                 Util::JsonObject* edgeMdDepField = new Util::JsonObject();
-                edgeMdDepField->emplace("gress", field.gress);
-                edgeMdDepField->emplace("field_name", field.name);
-                edgeMdDepField->emplace("start_bit", field.lo);
-                edgeMdDepField->emplace("width", field.hi - field.lo + 1);
+                edgeMdDepField->emplace("gress"_cs, field.gress);
+                edgeMdDepField->emplace("field_name"_cs, field.name);
+                edgeMdDepField->emplace("start_bit"_cs, field.lo);
+                edgeMdDepField->emplace("width"_cs, field.hi - field.lo + 1);
                 edgeMdDepFields->append(edgeMdDepField);
             }
         }
-        edgeMdJson->emplace("dep_fields", edgeMdDepFields);
+        edgeMdJson->emplace("dep_fields"_cs, edgeMdDepFields);
     }
 
     void add_action_name_json(Util::JsonObject* edgeMdJson) {
         auto act_name = cstring::to_cstring(canon_name(action_name));
-        edgeMdJson->emplace("action_name", act_name);
+        edgeMdJson->emplace("action_name"_cs, act_name);
     }
 
     void add_exit_action_name_json(Util::JsonObject* edgeMdJson) {
         auto act_name = cstring::to_cstring(canon_name(exit_action_name));
-        edgeMdJson->emplace("action_name", act_name);
+        edgeMdJson->emplace("action_name"_cs, act_name);
     }
 
     void add_phv_number_json(Util::JsonObject* edgeMdJson) {
-        edgeMdJson->emplace("phv_number", phv_number);
+        edgeMdJson->emplace("phv_number"_cs, phv_number);
     }
 
     void add_condition_value_json(Util::JsonObject* edgeMdJson) {
         if (labels_to_conds.count(label) == 0)
             BUG("Invalid edge type. Cannot determine condition value");
         bool condition_value = labels_to_conds[label];
-        edgeMdJson->emplace("condition_value", condition_value);
+        edgeMdJson->emplace("condition_value"_cs, condition_value);
     }
 
     void add_anti_type_json(Util::JsonObject* edgeMdJson) {
@@ -687,7 +687,7 @@ class TableGraphEdge {
             BUG("Invalid edge type. Cannot determine anti type");
 
         auto anti_type = labels_to_anti_types[label];
-        edgeMdJson->emplace("anti_type", anti_type);
+        edgeMdJson->emplace("anti_type"_cs, anti_type);
     }
 
     void add_type_json(Util::JsonObject* edgeMdJson) {
@@ -695,7 +695,7 @@ class TableGraphEdge {
             BUG("Invalid edge type");
 
         auto type = labels_to_types[label];
-        edgeMdJson->emplace("type", type);
+        edgeMdJson->emplace("type"_cs, type);
     }
 
     void add_sub_type_json(Util::JsonObject* edgeMdJson) {
@@ -703,7 +703,7 @@ class TableGraphEdge {
             BUG("Invalid edge type. Cannot determine sub type.");
 
         auto sub_type = labels_to_sub_types[label];
-        edgeMdJson->emplace("sub_type", sub_type);
+        edgeMdJson->emplace("sub_type"_cs, sub_type);
     }
 
     Util::JsonObject* create_edge_md_json() {
@@ -759,13 +759,13 @@ class TableGraphEdge {
         }
 
         if (is_critical)
-            edgeMdJson->emplace("is_critical", is_critical);
+            edgeMdJson->emplace("is_critical"_cs, is_critical);
 
         if (tags.size() > 0) {
             Util::JsonArray* edgeMdTags = new Util::JsonArray();
             for (auto t : tags)
                 edgeMdTags->append(t);
-            edgeMdJson->emplace("tags", edgeMdTags);
+            edgeMdJson->emplace("tags"_cs, edgeMdTags);
         }
 
         return edgeMdJson;
@@ -773,10 +773,10 @@ class TableGraphEdge {
 
     Util::JsonObject* create_edge_json() {
         Util::JsonObject* edgeJson = new Util::JsonObject();
-        edgeJson->emplace("id", new Util::JsonValue(std::to_string(id)));
-        edgeJson->emplace("source", new Util::JsonValue(std::to_string(source)));
-        edgeJson->emplace("target", new Util::JsonValue(std::to_string(target)));
-        edgeJson->emplace("metadata", create_edge_md_json());
+        edgeJson->emplace("id"_cs, new Util::JsonValue(std::to_string(id)));
+        edgeJson->emplace("source"_cs, new Util::JsonValue(std::to_string(source)));
+        edgeJson->emplace("target"_cs, new Util::JsonValue(std::to_string(target)));
+        edgeJson->emplace("metadata"_cs, create_edge_md_json());
         return edgeJson;
     }
 };
@@ -791,34 +791,34 @@ class TableGraphNode {
 
     class TableGraphNodeTable {
      public:
-        cstring name = "";
-        cstring table_type = "";
-        cstring match_type = "";
-        cstring condition = "";
+        cstring name = ""_cs;
+        cstring table_type = ""_cs;
+        cstring match_type = ""_cs;
+        cstring condition = ""_cs;
     };
     std::vector<TableGraphNodeTable> nodeTables;
 
     static cstring get_node_match_type(const IR::MAU::Table *tbl) {
         auto match_type = tbl->get_table_type_string();
-        if (match_type == "exact_match")        return "exact";
-        else if (match_type == "ternary_match") return "ternary";
-        else if (match_type == "proxy_hash")    return "proxy_hash";
-        else if (match_type == "hash_action")   return "hash_action";
+        if (match_type == "exact_match")        return "exact"_cs;
+        else if (match_type == "ternary_match") return "ternary"_cs;
+        else if (match_type == "proxy_hash")    return "proxy_hash"_cs;
+        else if (match_type == "hash_action")   return "hash_action"_cs;
         else if (tbl->layout.pre_classifier
-                || tbl->layout.alpm)            return "algorithmic_lpm";
-        else if (match_type == "atcam_match")   return "algorithmic_tcam";
-        return "none";
+                || tbl->layout.alpm)            return "algorithmic_lpm"_cs;
+        else if (match_type == "atcam_match")   return "algorithmic_tcam"_cs;
+        return "none"_cs;
     }
 
     static cstring get_attached_table_type(const IR::MAU::AttachedMemory *att) {
-        if (att->to<IR::MAU::Counter>())                 return "statistics";
-        else if (att->to<IR::MAU::Meter>())              return "meter";
-        else if (att->to<IR::MAU::StatefulAlu>())        return "stateful";
-        else if (att->to<IR::MAU::Selector>())           return "selection";
-        else if (att->to<IR::MAU::ActionData>())         return "action";
-        else if (att->to<IR::MAU::TernaryIndirect>())    return "ternary_indirect";
-        else if (att->to<IR::MAU::IdleTime>())           return "idletime";
-        return "none";
+        if (att->to<IR::MAU::Counter>())                 return "statistics"_cs;
+        else if (att->to<IR::MAU::Meter>())              return "meter"_cs;
+        else if (att->to<IR::MAU::StatefulAlu>())        return "stateful"_cs;
+        else if (att->to<IR::MAU::Selector>())           return "selection"_cs;
+        else if (att->to<IR::MAU::ActionData>())         return "action"_cs;
+        else if (att->to<IR::MAU::TernaryIndirect>())    return "ternary_indirect"_cs;
+        else if (att->to<IR::MAU::IdleTime>())           return "idletime"_cs;
+        return "none"_cs;
     }
 
     Util::JsonObject* create_node_md_json() {
@@ -826,32 +826,32 @@ class TableGraphNode {
 
         if (logical_id >= 0 && stage_number >= 0) {
             Util::JsonObject* placement = new Util::JsonObject();
-            placement->emplace("logical_table_id", new Util::JsonValue(logical_id));
-            placement->emplace("stage_number", new Util::JsonValue(stage_number));
-            nodeMdJson->emplace("placement", placement);
+            placement->emplace("logical_table_id"_cs, new Util::JsonValue(logical_id));
+            placement->emplace("stage_number"_cs, new Util::JsonValue(stage_number));
+            nodeMdJson->emplace("placement"_cs, placement);
         }
 
         Util::JsonArray* nodesTJsons = new Util::JsonArray();
         for (auto n : nodeTables) {
             Util::JsonObject* nodeTJson = new Util::JsonObject();
-            nodeTJson->emplace("name", new Util::JsonValue(n.name));
-            nodeTJson->emplace("table_type", new Util::JsonValue(n.table_type));
+            nodeTJson->emplace("name"_cs, new Util::JsonValue(n.name));
+            nodeTJson->emplace("table_type"_cs, new Util::JsonValue(n.table_type));
             if (n.table_type == "match")
-                nodeTJson->emplace("match_type", new Util::JsonValue(n.match_type));
+                nodeTJson->emplace("match_type"_cs, new Util::JsonValue(n.match_type));
             if (n.table_type == "condition")
-                nodeTJson->emplace("condition", new Util::JsonValue(n.condition));
+                nodeTJson->emplace("condition"_cs, new Util::JsonValue(n.condition));
             nodesTJsons->append(nodeTJson);
         }
-        nodeMdJson->emplace("tables", nodesTJsons);
-        nodeMdJson->emplace("min_stage", min_stage);
-        nodeMdJson->emplace("dep_chain", dep_chain);
+        nodeMdJson->emplace("tables"_cs, nodesTJsons);
+        nodeMdJson->emplace("min_stage"_cs, min_stage);
+        nodeMdJson->emplace("dep_chain"_cs, dep_chain);
         return nodeMdJson;
       }
 
     Util::JsonObject* create_node_json() {
         Util::JsonObject* nodeJson = new Util::JsonObject();
-        nodeJson->emplace("id", std::to_string(id));
-        nodeJson->emplace("metadata", create_node_md_json());
+        nodeJson->emplace("id"_cs, std::to_string(id));
+        nodeJson->emplace("metadata"_cs, create_node_md_json());
         return nodeJson;
     }
 };
@@ -1048,7 +1048,7 @@ class FindDependencyGraph : public Logging::PassManager {
     std::vector<ordered_set<DependencyGraph::Graph::vertex_descriptor>>
     calc_topological_stage(unsigned deps_flag = 0, DependencyGraph *dg_p = nullptr);
     FindDependencyGraph(const PhvInfo &, DependencyGraph &out, const BFN_Options *o = nullptr,
-        cstring dotFileName = "", cstring passContext = "", const TableSummary *s = nullptr);
+        cstring dotFileName = ""_cs, cstring passContext = ""_cs, const TableSummary *s = nullptr);
 };
 
 class PrintDependencyGraph : public Inspector {
@@ -1086,7 +1086,7 @@ class TableDependencyGraphSummary : public Logging::PassManager {
 
  public:
     explicit TableDependencyGraphSummary(const DependencyGraph &d)
-    : Logging::PassManager("table_dependency_summary", Logging::Mode::AUTO),
+    : Logging::PassManager("table_dependency_summary"_cs, Logging::Mode::AUTO),
     dg(d) {
         passes.push_back(new PrintDependencyGraph(dg));
     }

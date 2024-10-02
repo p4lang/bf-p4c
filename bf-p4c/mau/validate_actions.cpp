@@ -37,10 +37,12 @@ Visitor::profile_t ValidateActions::init_apply(const IR::Node *root) {
 void ValidateActions::end_apply() {
     cstring error_message;
     if (phv_alloc)
-        error_message = "PHV allocation creates an invalid container action within a Tofino ALU";
+        error_message =
+            cstring("PHV allocation creates an invalid container action within a Tofino ALU");
     else
-        error_message = "Instruction selection creates an instruction that the rest of the "
-                        "compiler cannot correctly interpret";
+        error_message = cstring(
+            "Instruction selection creates an instruction that the rest of the compiler cannot "
+            "correctly interpret");
     if (error_found) {
         ::error(error_message);
     } else if (warning_found) {

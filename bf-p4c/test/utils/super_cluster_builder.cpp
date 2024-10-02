@@ -303,7 +303,7 @@ PHV::FieldSlice* SuperClusterBuilder::analyze_field_slice(std::string &str) {
         // Get the name
         std::string name;
         std::getline(namestr, name, '<');
-        f->name = name.c_str();
+        f->name = cstring(name);
         // Get the width
         namestr >> f->size;
         str_to_field_m.insert(std::pair<const std::string, PHV::Field*>(t, f));
