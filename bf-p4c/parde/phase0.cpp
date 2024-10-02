@@ -3,7 +3,7 @@
 #include "bf-p4c/parde/field_packing.h"
 #include "bf-p4c/parde/phase0.h"
 #include "frontends/p4/coreLibrary.h"
-#include "frontends/p4/fromv1.0/v1model.h"
+#include "frontends/p4-14/fromv1.0/v1model.h"
 #include "lib/cstring.h"
 #include "lib/indent.h"
 

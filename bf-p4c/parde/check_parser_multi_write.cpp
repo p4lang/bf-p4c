@@ -141,11 +141,12 @@ struct InferWriteMode : public ParserTransform {
         // On Tofino 1, we emit only warning unless the field is rewritten on all paths.
         // JIRA-DOC: for more details, see P4C-2293
         // FIXME: we probably need a better check and pragma-triggered supression
-        auto diagType = Device::currentDevice() != Device::TOFINO || example->is_rewritten_always
-            ? DiagnosticAction::Error : DiagnosticAction::Warn;
+        // auto diagType = Device::currentDevice() != Device::TOFINO || example->is_rewritten_always
+        //     ? DiagnosticAction::Error : DiagnosticAction::Warn;
         // FIXME(vstill): use ErrorType directly once the appropriate overload is added to p4c
-        auto errorName = ErrorCatalog::getCatalog().getName(ErrorType::ERR_UNSUPPORTED_ON_TARGET);
-        diagnose(diagType, errorName.c_str(),
+        // auto errorName = ErrorCatalog::getCatalog().getName(ErrorType::ERR_UNSUPPORTED_ON_TARGET);
+        // diagnose(diagType, errorName.c_str(),
+        error(
             "%1%%2% is assigned in state %3% but has also previous assignment%4%%5%%6%. %7%"
             "This re-assignment is not supported by Tofino.%8%%9%", "",
             /* 1 */ first_valid(c_field->getSourceInfo(), example->curr->getSourceInfo()),
@@ -169,7 +170,8 @@ struct InferWriteMode : public ParserTransform {
             // then be possibly ignored if we have reported another error with
             // the same source location.
             auto p_field = p->getWriteDest()->field;
-            diagnose(diagType, nullptr,
+            // diagnose(diagType, nullptr,
+            error(
                 "%1%%2% previously assigned in state %3%.", "",
                 first_valid(p_field->getSourceInfo(), p->getSourceInfo()),
                 p_field->toString(), ps);

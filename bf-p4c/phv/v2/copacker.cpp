@@ -318,7 +318,7 @@ CoPacker::CoPackHintOrErr CoPacker::gen_move_copack(const Allocation& allocated_
         }
         LOG5("Found move (dest, src) pair: "
              << dest << " = " << src_fs.shortString() << "@"
-             << (src_container ? cstring::to_cstring(*src_container) : "*")
+             << (src_container != std::nullopt ? cstring::to_cstring(*src_container) : "*")
              << "[" << src_start_idx << ":" << src_start_idx + src_fs.size() - 1 << "]");
         // compute number of bits that source will be right shifted, wrap-around considered.
         const int this_src_right_shift_bits =

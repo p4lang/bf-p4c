@@ -4,7 +4,8 @@
 #include "bf-p4c/parde/parde_visitor.h"
 #include "frontends/p4/cloner.h"
 #include "frontends/p4/coreLibrary.h"
-#include "frontends/p4/fromv1.0/v1model.h"
+#include "frontends/p4-14/fromv1.0/v1model.h"
+#include "frontends/p4/methodInstance.h"
 #include "bf-p4c/arch/intrinsic_metadata.h"
 
 namespace BFN {

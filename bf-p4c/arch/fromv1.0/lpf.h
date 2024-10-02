@@ -1,7 +1,7 @@
 #ifndef EXTENSIONS_BF_P4C_ARCH_FROMV1_0_LPF_H_
 #define EXTENSIONS_BF_P4C_ARCH_FROMV1_0_LPF_H_
 
-#include "frontends/p4/fromv1.0/converters.h"
+#include "frontends/p4-14/fromv1.0/converters.h"
 
 namespace P4 {
 namespace P4V1 {

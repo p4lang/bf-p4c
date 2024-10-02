@@ -35,7 +35,7 @@ class CheckReservedNames : public Inspector {
  *
  * JIRA-DOC: P4C-3177
  * If no 'size' parameter is set on the table, p4info picks a default value of 1024.
- * p4c/frontends/p4/fromv1.0/v1model.h: const unsigned defaultTableSize = 1024;
+ * p4c/frontends/p4-14/fromv1.0/v1model.h: const unsigned defaultTableSize = 1024;
  * This pass is run again in the MidEnd to modify IR and set this value.
  * BF-RT does not modify program IR used by Midend.
  */

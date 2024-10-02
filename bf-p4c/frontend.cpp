@@ -10,7 +10,7 @@
 #include "frontends/common/options.h"
 #include "frontends/common/parseInput.h"
 #include "frontends/p4/frontend.h"
-#include "frontends/p4/fromv1.0/converters.h"
+#include "frontends/p4-14/fromv1.0/converters.h"
 #include "lib/error.h"
 
 // This is a simple update of the original convertor that just allows
