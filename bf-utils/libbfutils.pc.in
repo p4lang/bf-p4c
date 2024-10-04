@@ -1,0 +1,10 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+includedir=@includedir@
+
+Name: libbfutils
+Description: Barefoot driver helper library
+Version: @VERSION@
+Libs: -lbfutils
+Cflags: -I${includedir}
+
