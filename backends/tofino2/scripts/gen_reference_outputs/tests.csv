@@ -1,0 +1,32 @@
+# p4,p4_path,include_path,p4_opts,target,language,arch
+pvs,p4-tests/p4-programs/programs/pvs/pvs.p4,,"--archive",tofino,p4-14,v1model
+opcode_test,p4-tests/p4-programs/internal_p4_14/opcode_test/opcode_test.p4,,"--archive",tofino,p4-14,v1model
+stful,p4-tests/p4-programs/programs/stful/stful.p4,,"--archive",tofino,p4-14,v1model
+action_spec_format,p4-tests/p4-programs/internal_p4_14/action_spec_format/action_spec_format.p4,,"--archive",tofino,p4-14,v1model
+alpm_test,p4-tests/p4-programs/programs/alpm_test/alpm_test.p4,,"--archive",tofino,p4-14,v1model
+atomic_mod,p4-tests/p4-programs/internal_p4_14/atomic_mod/atomic_mod.p4,,"--archive",tofino,p4-14,v1model
+basic_ipv4,p4-tests/p4-programs/internal_p4_14/basic_ipv4/basic_ipv4.p4,,"--archive",tofino,p4-14,v1model
+basic_switching,p4-tests/p4-programs/programs/basic_switching/basic_switching.p4,,"--archive",tofino,p4-14,v1model
+chksum,p4-tests/p4-programs/programs/chksum/chksum.p4,,"--archive",tofino,p4-14,v1model
+switch_msdc_profile,p4-tests/p4_14/switch/p4src/switch.p4,,"-DMSDC_PROFILE -DP4_WRED_DEBUG",tofino,p4-14,v1model
+test_config_11_multi_pipe_multi_parsers,p4-tests/p4_16/compile_only/test_config_11_multi_pipe_multi_parsers.p4,,"--archive",tofino,p4-16,tna
+tofino_tna_32q_2pipe,p4-tests/p4-programs/p4_16_programs/tna_32q_2pipe/tna_32q_2pipe.p4,p4-tests/p4_14/p4-tests/p4_16_programs,"--archive",tofino,p4-16,tna
+tofino_tna_action_profile,p4-tests/p4-programs/p4_16_programs/tna_action_profile/tna_action_profile.p4,p4-tests/p4_14/p4-tests/p4_16_programs,"",tofino,p4-16,tna
+tofino_tna_lpm_match,p4-tests/p4-programs/p4_16_programs/tna_lpm_match/tna_lpm_match.p4,p4-tests/p4_14/p4-tests/p4_16_programs,"--archive",tofino,p4-16,tna
+tofino_tna_meter_lpf_wred,p4-tests/p4-programs/p4_16_programs/tna_meter_lpf_wred/tna_meter_lpf_wred.p4,p4-tests/p4_14/p4-tests/p4_16_programs,"",tofino,p4-16,tna
+tofino2_tna_32q_2pipe,p4-tests/p4-programs/p4_16_programs/tna_32q_2pipe/tna_32q_2pipe.p4,p4-tests/p4_14/p4-tests/p4_16_programs,"--archive",tofino2,p4-16,t2na
+tofino2_tna_action_profile,p4-tests/p4-programs/p4_16_programs/tna_action_profile/tna_action_profile.p4,p4-tests/p4_14/p4-tests/p4_16_programs,"",tofino2,p4-16,t2na
+tofino2_tna_lpm_match,p4-tests/p4-programs/p4_16_programs/tna_lpm_match/tna_lpm_match.p4,p4-tests/p4_14/p4-tests/p4_16_programs,"",tofino2,p4-16,t2na
+tofino2_tna_meter_lpf_wred,p4-tests/p4-programs/p4_16_programs/tna_meter_lpf_wred/tna_meter_lpf_wred.p4,p4-tests/p4_14/p4-tests/p4_16_programs,"--archive",tofino2,p4-16,t2na
+tofino_switch_16_x2,p4-tests/p4_16/switch_16/p4src/switch-tofino/switch_tofino_x2.p4,p4-tests/p4_16/switch_16/p4src/shared,-DX2_PROFILE -Xp4c=\"--auto-init-metadata --disable-power-check\",tofino,p4-16,tna
+tofino2_switch_y2,p4-tests/p4_16/switch_16/p4src/switch-tofino2/switch_tofino2_y2.p4,p4-tests/p4_16/switch_16/p4src/shared,-DY2_PROFILE -Xp4c=\"--auto-init-metadata\",tofino2,p4-16,t2na
+wide_shift,p4-tests/p4_16/stf/p4c-3055-2.p4,,"",tofino,p4-16,tna
+skipped_pipe,p4-tests/p4_16/compile_only/test_config_11_multi_pipe_multi_parsers.p4,,-Xp4c=\"--skip-compilation pipeB\",tofino,p4-16,tna
+# Failed PHV Allocation examples
+tofino_p4c_2350,p4-tests/p4_16/customer/ruijie/p4c-2350-1.p4,,"",tofino,p4-16,tna
+tofino2_lrn1,p4-tests/p4_16/compile_only/lrn1.p4,,"",tofino2,p4-16,t2na
+tofino2_p4c_2091,p4-tests/p4_16/compile_only/p4c-2091.p4,,"",tofino2,p4-16,t2na
+# Tofino 3 examples
+tofino3_t3na_multipipe,p4-tests/p4_16/stf/t3na_multipipe.p4,,,tofino3,p4-16,t3na
+tofino3_greedy_extracts-1,p4-tests/p4_16/stf/t3na_greedy_extracts-1.p4,,,tofino3,p4-16,t3na
+tofino3_greedy_extracts-2,p4-tests/p4_16/stf/t3na_greedy_extracts-2.p4,,,tofino3,p4-16,t3na

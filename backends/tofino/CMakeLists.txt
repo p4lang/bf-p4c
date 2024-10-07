@@ -1387,7 +1387,7 @@ install (PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/dist/p4c-build-logs
   DESTINATION bin)
 
 add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/p4c/p4c_src/schema_versions
-  COMMAND ${CMAKE_SOURCE_DIR}/scripts/extract_schema_versions.sh ${CMAKE_BINARY_DIR}/p4c/p4c_src/schema_versions
+  COMMAND ${CMAKE_SOURCE_DIR}/backends/tofino/scripts/extract_schema_versions.sh ${CMAKE_BINARY_DIR}/p4c/p4c_src/schema_versions
   DEPENDS ${SCHEMA_FILES}
   COMMENT "Extract all used schema versions")
 

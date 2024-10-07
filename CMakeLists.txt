@@ -34,16 +34,17 @@ set (P4C_ARTIFACTS_OUTPUT_DIRECTORY share/p4c)
 set (CMAKE_USE_RELATIVE_PATHS 1)
 
 OPTION (ENABLE_DOCS "Build the documentation" OFF)
-OPTION (ENABLE_GTESTS "Enable building and running GTest unit tests" ON)
-OPTION (ENABLE_BMV2 "Build the BMV2 backend (required for the full test suite)" ON)
-OPTION (ENABLE_EBPF "Build the EBPF backend (required for the full test suite)" ON)
-OPTION (ENABLE_UBPF "Build the uBPF backend (required for the full test suite)" ON)
-OPTION (ENABLE_DPDK "Build the DPDK backend (required for the full test suite)" ON)
-OPTION (ENABLE_P4TC "Build the P4TC backend" ON)
-OPTION (ENABLE_P4FMT "Build the P4FMT backend" ON)
-OPTION (ENABLE_P4TEST "Build the P4Test backend (required for the full test suite)" ON)
+OPTION (ENABLE_GTESTS "Enable building and running GTest unit tests" OFF)
+OPTION (ENABLE_TOFINO "Build the TOFINO backend (required for the full test suite)" ON)
+OPTION (ENABLE_BMV2 "Build the BMV2 backend (required for the full test suite)" OFF)
+OPTION (ENABLE_EBPF "Build the EBPF backend (required for the full test suite)" OFF)
+OPTION (ENABLE_UBPF "Build the uBPF backend (required for the full test suite)" OFF)
+OPTION (ENABLE_DPDK "Build the DPDK backend (required for the full test suite)" OFF)
+OPTION (ENABLE_P4TC "Build the P4TC backend" OFF)
+OPTION (ENABLE_P4FMT "Build the P4FMT backend" OFF)
+OPTION (ENABLE_P4TEST "Build the P4Test backend (required for the full test suite)" OFF)
 OPTION (ENABLE_TEST_TOOLS "Build the P4Tools development platform" OFF)
-OPTION (ENABLE_P4C_GRAPHS "Build the p4c-graphs backend" ON)
+OPTION (ENABLE_P4C_GRAPHS "Build the p4c-graphs backend" OFF)
 OPTION (ENABLE_PROTOBUF_STATIC "Link against Protobuf statically" ON)
 OPTION (ENABLE_GC "Compile with the Boehm-Demers-Weiser garbage collector." ON)
 OPTION (ENABLE_WERROR "Treat warnings as errors" OFF)
@@ -374,6 +375,7 @@ include_directories (
   ${P4C_SOURCE_DIR}
   ${P4C_BINARY_DIR}
   ${P4C_SOURCE_DIR}/extensions
+  ${P4C_SOURCE_DIR}/backends/tofino2  ## FIXME
   )
 add_definitions (-DCONFIG_PREFIX="${CMAKE_INSTALL_PREFIX}")
 add_definitions (-DCONFIG_PKGDATADIR="${CMAKE_INSTALL_PREFIX}/${P4C_ARTIFACTS_OUTPUT_DIRECTORY}")
@@ -487,11 +489,16 @@ endif ()
 if (ENABLE_UBPF)
     add_subdirectory (backends/ubpf)
 endif ()
+if (ENABLE_TOFINO)
+    add_subdirectory (backends/tofino2)
+endif ()
 if (ENABLE_GTESTS)
   add_subdirectory (test)
 endif ()
 
 ####################################### IR Generation Begin #######################################
+
+MESSAGE("EXTENSION_IR_SOURCES: " ${EXTENSION_IR_SOURCES})
 
 set (IR_GENERATED_SRCS
   ${P4C_BINARY_DIR}/ir/ir-generated.h

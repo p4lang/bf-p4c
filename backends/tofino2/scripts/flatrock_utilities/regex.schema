@@ -1,0 +1,28 @@
+exact_match:
+    - MinputInputControl
+    - MinputMatchPowerReduction
+    - MinputGateway
+    - MinputExactXbar
+    - ExactMatch
+    - MatchResDist
+    - Ealu
+    - PhvWrite
+
+ternary_match:
+    - MinputInputControl
+    - MinputGateway
+    - MinputTernaryXbar
+    - TernaryMatch
+    - MatchResDist
+    - Ealu
+    - PhvWrite
+
+hash_action:
+    - MinputInputControl:
+        - xcmp byte: phv_en_xcmp
+        - xcmp word: phv_word_en_xcmp
+    - MinputMatchPowerReduction
+    - MinputGateway
+    - MinputXcmpXbar
+    - Ealu
+    - PhvWrite
