@@ -375,7 +375,7 @@ include_directories (
   ${P4C_SOURCE_DIR}
   ${P4C_BINARY_DIR}
   ${P4C_SOURCE_DIR}/extensions
-  ${P4C_SOURCE_DIR}/backends/tofino2  ## FIXME
+  ${P4C_SOURCE_DIR}/backends/tofino  ## FIXME
   )
 add_definitions (-DCONFIG_PREFIX="${CMAKE_INSTALL_PREFIX}")
 add_definitions (-DCONFIG_PKGDATADIR="${CMAKE_INSTALL_PREFIX}/${P4C_ARTIFACTS_OUTPUT_DIRECTORY}")
@@ -490,7 +490,7 @@ if (ENABLE_UBPF)
     add_subdirectory (backends/ubpf)
 endif ()
 if (ENABLE_TOFINO)
-    add_subdirectory (backends/tofino2)
+    add_subdirectory (backends/tofino)
 endif ()
 if (ENABLE_GTESTS)
   add_subdirectory (test)
