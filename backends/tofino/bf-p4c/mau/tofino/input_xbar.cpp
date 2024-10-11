@@ -20,7 +20,7 @@
 #include "bf-p4c/mau/resource.h"
 #include "bf-p4c/mau/resource_estimate.h"
 #include "bf-p4c/phv/phv_fields.h"
-#include "dynamic_hash/dynamic_hash.h"
+#include "bf-utils/include/dynamic_hash/dynamic_hash.h"
 #include "lib/algorithm.h"
 #include "lib/bitvec.h"
 #include "lib/bitops.h"

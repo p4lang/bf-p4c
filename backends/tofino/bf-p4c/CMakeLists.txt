@@ -22,6 +22,10 @@ set(CMAKE_FIND_LIBRARY_SUFFIXES .a)
 find_package(Z3 ${Z3_MIN_VERSION} REQUIRED)
 set(CMAKE_FIND_LIBRARY_SUFFIXES ${_z3_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES})
 
+# Set dynamic hash include directory
+set(LIBDYNHASH_INCLUDE_DIR "${BFN_P4C_SOURCE_DIR}/bf-utils/include")
+include_directories(${LIBDYNHASH_INCLUDE_DIR})
+
 # An option to configure the chunk size we use for unified builds in bf-p4c. By
 # default, this is tuned to use smaller chunks than the p4c repo uses. The goal
 # is to gain most of the benefit of unified builds when many files change, while
@@ -123,6 +127,7 @@ set (BF_P4C_IR_SRCS
   parde/clot/clot.cpp
   phv/phv.cpp
   )
+MESSAGE("LIBDYNHASH_INCLUDE_DIR: " ${LIBDYNHASH_INCLUDE_DIR})
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_IR_SRCS}")
 set_source_files_properties(${BF_P4C_IR_SRCS} PROPERTIES
   COMPILE_FLAGS "-I${LIBDYNHASH_INCLUDE_DIR}")
@@ -180,8 +185,8 @@ set (BF_P4C_MIDEND_SRCS
   midend/table_mutex.cpp
   midend/type_categories.cpp
   midend/type_checker.cpp
-  midend/dynamic_hash/dynamic_hash.c
-  midend/dynamic_hash/bfn_hash_algorithm.c
+  ${BFN_P4C_SOURCE_DIR}/bf-utils/src/dynamic_hash/dynamic_hash.c
+  ${BFN_P4C_SOURCE_DIR}/bf-utils/src/dynamic_hash/bfn_hash_algorithm.c
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_MIDEND_SRCS}")
 
@@ -221,8 +226,8 @@ set (BF_P4C_MIDEND_HDRS
   midend/table_mutex.h
   midend/type_categories.h
   midend/type_checker.h
-  midend/dynamic_hash/dynamic_hash.h
-  midend/dynamic_hash/bfn_hash_algorithm.h
+  ${BFN_P4C_SOURCE_DIR}/include/dynamic_hash/dynamic_hash.h
+  ${BFN_P4C_SOURCE_DIR}/include/dynamic_hash/bfn_hash_algorithm.h
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_MIDEND_HDRS}")
 
@@ -1250,7 +1255,7 @@ install (PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/dist/p4c-build-logs
   DESTINATION bin)
 
 add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/p4c_src/schema_versions
-  COMMAND ${CMAKE_SOURCE_DIR}/scripts/extract_schema_versions.sh ${CMAKE_BINARY_DIR}/p4c_src/schema_versions
+  COMMAND ${BFN_P4C_SOURCE_DIR}/scripts/extract_schema_versions.sh ${CMAKE_BINARY_DIR}/p4c_src/schema_versions
   DEPENDS ${SCHEMA_FILES}
   COMMENT "Extract all used schema versions")
 

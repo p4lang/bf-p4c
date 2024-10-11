@@ -20,7 +20,7 @@
 #include <iostream>
 #include <sstream>
 
-#include "bf-asm/version.h"
+// #include "bf-asm/version.h"
 #include "bf-p4c/common/run_id.h"
 #include "bf-p4c/device.h"
 
@@ -89,7 +89,7 @@ bool AsmOutput::preorder(const IR::BFN::Pipe *pipe) {
         pipe->apply(*mauasm);
 
         out << "version:" << std::endl
-            << "  version: " << BFASM::Version::getVersion() << std::endl
+            // << "  version: " << BFASM::Version::getVersion() << std::endl
             << "  run_id: \"" << RunId::getId() << "\"" << std::endl
             << "  target: " << Device::name() << std::endl;
         // set the default error mode used by all stages

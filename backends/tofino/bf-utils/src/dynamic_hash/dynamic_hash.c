@@ -5,18 +5,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef NO_BFSYSLIBS
 #include <assert.h>
 #define assert_macro assert
 #define calloc_macro calloc
 #define free_macro free
-#else
-#include <target-sys/bf_sal/bf_sys_assert.h>
-#include <target-sys/bf_sal/bf_sys_mem.h>
-#define calloc_macro bf_sys_calloc
-#define assert_macro bf_sys_assert
-#define free_macro bf_sys_free
-#endif
 
 #define ALLOC_CHECK(ptr, str) \
   do {                        \

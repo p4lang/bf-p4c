@@ -20,7 +20,7 @@
 #pragma GCC diagnostic pop
 #include "bf-p4c/device.h"
 #include "bfruntime.h"
-#include "dynamic_hash/bfn_hash_algorithm.h"
+#include "bf-utils/include/dynamic_hash/bfn_hash_algorithm.h"
 
 namespace BFN {
 

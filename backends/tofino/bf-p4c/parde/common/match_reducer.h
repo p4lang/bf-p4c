@@ -15,8 +15,8 @@
 
 #include <stdint.h>
 
-#include "p4c/lib/match.h"
-#include "p4c/lib/ordered_set.h"
+#include "lib/match.h"
+#include "lib/ordered_set.h"
 
 /**
  * @ingroup parde

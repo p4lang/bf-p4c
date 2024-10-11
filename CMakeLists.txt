@@ -498,8 +498,6 @@ endif ()
 
 ####################################### IR Generation Begin #######################################
 
-MESSAGE("EXTENSION_IR_SOURCES: " ${EXTENSION_IR_SOURCES})
-
 set (IR_GENERATED_SRCS
   ${P4C_BINARY_DIR}/ir/ir-generated.h
   ${P4C_BINARY_DIR}/ir/ir-generated.cpp

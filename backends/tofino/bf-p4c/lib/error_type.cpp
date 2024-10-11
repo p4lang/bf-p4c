@@ -15,7 +15,7 @@
 #include <vector>
 #include <numeric>
 
-#include "p4c/lib/exceptions.h"
+#include "lib/exceptions.h"
 
 void BFN::ErrorType::printWarningsHelp(std::ostream& out) {
     std::vector<int> warningTypes;

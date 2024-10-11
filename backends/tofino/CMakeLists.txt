@@ -93,19 +93,6 @@ endif()
 
 set(BOOST_MIN_VERSION "1.58.0")
 find_package(Boost ${BOOST_MIN_VERSION} REQUIRED)
-# Look for the dynamic hash library
-#if (${FIXED_LIBDYNHASH})
-#  # In the p4factory env, the library will be generated later, so we
-#  # predefine the location
-#  set(LIBDYNHASH_INCLUDE_DIR "${CMAKE_INSTALL_PREFIX}/include/bfutils"
-#    CACHE STRING "Dynamic hash library include dirs" FORCE)
-#  set(LIBDYNHASH_LIBRARY "${CMAKE_INSTALL_PREFIX}/lib/libdynhash.a"
-#    CACHE STRING "Dynamic hash library" FORCE)
-#  set(HAVE_LIBDYNHASH 1)
-#else()
-#  find_package(LibDynHash REQUIRED)
-#endif()
-#include_directories(${LIBDYNHASH_INCLUDE_DIR})
 
 # Additional P4C_CPP_FLAGS may be passed (via bootstrap_bfn_compilers.sh script)
 # from p4factory when configuring bf-p4c-compilers to specify certain predefined
@@ -147,8 +134,9 @@ MESSAGE(STATUS "p4c-barefoot version: $ENV{P4C_VERSION}")
 
 # Generate the sha specific version file. It includes the GIT SHA.
 # Because this version changes frequently, we include it separately from the normal version files.
+MESSAGE(STATUS "Generating git_sha_version.h ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}")
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/git_sha_version.h.in"
-  "${CMAKE_CURRENT_BINARY_DIR}/git_sha_version.h" @ONLY)
+  "${CMAKE_CURRENT_BINARY_DIR}/bf-p4c/git_sha_version.h" @ONLY)
 
 
 macro(get_schema_version schema_file schema_var)
@@ -288,11 +276,8 @@ set (BF_P4C_IR_DEF_FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/bf-p4c/ir/flatrock.def
   )
   
-MESSAGE("CURRNET_SOURCE DIR : "${CMAKE_CURRENT_SOURCE_DIR})
 # publish IR_DEF_FILES upstream
 set (IR_DEF_FILES ${IR_DEF_FILES} ${BF_P4C_IR_DEF_FILES} PARENT_SCOPE)
-MESSAGE("IR_DEF_FILES: "${BF_P4C_IR_DEF_FILES})
-
 
 set (BF_P4C_IR_SRCS
   bf-p4c/midend/path_linearizer.cpp
@@ -334,8 +319,6 @@ set(QUAL_BF_P4C_IR_SRCS)
 foreach(src IN LISTS BF_P4C_IR_SRCS)
   set(QUAL_BF_P4C_IR_SRCS ${QUAL_BF_P4C_IR_SRCS} ${CMAKE_CURRENT_SOURCE_DIR}/${src})
 endforeach()
-MESSAGE("-- **** TOFINO **** IR sources: " ${QUAL_BF_P4C_IR_SRCS})
 set(EXTENSION_IR_SOURCES ${EXTENSION_IR_SOURCES} ${QUAL_BF_P4C_IR_SRCS} PARENT_SCOPE)
-
 
 add_subdirectory(bf-p4c)

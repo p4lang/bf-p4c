@@ -14,7 +14,7 @@
 #define EXTENSIONS_BF_P4C_PARDE_LOWERED_SPLIT_GREEDY_PARSER_STATES_H_
 
 #include "bf-p4c/parde/clot/clot_info.h"
-#include "p4c/ir/visitor.h"
+#include "ir/visitor.h"
 
 namespace Parde::Lowered {
 

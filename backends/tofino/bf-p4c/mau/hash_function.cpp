@@ -13,10 +13,10 @@
 #include <exception>
 #include "ir/ir.h"
 #include "ir/json_loader.h"
-#include "dynamic_hash/dynamic_hash.h"
 #include "lib/hex.h"
 #include "lib/big_int_util.h"
 #include "bf-p4c/mau/hash_function.h"
+#include "bf-utils/include/dynamic_hash/dynamic_hash.h"
 
 using namespace P4::literals;
 
