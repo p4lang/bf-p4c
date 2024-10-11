@@ -1,20 +1,33 @@
 ####### Barefoot Compilers Toolchain
 MESSAGE("-- Adding p4c-barefoot")
 
+message(STATUS "Fetching spdlog")
+
+include(FetchContent)
+
+# Preserve previous FETCHCONTENT_QUIET setting
+set(FETCHCONTENT_QUIET_PREV ${FETCHCONTENT_QUIET})
+set(FETCHCONTENT_QUIET OFF)
+
+FetchContent_Declare(
+  spdlog
+  GIT_REPOSITORY https://github.com/gabime/spdlog.git
+  GIT_TAG v1.8.3
+  SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party/spdlog
+  USES_TERMINAL_DOWNLOAD TRUE
+  GIT_PROGRESS TRUE
+)
+
+FetchContent_MakeAvailable(spdlog)
+
+# Restore FETCHCONTENT_QUIET setting
+set(FETCHCONTENT_QUIET ${FETCHCONTENT_QUIET_PREV})
+
+message("Done fetching spdlog")
+
 set (BFN_P4C_SOURCE_DIR ${PROJECT_SOURCE_DIR}/backends/tofino)
 
-# Variable to help code cleanup script
-#
-# Protect anything that should not be released as open source by enclosing in
-#   if (CLOSED_SOURCE) ... endif (CLOSED_SOURCE)
-# Other if statements may also be filtered by clean-up script
-set(CLOSED_SOURCE TRUE)
-
 OPTION(ENABLE_STATIC_LIBS OFF)
-if (CLOSED_SOURCE)
-  OPTION(ENABLE_CLOUDBREAK "Enable Cloudbreak" OFF)
-  OPTION(ENABLE_FLATROCK "Enable Flatrock" OFF)
-endif (CLOSED_SOURCE)
 OPTION(ENABLE_BAREFOOT_INTERNAL "Enable Barefoot Internal" ON)
 OPTION(ENABLE_TESTING "Enable generation of ctests" ON)
 OPTION(ENABLE_GTESTS "Enable building and running GTest unit tests" ON)
@@ -44,19 +57,6 @@ endif()
 
 # JBay is always enabled, the preprocessor guard is deprecated
 add_definitions("-DHAVE_JBAY=1")
-
-if (ENABLE_FLATROCK)
-    message(FATAL_ERROR "Flatrock architecture is no longer supported, please remove or set -DENABLE_FLATROCK=OFF")
-  add_definitions("-DHAVE_FLATROCK=1")
-  if (NOT ENABLE_CLOUDBREAK)
-    message(WARNING "Enabled Flatrock but not Cloudbreak, enabling Cloudbreak.")
-    set(ENABLE_CLOUDBREAK ON CACHE BOOL "Enable Cloudbreak" FORCE)
-  endif()
-endif()
-if (ENABLE_CLOUDBREAK)
-    message(FATAL_ERROR "Cloudbreak architecture is no longer supported, please remove or set -DENABLE_CLOUDBREAK=OFF")
-  add_definitions("-DHAVE_CLOUDBREAK=1")
-endif()
 
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
@@ -134,7 +134,6 @@ MESSAGE(STATUS "p4c-barefoot version: $ENV{P4C_VERSION}")
 
 # Generate the sha specific version file. It includes the GIT SHA.
 # Because this version changes frequently, we include it separately from the normal version files.
-MESSAGE(STATUS "Generating git_sha_version.h ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}")
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/git_sha_version.h.in"
   "${CMAKE_CURRENT_BINARY_DIR}/bf-p4c/git_sha_version.h" @ONLY)
 
