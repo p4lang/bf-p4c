@@ -1,10 +1,19 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include "bf-p4c/arch/arch.h"
 #include <utility>
 #include "bf-p4c/arch/tna.h"
 #include "bf-p4c/arch/t2na.h"
-#if HAVE_FLATROCK
-#include "bf-p4c/arch/t5na.h"
-#endif  /* HAVE_FLATROCK */
 #include "bf-p4c/arch/v1model.h"
 #include "bf-p4c/arch/psa/psa.h"
 #include "bf-p4c/device.h"
@@ -82,38 +91,10 @@ ArchTranslation::ArchTranslation(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
         if (Device::currentDevice() == Device::JBAY) {
             passes.push_back(new BFN::T2naArchTranslation(refMap, typeMap, options));
         }
-#if HAVE_CLOUDBREAK
-        if (Device::currentDevice() == Device::CLOUDBREAK) {
-            passes.push_back(new BFN::T2naArchTranslation(refMap, typeMap, options));
-        }
-#endif
-#if HAVE_FLATROCK
-        if (Device::currentDevice() == Device::FLATROCK) {
-            ::warning("TNA architecture is not supported on a Tofino5 device."
-                 "The compilation may produce wrong binary."
-                 "Consider adding #include \"t5na.p4\" in your program.");
-            passes.push_back(new BFN::T5naArchTranslation(refMap, typeMap, options));
-        }
-#endif  /* HAVE_FLATROCK */
     } else if (Architecture::currentArchitecture() == Architecture::T2NA) {
         if (Device::currentDevice() == Device::JBAY) {
             passes.push_back(new BFN::T2naArchTranslation(refMap, typeMap, options));
         }
-#if HAVE_CLOUDBREAK
-        if (Device::currentDevice() == Device::CLOUDBREAK) {
-            passes.push_back(new BFN::T2naArchTranslation(refMap, typeMap, options));
-        }
-    } else if (Architecture::currentArchitecture() == Architecture::T3NA) {
-        if (Device::currentDevice() == Device::CLOUDBREAK) {
-            passes.push_back(new BFN::T2naArchTranslation(refMap, typeMap, options));
-        }
-#endif
-#if HAVE_FLATROCK
-    } else if (Architecture::currentArchitecture() == Architecture::T5NA) {
-        if (Device::currentDevice() == Device::FLATROCK) {
-            passes.push_back(new BFN::T5naArchTranslation(refMap, typeMap, options));
-        }
-#endif
     } else if (Architecture::currentArchitecture() == Architecture::PSA) {
         passes.push_back(new BFN::PortableSwitchTranslation(refMap, typeMap, options /*map*/));
     } else {
@@ -431,12 +412,6 @@ const IR::Node* RestoreParams::postorder(IR::BFN::TnaControl* control) {
         add_param(tnaParams, params, newParams, "hdr"_cs, 0);
         add_param(tnaParams, params, newParams, "ig_md"_cs, 1);
         add_param(tnaParams, params, newParams, "ig_intr_md"_cs, 2);
-#if HAVE_FLATROCK
-        if (Architecture::currentArchitecture() == Architecture::T5NA) {
-            add_param(tnaParams, params, newParams, "ig_intr_md_for_tm"_cs, 3,
-                     "ingress_intrinsic_metadata_for_tm_t"_cs, IR::Direction::InOut);
-        } else {
-#endif  /* HAVE_FLATROCK */
             add_param(tnaParams, params, newParams, "ig_intr_md_from_prsr"_cs, 3,
                       "ingress_intrinsic_metadata_from_parser_t"_cs, IR::Direction::In);
             add_param(tnaParams, params, newParams, "ig_intr_md_for_dprsr"_cs, 4,
@@ -452,37 +427,20 @@ const IR::Node* RestoreParams::postorder(IR::BFN::TnaControl* control) {
             // the ghost intrinsic metadata should not be present because the
             // program includes 'tna.p4', instead of 't2na.p4'
             if (Architecture::currentArchitecture() == Architecture::T2NA
-#if HAVE_CLOUDBREAK
-                || Architecture::currentArchitecture() == Architecture::T3NA
-#endif  /* HAVE_CLOUDBREAK */
                 ) {
                 add_param(tnaParams, params, newParams, "gh_intr_md"_cs, 6,
                           "ghost_intrinsic_metadata_t"_cs, IR::Direction::In);
             }
-#if HAVE_FLATROCK
-        }
-#endif  /* HAVE_FLATROCK */
     } else if (control->thread == EGRESS) {
         add_param(tnaParams, params, newParams, "hdr"_cs, 0);
         add_param(tnaParams, params, newParams, "eg_md"_cs, 1);
         add_param(tnaParams, params, newParams, "eg_intr_md"_cs, 2);
-#if HAVE_FLATROCK
-        if (Architecture::currentArchitecture() == Architecture::T5NA) {
-            add_param(tnaParams, params, newParams, "eg_intr_md_for_dprsr"_cs, 3,
-                      "egress_intrinsic_metadata_for_deparser_t"_cs, IR::Direction::InOut);
-            add_param(tnaParams, params, newParams, "eg_intr_md_for_oport"_cs, 4,
-                      "egress_intrinsic_metadata_for_output_port_t"_cs, IR::Direction::InOut);
-        } else {
-#endif  /* HAVE_FLATROCK */
             add_param(tnaParams, params, newParams, "eg_intr_md_from_prsr"_cs, 3,
                       "egress_intrinsic_metadata_from_parser_t"_cs, IR::Direction::In);
             add_param(tnaParams, params, newParams, "eg_intr_md_for_dprsr"_cs, 4,
                       "egress_intrinsic_metadata_for_deparser_t"_cs, IR::Direction::InOut);
             add_param(tnaParams, params, newParams, "eg_intr_md_for_oport"_cs, 5,
                       "egress_intrinsic_metadata_for_output_port_t"_cs, IR::Direction::InOut);
-#if HAVE_FLATROCK
-        }
-#endif  /* HAVE_FLATROCK */
     }
 
     auto newType = new IR::Type_Control(control->srcInfo, control->name, control->type->annotations,
@@ -510,15 +468,9 @@ const IR::Node* RestoreParams::postorder(IR::BFN::TnaParser* parser) {
         add_param(tnaParams, params, newParams, "ig_intr_md_for_tm"_cs, 4,
                   "ingress_intrinsic_metadata_for_tm_t"_cs,
                   IR::Direction::Out);
-#if HAVE_FLATROCK
-        if (Architecture::currentArchitecture() != Architecture::T5NA) {
-#endif  /* HAVE_FLATROCK */
             add_param(tnaParams, params, newParams, "ig_intr_md_from_prsr"_cs, 5,
                       "ingress_intrinsic_metadata_from_parser_t"_cs,
                       IR::Direction::Out);
-#if HAVE_FLATROCK
-        }
-#endif  /* HAVE_FLATROCK */
     } else if (parser->thread == EGRESS) {
         add_param(tnaParams, params, newParams, "pkt"_cs, 0);
         add_param(tnaParams, params, newParams, "hdr"_cs, 1);
@@ -561,15 +513,6 @@ const IR::Node* RestoreParams::postorder(IR::BFN::TnaDeparser* control) {
         add_param(tnaParams, params, newParams, "pkt"_cs, 0);
         add_param(tnaParams, params, newParams, "hdr"_cs, 1);
         add_param(tnaParams, params, newParams, "metadata"_cs, 2);
-#if HAVE_FLATROCK
-        if (Architecture::currentArchitecture() == Architecture::T5NA) {
-            add_param(tnaParams, params, newParams, "eg_intr_md"_cs, 3,
-                      "egress_intrinsic_metadata_t"_cs, IR::Direction::In);
-            add_param(tnaParams, params, newParams, "eg_intr_md_for_dprsr"_cs, 4,
-                      "egress_intrinsic_metadata_for_deparser_t"_cs,
-                      IR::Direction::In);
-        } else {
-#endif  /* HAVE_FLATROCK */
             add_param(tnaParams, params, newParams, "eg_intr_md_for_dprsr"_cs, 3,
                       "egress_intrinsic_metadata_for_deparser_t"_cs,
                       IR::Direction::In);
@@ -578,9 +521,6 @@ const IR::Node* RestoreParams::postorder(IR::BFN::TnaDeparser* control) {
             add_param(tnaParams, params, newParams, "eg_intr_md_from_prsr"_cs, 5,
                       "egress_intrinsic_metadata_from_parser_t"_cs,
                       IR::Direction::In);
-#if HAVE_FLATROCK
-        }
-#endif  /* HAVE_FLATROCK */
     }
 
     auto newType = new IR::Type_Control(control->name, control->type->annotations,

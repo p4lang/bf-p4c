@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include "bf-p4c/phv/phv_spec.h"
 
 #include <optional>
@@ -778,90 +790,6 @@ unsigned JBayPhvSpec::physicalAddress(unsigned id, ArchBlockType_t interface) co
            ((blockOffset << physicalRange.shl) >> physicalRange.shr);
 }
 
-#if HAVE_FLATROCK
-// Static data member intializers for phv grouping on Flatrock
-PhvSpec::AddressSpec FlatrockPhvSpec::_physicalAddresses = {
-    /*                  start, blocks, blockSize, incr, shl, shr */
-    {PHV::Type::B,  {       0,      1,       128,    0,   0,   0 }},
-    {PHV::Type::H,  {     128,      1,        32,    0,   0,   0 }},
-    {PHV::Type::W,  {     160,      1,        16,    0,   0,   0 }},
-};
-
-FlatrockPhvSpec::FlatrockPhvSpec() {
-    addType(PHV::Type::B);
-    addType(PHV::Type::H);
-    addType(PHV::Type::W);
-
-    auto phv_scale_factor = BackendOptions().phv_scale_factor;
-    if (phv_scale_factor != 1.0)
-        P4C_UNIMPLEMENTED("phv_scale_factor not yet implemented for Tofino5");
-
-    // No groups on Flatrock, so we want all containers in a single "group".
-    // FIXME -- PHV alloc does not allow for different sizes in one group, so
-    // we make a group for each size with all the containers of that size.
-    sizeToTypeMap[PHV::Size::b8].insert(PHV::Type::B);
-    sizeToTypeMap[PHV::Size::b16].insert(PHV::Type::H);
-    sizeToTypeMap[PHV::Size::b32].insert(PHV::Type::W);
-    mauGroupSpec.emplace(PHV::Size::b8, MauGroupType(1, {{ PHV::Type::B, 128 }}));
-    mauGroupSpec.emplace(PHV::Size::b16, MauGroupType(1, {{ PHV::Type::H, 32 }}));
-    mauGroupSpec.emplace(PHV::Size::b32, MauGroupType(1, {{ PHV::Type::W, 16 }}));
-    containersPerGroup = 128;  // the max
-
-    ingressOnlyMauGroupIds = { };
-
-    egressOnlyMauGroupIds  = { };
-
-    tagalongCollectionSpec = { };
-
-    numTagalongCollections = 0;
-
-    deparserGroupSize = { };
-
-    deparserGroupSpec = { };
-
-    numPovBits = 128;
-}
-
-bitvec FlatrockPhvSpec::parserGroup(unsigned id) const {
-    return bitvec(id, 1);
-}
-
-bool FlatrockPhvSpec::hasParserExtractGroups() const {
-    return true;
-}
-
-bitvec FlatrockPhvSpec::parserExtractGroup(unsigned id) const {
-    const auto containerType = idToContainerType(id % numContainerTypes());
-    const unsigned index =  id / numContainerTypes();
-    if (idToContainer(id).is(PHV::Size::b8)) {
-        return range(containerType, index & ~0x3U, 4) & physicalContainers();
-    } else if (idToContainer(id).is(PHV::Size::b16)) {
-        return range(containerType, index & ~0x1U, 2) & physicalContainers();
-    }
-    return bitvec(id, 1);
-}
-
-unsigned FlatrockPhvSpec::parserGroupId(const PHV::Container &) const {
-    return 0;
-}
-
-unsigned FlatrockPhvSpec::mauGroupId(const PHV::Container &) const {
-    return 0;
-}
-
-unsigned FlatrockPhvSpec::deparserGroupId(const PHV::Container &) const {
-    return 0;
-}
-
-const bitvec& FlatrockPhvSpec::individuallyAssignedContainers() const {
-    return individually_assigned_containers_i;
-}
-
-unsigned FlatrockPhvSpec::physicalAddress(unsigned id, ArchBlockType_t) const {
-    return id;
-}
-
-#endif /* HAVE_FLATROCK */
 
 void PhvSpec::applyGlobalPragmas(const std::vector<const IR::Annotation*>& global_pragmas) const {
     // clear all the cached values

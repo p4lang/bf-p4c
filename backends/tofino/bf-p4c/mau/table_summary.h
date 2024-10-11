@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #ifndef BF_P4C_MAU_TABLE_SUMMARY_H_
 #define BF_P4C_MAU_TABLE_SUMMARY_H_
 
@@ -278,8 +290,6 @@ class TableSummary: public MauInspector {
     std::map<cstring, std::map<le_bitrange, std::map<int, int>>> ixbarBytes;
     // For ixbar/memory/action_data_bus/imems:  Tofino 1/2 share the pipe between
     // ingress and egress, so every will be in the [0] element of these arrays.
-    // TOF3-DOC: Tofino 3 also shares the pipe between ingress and egress.
-    // TOF5-DOC: Tofino 5 has independent pipes for ingress([0]) and egress([1])
     // Array of Map of Stage -> Input Xbar
     std::map<int, std::unique_ptr<IXBar>> ixbar[2];
     // Map of Stage -> Memories

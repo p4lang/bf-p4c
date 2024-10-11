@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include "bf-p4c/parde/lower_parser.h"
 
 #include <algorithm>
@@ -16,9 +28,6 @@
 #include "bf-p4c/common/debug_info.h"
 #include "bf-p4c/common/field_defuse.h"
 #include "bf-p4c/common/ir_utils.h"
-#ifdef HAVE_FLATROCK
-#include "bf-p4c/common/flatrock.h"
-#endif  // HAVE_FLATROCK
 #include "bf-p4c/common/slice.h"
 #include "bf-p4c/common/utils.h"
 #include "bf-p4c/device.h"
@@ -30,9 +39,6 @@
 #include "bf-p4c/parde/collect_parser_usedef.h"
 #include "bf-p4c/parde/dump_parser.h"
 #include "bf-p4c/parde/field_packing.h"
-#ifdef HAVE_FLATROCK
-#include "bf-p4c/parde/flatrock.h"
-#endif  // HAVE_FLATROCK
 #include "bf-p4c/parde/parde_utils.h"
 #include "bf-p4c/parde/parde_visitor.h"
 #include "bf-p4c/parde/split_parser_state.h"
@@ -46,9 +52,6 @@
 #include "bf-p4c/parde/lowered/compute_multi_write_containers.h"
 #include "bf-p4c/parde/lowered/eliminate_empty_states.h"
 #include "bf-p4c/parde/lowered/helpers.h"
-#ifdef HAVE_FLATROCK
-#include "bf-p4c/parde/lowered/lower_flatrock.h"
-#endif  // HAVE_FLATROCK
 #include "bf-p4c/parde/lowered/hoist_common_match_operations.h"
 #include "bf-p4c/parde/lowered/merge_lowered_parser_states.h"
 #include "bf-p4c/parde/lowered/rewrite_emit_clot.h"
@@ -248,35 +251,6 @@ struct RemoveNegativeDeposits : public ParserTransform {
     }
 };
 
-#ifdef HAVE_FLATROCK
-/**
- * \ingroup LowerParserIR
- */
-class InsertPayloadPseudoHeaderState : public ParserTransform {
-    const IR::BFN::ParserState *payload_header_state = nullptr;
-
-    profile_t init_apply(const IR::Node *node) override {
-        payload_header_state = new IR::BFN::ParserState(
-            payloadHeaderStateName, INGRESS,
-            IR::Vector<IR::BFN::ParserPrimitive>(
-                {new IR::Flatrock::ExtractPayloadHeader(payloadHeaderName)}),
-            IR::Vector<IR::BFN::Select>(),
-            IR::Vector<IR::BFN::Transition>());
-        return Transform::init_apply(node);
-    }
-
-    const IR::BFN::Transition* preorder(IR::BFN::Transition *t) override {
-        if (t->next == nullptr) {
-            t->next = payload_header_state;
-            LOG3("Inserting transition to payload pseudo header state from state: " <<
-                    findContext<IR::BFN::ParserState>());
-        }
-        return t;
-    }
- public:
-    InsertPayloadPseudoHeaderState() {}
-};
-#endif
 
 /**
  * \defgroup LowerParserIR LowerParserIR
@@ -286,14 +260,6 @@ class InsertPayloadPseudoHeaderState : public ParserTransform {
  */
 struct LowerParserIR : public PassManager {
     std::map<gress_t, std::set<PHV::Container>>& origParserZeroInitContainers;
-#ifdef HAVE_FLATROCK
-    ComputeFlatrockParserIR* computeFlatrockParserIR = nullptr;
-
-    const IR::Vector<IR::BFN::ContainerRef>* get_pov_flags_refs() const {
-        CHECK_NULL(computeFlatrockParserIR);
-        return computeFlatrockParserIR->get_pov_flags_refs();
-    }
-#endif
 
     LowerParserIR(const PhvInfo& phv,
                   BFN_MAYBE_UNUSED const FieldDefUse& defuse,
@@ -308,14 +274,7 @@ struct LowerParserIR : public PassManager {
         auto* find_negative_deposits = new FindNegativeDeposits;
         auto* computeLoweredParserIR = new ComputeLoweredParserIR(
             phv, clotInfo, *allocateParserChecksums, origParserZeroInitContainers);
-#ifdef HAVE_FLATROCK
-        computeFlatrockParserIR = new ComputeFlatrockParserIR(phv, defuse);
-#endif  // HAVE_FLATROCK
         auto* replaceLoweredParserIR = new ReplaceParserIR(*computeLoweredParserIR);
-#ifdef HAVE_FLATROCK
-        auto *replaceFlatrockParserIR = new ReplaceFlatrockParserIR(phv, *computeFlatrockParserIR,
-                parserHeaderSeqs, *parser_info);
-#endif  // HAVE_FLATROCK
 
         addPasses({
             LOGGING(4) ? new DumpParser("before_parser_lowering", false, true) : nullptr,
@@ -334,20 +293,7 @@ struct LowerParserIR : public PassManager {
             allocateParserChecksums,
             LOGGING(4) ? new DumpParser("after_alloc_parser_csums") : nullptr,
             LOGGING(4) ? new DumpParser("final_hlir_parser") : nullptr,
-#ifdef HAVE_FLATROCK
-            Device::currentDevice() == Device::FLATROCK ?
-            new InsertPayloadPseudoHeaderState() : nullptr,
-            parser_info,
-#endif
-#ifdef HAVE_FLATROCK
-            Device::currentDevice() == Device::FLATROCK ?
-                static_cast<Visitor *>(computeFlatrockParserIR) :
-#endif  // HAVE_FLATROCK
                 static_cast<Visitor *>(computeLoweredParserIR),
-#ifdef HAVE_FLATROCK
-            Device::currentDevice() == Device::FLATROCK ?
-                static_cast<Visitor *>(replaceFlatrockParserIR) :
-#endif  // HAVE_FLATROCK
                 static_cast<Visitor *>(replaceLoweredParserIR),
             LOGGING(4) ? new DumpParser("after_parser_lowering") : nullptr,
             new PassRepeated({
@@ -386,12 +332,6 @@ struct ReplaceDeparserIR : public DeparserTransform {
     const IR::BFN::AbstractDeparser*
     preorder(IR::BFN::Deparser* deparser) override {
         prune();
-#if HAVE_FLATROCK
-        // if (Device::currentDevice() == Device::FLATROCK && deparser->gress == INGRESS) {
-        //     // FLATROCK does not have a real ingress deparser
-        //     return deparser; }
-        // Flatrock: metadata packer is output as a deparser
-#endif
         return deparser->gress == INGRESS ? igLoweredDeparser : egLoweredDeparser;
     }
 
@@ -415,15 +355,9 @@ struct ReplaceDeparserIR : public DeparserTransform {
  */
 struct LowerDeparserIR : public PassManager {
     LowerDeparserIR(const PhvInfo& phv, ClotInfo& clot
-#ifdef HAVE_FLATROCK
-            , const IR::Vector<IR::BFN::ContainerRef>* pov_flags_refs = nullptr
-#endif
     ) {
         auto* rewriteEmitClot = new RewriteEmitClot(phv, clot);
         auto* computeLoweredDeparserIR = new ComputeLoweredDeparserIR(phv, clot
-#ifdef HAVE_FLATROCK
-            , pov_flags_refs
-#endif
         );  // NOLINT(whitespace/parens)
         addPasses({
             rewriteEmitClot,
@@ -522,20 +456,12 @@ LowerParser::LowerParser(const PhvInfo& phv, ClotInfo& clot, const FieldDefUse &
     addPasses({
         pragma_no_init,
         lower_parser_ir,
-#ifdef HAVE_FLATROCK
-        Device::currentDevice() == Device::FLATROCK ?
-            new LowerDeparserIR(phv, clot, lower_parser_ir->get_pov_flags_refs()) :
-#endif
         new LowerDeparserIR(phv, clot),
         new WarnTernaryMatchFields(phv),
         Device::currentDevice() == Device::TOFINO ? compute_init_valid : nullptr,
         parser_info,
         new ComputeMultiWriteContainers(phv, *parser_info),
         new ComputeBufferRequirements,
-#ifdef HAVE_FLATROCK
-        // TODO CharacterizeParser not implemented for Flatrock yet
-        Device::currentDevice() == Device::FLATROCK ? nullptr :
-#endif  // HAVE_FLATROCK
         new CharacterizeParser
     });
 }

@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #ifndef EXTENSIONS_BF_P4C_MAU_MAU_SPEC_H_
 #define EXTENSIONS_BF_P4C_MAU_MAU_SPEC_H_
 
@@ -23,15 +35,6 @@ class TofinoIMemSpec : public IMemSpec {
     int map_table_entries() const override;
 };
 
-#if HAVE_FLATROCK
-class FlatrockIMemSpec : public IMemSpec {
-    int rows() const override;
-    int colors() const override;
-    int color_bits() const override;
-    int address_bits() const override;
-    int map_table_entries() const override;
-};
-#endif
 
 class IXBarSpec {
  public:
@@ -44,7 +47,6 @@ class IXBarSpec {
     virtual int tcam_columns() const = 0;  //  pure virtual
 
     /* --- Tofino[1, 2] --- */
-    /* --- TOF3-DOC: And Tofino3 --- */
     virtual int byteGroups() const;
     virtual int exactBytesPerGroup() const;
     virtual int exactGroups() const;
@@ -73,19 +75,6 @@ class IXBarSpec {
     virtual int ternaryBytesPerBigGroup() const;
     virtual int tofinoMeterAluByteOffset() const;
 
-#if HAVE_FLATROCK
-    /* --- FlatRock --- */
-    virtual int bytesPerWord() const;
-    virtual int exactBytes() const;
-    virtual int exactMatchSTMUnits() const;
-    virtual int exactMatchUnits() const;
-    virtual int exactWords() const;
-    virtual int gatewayFixedBytes() const;
-    virtual int gatewayRows() const;
-    virtual int gatewayVecBytes() const;
-    virtual int xcmpBytes() const;
-    virtual int xcmpWords() const;
-#endif
 
     virtual int getExactOrdBase(int group) const = 0;
     virtual int getTernaryOrdBase(int group) const = 0;
@@ -98,10 +87,6 @@ class IXBarSpec {
 //   and their respective MauSpec subclasses, while still preserving DRY compliance.
 static constexpr int Tofino_tcam_rows = 12;
 static constexpr int Tofino_tcam_columns = 2;
-#if HAVE_FLATROCK
-static constexpr int Flatrock_tcam_rows = 20;
-static constexpr int Flatrock_tcam_columns = 1;
-#endif
 
 class MauSpec {
  public:
@@ -176,38 +161,6 @@ class TofinoIXBarSpec : public IXBarSpec {
     int xcmpMatchTotalBytes() const override;
 };
 
-#if HAVE_FLATROCK
-class FlatrockIXBarSpec : public IXBarSpec {
- public:
-    FlatrockIXBarSpec();
-
-    int bytesPerWord() const override;
-    int exactBytes() const override;
-    int exactMatchSTMUnits() const override; /* first 4 units */
-    int exactMatchUnits() const override;    /* 4 STM + 4 LAMB */
-    int exactWords() const override;
-    int gatewayFixedBytes() const override;
-    int gatewayRows() const override;
-    int gatewayVecBytes() const override;
-    int ramSelectBitStart() const override;  // any bits can be ram select
-    int ramLineSelectBits() const override;  // FIXME 6 for lamb, 10 for STM
-    int ternaryBytesPerGroup() const override;
-    int ternaryGroups() const override;
-    int xcmpBytes() const override;
-    int xcmpWords() const override;
-
-    // the next two: support for "legacy code" [as of Nov. 10 2022] that gets these via IXBarSpec
-    int tcam_rows() const override;
-    int tcam_columns() const override;
-
-    int getExactOrdBase(int group) const override;
-    int getTernaryOrdBase(int group) const override;
-
-    int exactMatchTotalBytes() const override;
-    int ternaryMatchTotalBytes() const override;
-    int xcmpMatchTotalBytes() const override;
-};
-#endif
 
 class TofinoMauSpec : public MauSpec {
     const TofinoIXBarSpec ixbar_;
@@ -229,36 +182,6 @@ class JBayMauSpec : public MauSpec {
     const IMemSpec &getIMemSpec() const override;
 };
 
-#if HAVE_CLOUDBREAK
-class CloudbreakMauSpec : public MauSpec {
-    const TofinoIXBarSpec ixbar_;
-    const TofinoIMemSpec imem_;
 
- public:
-    CloudbreakMauSpec() {}
-    const IXBarSpec &getIXBarSpec() const override;
-    const IMemSpec &getIMemSpec() const override;
-};
-#endif  /* HAVE_CLOUDBREAK */
-
-#if HAVE_FLATROCK
-class FlatrockMauSpec : public MauSpec {
-    const FlatrockIXBarSpec ixbar_;
-    const FlatrockIMemSpec imem_;
-
- public:
-    FlatrockMauSpec() {}
-    const IXBarSpec &getIXBarSpec() const override;
-    const IMemSpec &getIMemSpec() const override;
-
-    int tcam_width() const override;
-    int tcam_depth() const override;
-    int tcam_rows() const override;
-    int tcam_columns() const override;
-
-    IR::Node *postTransformTables(IR::MAU::Table *) const override;
-    //  preceding line`s decl.: implemented in "flatrock/mau_spec.cpp"
-};
-#endif
 
 #endif /* EXTENSIONS_BF_P4C_MAU_MAU_SPEC_H_ */

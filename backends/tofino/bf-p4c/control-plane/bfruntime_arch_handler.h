@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #ifndef EXTENSIONS_BF_P4C_CONTROL_PLANE_BFRUNTIME_ARCH_HANDLER_H_
 #define EXTENSIONS_BF_P4C_CONTROL_PLANE_BFRUNTIME_ARCH_HANDLER_H_
 
@@ -568,7 +580,6 @@ class SnapshotFieldFinder : public Inspector {
         // while dealing with header stacks where we have to loop for all elements in a stack.
         // Type_Stack is not a vector so we have a single node which needs to output 'n' values for
         // a size 'n' stack.
-        // JIRA-DOC: [P4C-4329]
         visitDagOnce = false;
     }
 
@@ -691,7 +702,6 @@ class BFRuntimeArchHandlerCommon : public P4::ControlPlaneAPI::P4RuntimeArchHand
     // Note, in some cases like multiparser blocks, the parser names are always
     // arch names since the instantiations are always anonymous. In such cases
     // we skip the control plane name
-    // JIRA-DOC: [ DRV-2939 ]
     // E.g.
     // P4:
     // IngressParsers(IgCPUParser(), IgNetworkParser()) ig_pipe0;
@@ -2170,7 +2180,6 @@ class BFRuntimeArchHandlerTofino final : public BFN::BFRuntimeArchHandlerCommon<
         // insufficient: the standard ValueSet message restricts the element
         // type to a simple binary string (P4Runtime v1.0 limitation).
         //
-        // JIRA-DOC: Fix for P4C-3920.
         // ValueSets created by open-source p4RuntimeSerializer.cpp need
         // to be deleted because it creates duplicates when dealing with multipipe programs.
         p4info->clear_value_sets();

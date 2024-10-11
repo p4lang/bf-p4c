@@ -1,4 +1,16 @@
 /**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
+/**
  * \defgroup ArchTranslation BFN::ArchTranslation
  * \ingroup midend
  * \brief Set of passes that normalize variations in the architectures.
@@ -37,12 +49,6 @@ class Architecture : public Inspector {
  public:
     enum Arch_t {
         TNA, T2NA,
-#if HAVE_CLOUDBREAK
-        T3NA,
-#endif  /* HAVE_CLOUDBREAK */
-#if HAVE_FLATROCK
-        T5NA,
-#endif
         PSA, V1MODEL,
         UNKNOWN
         };
@@ -65,12 +71,6 @@ class Architecture : public Inspector {
     static Arch_t toArchEnum(cstring arch) {
         if (arch == "TNA" || arch == "tna") return Arch_t::TNA;
         else if (arch == "T2NA" || arch == "t2na") return Arch_t::T2NA;
-#if HAVE_CLOUDBREAK
-        else if (arch == "T3NA" || arch == "t3na") return Arch_t::T3NA;
-#endif  /* HAVE_CLOUDBREAK */
-#if HAVE_FLATROCK
-        else if (arch == "T5NA" || arch == "t5na") return Arch_t::T5NA;
-#endif
         else
             return Arch_t::UNKNOWN;
     }
@@ -170,9 +170,6 @@ class TranslationLast : public PassManager {
 /// @sa BFN::SimpleSwitchTranslation
 /// @sa BFN::TnaArchTranslation
 /// @sa BFN::T2naArchTranslation
-#if HAVE_FLATROCK
-/// @sa BFN::T5naArchTranslation
-#endif  /* HAVE_FLATROCK */
 /// @sa BFN::PortableSwitchTranslation
 class ArchTranslation : public PassManager {
  public:
@@ -206,26 +203,6 @@ static const std::map<Architecture::Arch_t,
         { { DEPARSER, EGRESS }, 5 },
         { { MAU, GHOST }, 6 }
     } },
-#if HAVE_CLOUDBREAK
-    { Architecture::T3NA, {
-        { { PARSER, INGRESS }, 0 },
-        { { MAU, INGRESS }, 1 },
-        { { DEPARSER, INGRESS }, 2 },
-        { { PARSER, EGRESS }, 3 },
-        { { MAU, EGRESS }, 4 },
-        { { DEPARSER, EGRESS }, 5 },
-        { { MAU, GHOST }, 6 }
-    } }
-#endif  /* HAVE_CLOUDBREAK */
-#if HAVE_FLATROCK
-    , { Architecture::T5NA, {
-        { { PARSER, INGRESS }, 0 },
-        { { MAU, INGRESS }, 1 },
-        { { MAU, EGRESS }, 2 },
-        { { DEPARSER, EGRESS }, 3 },
-        { { MAU, GHOST }, 4 }
-    } }
-#endif
 };
 
 /** \ingroup ArchTranslation */

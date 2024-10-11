@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #ifndef BF_P4C_PHV_PHV_PARDE_MAU_USE_H_
 #define BF_P4C_PHV_PHV_PARDE_MAU_USE_H_
 
@@ -101,7 +113,6 @@ class Phv_Parde_Mau_Use : public Inspector, public TofinoWriteContext {
     /// (1) is referenced or
     /// (2) not referenced, but is ghost field (we should try to
     ///     eliminated this case once we add ghost field writes to IR).
-    ///     JIRA-DOC: see P4C-3925
     bool is_allocation_required(const PHV::Field *f) const;
 
     /// @returns true if @p is read by deparser for learning digest and subject to the

@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include "bf-p4c/mau/table_layout.h"
 #include "bf-p4c/phv/analysis/live_range_shrinking.h"
 #include "bf-p4c/phv/utils/liverange_opti_utils.h"
@@ -528,7 +540,6 @@ FindInitializationNode::getInitializationCandidates(
         // Find the first table where initialization is possible.
         //  What if the first table found is control flow mutex
         // with dominator and uses of field f? Is this possible?
-        // JIRA-DOC: (maybe issue for p4c-2678?)
         LOG_DEBUG3(TAB2 "Checking whether initialization is possible at table " << tbl->name);
         bool reachCondition = false;
         for (auto kv : g_units) {

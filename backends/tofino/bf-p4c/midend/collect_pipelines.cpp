@@ -1,4 +1,16 @@
 /**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
+/**
  *  Collect pipelines form program.
  */
 #include "collect_pipelines.h"
@@ -28,23 +40,8 @@ static void _setPipe(CollectPipelines::Pipe *self, const IR::IDeclaration *dec,
 void CollectPipelines::Pipe::set(unsigned count, unsigned idx, const IR::IDeclaration *dec) {
     using Gress = CollectPipelines::FullGress;
 
-#if HAVE_FLATROCK
-    bool isFlatrock = Device::currentDevice() == Device::FLATROCK;
-#endif
     BUG_CHECK(idx < count, "Pipe argument %1% out of range", idx);
 
-#if HAVE_FLATROCK
-    if (isFlatrock) {
-        // TODO This will need to change when T5NA gets ghost support
-        BUG_CHECK(count == 4, "Cannot process pipelines with %1% arguments on Tofino 5", count);
-        switch (idx) {
-            case 0: _setPipe(this, dec, &Pipe::ingress, &Gress::parser, "parser"_cs); break;
-            case 1: _setPipe(this, dec, &Pipe::ingress, &Gress::control, "control"_cs); break;
-            case 2: _setPipe(this, dec, &Pipe::egress, &Gress::control, "control"_cs); break;
-            case 3: _setPipe(this, dec, &Pipe::egress, &Gress::deparser, "deparser"_cs); break;
-        }
-    } else {
-#endif  // HAVE_FLATROCK
         BUG_CHECK(count == 6u || count == 7u,
                   "Cannot process pipelines with %1% arguments", count);
         if (idx == 6) {
@@ -59,9 +56,6 @@ void CollectPipelines::Pipe::set(unsigned count, unsigned idx, const IR::IDeclar
                 case 2: _setPipe(this, dec, gress, &Gress::deparser, "deparser"_cs); break;
             }
         }
-#if HAVE_FLATROCK
-    }
-#endif  // HAVE_FLATROCK
 }
 
 bool CollectPipelines::Pipe::operator==(const Pipe &other) const {

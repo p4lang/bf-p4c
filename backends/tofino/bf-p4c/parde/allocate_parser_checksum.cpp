@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include <map>
 #include "allocate_parser_checksum.h"
 
@@ -435,9 +447,6 @@ struct ParserChecksumAllocator : public Visitor {
         // FIXME -- should be a Device or PardeSpec feature
         if (Device::currentDevice() == Device::TOFINO) avail = 2;
         else if (Device::currentDevice() == Device::JBAY) avail = 5;
-#if HAVE_CLOUDBREAK
-        else if (Device::currentDevice() == Device::CLOUDBREAK) avail = 5;
-#endif /* HAVE_CLOUDBREAK */
 
         msg << "Ran out of checksum units on " << ::toString(gress) << " parser ("
             << avail << " available).";
@@ -705,7 +714,6 @@ struct InsertParserClotChecksums : public PassManager {
 //          c            c'
 //          |            |
 //          d            d'
-// JIRA-DOC: Ticket : P4C-2236
 struct DuplicateStates : public ParserTransform {
     ordered_map<cstring,
         ordered_map<cstring, ordered_set<const IR::BFN::ParserState*>>> duplicate_path;
@@ -777,7 +785,6 @@ struct DuplicateStates : public ParserTransform {
                 duplicate_path[first->name][decl].insert(path_to_duplicate.begin(),
                                                          path_to_duplicate.end());
             }
-            // JIRA-DOC: P4C-4158:
             // Clearing this set is required or else the pass does not work properly when
             // 1 checksum has 2 or more paths to duplicate.
             path_to_duplicate.clear();

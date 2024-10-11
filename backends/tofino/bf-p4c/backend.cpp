@@ -1,4 +1,16 @@
 /**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
+/**
  * \defgroup backend Backend
  * \brief Overview of backend passes
  *
@@ -195,12 +207,6 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
         flexibleLogging,
         LOGGING(4) ? new DumpParser("begin_backend") : nullptr,
         new AdjustByteCountSetup,
-#if HAVE_FLATROCK
-        // FIXME -- Flatrock *could* have separate allocations for ingress and egress, but
-        // the same containers can be used across both too.  Since there's no ingress deparser
-        // or egress parser, DefUse needs a single name for fields across both ingress and egress
-        Device::currentDevice() == Device::FLATROCK ? nullptr :
-#endif
         new CreateThreadLocalInstances,
         new CollectHardwareConstrainedFields,
         new CheckForUnimplementedFeatures(),
@@ -324,10 +330,6 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
         // programs
         (options.no_deadcode_elimination == false) ?
             new ElimUnused(phv, defuse, zeroInitFields) : nullptr,
-#ifdef HAVE_FLATROCK
-        // ParserHeaderSequences must be run before the IR is lowered
-        Device::currentDevice() == Device::FLATROCK ? &parserHeaderSeqs : nullptr,
-#endif  /* HAVE_FLATROCK */
         new MergePovBits(phv),  // Ideally run earlier, see comment in class for explanation.
 
         // Two different allocation flow:
@@ -397,7 +399,6 @@ Backend::Backend(const BFN_Options& o, int pipe_id) :
         }),
         PHV_Analysis,
 
-        // JIRA-DOC: P4C-5147
         // CheckUninitializedReadAndOverlayedReads Pass checks all allocation slices for overlays
         // which can corrupt uninitialized read values and potentially cause fatal errors
         // while running tests.

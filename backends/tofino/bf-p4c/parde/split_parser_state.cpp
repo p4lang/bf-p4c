@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include "split_parser_state.h"
 #include "bf-p4c/common/utils.h"
 #include "bf-p4c/parde/parser_query.h"
@@ -370,8 +382,6 @@ struct AllocateParserState : public ParserTransform {
             // FIXME: Should look at the actual extractions (could extract to half a 32b
             // container for JBay), but requires consistent and accurate analysis across all passes
             // and assembler.
-            // JIRA-DOC: Changing here only causes a failure in P4C-2490 (failure
-            // JIRA-DOC: introduced by HoistCommonMatchOperations).
             //
             // Problem is that code currently calculates a constant number of extracts per
             // container, but JBay can extract only half of a 32b container if only some bits are
@@ -545,10 +555,6 @@ struct AllocateParserState : public ParserTransform {
                             constant_avail = !valid_choices.empty();
                         } else if (Device::currentDevice() == Device::JBAY) {
                             constant_avail = constant_choices.at(16) + constants_by_size[16] <= 2;
-#if HAVE_CLOUDBREAK
-                        } else if (Device::currentDevice() == Device::CLOUDBREAK) {
-                            constant_avail = constant_choices.at(16) + constants_by_size[16] <= 2;
-#endif /* HAVE_CLOUDBREAK */
                         }
                     }
 
@@ -834,13 +840,6 @@ struct AllocateParserState : public ParserTransform {
                             masked_ranges_map[r]++;
                             return true;
                         }
-#if HAVE_CLOUDBREAK
-                    } else if (Device::currentDevice() == Device::CLOUDBREAK) {
-                        if (masked_ranges_map[r] % 2 == 0 || r.size() % 16) {
-                            masked_ranges_map[r]++;
-                            return true;
-                        }
-#endif /* HAVE_CLOUDBREAK */
                     } else {
                         BUG("unhandled device");
                     }
@@ -1045,19 +1044,6 @@ struct AllocateParserState : public ParserTransform {
             } else if (Device::currentDevice() == Device::JBAY) {
                 JBayExtractAllocator jea(*this);
                 ClotAllocator cla(*this);
-#if HAVE_CLOUDBREAK
-            } else if (Device::currentDevice() == Device::CLOUDBREAK) {
-                JBayExtractAllocator jea(*this);
-                ClotAllocator cla(*this);
-#endif /* HAVE_CLOUDBREAK */
-#if HAVE_FLATROCK
-            } else if (Device::currentDevice() == Device::FLATROCK) {
-                // FIXME: Change the extract allocator to FTR specific,
-                //        also some of the following code might be useless for FTR,
-                //        for example oob_stall splitting is useless
-                //        (tracked under P4C-5071)
-                TofinoExtractAllocator tea(*this);
-#endif /* HAVE_FLATROCK */
             } else {
                 BUG("Unknown device");
             }
@@ -1155,21 +1141,6 @@ struct AllocateParserState : public ParserTransform {
                     std::remove(current_statements.begin(), current_statements.end(), s),
                     current_statements.end());
             }
-#if HAVE_FLATROCK
-            // Split transitions
-            if (Device::currentDevice() == Device::FLATROCK &&
-                state->transitions.size() > ::Flatrock::PARSER_ANALYZER_STAGE_RULES) {
-                unsigned i = 0;
-                for (auto t : state->transitions) {
-                    // We have to leave space for 1 transition to the split state => -1
-                    if (i < ::Flatrock::PARSER_ANALYZER_STAGE_RULES-1)
-                        current_transitions.push_back(t);
-                    else
-                        spilled_transitions.push_back(t);
-                    i++;
-                }
-            }
-#endif /* HAVE_FLATROCK */
         }
 
         struct GetExtractBufferPos : Inspector {
@@ -1275,11 +1246,6 @@ struct AllocateParserState : public ParserTransform {
         std::vector<const IR::BFN::ParserPrimitive*> others;
 
         IR::Vector<IR::BFN::ParserPrimitive> current_statements, spilled_statements;
-#if HAVE_FLATROCK
-        // For FTR we need to also spill transitions as only
-        // ::Flatrock::PARSER_ANALYZER_STAGE_RULES are available in each stage
-        IR::Vector<IR::BFN::Transition> current_transitions, spilled_transitions;
-#endif /* HAVE_FLATROCK */
         bool spill_selects = false;
     };
 
@@ -1439,9 +1405,6 @@ struct AllocateParserState : public ParserTransform {
 
             // No more splits = recursion end
             if (alloc.spilled_statements.empty() && !alloc.spill_selects
-#if HAVE_FLATROCK
-                && alloc.spilled_transitions.empty()
-#endif /* HAVE_FLATROCK */
                 ) {
                 LOG3("no need to split " << state->name << " (nothing spilled)");
 
@@ -1504,39 +1467,6 @@ struct AllocateParserState : public ParserTransform {
 
                 auto to_split = new IR::BFN::Transition(match_t(), max_shift / 8, split);
                 state->transitions = {to_split};
-#if HAVE_FLATROCK
-            // Otherwise this is split due to limited transitions (FTR)
-            } else if (!alloc.spilled_transitions.empty()) {
-                // Imagine we want to split Y transitions because a state can only hold X
-                // We do the following:
-                //   - original state stays the same, but would only keep the first X-1 transitions
-                //   - the X-th transition would be a default one with shift 0 to the first split
-                //     state
-                //   - the first split state is empty, has the same selects and another X-1
-                //     transitions and X-th default transition with shift 0 to second split state
-                //   - second split state the same as the first one but with another X-1
-                //     transitions
-                //   - ...
-                //   - the last split state can keep the last X transitions (= don't split a
-                //     single transition)
-                LOG3("split iteration " << iteration << " of " << state->name
-                     << " spills " << alloc.spilled_transitions.size() << " transitions");
-                // Current state statements stay the same, split statements are empty
-                // Current selects stay the same and are copied/cloned for the split state
-                // Note: We have to create a new select and clone its source here,
-                // otherwise the following passes (AllocateMatchRegisters/CollectUseDef) ignore it
-                // in split state
-                for (auto* s : state->selects) {
-                    split->selects.push_back(new IR::BFN::Select(s->srcInfo, s->source->clone()));
-                }
-                // Transitions are split according to allocation
-                state->transitions = alloc.current_transitions;
-                split->transitions = alloc.spilled_transitions;
-                // Create the default (shift 0) transition to split state
-                auto to_split = new IR::BFN::Transition(match_t(), 0, split);
-                state->transitions.push_back(to_split);
-                transitions_split = true;
-#endif /* HAVE_FLATROCK */
             } else {
                 BUG("Unexpected state splitting spill");
             }

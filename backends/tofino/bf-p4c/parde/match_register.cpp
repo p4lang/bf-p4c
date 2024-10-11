@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include "match_register.h"
 
 #include <sstream>
@@ -5,9 +17,6 @@
 #include "ir/json_generator.h"
 #include "ir/json_loader.h"
 
-#if HAVE_FLATROCK
-#include "bf-p4c/common/flatrock.h"
-#endif
 
 int MatchRegister::s_id = 0;
 
@@ -25,10 +34,6 @@ MatchRegister::MatchRegister(cstring n) : name(n), id(s_id++) {
         size = 1;
     else if (name.find("half"))
         size = 2;
-#if HAVE_FLATROCK
-    else if (name.find("W"))
-        size = ::Flatrock::PARSER_W_WIDTH;
-#endif
     else
         BUG("Invalid parser match register %s", name);
 }

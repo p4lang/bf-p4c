@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #ifndef BF_P4C_PARDE_ADD_METADATA_POV_H_
 #define BF_P4C_PARDE_ADD_METADATA_POV_H_
 
@@ -9,26 +21,17 @@
 /**
  * \ingroup parde
  * @brief Create POV bits for output metadata (JBAY)
- * TOF3-DOC: (Cloudbreak)
- * TOF5-DOC: (Flatrock)
  *
  * JBay requires POV bits to control output metadata as implicit
  * PHV valid bits are gone.  We create a single POV bit for each metadata in use
  * and set the bit whenever the metadata is set.
- * TOF3-DOC: Applies to Cloudbreak too.
  *
- * TOF5-DOC: Flatrock requires POV bits for a subset of fields.
  */
 
 class AddMetadataPOV : public Transform {
     const PhvInfo &phv;
     const IR::BFN::Deparser *dp = nullptr;
 
-#if HAVE_FLATROCK
-    static std::map<cstring, std::set<cstring>> flatrock_dprsr_param_with_pov;
-
-    bool is_deparser_parameter_with_pov(const IR::BFN::DeparserParameter *param);
-#endif /* HAVE_FLATROCK */
 
     bool equiv(const IR::Expression *a, const IR::Expression *b);
     static IR::MAU::Primitive *create_pov_write(const IR::Expression *povBit, bool validate);

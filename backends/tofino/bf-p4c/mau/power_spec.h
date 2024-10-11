@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #ifndef EXTENSIONS_BF_P4C_MAU_POWER_SPEC_H_
 #define EXTENSIONS_BF_P4C_MAU_POWER_SPEC_H_
 
@@ -235,45 +247,6 @@ class JBayUMauPowerSpec : public JBayMauPowerSpec {
 };
 
 
-#if HAVE_CLOUDBREAK
-/**
-  * Power values scaled to 1.26 GHz from Jbay at 1.5 GHz
-  * NOTE: Once library models are available, we can update the Cloudbreak
-  * power values.  For now, just have this map to JBay 20-stage device.
-  */
-class CloudbreakMauPowerSpec : public JBayMauPowerSpec {
- public:
-  CloudbreakMauPowerSpec() { }
 
-  // TBD: Could be set to 80W in future.
-  double get_max_power() const override { return 87; }  // P4C-5902
-
-  // Power nos are for 1.26 GHz PPS (Clock freq of MAU)
-  double get_ram_read_power() const override {
-    return (1.26 / 1.5) * 0.0166 * get_ram_scaling_factor(); }
-  double get_ram_write_power() const override {
-    return (1.26 / 1.5) * 0.0176 * get_ram_scaling_factor(); }
-  double get_tcam_search_power() const override {
-    return (1.26 / 1.5) * 0.0185 * get_tcam_scaling_factor(); }
-  double get_map_ram_read_power() const override {
-    return (1.26 / 1.5) * 0.0027 * get_ram_scaling_factor(); }
-  double get_map_ram_write_power() const override {
-    return (1.26 / 1.5) * 0.0030 * get_ram_scaling_factor(); }
-  double get_deferred_ram_read_power() const override {
-    return (1.26 / 1.5) * 0.0025 * get_ram_scaling_factor(); }
-  double get_deferred_ram_write_power() const override {
-    return (1.26 / 1.5) * 0.0024 * get_ram_scaling_factor(); }
-};
-
-#endif  /* HAVE_CLOUDBREAK */
-
-#if HAVE_FLATROCK
-class FlatrockMauPowerSpec : public JBayMauPowerSpec {
- public:
-  FlatrockMauPowerSpec() { }
-  double get_max_power() const override { return 1e9; }  // essentially unlimited for now
-  double get_excess_power_threshold() const override { return 1e9; }
-};
-#endif  /* HAVE_FLATROCK */
 
 #endif /* EXTENSIONS_BF_P4C_MAU_POWER_SPEC_H_ */

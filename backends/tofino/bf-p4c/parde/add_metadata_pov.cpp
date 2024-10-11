@@ -1,38 +1,20 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include "add_metadata_pov.h"
 
 #include "ir/ir.h"
 #include "bf-p4c/phv/phv_fields.h"
 
-#if HAVE_FLATROCK
-std::map<cstring, std::set<cstring>> AddMetadataPOV::flatrock_dprsr_param_with_pov({
-    {
-        "ingress_intrinsic_metadata_for_tm_t",
-        {
-            "mirror_bitmap",    // FIXME: should this be mirror_cos?
-            "mcast_grp_a",
-            "mcast_grp_b",
-            "ucast_egress_port",
-        }
-    },
-});
-
-bool AddMetadataPOV::is_deparser_parameter_with_pov(const IR::BFN::DeparserParameter *param) {
-    if (const auto *member = param->source->field->to<IR::Member>()) {
-        if (const auto *chr = member->expr->to<IR::ConcreteHeaderRef>()) {
-            cstring name = member->member;
-            cstring type_name;
-            if (const auto *ts = chr->type->to<IR::Type_Struct>())
-                type_name = ts->name;
-            else if (const auto *th = chr->type->to<IR::Type_Header>())
-                type_name = th->name;
-            return flatrock_dprsr_param_with_pov.count(type_name) &&
-                   flatrock_dprsr_param_with_pov.at(type_name).count(name);
-        }
-    }
-    return false;
-}
-
-#endif  /* HAVE_FLATROCK */
 
 bool AddMetadataPOV::equiv(const IR::Expression *a, const IR::Expression *b) {
     if (auto field = phv.field(a)) return field == phv.field(b);
@@ -51,18 +33,9 @@ IR::BFN::Pipe *AddMetadataPOV::preorder(IR::BFN::Pipe *pipe) {
 }
 
 IR::BFN::DeparserParameter *AddMetadataPOV::postorder(IR::BFN::DeparserParameter *param) {
-#if HAVE_FLATROCK
-    if (Device::currentDevice() == Device::FLATROCK && !is_deparser_parameter_with_pov(param))
-        return param;
-#endif  /* HAVE_FLATROCK */
     LOG5("Adding Metadata POV for deparser param: " << param);
     param->povBit = new IR::BFN::FieldLVal(new IR::TempVar(
         IR::Type::Bits::get(1), true, param->source->field->toString() + ".$valid"));
-#if HAVE_FLATROCK
-    // Flatrock: want to keep the POV bits, even if the field is optimized away
-    if (Device::currentDevice() == Device::FLATROCK)
-        param->sourceReq = false;
-#endif /* HAVE_FLATROCK */
     return param;
 }
 
@@ -85,10 +58,6 @@ IR::Node *AddMetadataPOV::insert_deparser_param_pov_write(const IR::MAU::Primiti
             << ", validate: " << (validate ? "Y" : "N") << indent);
     auto *dest = p->operands.at(0);
     for (auto *param : dp->params) {
-#if HAVE_FLATROCK
-        if (Device::currentDevice() == Device::FLATROCK && !is_deparser_parameter_with_pov(param))
-            continue;
-#endif
         if (equiv(dest, param->source->field)) {
             auto pov_write = create_pov_write(param->povBit->field, validate);
             LOG5("Inserting param for pov write: " << pov_write);

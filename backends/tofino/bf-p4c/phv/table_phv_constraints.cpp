@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include "bf-p4c/phv/table_phv_constraints.h"
 #include "bf-p4c/mau/table_layout.h"
 
@@ -43,7 +55,6 @@ TernaryMatchKeyConstraints::calculateTernaryMatchKeyConstraints(const IR::MAU::T
     // of ternary match fields. The imposed alignment constraints may
     // lead to erroneous PHV allocation fails due to preventing packing
     // of 1bit or narrow fields into PHV containers
-    // JIRA-DOC: (See P4C-2538)
 
     // *OFF* ordered_set<PHV::Field*> fields;
 

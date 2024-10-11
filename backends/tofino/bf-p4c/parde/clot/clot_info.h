@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #ifndef EXTENSIONS_BF_P4C_PARDE_CLOT_CLOT_INFO_H_
 #define EXTENSIONS_BF_P4C_PARDE_CLOT_CLOT_INFO_H_
 
@@ -204,7 +216,6 @@ class ClotInfo {
     // may be included in both IPv4 and TCP checksum updates. In such cases,
     // we require the IPv4 fields in both updates to be identical sets in order
     // to be allocated to a CLOT (each CLOT can only compute one checksum)
-    // JIRA-DOC: see P4C-1509
     bool is_used_in_multiple_checksum_update_sets(const PHV::Field* field) const;
 
     /// Determines whether a field is extracted in multiple states that are not mutually exclusive.

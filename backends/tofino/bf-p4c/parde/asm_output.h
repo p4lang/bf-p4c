@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #ifndef BF_P4C_PARDE_ASM_OUTPUT_H_
 #define BF_P4C_PARDE_ASM_OUTPUT_H_
 
@@ -52,18 +64,5 @@ struct DeparserAsmOutput {
     const IR::BFN::LoweredDeparser* deparser;
 };
 
-#if HAVE_FLATROCK
-/// \ingroup AsmOutput parde
-///
-/// Helper that can generate header assembly and write it to an output stream.
-struct HeaderAsmOutput {
-    explicit HeaderAsmOutput(const ParserHeaderSequences &seqs);
-
- private:
-    friend std::ostream& operator<<(std::ostream&, const HeaderAsmOutput&);
-
-    const ParserHeaderSequences &seqs;
-};
-#endif  // HAVE_FLATROCK
 
 #endif /* BF_P4C_PARDE_ASM_OUTPUT_H_ */

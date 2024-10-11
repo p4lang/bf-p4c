@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include <fstream>
 
 #include "bf_gtest_helpers.h"
@@ -53,7 +65,7 @@ class ErrorReporterTest : public ::testing::Test {
     }
 
     void ReportWarning(const std::string& code, std::string msg, int line, int column = 1) {
-        ::warning(ErrorType::ERR_EXPECTED, (msg + "%1%").c_str(), GetMockNode(code, line, column));
+        ::warning(ErrorType::WARN_FAILED, (msg + "%1%").c_str(), GetMockNode(code, line, column));
     }
 };
 

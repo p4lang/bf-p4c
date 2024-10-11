@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include "bf-p4c/asm.h"
 
 #include <sys/stat.h>
@@ -8,7 +20,7 @@
 #include <iostream>
 #include <sstream>
 
-// #include "bf-asm/version.h"
+#include "bf-asm/version.h"
 #include "bf-p4c/common/run_id.h"
 #include "bf-p4c/device.h"
 
@@ -72,16 +84,12 @@ bool AsmOutput::preorder(const IR::BFN::Pipe *pipe) {
         std::ofstream out(outputFile, std::ios_base::out);
 
         MauAsmOutput *mauasm = nullptr;
-#if HAVE_FLATROCK
-        if (Device::currentDevice() == Device::FLATROCK)
-            mauasm = new Flatrock::PpuAsmOutput(phv, pipe, nxt_tbl, power_and_mpr, options);
-#endif
         if (!mauasm) mauasm = new Tofino::MauAsmOutput(phv, pipe, nxt_tbl, power_and_mpr, options);
 
         pipe->apply(*mauasm);
 
         out << "version:" << std::endl
-            // << "  version: " << BFASM::Version::getVersion() << std::endl
+            << "  version: " << BFASM::Version::getVersion() << std::endl
             << "  run_id: \"" << RunId::getId() << "\"" << std::endl
             << "  target: " << Device::name() << std::endl;
         // set the default error mode used by all stages
@@ -90,18 +98,12 @@ bool AsmOutput::preorder(const IR::BFN::Pipe *pipe) {
         if (::errorCount() == 0) {
             out << PhvAsmOutput(phv, defuse, tbl_summary, live_range_report,
                                 pipe->ghost_thread.ghost_parser != nullptr);
-#if HAVE_FLATROCK
-            if (Device::currentDevice() == Device::FLATROCK)
-                out << HeaderAsmOutput(prsr_header_seqs);
-#endif
             out << ParserAsmOutput(pipe, phv, clot, INGRESS);
-            // TOF5-DOC: Flatrock metadata packer is output as "ingress deparser" section
             out << DeparserAsmOutput(pipe, phv, clot, INGRESS);
             if (pipe->ghost_thread.ghost_parser != nullptr) {
                 out << "parser ghost: " << std::endl;
                 out << "  ghost_md: " << ghostPhvContainer() << std::endl;
                 if (ghost_only_on_other_pipes(pipe_id)) {
-                    // JIRA-DOC: Fix for P4C-3925.
                     // In future this may be tied to a
                     // command line option which dictates the pipe mask
                     // value

@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include "bf-p4c/phv/v2/greedy_tx_score.h"
 
 #include <algorithm>
@@ -390,7 +402,6 @@ TxScore* GreedyTxScoreMaker::make(const Transaction& tx) const {
         // a 32-bit container, because there are inefficiencies of the implementation
         // of ixbar allocation: it will use two TCAM groups, which will double the
         // number of bytes used.
-        // JIRA-DOC: see P4C-4545 for more details.
         if (c.type().size() == PHV::Size::b32) {
             for (const auto& sl : slices) {
                 if (range_match_double_bytes_container.count(c)) break;

@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #ifndef BF_P4C_MAU_GEN_PRIM_JSON_H_
 #define BF_P4C_MAU_GEN_PRIM_JSON_H_
 
@@ -47,7 +59,6 @@
 // - one split stage is a no match table and others have a gateway
 // - one split stage has an indirect resource and others dont
 // - one split stage has a partial action completed in the other stages
-// JIRA-DOC: [JIRA CI-11]
 //
 // With current schema the action primitives (used for logging) are
 // populated per table and are stage agnostic. They assume the actions

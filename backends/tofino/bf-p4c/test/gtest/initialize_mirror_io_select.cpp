@@ -1,7 +1,18 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 /*
  * This test covers initialization of eg_intr_md_for_dprsr.mirror_io_select
  * on Tofino2 targets if it's not explicitly set.
- * TOF3-DOC: Applies to Tofino3 targets as well.
  */
 
 #include "bf-p4c/midend/initialize_mirror_io_select.h"
@@ -127,37 +138,6 @@ TEST(InitializeMirrorIOSelect, Tofino2ParserBodyCompleteMeta) {
               InitializeMirrorIOSelectTest::tofino_shell_egress_parser_body_marker(), expected);
 }
 
-#if HAVE_CLOUDBREAK
-TEST(InitializeMirrorIOSelect, Tofino3ParserBody) {
-    Match::CheckList expected{"state start { ",
-                              "eg_intr_md_for_dprsr.mirror_io_select = 1w1; "
-                              "transition accept; "
-                              "}"};
-    RUN_CHECK(TestCode::Hdr::Tofino3arch, " ",
-              InitializeMirrorIOSelectTest::tofino_shell_egress_parser_body_marker(), expected);
-}
-
-TEST(InitializeMirrorIOSelect, Tofino3ParserBodyPartialMeta) {
-    Match::CheckList expected{"state start { ",
-                              "eg_intr_md_for_dprsr.mirror_io_select = 1w1; "
-                              "transition accept; "
-                              "}"};
-    RUN_CHECK(TestCode::Hdr::Tofino3arch,
-              ", out egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr",
-              InitializeMirrorIOSelectTest::tofino_shell_egress_parser_body_marker(), expected);
-}
-
-TEST(InitializeMirrorIOSelect, Tofino3ParserBodyCompleteMeta) {
-    Match::CheckList expected{"state start { ",
-                              "eg_intr_md_for_dprsr.mirror_io_select = 1w1; "
-                              "transition accept; "
-                              "}"};
-    RUN_CHECK(TestCode::Hdr::Tofino3arch,
-              ", out egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr, \
-              out egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr",
-              InitializeMirrorIOSelectTest::tofino_shell_egress_parser_body_marker(), expected);
-}
-#endif  // HAVE_CLOUDBREAK
 
 TEST(InitializeMirrorIOSelect, Tofino1ParserParams) {
     Match::CheckList expected{"packet_in packet, out headers_t hdr, out local_metadata_t eg_md, ",
@@ -196,37 +176,6 @@ TEST(InitializeMirrorIOSelect, Tofino2ParserParamsCompleteMeta) {
               InitializeMirrorIOSelectTest::tofino_shell_egress_parser_params_marker(), expected);
 }
 
-#if HAVE_CLOUDBREAK
-TEST(InitializeMirrorIOSelect, Tofino3ParserParams) {
-    Match::CheckList expected{"packet_in packet, out headers_t hdr, out local_metadata_t eg_md, ",
-                              "out egress_intrinsic_metadata_t eg_intr_md, ",
-                              "out egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr, ",
-                              "out egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprs"};
-    RUN_CHECK(TestCode::Hdr::Tofino3arch, " ",
-              InitializeMirrorIOSelectTest::tofino_shell_egress_parser_params_marker(), expected);
-}
-
-TEST(InitializeMirrorIOSelect, Tofino3ParserParamsPartialMeta) {
-    Match::CheckList expected{"packet_in packet, out headers_t hdr, out local_metadata_t eg_md, ",
-                              "out egress_intrinsic_metadata_t eg_intr_md, ",
-                              "out egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr, ",
-                              "out egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprs"};
-    RUN_CHECK(TestCode::Hdr::Tofino3arch,
-              ", out egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr",
-              InitializeMirrorIOSelectTest::tofino_shell_egress_parser_params_marker(), expected);
-}
-
-TEST(InitializeMirrorIOSelect, Tofino3ParserParamsCompleteMeta) {
-    Match::CheckList expected{"packet_in packet, out headers_t hdr, out local_metadata_t eg_md, ",
-                              "out egress_intrinsic_metadata_t eg_intr_md, ",
-                              "out egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr, ",
-                              "out egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprs"};
-    RUN_CHECK(TestCode::Hdr::Tofino3arch,
-              ", out egress_intrinsic_metadata_from_parser_t eg_intr_md_from_prsr, \
-              out egress_intrinsic_metadata_for_deparser_t eg_intr_md_for_dprsr",
-              InitializeMirrorIOSelectTest::tofino_shell_egress_parser_params_marker(), expected);
-}
-#endif  // HAVE_CLOUDBREAK
 
 // Keep definition of RUN_CHECK local for unity builds.
 #undef RUN_CHECK

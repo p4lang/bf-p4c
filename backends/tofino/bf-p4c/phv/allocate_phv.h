@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #ifndef BF_P4C_PHV_ALLOCATE_PHV_H_
 #define BF_P4C_PHV_ALLOCATE_PHV_H_
 
@@ -491,21 +503,6 @@ class CoreAllocation {
     /// @look for ARA inits in set of slices
     bool hasARAinits(ordered_set<PHV::AllocSlice> slices) const;
 
-#ifdef HAVE_FLATROCK
-    /**
-     * Flatrock-specific constraint:
-     * All extractions within parser extract group must be into fields of a single header.
-     * E.g. B0, B1, B2, and B3 need to extract fields of a single header. So do H0 and H1;
-     * H2 and H3, etc.
-     * @param alloc Information about per-container allocation. Used to look at the other
-     *              containers in the same parser extract group.
-     * @param slice Slice to check the constraints against.
-     * @returns constraints check status
-     */
-    bool satisfies_parser_extract_group_constraints(
-        const PHV::Allocation& alloc,
-        const PHV::AllocSlice& slice) const;
-#endif  // HAVE_FLATROCK
 
     /// @returns true if slice list<-->container constraints are satisfied.
     bool satisfies_constraints(std::vector<PHV::AllocSlice> slices,

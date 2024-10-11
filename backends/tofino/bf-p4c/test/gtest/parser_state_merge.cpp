@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 /*
  * Tests related to the merging of parser states.
  */
@@ -228,7 +240,6 @@ Switch(pipe) main;)";
 }
 
 /*
- * JIRA-DOC: P4C-4281:
  *           state parse_seg_list could mistakenly be merged because
  *           the loop created along with state parse_segment was
  *           overlooked in the code.  This test makes sure this
@@ -352,7 +363,6 @@ Switch(pipe) main;
 }
 
 /**
- * JIRA-DOC: P4C-3970:
  * This test checks that correct state is dumped in phv.json for header fields
  * in case the state which they are extracted in is merged.
  */

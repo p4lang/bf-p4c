@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include <functional>
 #include "bf-p4c/common/utils.h"
 #include "bf-p4c/device.h"
@@ -12,7 +24,6 @@
 
 namespace Tofino {
 // Despite the namespace name, this code is shared for Tofino and JBay (Tofino 1/2)
-// TOF3-DOC: It is also shared by Cloudbreak (Tofino 3)
 
 static const char *use_type_to_str[] = {
     "EXACT", "ATCAM", "TERNARY", "GATEWAY", "TIND", "IDLETIME",
@@ -2466,7 +2477,6 @@ bool Memories::overflow_possible(const SRAM_group *candidate, const SRAM_group *
         available_rams -= curr_oflow->left_to_place();
         // Need to guarantee that there is enough color maprams for meters, as this will
         // take some potential RAM space for other RAMs.
-        // JIRA-DOC: Came up in P4C-2664
         if (curr_oflow->type == SRAM_group::METER) {
             available_rams -= curr_oflow->cm.left_to_place();
         }
@@ -3587,8 +3597,6 @@ bool Memories::allocate_all_swbox_users() {
                     // problem in Memories::can_be_placed_in_half where it either incorrectly
                     // computes the number of availble memories in the half, or doesn't
                     // consider interactions between multiple tables.
-                    // JIRA-DOC: The example in
-                    // JIRA-DOC: P4C-3205 has both a selector and a register in the stage.
                     // As a stopgap, we just fail memory allocation instead of aborting
                     failure_reason = "syth2port failed over center on jbay"_cs;
                     LOG4(failure_reason);
@@ -3628,7 +3636,6 @@ Memories::table_alloc *Memories::find_corresponding_exact_match(cstring name) {
 }
 
 bool Memories::gw_search_bus_fit(table_alloc *ta, table_alloc *exact_ta, int row, int col) {
-    // JIRA-DOC: P4C-2211:
     // Proxy Hash Tables cannot share a search bus with a gateway, as the input
     // from the xbar cannot be merged onto the same bus.  See uArch 6.2.3. Exact Match Row
     // Vertical/Horizontal (VH) XBars
@@ -3871,7 +3878,6 @@ uint64_t Memories::determine_payload(table_alloc *ta) {
         // match table, which is not the case when we're just using a payload to
         // supply an invalid match address to avoid running a direct table
         // this needs cleaning up
-        // JIRA-DOC: (P4C-2938)
     } else if (!ta->format_type.matchThisStage()) {
         // FIXME -- running a split attached table -- the address comes from hash_dist
         // if part of the action needs immed data (from match or tind), that would have to

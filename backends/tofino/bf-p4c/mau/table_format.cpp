@@ -1,12 +1,21 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include "table_format.h"
 #include "gateway.h"
 #include "hash_mask_annotations.h"
 #include "lib/dyn_vector.h"
 #include "memories.h"
 #include "tofino/input_xbar.h"
-#ifdef HAVE_FLATROCK
-#include "bf-p4c/mau/flatrock/table_format.h"
-#endif
 
 void ByteInfo::InterleaveInfo::dbprint(std::ostream &out) const {
     if (!interleaved) return;
@@ -258,7 +267,7 @@ bool TableFormat::analyze_layout_option() {
  */
 void TableFormat::analyze_proxy_hash_option(int per_RAM) {
     auto *tphi = dynamic_cast<const Tofino::IXBar::Use *>(proxy_hash_ixbar);
-    if (!tphi) return;  // TODO for flatrock
+    if (!tphi) return;
     auto &ph = tphi->proxy_hash_key_use;
     BUG_CHECK(ph.allocated, "%s: Proxy Hash Table %s does not have an allocation for a proxy "
               "hash key", tbl->srcInfo, tbl->name);
@@ -555,13 +564,6 @@ bool TableFormat::find_format(Use *u) {
     }
     redistribute_next_table();
 
-#ifdef HAVE_FLATROCK
-    if (Device::currentDevice() == Device::FLATROCK) {
-        verify();
-        LOG2("SRAM Table format is successful");
-        return true;
-    }
-#endif
 
     LOG3("Build match group map");
     if (!build_match_group_map())
@@ -757,8 +759,6 @@ bitvec TableFormat::bitvec_necessary(type_t type) const {
         else
             BUG("Unreachable");
     } else if ((type == VALID) && requires_valid_bit()) {
-        // TOF5-DOC: Flatrock check required as the overhead_bits_necessary() call will otherwise
-        // TOF5-DOC: allocate bits for valid in non flatrock backends
         rv.setrange(0, 1);  // Single valid bit
     }
     return rv;
@@ -1491,7 +1491,6 @@ void TableFormat::classify_match_bits() {
  *  It would be optimal to ghost off the 3 3 bit fields, and the 1 bit fields, as it would remove
  *  4 total PHV bytes to match on.
  *
- *  JIRA-DOC: P4C-4958:
  *            Ghost bits selection now considers the mask specified with the @hash_mask
  *            annotation: bits that are masked off through the annotation are not selected
  *            to be part of ghost bits.
@@ -2938,11 +2937,6 @@ void TableFormat::verify() {
 TableFormat* TableFormat::create(const LayoutOption &l, const IXBar::Use *mi, const IXBar::Use *phi,
         const IR::MAU::Table *t, const bitvec im, bool gl, FindPayloadCandidates &fpc,
         const PhvInfo &phv) {
-#ifdef HAVE_FLATROCK
-    if (Device::currentDevice() == Device::FLATROCK) {
-        return new Flatrock::TableFormat(l, mi, phi, t, im, gl, fpc, phv);
-    }
-#endif
     return new TableFormat(l, mi, phi, t, im, gl, fpc, phv);
 }
 

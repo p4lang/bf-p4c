@@ -1,13 +1,25 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include "bf-p4c/midend/type_checker.h"
 
 namespace BFN {
 
 // Overrides the setTypeType method in base classes.
-const P4::IR::Type* TypeInference::setTypeType(const P4::IR::Type* type, bool learn) {
+const IR::Type* TypeInference::setTypeType(const IR::Type* type, bool learn) {
     if (done()) return type;
-    const P4::IR::Type* typeToCanonicalize;
+    const IR::Type* typeToCanonicalize;
     if (readOnly)
-        typeToCanonicalize = getOriginal<P4::IR::Type>();
+        typeToCanonicalize = getOriginal<IR::Type>();
     else
         typeToCanonicalize = type;
     auto canon = canonicalize(typeToCanonicalize);
@@ -20,7 +32,7 @@ const P4::IR::Type* TypeInference::setTypeType(const P4::IR::Type* type, bool le
             if (errorCount() > e)
                 return nullptr;
         }
-        auto tt = new P4::IR::Type_Type(canon);
+        auto tt = new IR::Type_Type(canon);
         setType(getOriginal(), tt);
         setType(type, tt);
     }
@@ -30,63 +42,61 @@ const P4::IR::Type* TypeInference::setTypeType(const P4::IR::Type* type, bool le
 /**
  * IR class to represent sign conversion from bit<n> to int<n>, or vice versa.
  */
- /*
-const P4::IR::Node* TypeInference::postorder(P4::IR::BFN::ReinterpretCast *expression) {
+const IR::Node* TypeInference::postorder(IR::BFN::ReinterpretCast *expression) {
     if (done()) return expression;
-    const P4::IR::Type* sourceType = getType(expression->expr);
-    const P4::IR::Type* castType = getTypeType(expression->destType);
+    const IR::Type* sourceType = getType(expression->expr);
+    const IR::Type* castType = getTypeType(expression->destType);
     if (sourceType == nullptr || castType == nullptr)
         return expression;
 
-    if (!castType->is<P4::IR::Type_Bits>() &&
-        !castType->is<P4::IR::Type_Boolean>() &&
-        !castType->is<P4::IR::Type_Newtype>() &&
-        !castType->is<P4::IR::Type_SerEnum>()) {
+    if (!castType->is<IR::Type_Bits>() &&
+        !castType->is<IR::Type_Boolean>() &&
+        !castType->is<IR::Type_Newtype>() &&
+        !castType->is<IR::Type_SerEnum>()) {
         error("%1%: cast not supported", expression->destType);
         return expression;
     }
     setType(expression, castType);
     setType(getOriginal(), castType);
     return expression;
-}*/
+}
 
 /**
  * IR class to represent the sign extension for int<n> type.
  */
- /*
-const P4::IR::Node* TypeInference::postorder(P4::IR::BFN::SignExtend *expression) {
+const IR::Node* TypeInference::postorder(IR::BFN::SignExtend *expression) {
     if (done()) return expression;
-    const P4::IR::Type* sourceType = getType(expression->expr);
-    const P4::IR::Type* castType = getTypeType(expression->destType);
+    const IR::Type* sourceType = getType(expression->expr);
+    const IR::Type* castType = getTypeType(expression->destType);
     if (sourceType == nullptr || castType == nullptr)
         return expression;
-    if (!castType->is<P4::IR::Type_Bits>()) {
+    if (!castType->is<IR::Type_Bits>()) {
         error("%1%: cast not supported", expression->destType);
         return expression;
     }
     setType(expression, castType);
     setType(getOriginal(), castType);
     return expression;
-}*/
+}
 
-const P4::IR::Node* TypeInference::postorder(P4::IR::Member* expression) {
+const IR::Node* TypeInference::postorder(IR::Member* expression) {
     if (done()) return expression;
     auto type = getType(expression->expr);
     if (type == nullptr)
         return expression;
     cstring member = expression->member.name;
-    if (type->is<P4::IR::Type_StructLike>()) {
-        if (type->is<P4::IR::Type_Header>() || type->is<P4::IR::Type_HeaderUnion>()) {
+    if (type->is<IR::Type_StructLike>()) {
+        if (type->is<IR::Type_Header>() || type->is<IR::Type_HeaderUnion>()) {
             if (member == "$valid") {
                 // Built-in method
-                auto type = P4::IR::Type::Bits::get(1);
+                auto type = IR::Type::Bits::get(1);
                 auto ctype = canonicalize(type);
                 if (ctype == nullptr)
                     return expression;
                 setType(getOriginal(), ctype);
                 setType(expression, ctype);
                 setLeftValue(expression);
-                setLeftValue(getOriginal<P4::IR::Expression>());
+                setLeftValue(getOriginal<IR::Expression>());
                 return expression;
             }
         }

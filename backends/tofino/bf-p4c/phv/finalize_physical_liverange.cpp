@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include "bf-p4c/phv/finalize_physical_liverange.h"
 #include <sstream>
 #include <utility>
@@ -437,9 +449,6 @@ void FinalizePhysicalLiverange::end_apply() {
 
     // Temporarily disabled (print warnings instead of BUG_CHECK),
     // because post-table-placement table-mutex pass seems to be incorrect.
-    // JIRA-DOC: In barefoot_academy/p4c-2756.p4, it complains about
-    // JIRA-DOC: table ipv6_lpm_0 reads ... stage 1, while table ipv6_host_0 writes ... stage 0
-    // JIRA-DOC: but in P4 codes, they are mutex.
     // if (!ipv6_host.apply().hit) {
     //     ipv6_lpm.apply();
     // }

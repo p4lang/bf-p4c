@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #ifndef EXTENSIONS_BF_P4C_PARDE_LOWERED_COMPUTE_LOWERED_DEPARSER_IR_H_
 #define EXTENSIONS_BF_P4C_PARDE_LOWERED_COMPUTE_LOWERED_DEPARSER_IR_H_
 
@@ -15,9 +27,6 @@ namespace Parde::Lowered {
 /// high-level deparser IR into references to containers.
 struct ComputeLoweredDeparserIR : public DeparserInspector {
     ComputeLoweredDeparserIR(const PhvInfo& phv, const ClotInfo& clotInfo
-#ifdef HAVE_FLATROCK
-                             , const IR::Vector<IR::BFN::ContainerRef>* pov_flags_refs = nullptr
-#endif
                              )
         : phv(phv),
           clotInfo(clotInfo),
@@ -25,9 +34,6 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
           lastSharedUnit(0),
           nested_unit(0),
           normal_unit(4)
-#ifdef HAVE_FLATROCK
-          , pov_flags_refs(pov_flags_refs)
-#endif
     {
         igLoweredDeparser = new IR::BFN::LoweredDeparser(INGRESS);
         egLoweredDeparser = new IR::BFN::LoweredDeparser(EGRESS);
@@ -78,9 +84,6 @@ struct ComputeLoweredDeparserIR : public DeparserInspector {
     unsigned lastSharedUnit;
     unsigned nested_unit;
     unsigned normal_unit;
-#ifdef HAVE_FLATROCK
-    const IR::Vector<IR::BFN::ContainerRef>* pov_flags_refs;
-#endif
 };
 
 }  // namespace Parde::Lowered

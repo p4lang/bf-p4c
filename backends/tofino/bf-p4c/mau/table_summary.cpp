@@ -1,4 +1,16 @@
 /**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
+/**
  * \defgroup backtracking_phv_allocation_and_table_placement \
  *   Backtracking in PHV allocation and table placement
  * \brief Description of %PHV allocation and table placement phases of compilation
@@ -183,12 +195,6 @@ bool TableSummary::preorder(const IR::MAU::Table *t) {
             addPlacementError(t->toString() + " not placed");
         return true; }
     int gid = *t->global_id();
-#if HAVE_FLATROCK
-    // FIXME -- on flatrock, ingress and egress have independent ids, so the gids are
-    // not unique.  To work around this, we or egress ids with 0x10000 to make them distinct
-    if (Device::currentDevice() == Device::FLATROCK && t->gress == EGRESS)
-        gid |= 0x10000;
-#endif
     BUG_CHECK(order.count(gid) == 0,
               "Encountering table multiple times in IR traversal");
     assert(order.count(gid) == 0);
@@ -205,10 +211,6 @@ bool TableSummary::preorder(const IR::MAU::Table *t) {
     }
     if (t->resources) {
         int gress = INGRESS;
-#if HAVE_FLATROCK
-        if (!Device::threadsSharePipe(INGRESS, EGRESS))
-            gress = t->thread();
-#endif
         if (!ixbar[gress][t->stage()])
             ixbar[gress][t->stage()].reset(IXBar::create());
         ixbar[gress][t->stage()]->update(t);

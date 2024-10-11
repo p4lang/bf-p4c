@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 /* -*-C++-*- */
 
 #emit
@@ -55,12 +67,6 @@ class Table : BFN::Unit, IAnnotated  {
      * If the gateway inhibits the match_table (gateway_row.second != NULL), then the gateway
      * can also run an action directly, via the payload.  All rows must be the same action on
      * tofino1, but tofino2 allows different actions for different rows.
-     * TOF3-DOC: Tofino3 also allows different actions for different rows.
-     * TOF5-DOC: Tofino5 is odd in that it only allows 1 payload, but up to 4 can be simulated by
-     * TOF5-DOC: using the gateway inhibit index and extracting that as an index into the map
-     * TOF5-DOC: table.  This can only work if the match table (if any) can use the default for
-     * TOF5-DOC: action/params, as there can only be one extract for either case (either extract
-     * TOF5-DOC: the inhibit index or extract the match overhead)
      *
      * The gateway payload key value pair is:
      *     the key corresponds to gateway_row.second which inhibits the table.  These also
@@ -132,11 +138,11 @@ class Table : BFN::Unit, IAnnotated  {
         bool  has_range                    = false;
         bool  proxy_hash                   = false;
         bool  requires_versioning          = true;
-        bool  is_lamb                      = false;  // Tofino5 specific
-        bool  is_direct                    = false;  // Tofino5 specific
-        bool  is_local_tind                = false;  // Tofino5 specific
-        int   entries_per_set              = 0;      // Tofino5 specific
-        int   sets_per_word                = 0;      // Tofino5 specific
+        bool  is_lamb                      = false;
+        bool  is_direct                    = false;
+        bool  is_local_tind                = false;
+        int   entries_per_set              = 0;
+        int   sets_per_word                = 0;
         int   ixbar_bytes                  = 0;
         int   match_bytes                  = 0;
         int   ixbar_width_bits             = 0;
@@ -366,6 +372,8 @@ class Table : BFN::Unit, IAnnotated  {
 #nooperator==
 #emit
     bool operator==(const Table &a) const override;
+    bool operator==(const IR::BFN::Unit &a) const override { return a == *this; }
+    bool operator==(const IR::Node &a) const override { return a == *this; }
 #end
     cstring get_table_type_string() const;
     bool uses_gateway() const { return !gateway_rows.empty(); }

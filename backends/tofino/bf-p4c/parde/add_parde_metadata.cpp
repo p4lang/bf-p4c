@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include "bf-p4c/parde/add_parde_metadata.h"
 #include "bf-p4c/arch/bridge_metadata.h"
 #include "bf-p4c/device.h"
@@ -54,11 +66,7 @@ void AddParserMetadata::addTofinoIngressParserEntryPoint(IR::BFN::Parser* parser
     }
 
     // Initialize mirror_type.$valid to 1 to workaround ingress drop issue in tofino2.
-    // TOF3-DOC: Also tofino3.
     if (Device::currentDevice() == Device::JBAY
-#if HAVE_CLOUDBREAK
-        || Device::currentDevice() == Device::CLOUDBREAK
-#endif
         ) {
         // can be disabled with a pragma
         if (!pipe->has_pragma(PragmaDisableI2EReservedDropImplementation::name)) {
@@ -85,33 +93,12 @@ void AddParserMetadata::addTofinoIngressParserEntryPoint(IR::BFN::Parser* parser
         { new IR::BFN::Transition(match_t(), 0, parser->start) });
 }
 
-#if HAVE_FLATROCK
-void AddParserMetadata::addFlatrockIngressParserEntryPoint(IR::BFN::Parser* parser) {
-    // Initialize ingress_intrinsic_metadata_for_tm.$zero to 0
-    auto* igTmMeta = getMetadataType(pipe, "ingress_intrinsic_metadata_for_tm");
-    CHECK_NULL(igTmMeta);
-    auto zeroVar = new IR::BFN::FieldLVal(
-        new IR::TempVar(IR::Type::Bits::get(8), true, igTmMeta->name + ".$zero"));
-    auto prim = new IR::Vector<IR::BFN::ParserPrimitive>(
-        { new IR::BFN::Extract(zeroVar, new IR::BFN::ConstantRVal(0)) });
-
-    parser->start = new IR::BFN::ParserState(createThreadName(parser->gress, "$entry_point"_cs),
-        parser->gress, *prim, { }, { new IR::BFN::Transition(match_t(), 0, parser->start) });
-}
-#endif  // HAVE_FLATROCK
 
 void AddParserMetadata::addIngressMetadata(IR::BFN::Parser *parser) {
     if (Device::currentDevice() == Device::TOFINO ||
         Device::currentDevice() == Device::JBAY
-#if HAVE_CLOUDBREAK
-        || Device::currentDevice() == Device::CLOUDBREAK
-#endif
     ) {
         addTofinoIngressParserEntryPoint(parser);
-#if HAVE_FLATROCK
-    } else if (Device::currentDevice() == Device::FLATROCK) {
-        addFlatrockIngressParserEntryPoint(parser);
-#endif
     }
 }
 
@@ -153,15 +140,8 @@ void AddParserMetadata::addTofinoEgressParserEntryPoint(IR::BFN::Parser* parser)
 void AddParserMetadata::addEgressMetadata(IR::BFN::Parser *parser) {
     if (Device::currentDevice() == Device::TOFINO ||
         Device::currentDevice() == Device::JBAY
-#if HAVE_CLOUDBREAK
-        || Device::currentDevice() == Device::CLOUDBREAK
-#endif
     ) {
         addTofinoEgressParserEntryPoint(parser);
-#if HAVE_FLATROCK
-    } else if (Device::currentDevice() == Device::FLATROCK) {
-        warning("Parser metadata not implemented for %1%", Device::name());
-#endif
     }
 }
 
@@ -200,19 +180,6 @@ void AddDeparserMetadata::addIngressMetadata(IR::BFN::Deparser *d) {
         addDeparserParamRename(d, dpMeta, f.name, f.asm_name);
     }
 
-#if HAVE_FLATROCK
-    // Create a zero-field to ensure that there's a zero container available to the metadata packer
-    if (Device::currentDevice() == Device::FLATROCK) {
-        auto* tmMeta = getMetadataType(pipe, "ingress_intrinsic_metadata_for_tm"_cs);
-        if (!tmMeta) {
-            warning("ig_intr_md_for_tm not defined in ingress control block");
-        } else {
-            auto* zeroVar = new IR::TempVar(IR::Type::Bits::get(8), true, tmMeta->name + ".$zero");
-            auto* param = new IR::BFN::DeparserParameter("zero"_cs, zeroVar);
-            d->params.push_back(param);
-        }
-    }
-#endif  /* HAVE_FLATROCK */
 }
 
 void AddDeparserMetadata::addEgressMetadata(IR::BFN::Deparser *d) {

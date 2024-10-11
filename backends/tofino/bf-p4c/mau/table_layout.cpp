@@ -1,7 +1,16 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include "bf-p4c/mau/table_layout.h"
-#ifdef HAVE_FLATROCK
-#include "bf-p4c/mau/flatrock/table_layout.h"
-#endif
 #include <math.h>
 
 #include <set>
@@ -77,11 +86,6 @@ Visitor::profile_t DoTableLayout::init_apply(const IR::Node *root) {
 }
 
 LayoutChoices* LayoutChoices::create(PhvInfo &p, const ReductionOrInfo &ri, SplitAttachedInfo &a) {
-#if HAVE_FLATROCK
-    // FIXME -- add Device::newLayoutChoices() method?
-    if (Device::currentDevice() == Device::FLATROCK)
-        return new Flatrock::LayoutChoices(p, ri, a);
-#endif
     return new LayoutChoices(p, ri, a);
 }
 
@@ -296,11 +300,6 @@ void DoTableLayout::check_for_proxy_hash(IR::MAU::Table::Layout &layout,
 }
 
 bool DoTableLayout::check_for_versioning(const IR::MAU::Table *tbl) {
-#ifdef HAVE_FLATROCK
-    // No version bits in Flatrock
-    if (Device::currentDevice() == Device::FLATROCK)
-        return false;
-#endif
 
     if (!tbl->match_table)
         return false;
@@ -488,12 +487,7 @@ void DoTableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR:
                     "proxy hash table for table %1%. Cannot be ternary.", tbl);
     }
 
-#ifdef HAVE_FLATROCK
-    if (!layout.requires_versioning && !layout.ternary
-            && Device::currentDevice() != Device::FLATROCK)
-#else
     if (!layout.requires_versioning && !layout.ternary)
-#endif
         error("%1%: Tables, such as %2% that do not require versioning must be allocated to "
                 "the TCAM array", tbl, tbl->name);
 
@@ -538,13 +532,7 @@ void DoTableLayout::setup_match_layout(IR::MAU::Table::Layout &layout, const IR:
         check_atcam_parameters(layout, tbl, partition_found, partition_index);
     }
 
-#ifdef HAVE_FLATROCK
-    // Ghost bits are decided based on direct / cuckoo lookup later
-    if (!layout.ternary && !layout.atcam && !layout.proxy_hash
-            && !(Device::currentDevice() == Device::FLATROCK)) {
-#else
     if (!layout.ternary && !layout.atcam && !layout.proxy_hash) {
-#endif
         int ghost_bits_left = layout.get_ram_ghost_bits();
         std::sort(byte_sizes.begin(), byte_sizes.end());
         for (auto byte_size : byte_sizes) {
@@ -911,8 +899,6 @@ bool DoTableLayout::can_be_hash_action(const IR::MAU::Table *tbl, std::string &r
 
     /* this doesnt have to be a power of 2. This check is mostly
      * to make the driver happy.
-     * JIRA-DOC: Here's a JIRA for the driver to
-     * JIRA-DOC: fix this constraint: https://barefootnetworks.atlassian.net/browse/DRV-2116
      */
     if (entries != pow(2, tbl->layout.ixbar_width_bits)) {
         reason = "the size is not 2^(key bits)";
@@ -1371,11 +1357,6 @@ void AssignCounterLRTValues::ComputeLRT::calculate_lrt_threshold_and_interval(
                 } } } }
     }
     if (rams == 0) {
-#if HAVE_FLATROCK
-        // FIXME -- allocation TBD on flatrock -- skip error here for now
-        if (Device::currentDevice() == Device::FLATROCK)
-            return;
-#endif  /* HAVE_FLATROCK */
         error(ErrorType::ERR_NOT_FOUND,
                 "Unable to find memory allocation for counter %1% that was "
                 "accessed by %2%", cntr->name, tbl->externalName());
@@ -1642,7 +1623,6 @@ bool CheckPlacementPriorities::preorder(const IR::MAU::Table *tbl) {
 
 /**
  * TODO: the placement_priorities could use a check for a cycle
- * JIRA-DOC: P4C-2256
  */
 void CheckPlacementPriorities::end_apply() {
     if (run_once)

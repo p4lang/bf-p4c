@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #ifndef EXTENSIONS_BF_P4C_PHV_ANALYSIS_MUTEX_OVERLAY_H_
 #define EXTENSIONS_BF_P4C_PHV_ANALYSIS_MUTEX_OVERLAY_H_
 
@@ -227,7 +239,6 @@ class ExcludeDeparserOverlays : public Inspector {
  *  checksum engine cannot dynamically predicate entries based on header
  *  validity.  Instead, it relies on the PHV Validity bit.
  *
- *  JIRA-DOC: P4C-3064:
  *  Avoid overlay of checksum fields with other fields that may be
  *  present. The pass was updated to detect if checksum source field might come
  *  from a new header being added in MAU. In that case, all of the checksum
@@ -247,7 +258,6 @@ class ExcludeCsumOverlays : public Inspector {
 
 /** For checksums that rely on POV bits (Tofino2), make sure that none of
  *  the source fields are mutually exclusive with each other.
- *  TOF3-DOC: Also Tofino 3.
  *
  *  Note that source fields in POV-based checksums can be mutually exclusive
  *  with fields that are not used in checksums or that are used in a different
@@ -296,10 +306,6 @@ class MutexOverlay : public PassManager {
             exclude_csum_overlays = new ExcludeCsumOverlays(phv, addedFields, use);
         } else if (Device::currentDevice() == Device::JBAY) {
             exclude_csum_overlays = new ExcludeCsumOverlaysPOV(phv, addedFields, use);
-#if HAVE_CLOUDBREAK
-        } else if (Device::currentDevice() == Device::CLOUDBREAK) {
-            exclude_csum_overlays = new ExcludeCsumOverlaysPOV(phv, addedFields, use);
-#endif
         }
 
         addPasses({

@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include <z3++.h>
 #include <algorithm>
 #include <cstring>
@@ -1866,7 +1878,6 @@ bool findFlexibleAnnotation(const IR::Type_StructLike* header) {
     return false;
 }
 
-// JIRA-DOC: XXX(Deep): BRIG-333
 // We can do better with these IR::BFN::DeparserParameters in terms of packing. This IR type is only
 // used to represent intrinsic metadata in ingress and egress at the moment. As noted in the
 // comments in line 698 in phv_fields.cpp, the constraints on bottom_bit for some of these TM
@@ -1874,7 +1885,6 @@ bool findFlexibleAnnotation(const IR::Type_StructLike* header) {
 // bypass_egress to any bit in a byte. The implication for bridge metadata packing is that
 // bypass_egress could be packed with any field anywhere. There are a few other TM metadata with the
 // same property: ct_disable, ct_mcast, qid, icos, meter_color, deflect_on_drop, copy_to_cpu_cos.
-// JIRA-DOC: BRIG-333 is tracking this issue.
 bool GatherDeparserParameters::preorder(const IR::BFN::DeparserParameter* p) {
     BUG_CHECK(p->source, "Parameter %1% missing source", p->name);
     const PHV::Field* f = phv.field(p->source->field);

@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #ifndef BF_P4C_PHV_V2_ALLOCATOR_BASE_H_
 #define BF_P4C_PHV_V2_ALLOCATOR_BASE_H_
 
@@ -196,7 +208,6 @@ class AllocatorBase {
     /// - Skip containers of the same type (kind and size) if an empty container cannot be allocated
     /// - Skip containers of the same equivalence class which have been tried before
     /// NOTE: Above pruning improves phv compilation times by 10x in some cases
-    /// JIRA-DOC: (P4C-5184)
     SomeContScopeAllocResult try_slices_to_container_group(
         const ScoreContext& ctx,
         const Allocation& alloc,

@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #ifndef BF_P4C_MAU_TABLE_FORMAT_H_
 #define BF_P4C_MAU_TABLE_FORMAT_H_
 
@@ -51,7 +63,7 @@ struct TableFormat {
     static constexpr int OVERHEAD_BITS = 64;
     static constexpr int SINGLE_RAM_BITS = 128;
     static constexpr int SINGLE_RAM_BYTES = 16;
-    static constexpr int MAX_GROUPS_PER_LAMB = 4;  // Tofino5 specific
+    static constexpr int MAX_GROUPS_PER_LAMB = 4;
     static constexpr int RAM_GHOST_BITS = IXBar::RAM_LINE_SELECT_BITS;
     static constexpr int GATEWAY_BYTES = 4;
     static constexpr int VERSION_BYTES = 14;

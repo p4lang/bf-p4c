@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #ifndef BF_P4C_MAU_RESOURCE_ESTIMATE_H_
 #define BF_P4C_MAU_RESOURCE_ESTIMATE_H_
 
@@ -13,7 +25,7 @@ struct StageUseEstimate {
     static constexpr int MAX_WAYS = 8;
     static constexpr int MAX_METER_ALUS = 4;
     static constexpr int MAX_STATS_ALUS = 4;
-    static constexpr int MAX_LOCAL_TINDS = 16;  // Tofino5 specific
+    static constexpr int MAX_LOCAL_TINDS = 16;
     // FIXME: This is a quick workaround that will need to change as the tables need to expand
     static constexpr int MAX_DLEFT_HASH_SIZE = 23;
     static constexpr int COMPILER_DEFAULT_SELECTOR_POOLS = 4;
@@ -26,7 +38,7 @@ struct StageUseEstimate {
     int logical_ids = 0;
     int srams = 0;
     int tcams = 0;
-    int local_tinds = 0;  // Tofino5 specific
+    int local_tinds = 0;
     int maprams = 0;
     int exact_ixbar_bytes = 0;
     int ternary_ixbar_groups = 0;

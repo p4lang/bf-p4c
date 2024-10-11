@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include "bf-p4c/mau/instruction_selection.h"
 
 #include <sstream>
@@ -784,7 +796,6 @@ bool DoInstructionSelection::equiv(const IR::Expression *a, const IR::Expression
 }
 
 void DoInstructionSelection::limitWidth(const IR::Expression *e) {
-    // JIRA-DOC: P4C-2694
     // Verify that the operation width is less than the maximum container width.
     // Required for instructions that can't be split without rewriting the
     // instruction.
@@ -924,7 +935,6 @@ const IR::Expression *DoInstructionSelection::postorder(IR::SubSat *e) {
     }
     limitWidth(e);
 
-    // JIRA-DOC: P4C-1819
     // Compiler generates an invalid instruction here for saturated unsigned
     // subtract with a constant value as src2 which is unsupported in
     // Tofino/JBAY.

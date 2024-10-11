@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #ifndef BF_P4C_IR_IR_ENUMS_H_
 #define BF_P4C_IR_IR_ENUMS_H_
 
@@ -12,7 +24,6 @@ enum class MeterType { UNUSED = 0,
     // we use explicit constants here to map to the meter types defined by hardware
     // these are (currently) consistent across tofino1/2, but perhaps should be
     // moved to the Device model
-    // TOF3-DOC: Also tofino3
     COLOR_BLIND = 2, SELECTOR = 4, COLOR_AWARE = 6,
     STFUL_INST0 = 1, STFUL_INST1 = 3, STFUL_INST2 = 5, STFUL_INST3 = 7,
     STFUL_CLEAR = 6,

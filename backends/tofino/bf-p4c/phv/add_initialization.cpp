@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include "bf-p4c/phv/add_initialization.h"
 #include "boost/optional/optional_io.hpp"
 
@@ -318,7 +330,6 @@ void ComputeDarkInitialization::createAlwaysRunTable(PHV::AllocSlice& alloc_sl) 
 
         // Using dependency graph min_stage() instead of PhvInfo::minStage()
         //        due to corner case
-        //        JIRA-DOC: hit in P4C-3522
         auto minStg = dg.min_stage(tbl);
         prior_max_stage = std::max(prior_max_stage, minStg);
     }
@@ -477,7 +488,6 @@ void ComputeDarkInitialization::end_apply() {
     // the spilling part of dark overlays. The main reason is program
     // p4-tests/p4-programs/internal_p4_14/basic_ipv4/basic_ipv4.p4
     // which uses '--placement pragma' and '@pragma stage * 'for most tables
-    // JIRA-DOC: P4C-3079 is filed to modify the program to not reuire these pragmas.
     bool forcedPlacement = BackendOptions().forced_placement;
 
     for (auto& f : phv) {

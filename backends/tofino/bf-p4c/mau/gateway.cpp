@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include "gateway.h"
 #include <deque>
 #include "split_gateways.h"
@@ -37,39 +49,6 @@ const Device::GatewaySpec &JBayDevice::getGatewaySpec() const {
     };
     return spec; }
 #endif
-#if HAVE_CLOUDBREAK
-const Device::GatewaySpec &CloudbreakDevice::getGatewaySpec() const {
-    static const Device::GatewaySpec spec = {
-        /* .PhvBytes = */       4,
-        /* .HashBits = */       12,
-        /* .PredicateBits = */  0,
-        /* .MaxRows = */        4,
-        /* .SupportXor = */     true,
-        /* .SupportRange = */   true,
-        /* .ExactShifts = */    5,
-        /* .ByteSwizzle = */    true,
-        /* .PerByteMatch = */   0,
-        /* .XorByteSlots = */   0xf0,
-    };
-    return spec; }
-#endif
-#if HAVE_FLATROCK
-const Device::GatewaySpec &FlatrockDevice::getGatewaySpec() const {
-    static const Device::GatewaySpec spec = {
-        /* .PhvBytes = */       13,     // 8 vector + 5 fixed
-        /* .HashBits = */       0,
-        /* .PredicateBits = */  0,      // gone?
-        /* .MaxRows = */        24,
-        /* .SupportXor = */     true,
-        /* .SupportRange = */   false,
-        /* .ExactShifts = */    4,
-        /* .ByteSwizzle = */    false,
-        /* .PerByteMatch = */   8,
-        /* .XorByteSlots = */   0xf0,
-    };
-    return spec;
-}
-#endif  /* HAVE_FLATROCK */
 
 class CanonGatewayExpr::NeedNegate : public Inspector {
     bool        rv = false;
@@ -1248,16 +1227,7 @@ bool BuildGatewayMatch::preorder(const IR::MAU::TypedPrimitive *prim) {
     return false;
 }
 
-#if HAVE_FLATROCK
-/** Check that a byte match is compatible with other byte matches that are in the
- *  same byte of the gateway for Flatrock.  If it is not, return false, causing the
- *  caller to do a don't-care match on this byte.  If it is, add the new bits to the
- *  byte match and *remove* them from the overall field match (so later matches against
- *  the same field byte in different bytes of the gateway will be don't care)
- */
-#else
 /** Unused */
-#endif  /* HAVE_FLATROCK */
 bool BuildGatewayMatch::check_per_byte_match(const std::pair<int, le_bitrange> &byte,
                                              big_int mask, big_int val) {
     BUG_CHECK((byte.first % 8) + byte.second.size() <= 8, "match crosses byte boundary");

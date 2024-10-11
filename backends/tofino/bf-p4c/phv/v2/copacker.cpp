@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include "bf-p4c/phv/v2/copacker.h"
 
 #include <optional>
@@ -318,7 +330,7 @@ CoPacker::CoPackHintOrErr CoPacker::gen_move_copack(const Allocation& allocated_
         }
         LOG5("Found move (dest, src) pair: "
              << dest << " = " << src_fs.shortString() << "@"
-             << (src_container ? cstring::to_cstring(*src_container) : "*")
+             << (src_container != std::nullopt ? cstring::to_cstring(*src_container) : "*")
              << "[" << src_start_idx << ":" << src_start_idx + src_fs.size() - 1 << "]");
         // compute number of bits that source will be right shifted, wrap-around considered.
         const int this_src_right_shift_bits =

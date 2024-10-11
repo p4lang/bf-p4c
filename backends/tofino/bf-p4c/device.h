@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #ifndef EXTENSIONS_BF_P4C_DEVICE_H_
 #define EXTENSIONS_BF_P4C_DEVICE_H_
 
@@ -14,12 +26,6 @@
 class Device {
  public:
     enum Device_t { TOFINO, JBAY,
-#if HAVE_CLOUDBREAK
-    CLOUDBREAK,
-#endif
-#if HAVE_FLATROCK
-    FLATROCK,
-#endif
     };
     /**
      * Initialize the global device context for the provided target - e.g.
@@ -311,139 +317,6 @@ class JBayA0Device : public JBayDevice {
     cstring get_name() const override { return "Tofino2A0"_cs; }
 };
 
-#if HAVE_CLOUDBREAK
-class CloudbreakDevice : public Device {
-    const CloudbreakPhvSpec phv_;
-    const CloudbreakPardeSpec parde_;
-    const CloudbreakMauSpec mau_;
-    const CloudbreakMauPowerSpec mau_power_;
-    const CloudbreakArchSpec arch_;
 
- protected:
-#ifdef EMU_OVERRIDE_STAGE_COUNT
-    const int NUM_MAU_STAGES = EMU_OVERRIDE_STAGE_COUNT;
-#else
-    const int NUM_MAU_STAGES = 20;
-#endif
-
- public:
-    CloudbreakDevice() : Device("Tofino3"_cs), phv_(), parde_() {}
-    Device::Device_t device_type() const override { return Device::CLOUDBREAK; }
-    cstring get_name() const override { return "Tofino3"_cs; }
-    int getNumPipes() const override { return 8; }
-    int getNumPortsPerPipe() const override { return 4; }
-    int getNumChannelsPerPort() const override { return 18; }
-    int getNumStages() const override { return NUM_MAU_STAGES; }
-    int getLongBranchTags() const override { return 8; }
-    int getAlwaysRunIMemAddr() const override { return 63; }
-    unsigned getMaxCloneId(gress_t /* gress */) const override { return 16; }
-    gress_t getMaxGress() const override { return GHOST; }
-    unsigned getMaxResubmitId() const override { return 8; }
-    unsigned getMaxDigestId() const override { return 8; }
-    unsigned getMaxDigestSizeInBytes() const override { return (384/8); }
-    int getMirrorTypeWidth() const override { return 4; }
-    int getCloneSessionIdWidth() const override { return 8; }
-    int getQueueIdWidth() const override { return 7; }
-    int getPortBitWidth() const override { return 11; }
-    int getMaxParserMatchBits() const override { return 32; }
-    int getNumMaxChannels() const override {
-        return getNumPipes() * getNumPortsPerPipe() * getNumChannelsPerPort(); }
-
-    const PhvSpec& getPhvSpec() const override { return phv_; }
-    const PardeSpec& getPardeSpec() const override { return parde_; }
-    const GatewaySpec& getGatewaySpec() const override;
-    const StatefulAluSpec& getStatefulAluSpec() const override;
-    const MauSpec& getMauSpec() const override { return mau_; }
-    const MauPowerSpec& getMauPowerSpec() const override { return mau_power_; }
-    const ArchSpec& getArchSpec() const override { return arch_; }
-    bool getIfMemoryCoreSplit() const override { return true; }
-    bool getHasCompareInstructions() const override { return true; }
-    int getNumLogTablesPerStage() const override { return 16; }
-    bool getHasIngressDeparser() const override { return true; }
-    bool getHasEgressParser() const override { return true; }
-    bool getHasGhostThread() const override { return true; };
-    bool getThreadsSharePipe(gress_t, gress_t) const override { return true; }
-    bool getHasMirrorIOSelect() const override { return true; }
-    bool getHasMetadataPOV() const override { return true; }
-    int getSramMinPackEntries() const override { return 1; }
-    int getSramMaxPackEntries() const override { return 9; }
-    int getSramMaxPackEntriesPerRow() const override { return 5; }
-    int getMetaGlobalTimestampStart() const override { return 400; }
-    int getMetaGlobalTimestampLen() const override { return 48; }
-    int getMetaGlobalVersionStart() const override { return 448; }
-    int getMetaGlobalVersionLen() const override { return 32; }
-    int getSramColumnAdjust() const override { return 2; }
-    unsigned int getEgressIntrinsicMetadataMinLen() const override { return 8; }
-};
-#endif /* HAVE_CLOUDBREAK */
-
-#if HAVE_FLATROCK
-class FlatrockDevice : public Device {
-    const FlatrockPhvSpec phv_;
-    const FlatrockPardeSpec parde_;
-    const FlatrockMauSpec mau_;
-    const FlatrockMauPowerSpec mau_power_;
-    const FlatrockArchSpec arch_;
-
- protected:
-#ifdef EMU_OVERRIDE_STAGE_COUNT
-    const int NUM_MAU_STAGES = EMU_OVERRIDE_STAGE_COUNT;
-#else
-    const int NUM_MAU_STAGES = 14;  // ingress stages, egress is 12
-#endif
-
- public:
-    FlatrockDevice() : Device("Tofino5"_cs), phv_(), parde_() {}
-    Device::Device_t device_type() const override { return Device::FLATROCK; }
-    cstring get_name() const override { return "Tofino5"_cs; }
-    int getNumPipes() const override { return 8; }
-    int getNumPortsPerPipe() const override { return 4; }
-    int getNumChannelsPerPort() const override { return 18; }
-    int getNumStages() const override { return NUM_MAU_STAGES; }
-    int getLongBranchTags() const override { return 8; }
-    int getAlwaysRunIMemAddr() const override { return 63; }
-    unsigned getMaxCloneId(gress_t /* gress */) const override { return 16; }
-    gress_t getMaxGress() const override { return GHOST; }
-    unsigned getMaxResubmitId() const override { return 8; }
-    unsigned getMaxDigestId() const override { return 8; }
-    unsigned getMaxDigestSizeInBytes() const override { return (384/8); }
-    int getMirrorTypeWidth() const override { return 4; }
-    int getCloneSessionIdWidth() const override { return 10; }
-    int getQueueIdWidth() const override { return 5; }
-    int getPortBitWidth() const override { return 9; }
-    int getMaxParserMatchBits() const override { return 32; }
-    int getNumMaxChannels() const override {
-        return getNumPipes() * getNumPortsPerPipe() * getNumChannelsPerPort(); }
-
-    const PhvSpec& getPhvSpec() const override { return phv_; }
-    const PardeSpec& getPardeSpec() const override { return parde_; }
-    const GatewaySpec& getGatewaySpec() const override;
-    const StatefulAluSpec& getStatefulAluSpec() const override;
-    const MauSpec& getMauSpec() const override { return mau_; }
-    const MauPowerSpec& getMauPowerSpec() const override { return mau_power_; }
-    const ArchSpec& getArchSpec() const override { return arch_; }
-    bool getIfMemoryCoreSplit() const override { return true; }
-    bool getHasCompareInstructions() const override { return true; }
-    int getNumLogTablesPerStage() const override { return 16; }
-    bool getHasIngressDeparser() const override { return false; }
-    bool getHasEgressParser() const override { return false; }
-    bool getHasGhostThread() const override { return false; /* TBD */ };
-    bool getThreadsSharePipe(gress_t a, gress_t b) const override {
-        // just check bottom bit, as ingress/ghost share a pipe
-        return (a&1) == (b&1); }
-    bool getHasMirrorIOSelect() const override { return false; }
-    // _Some_ flatrock metadata have associated POV bits
-    bool getHasMetadataPOV() const override { return true; }
-    int getSramMinPackEntries() const override { return 1; }
-    int getSramMaxPackEntries() const override { return 4; }
-    int getSramMaxPackEntriesPerRow() const override { return 4; }
-    int getMetaGlobalTimestampStart() const override { return 400; }
-    int getMetaGlobalTimestampLen() const override { return 48; }
-    int getMetaGlobalVersionStart() const override { return 448; }
-    int getMetaGlobalVersionLen() const override { return 32; }
-    int getSramColumnAdjust() const override { return 0; }
-    unsigned int getEgressIntrinsicMetadataMinLen() const override { return 0; }
-};
-#endif /* HAVE_FLATROCK */
 
 #endif /* EXTENSIONS_BF_P4C_DEVICE_H_ */

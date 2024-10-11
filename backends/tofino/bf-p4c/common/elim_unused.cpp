@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include "elim_unused.h"
 #include <string.h>
 #include "bf-p4c/common/ir_utils.h"
@@ -258,35 +270,6 @@ class ElimUnused::Headers : public PardeTransform {
         // We don't need to set a deparser parameter if the field it gets its
         // value from is never set.
         if (param->source && hasdefs) return param;
-#if HAVE_FLATROCK
-        // Keep Flatrock $zero fields -- these are fields that should be zero
-        if (Device::currentDevice() == Device::FLATROCK && param->source) {
-            if (const auto* f = self.phv.field(param->source->field)) {
-                if (f->name.endsWith("$zero")) return param;
-            }
-        }
-        // Keep Flatrock metadata packer valid vector fields
-        // Handle fields without POV bits
-        if (Device::currentDevice() == Device::FLATROCK && param->source && !param->povBit) {
-            if (const auto* f = self.phv.field(param->source->field)) {
-                auto* tmMeta = getMetadataType(pipe, "ingress_intrinsic_metadata_for_tm");
-                std::string fName(f->name.c_str());
-                std::string mdPrefix(tmMeta->name + ".");
-                if (fName.find(mdPrefix) != std::string::npos) {
-                    std::string fName_short = fName.substr(mdPrefix.size());
-                    if (Device::get().pardeSpec().mdpValidVecFieldsSet().count(fName_short))
-                        return param;
-                }
-            }
-        }
-        // MDP - fields with POV bits
-        if (Device::currentDevice() == Device::FLATROCK && !param->sourceReq) {
-            LOG1("ELIM UNUSED deparser parameter " << param << " IN UNIT " <<
-                DBPrint::Brief << findContext<IR::BFN::Unit>() << " but keeping POV");
-            param->source = nullptr;
-            return param;
-        }
-#endif  /* HAVE_FLATROCK */
 
         LOG1("ELIM UNUSED deparser parameter " << param << " IN UNIT " <<
              DBPrint::Brief << findContext<IR::BFN::Unit>());

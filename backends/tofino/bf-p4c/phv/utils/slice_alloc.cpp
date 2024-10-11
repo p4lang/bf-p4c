@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include <iostream>
 #include <sstream>
 #include <boost/optional/optional_io.hpp>
@@ -244,7 +256,6 @@ bool AllocSlice::isLiveAt(int stage, const FieldUse& use) const {
         const int start = min_stage_i.second.isRead() ? min_stage_i.first : min_stage_i.first + 1;
         // TODO: Unfortunately we will still have tail-write field slices (liverange ends with
         // a write), until we implement fieldslice-level defuse and deadcode-elim.
-        // JIRA-DOC: Example case in P4C-4050:
         // ig_mg.hash is set in stage 6 in expresion `hash[31:0] = ipv6_hash.get(***);`,
         // but only the first half-word is ever read in `ig_md.hash[15:0] : selector;`.
         // Then, live range of ig_md.hash[15:0] will be [6w, 6w].

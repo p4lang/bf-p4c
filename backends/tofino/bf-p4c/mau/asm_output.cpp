@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include <map>
 #include <regex>
 #include <string>
@@ -30,12 +42,6 @@
 #include "lib/indent.h"
 #include "lib/stringref.h"
 
-#if HAVE_FLATROCK
-// FIXME -- temp hack for flatrock specific stuff here -- should be removed once we
-// have Flatrock-specific memory allocation
-#include "bf-p4c/mau/flatrock/input_xbar.h"
-#include "bf-p4c/mau/flatrock/asm_output.h"
-#endif
 
 int DefaultNext::id_counter = 0;
 
@@ -480,7 +486,6 @@ void MauAsmOutput::emit_single_alias(std::ostream &out, std::string &sep,
         // Additional aliasing to map locally generated action param names to the p4
         // equivalent. With changes in frontend, all action params
         // will become unique to fix issues with inlining and need this mapping.
-        // JIRA-DOC: see P4C-3644
         if (param->name() != found_arg_name) {
             out << ", " << found_arg_name << param_name_suffix
                 << ": " << param->name() << param_name_suffix;
@@ -1070,9 +1075,6 @@ void MauAsmOutput::emit_table_format(std::ostream &out, indent_t indent,
 #ifdef HAVE_JBAY
     if (Device::currentDevice() == Device::JBAY && gateway) group = 0;
 #endif
-#ifdef HAVE_CLOUDBREAK
-    if (Device::currentDevice() == Device::CLOUDBREAK && gateway) group = 0;
-#endif
 
     for (auto match_group : use.match_groups) {
         int type;
@@ -1556,7 +1558,6 @@ class MauAsmOutput::EmitAction : public Inspector, public TofinoWriteContext {
         // This extra lo has to be printed out because the hash_dist has to understand this as
         // a range from deposit-field, even though the only thing that matters in this source
         // is the first lo, the range of the deposit-field is determined on the destination
-        // JIRA-DOC: See p4c-2153
         else
             out << ".." << lo;
         out << ")";
@@ -1592,7 +1593,6 @@ class MauAsmOutput::EmitAction : public Inspector, public TofinoWriteContext {
         // This extra lo has to be printed out because the hash_dist has to understand this as
         // a range from deposit-field, even though the only thing that matters in this source
         // is the first lo, the range of the deposit-field is determined on the destination
-        // JIRA-DOC: See p4c-2153
         else
             out << ".." << lo;
         out << ")";
@@ -1792,12 +1792,6 @@ class MauAsmOutput::EmitAlwaysRunAction : public MauAsmOutput::EmitAction {
 };
 
 TableMatch* TableMatch::create(const PhvInfo &phv, const IR::MAU::Table *tbl) {
-#ifdef HAVE_FLATROCK
-    if (Device::currentDevice() == Device::FLATROCK) {
-        LOG5("Creating Flatrock::TableMatch");
-        return new Flatrock::TableMatch(phv, tbl);
-    }
-#endif
     return new TableMatch(phv, tbl);
 }
 
@@ -2164,7 +2158,6 @@ void MauAsmOutput::emit_table_context_json(std::ostream &out, indent_t indent,
         if (tbl->layout.alpm && tbl->layout.atcam) {
             // NOTE: Replace with commented code once driver support is in for
             // Tofino2+ archs
-            // JIRA-DOC: Driver JIRA - DRV-4404
             // if (!disable_atomic_modify && BackendOptions().target == "tofino")
             if (!(disable_atomic_modify && BackendOptions().target == "tofino"))
                 out << ", disable_atomic_modify : true";
@@ -2463,7 +2456,6 @@ void MauAsmOutput::emit_atcam_match(std::ostream &out, indent_t indent,
 // validate each resource associated with the pragma as attached to the table
 // actions. A valid resource is directly output in the bfa as a context json
 // node syntax which the assembler plugs in to the match table context json
-// JIRA-DOC: Associated JIRA - P4C-1528
 void MauAsmOutput::emit_indirect_res_context_json(std::ostream &,
         indent_t indent, const IR::MAU::Table *tbl,
         std::stringstream &context_json_entries) const {
@@ -2571,7 +2563,6 @@ void MauAsmOutput::emit_indirect_res_context_json(std::ostream &,
  * This lead to an odd corner case where an action chain table had 7 actions and a gateway
  * attached.  Now, because the all 0th next table entry is unused, a gateway
  * entry can populate that particular entry.  This runs a BUG_CHECK to guarantee this.
- * JIRA-DOC: See P4C-2405.
  *
  * TODO: table_format.cpp must be updated for this to determine the next table requirements for
  * the combination of gateway and match table next table requirements.  Also just put both the
@@ -2645,7 +2636,6 @@ void MauAsmOutput::emit_table_hitmap(std::ostream &out, indent_t indent, const I
                 "%sTable % combined with a gateway has too many next tables",
                 tbl->srcInfo, tbl->externalName());
 
-            ///> JIRA-DOC: Specifically currently for P4C-2405
             if (reserved_entry_0 && unique_gw_next_tables.size() > 0)
                 next_table_map[0] = *unique_gw_next_tables.begin();
         }
@@ -3260,7 +3250,6 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Counter *counter) {
     counter_format(out, counter->type, per_row);
     out << "}" << std::endl;
     // FIXME: Eventually should not be necessary
-    // JIRA-DOC: due to DRV-1856
     auto *ba = findContext<IR::MAU::BackendAttached>();
     if (ba && ba->pfe_location == IR::MAU::PfeLocation::OVERHEAD)
         out << indent << "per_flow_enable: " << "counter_pfe" << std::endl;
@@ -3353,7 +3342,6 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Meter *meter) {
         out << hd_use->unit << ", " << lo << ".." << hi << ")" << std::endl;
 
         // FIXME: Eventually should not be necessar
-        // JIRA-DOC: due to DRV-1856
         out << indent << "color_aware: true" << std::endl;
     }
 
@@ -3376,7 +3364,6 @@ bool MauAsmOutput::EmitAttached::preorder(const IR::MAU::Meter *meter) {
         out << indent << "bytecount_adjust: " << bytecount_adjust << std::endl;
     auto *ba = findContext<IR::MAU::BackendAttached>();
     // FIXME: Eventually should not be necessar
-    // JIRA-DOC: due to DRV-1856
     if (ba && ba->pfe_location == IR::MAU::PfeLocation::OVERHEAD)
         out << indent << "per_flow_enable: " << "meter_pfe" << std::endl;
     return false;

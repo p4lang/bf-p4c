@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #pragma once
 
 #include "bf-p4c/phv/utils/utils.h"
@@ -94,19 +106,15 @@ class ContainerEquivalenceTracker {
     bool wideArith = false;
     bool wideArithLow = false;
     /// For Tofino 2 we need to keep track of parity of 8bit containers & treat W0 specially
-    /// TOF3-DOC: Tofino 3 as well.
-    /// JIRA-DOC: - P4C-3033
     /// In Tofino 2, all extractions happen using 16b extracts. So a 16-bit parser extractor
     /// extracts over a pair of even and odd phv 8-bit containers to perform 8-bit extraction. If
     /// any of 8-bit containers in the pair are in CLEAR_ON_WRITE mode, then both containers will
     /// be cleared everytime an extraction happens. In order to avoid this corruption, if one
     /// container in the pair in in CLEAR_ON_WRITE mode, the other is not used in parser.
     /// Initialized in .cpp.
-    /// JIRA-DOC: - P4C-4589
     /// Due to a hardware limitation on Tofino 2 where PHV container W0 can unexpectedly be
     /// written to at the end of parser with value 0x0000000, W0 can never be set to clear on write,
     /// as this would corrupt the value of the field in this container.
-    /// TOF3-DOC: Tofino 3 as well.
     bool restrictW0;
 };
 

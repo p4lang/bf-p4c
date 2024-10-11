@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include "bfruntime.h"
 #include "bf-p4c/common/utils.h"
 
@@ -872,7 +884,6 @@ BFRuntimeGenerator::addMatchTables(Util::JsonArray* tablesJson) const {
               dupKey.insert(keyName);
             }
 
-            // JIRA-DOC: DRV-3112
             // Make key fields not mandatory, this allows user to use a
             // driver initialized default value (0).
             addKeyField(keyJson, mf.id(), keyName,
@@ -881,7 +892,6 @@ BFRuntimeGenerator::addMatchTables(Util::JsonArray* tablesJson) const {
                         annotations);
         }
         if (needsPriority) {
-            // JIRA-DOC: DRV-3112
             // Make key fields not mandatory, this allows user to use a
             // driver initialized default value (0).
             addKeyField(keyJson, TD_DATA_MATCH_PRIORITY, "$MATCH_PRIORITY"_cs,

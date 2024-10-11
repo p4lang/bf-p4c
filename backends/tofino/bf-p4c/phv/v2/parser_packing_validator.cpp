@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include "bf-p4c/phv/v2/parser_packing_validator.h"
 
 #include "bf-p4c/device.h"
@@ -46,7 +58,6 @@ ParserPackingValidator::get_primitives(const FieldSlice& fs) const {
                     if (auto* dest = checksum->getWriteDest())
                         state_extracts_cache[{state, dest->field}].push_back(checksum);
                 }
-                // JIRA-DOC: TODO: P4C-4689: revisit zeroinit
             }
         }
 
@@ -134,13 +145,6 @@ const AllocError* ParserPackingValidator::will_buf_extract_clobber_the_other(
     // TODO: THIS is not required! BUT there are some P4 tests in our CI
     // that are incorrect: the manual extraction they wrote will corrupt other
     // fields!
-    // JIRA-DOC: Example:
-    // JIRA-DOC: (1) compile_only/p4c-2035-name.p4
-    // JIRA-DOC: cannot pack
-    // JIRA-DOC:     ingress::Bufalo.Quinhagak.Bowden<6>
-    // JIRA-DOC:     ingress::Bufalo.Quinhagak.Madawaska<2>
-    // JIRA-DOC: because the former slice is extracted in state ingress::Lugert
-    // JIRA-DOC: but the latter is not extracted in that state.
     // TODO(yumin): we should disallow these behaviors^, and remove this check,
     // unless there is some fancy way to bypass it?
     if (phv_i.must_alloc_same_container(fs, other_fs)) {

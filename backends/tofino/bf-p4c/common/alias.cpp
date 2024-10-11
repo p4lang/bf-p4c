@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include <sstream>
 #include "bf-p4c/arch/bridge_metadata.h"
 #include "bf-p4c/common/alias.h"
@@ -116,7 +128,6 @@ IR::Node* ReplaceAllAliases::preorder(IR::Expression* expr) {
     // FIXME -- if the target doesn't exist, this is *probably* a HardwareConstrainedField that
     // didn't get identified as such.  We should figure out why that happened and fix it, but
     // if we just ignore it things should work out ok, if sub-optimally.
-    // JIRA-DOC: See P4C-5248
     if (!fieldExpressions.count(replacementField->name)) return expr;
     // BUG_CHECK(fieldExpressions.count(replacementField->name),
     //         "Expression not found %1%", replacementField->name);

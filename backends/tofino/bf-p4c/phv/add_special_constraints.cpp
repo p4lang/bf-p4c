@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include "bf-p4c/arch/bridge_metadata.h"
 #include "bf-p4c/common/utils.h"
 #include "bf-p4c/phv/add_special_constraints.h"
@@ -52,76 +64,6 @@ bool AddSpecialConstraints::preorder(const IR::Cast* cast) {
 }
 
 bool AddSpecialConstraints::preorder(BFN_MAYBE_UNUSED const IR::ConcreteHeaderRef* hr) {
-#ifdef HAVE_FLATROCK
-    if (Device::currentDevice() == Device::FLATROCK) {
-        const auto* ts = hr->type->to<IR::Type_Struct>();
-        const auto* md = hr->ref->to<IR::Metadata>();
-        if (md && ts && ts->name == "ingress_intrinsic_metadata_for_tm_t") {
-            static std::vector<std::string> mdp_vld_vec = {
-                "icrc_enable",
-                "drop",
-                "pgen_trig_vld",
-                "iafc_vld",
-                "lq_vld",
-                "pkt_expan_idx_vld",
-                "ucast_egress_port.$valid",
-                "mcast_grp_b.$valid",
-                "mcast_grp_a.$valid",
-                "mirror_bitmap.$valid",
-                "copy_to_cpu",
-                "perfect_hash_table_id",
-                "enable_mcast_cutthru",
-                "disable_ucast_cutthru",
-                "deflect_on_drop",
-            };
-
-            if (seen_hdr_i.count(md->name)) return true;
-            seen_hdr_i.emplace(md->name);
-
-            LOG3("Adding byte pack constraint for " << md->name);
-            PHV::PackingLayout packing;
-            packing.gress = INGRESS;
-
-            // Add padding if we don't have a multiple of 8b
-            if (8 - (mdp_vld_vec.size() % 8))
-                packing.layout.push_back(
-                    PHV::PackingLayout::FieldRangeOrPadding(8 - (mdp_vld_vec.size() % 8)));
-
-            // Add the fields
-            for (auto mdp_field : mdp_vld_vec) {
-                cstring field_name = md->name + "."_cs + mdp_field;
-                const auto* field = phv_i.field(field_name);
-                // The field function matches suffixes, so make sure we have the field we actually
-                // care about
-                if (field && field->name == field_name) {
-                    LOG5("  Adding: " << field_name);
-                    packing.layout.push_back(PHV::PackingLayout::FieldRangeOrPadding(
-                        {field, le_bitrange(StartLen(0, field->size))}));
-                } else {
-                    LOG5("  Couldn't find: " << field_name);
-                    packing.layout.push_back(PHV::PackingLayout::FieldRangeOrPadding(1));
-                }
-
-                // FIXME: setting ucast_egress_port.$valid fails if the group is assigned to a 16b
-                // container. PHV alloc should handle this automatically.
-                if (mdp_field == "ucast_egress_port.$valid")
-                    pragmas_i.pa_container_sizes().add_constraint(field, {PHV::Size::b8});
-            }
-
-            auto res = pragmas_i.pa_byte_pack().add_compiler_added_packing(packing);
-            if (!res.ok()) error(*res.error);
-
-            // Require 9-16b fields to be in the upper half
-            // FIXME: should the packet_length field be excluded?
-            for (auto& struct_field : ts->fields) {
-                cstring field_name = md->name + "."_cs + struct_field->name;
-                auto* field = phv_i.field(field_name);
-                BUG_CHECK(field, "Couldn't find field: %1%", field_name);
-                if (field->size >= 9 && field->size <= 16) field->set_deparsed_top_bits(true);
-            }
-        }
-    }
-#endif  /* HAVE_FLATROCK */
     return true;
 }
 
@@ -160,7 +102,6 @@ void AddSpecialConstraints::end_apply() {
 
     // The meter hack, all destination of meter color go to 8-bit container if they can't be
     // rotated. This was relaxed from the original constraint.
-    // JIRA-DOC: see P4C-3019.
     for (const auto* f : actions_i.meter_color_dests()) {
         auto* meter_color_dest = phv_i.field(f->id);
         CHECK_NULL(meter_color_dest);

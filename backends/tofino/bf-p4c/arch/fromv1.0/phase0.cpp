@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include "phase0.h"
 
 #include <algorithm>
@@ -14,7 +26,7 @@
 #include "frontends/common/resolveReferences/referenceMap.h"
 #include "frontends/p4/cloner.h"
 #include "frontends/p4/coreLibrary.h"
-#include "frontends/p4/fromv1.0/v1model.h"
+#include "frontends/p4-14/fromv1.0/v1model.h"
 #include "frontends/p4/typeMap.h"
 #include "frontends/p4/typeChecking/typeChecker.h"
 #include "ir/ir.h"
@@ -928,7 +940,6 @@ IR::MethodCallExpression* ConvertPhase0AssignToExtract::generate_phase0_extract_
                                               IR::ID("advance"));
                 unsigned p0Size = static_cast<unsigned>(Device::pardeSpec().bitPhase0Size()
                         + Device::pardeSpec().bitIngressPrePacketPaddingSize());
-                // JIRA-DOC: P4C-3480
                 // Advance extern defined as:
                 // void advance(in bit<32> sizeInBits);
                 auto* a = new IR::Argument(new IR::Constant(IR::Type::Bits::get(32), p0Size));

@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include <cmath>
 #include <fstream>
 #include "bf-p4c/device.h"
@@ -924,7 +936,7 @@ class LoadTargetArchitecture : public Inspector {
             filenames.push_back("tofino1_specs.p4");
             filenames.push_back("tofino1_base.p4");
         }
-#if HAVE_JBAY || HAVE_CLOUDBREAK
+#if HAVE_JBAY
         else {
             filenames.push_back("tofino2_specs.p4");
             filenames.push_back("tofino2_base.p4");

@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include "bf-p4c/mau/mau_spec.h"
 
 #define MAU_SPEC_UNSUPPORTED                                     \
@@ -14,17 +26,6 @@ int TofinoIMemSpec::address_bits() const { return 6; }
 
 int TofinoIMemSpec::map_table_entries() const { return 8; }
 
-#if HAVE_FLATROCK
-int FlatrockIMemSpec::rows() const { return 8; }
-
-int FlatrockIMemSpec::colors() const { return 4; }
-
-int FlatrockIMemSpec::color_bits() const { return 2; }
-
-int FlatrockIMemSpec::address_bits() const { return 5; }
-
-int FlatrockIMemSpec::map_table_entries() const { return 16; }
-#endif
 
 int IXBarSpec::byteGroups() const { MAU_SPEC_UNSUPPORTED }
 
@@ -80,27 +81,6 @@ int IXBarSpec::ternaryBytesPerBigGroup() const { MAU_SPEC_UNSUPPORTED }
 
 int IXBarSpec::tofinoMeterAluByteOffset() const { MAU_SPEC_UNSUPPORTED }
 
-#if HAVE_FLATROCK
-int IXBarSpec::bytesPerWord() const { MAU_SPEC_UNSUPPORTED }
-
-int IXBarSpec::exactBytes() const { MAU_SPEC_UNSUPPORTED }
-
-int IXBarSpec::exactMatchSTMUnits() const { MAU_SPEC_UNSUPPORTED }
-
-int IXBarSpec::exactMatchUnits() const { MAU_SPEC_UNSUPPORTED }
-
-int IXBarSpec::exactWords() const { MAU_SPEC_UNSUPPORTED }
-
-int IXBarSpec::gatewayFixedBytes() const { MAU_SPEC_UNSUPPORTED }
-
-int IXBarSpec::gatewayRows() const { MAU_SPEC_UNSUPPORTED }
-
-int IXBarSpec::gatewayVecBytes() const { MAU_SPEC_UNSUPPORTED }
-
-int IXBarSpec::xcmpBytes() const { MAU_SPEC_UNSUPPORTED }
-
-int IXBarSpec::xcmpWords() const {MAU_SPEC_UNSUPPORTED }
-#endif
 
 IR::Node *MauSpec::postTransformTables(IR::MAU::Table *const table) const {
     return table;
@@ -192,66 +172,4 @@ const IMemSpec &JBayMauSpec::getIMemSpec() const { return imem_; }
 
 const IXBarSpec &JBayMauSpec::getIXBarSpec() const { return ixbar_; }
 
-#if HAVE_CLOUDBREAK
-const IXBarSpec &CloudbreakMauSpec::getIXBarSpec() const { return ixbar_; }
 
-const IMemSpec &CloudbreakMauSpec::getIMemSpec() const { return imem_; }
-#endif  /* HAVE_CLOUDBREAK */
-
-#if HAVE_FLATROCK
-
-FlatrockIXBarSpec::FlatrockIXBarSpec() = default;
-
-int FlatrockIXBarSpec::bytesPerWord() const { return 4; }
-
-int FlatrockIXBarSpec::exactBytes() const { return 20; }
-
-int FlatrockIXBarSpec::exactMatchSTMUnits() const { return 4; }
-
-int FlatrockIXBarSpec::exactMatchUnits() const { return 8; }
-
-int FlatrockIXBarSpec::exactWords() const { return 5; }
-
-int FlatrockIXBarSpec::gatewayFixedBytes() const { return 5; }
-
-int FlatrockIXBarSpec::gatewayRows() const { return 24; }
-
-int FlatrockIXBarSpec::gatewayVecBytes() const { return 8; }
-
-int FlatrockIXBarSpec::ramSelectBitStart() const { return 0; }
-
-int FlatrockIXBarSpec::ramLineSelectBits() const { return 10; }
-
-int FlatrockIXBarSpec::ternaryBytesPerGroup() const { return 5; }
-
-int FlatrockIXBarSpec::ternaryGroups() const { return 20; }
-
-int FlatrockIXBarSpec::xcmpBytes() const { return 16; }
-
-int FlatrockIXBarSpec::xcmpWords() const { return 12; }
-
-int FlatrockIXBarSpec::tcam_rows() const { return Flatrock_tcam_rows; }
-
-int FlatrockIXBarSpec::tcam_columns() const { return Flatrock_tcam_columns; }
-
-int FlatrockIXBarSpec::exactMatchTotalBytes() const { return 2 * 20; }
-
-int FlatrockIXBarSpec::ternaryMatchTotalBytes() const { return 20 * 5; }
-
-int FlatrockIXBarSpec::xcmpMatchTotalBytes() const { return 4 * 16; }
-
-const IXBarSpec &FlatrockMauSpec::getIXBarSpec() const { return ixbar_; }
-
-const IMemSpec &FlatrockMauSpec::getIMemSpec() const { return imem_; }
-
-IR::Node *FlatrockMauSpec::postTransformTables(IR::MAU::Table *const table) const { return table; }
-
-int FlatrockMauSpec::tcam_width() const { return 40; }
-
-int FlatrockMauSpec::tcam_depth() const { return 512; }
-
-int FlatrockMauSpec::tcam_rows() const { return Flatrock_tcam_rows; }
-
-int FlatrockMauSpec::tcam_columns() const { return Flatrock_tcam_columns; }
-
-#endif

@@ -1,12 +1,21 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include "resource_estimate.h"
 #include "hash_mask_annotations.h"
 #include "lib/log.h"
 #include "memories.h"
 #include "table_placement.h"
 #include "lib/bitops.h"
-#if HAVE_FLATROCK
-#include "flatrock/input_xbar.h"
-#endif  /* HAVE_FLATROCK */
 
 constexpr int RangeEntries::MULTIRANGE_DISTRIBUTION_LIMIT;
 constexpr int RangeEntries::RANGE_ENTRY_PERCENTAGE;
@@ -429,7 +438,6 @@ bool StageUseEstimate::ways_provided(const IR::MAU::Table *tbl, LayoutOption *lo
  * This could be fixed by a dynamic miss-entry.  If the miss-entry could move to
  * any open miss-entry, then all of these tables could support this identity hash.  If the table
  * was to ever fill all entries, then by definition, the table could never miss.
- * JIRA-DOC: DRV-2874.
  *
  * The current limitations are if a direct resource is required.  This will reserve the all 0
  * miss-entry, no matter what.
@@ -439,7 +447,6 @@ bool StageUseEstimate::ways_provided(const IR::MAU::Table *tbl, LayoutOption *lo
  * a more complex check, but not hard to add
  *
  * UPDATE:
- * JIRA-DOC: P4C-3656 / DRV-4341
  * Based on driver fixes, driver checks if the EXM table
  * requires a table location to be reserved for the default (miss) entry.
  * Originally the check was simply whether or not the table used direct
@@ -547,44 +554,6 @@ void StageUseEstimate::calculate_way_sizes(const IR::MAU::Table *tbl, LayoutOpti
     if (ways_provided(tbl, lo, calculated_depth))
         return;
 
-#if HAVE_FLATROCK
-    if (Device::currentDevice() == Device::FLATROCK) {
-        // TODO: Lambs are only used in Flatrock. Code needs to be updated for large lambs,
-        // currently only deals with small tables which fit in 64 / 128 words.
-        // For non-lamb layouts (STMs) the remaining code will also require a different approach.
-        // Eventually its best to separate out this function for Flatrock
-        if (lo->layout.is_lamb) {
-            if (lo->layout.is_direct) {
-                lo->way_sizes.push_back(calculated_depth);
-            } else {
-                switch (calculated_depth) {
-                    case 1:
-                        lo->way_sizes = { 1 };
-                        break;
-                    case 2:
-                        lo->way_sizes = {1, 1};
-                        break;
-                    case 3:
-                        lo->way_sizes = {1, 1, 1};
-                        break;
-                    case 4:
-                        lo->way_sizes = {1, 1, 1, 1};
-                        break;
-                }
-            }
-        } else {  // STM
-            // By default only use 2 ways
-            if (calculated_depth == 1) {
-                calculated_depth++;
-            } else {
-                calculated_depth = calculated_depth % 2 ? calculated_depth : calculated_depth + 1;
-            }
-
-            lo->way_sizes = { calculated_depth/2, calculated_depth/2 };
-        }
-        return;
-    }
-#endif
 
     // This indicates that we are using identity function.
     if ((lo->layout.ixbar_width_bits - hash_bits_masked) < ceil_log2(lo->layout.get_sram_depth())
@@ -722,13 +691,6 @@ void StageUseEstimate::options_to_ternary_entries(const IR::MAU::Table *tbl, int
         int depth = (entries + 511u)/512u;
         int bytes = tbl->layout.match_bytes;
         int width = 0;
-#ifdef HAVE_FLATROCK
-        if (Device::currentDevice() == Device::FLATROCK) {
-            width = (bytes + Flatrock::IXBar::TERNARY_BYTES_PER_GROUP - 1) /
-                    Flatrock::IXBar::TERNARY_BYTES_PER_GROUP;
-            bytes = 0;
-        }
-#endif
         while (bytes > 11) {
             bytes -= 11;
             width += 2;

@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #ifndef EXTENSIONS_BF_P4C_PARDE_PARDE_SPEC_H_
 #define EXTENSIONS_BF_P4C_PARDE_PARDE_SPEC_H_
 
@@ -44,12 +56,8 @@ using namespace P4::literals;
  * the Tofino parser is represented with the IR::BFN::Parser %IR node.
  * Within the LowerParser pass, the parser is transformed (lowered) into the representation
  * that is closer to how HW works. For Tofino 1/2, IR::BFN::LoweredParser is produced,
- * TOF3-DOC: Also applies to Tofino 3.
- * TOF5-DOC: For %Flatrock, IR::Flatrock::Parser and IR::Flatrock::PseudoParser are produced.
  *
  * In assembler, the Tofino 1/2 parser is represented with the Parser class,
- * TOF3-DOC: Also applies to Tofino 3.
- * TOF5-DOC: %Flatrock is represented with the FlatrockParser class.
  * Specific differences of Tofino versions are implemented using template specialization.
  *
  * ## Frontend passes
@@ -301,7 +309,6 @@ using namespace P4::literals;
  *
  * The deparser reassembles packets prior to storage in TM (Tofino 1/2) and prior to transmission
  * via the MAC (all chips).
- * TOF3-DOC: Also applies to Tofino 3.
  *
  * ## Target constants
  *
@@ -324,23 +331,6 @@ using namespace P4::literals;
  * - Target::JBay::DEPARSER_TOTAL_CHUNKS = DEPARSER_CHUNK_GROUPS * DEPARSER_CHUNKS_PER_GROUP = 128
  * - Target::JBay::DEPARSER_MAX_FD_ENTRIES = DEPARSER_TOTAL_CHUNKS = 128
  */
-#if HAVE_CLOUDBREAK
-/**
- *
- * Tofino3:
- * - Target::Cloudbreak::DEPARSER_CHECKSUM_UNITS = 8
- * - Target::Cloudbreak::DEPARSER_CONSTANTS = 8
- * - Target::Cloudbreak::DEPARSER_MAX_POV_BYTES = 16
- * - Target::Cloudbreak::DEPARSER_MAX_POV_PER_USE =  1
- * - Target::Cloudbreak::DEPARSER_CHUNKS_PER_GROUP = 8
- * - Target::Cloudbreak::DEPARSER_CHUNK_SIZE = 8
- * - Target::Cloudbreak::DEPARSER_CHUNK_GROUPS = 16
- * - Target::Cloudbreak::DEPARSER_CLOTS_PER_GROUP = 4
- * - Target::Cloudbreak::DEPARSER_TOTAL_CHUNKS = DEPARSER_CHUNK_GROUPS * DEPARSER_CHUNKS_PER_GROUP
- *                                             = 128
- * - Target::Cloudbreak::DEPARSER_MAX_FD_ENTRIES = DEPARSER_TOTAL_CHUNKS = 128
- */
-#endif  /* HAVE_CLOUDBREAK */
 /**
  *
  * ## Midend passes
@@ -360,7 +350,6 @@ using namespace P4::literals;
  *  - AddMetadataPOV - Adds POV bits for metadata used by the deparser (Tofino 2+). Tofino 1
  *                     uses the valid bit associated with each %PHV; Tofino 2+ use POV bits
  *                     instead.
- *                     TOF5-DOC: Tofino 5 requires POV bits for only a subset of metadata.
  *  - BFN::AsmOutput - Outputs the deparser assembler. Uses DeparserAsmOutput and the passes it
  *                     invokes.
  *  - CollectClotInfo - Collects information for generating CLOTs.
@@ -373,7 +362,6 @@ using namespace P4::literals;
  *  - GreedyClotAllocator - CLOT allocation. Enforces deparser CLOT rules during allocation.
  *  - InsertParserClotChecksums - Identifies CLOT fields used in deparser checksums to allow the
  *                                checksum to be calculated in the parser (Tofino 2).
- *                                TOF3-DOC: (And Tofino 3).
  *  - LowerParser - Replaces high-level parser and deparser %IR that operate on fields with
  *                  low-level parser and deparser %IR that operate on %PHV containers.
  *  - \ref ResetInvalidatedChecksumHeaders - Reset fields that are used in deparser checksum
@@ -504,18 +492,10 @@ class PardeSpec {
     /// Max line rate per-port (Gbps)
     virtual unsigned lineRate() const = 0;
 
-#if HAVE_FLATROCK
-    /// Metadata packer valid vector fields - as vector (Flatrock)
-#else
     /// Unused
-#endif  /* HAVE_FLATROCK */
     virtual const std::vector<std::string>& mdpValidVecFields() const = 0;
 
-#if HAVE_FLATROCK
-    /// Metadata packer valid vector fields - as set (Flatrock)
-#else
     /// Unused
-#endif  /* HAVE_FLATROCK */
     virtual const std::unordered_set<std::string>& mdpValidVecFieldsSet() const = 0;
 };
 
@@ -708,56 +688,6 @@ class JBayA0PardeSpec : public JBayPardeSpec {
     unsigned numDeparserInvertChecksumUnits() const override { return 0; }
 };
 
-#if HAVE_CLOUDBREAK
-class CloudbreakPardeSpec : public JBayPardeSpec {
- public:
-    unsigned numDeparserInvertChecksumUnits() const override { return 8; }
-};
-#endif /* HAVE_CLOUDBREAK */
 
-#if HAVE_FLATROCK
-class FlatrockPardeSpec : public TofinoPardeSpec {
- public:
-    const std::vector<std::string>& mdpValidVecFields() const override {
-        static std::vector<std::string> vldVecFields = {
-            "icrc_enable",
-            "drop",
-            "pgen_trig_vld",
-            "iafc_vld",
-            "lq_vld",
-            "pkt_expan_idx_vld",
-            "ucast_egress_port.$valid",
-            "mcast_grp_b.$valid",
-            "mcast_grp_a.$valid",
-            "mirror_bitmap.$valid",     // FIXME: should this be mirror_cos?
-            "copy_to_cpu",
-            "perfect_hash_table_id",
-            "enable_mcast_cutthru",
-            "disable_ucast_cutthru",
-            "deflect_on_drop",
-        };
-        return vldVecFields;
-    }
-
-    const std::unordered_set<std::string>& mdpValidVecFieldsSet() const override {
-        static std::unordered_set<std::string> vldVecSet;
-        if (vldVecSet.size() != mdpValidVecFields().size()) {
-            vldVecSet.insert(mdpValidVecFields().begin(), mdpValidVecFields().end());
-        }
-        return vldVecSet;
-    }
-
-    const std::vector<MatchRegister> matchRegisters() const override {
-        static std::vector<MatchRegister> spec;
-
-        if (spec.empty()) {
-            spec = { MatchRegister("W0"_cs),
-                     MatchRegister("W1"_cs) };
-        }
-
-        return spec;
-    }
-};
-#endif /* HAVE_FLATROCK */
 
 #endif /* EXTENSIONS_BF_P4C_PARDE_PARDE_SPEC_H_ */

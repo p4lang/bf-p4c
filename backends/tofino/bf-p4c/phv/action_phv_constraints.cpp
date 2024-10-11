@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include <algorithm>
 #include <sstream>
 #include <tuple>
@@ -64,7 +76,6 @@ bitvec compute_dest_live_bv(const PhvUse& uses, const PHV::Allocation& alloc,
             slice.isLiveAt(stage, PHV::FieldUse(PHV::FieldUse::WRITE))) {
             dest_live.setrange(slice.container_slice().lo, slice.container_slice().size());
         }
-        // JIRA-DOC: P4C-3893:
         // there seems to be a bug that a field @f is initialized in action @a
         // but the earliest liverange of @f is somehow wrongly later then min_stage of @a;
         // Add this additional check here to avoid compiler bug.
@@ -207,7 +218,6 @@ void ActionPhvConstraints::ConstraintTracker::add_action(
             // 32-bit container. To simplify things, we are actually only enforcing strict alignment
             // operation on 8-bit container. Using a deposit-field instruction to copy the
             // meter color to any container size should work fine.
-            // JIRA-DOC: See P4C-3019
             if (read.speciality == ActionAnalysis::ActionParam::METER_COLOR) {
                 if (fw.flags != OperandInfo::MOVE)
                     self.meter_color_destinations_8bit.insert(write.field());
@@ -486,7 +496,6 @@ std::optional<int> ActionPhvConstraints::ConstraintTracker::can_be_both_sources(
             } else if (entry.second.size() > 2) {
                 return std::nullopt;
             } else {
-                // JIRA-DOC: This is an extremely conservative check but will get us past P4C-2350
                 if (entry.first != src)
                     return std::nullopt;
             }

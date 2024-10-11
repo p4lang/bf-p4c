@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include "program_structure.h"
 #include <set>
 #include <algorithm>
@@ -16,7 +28,7 @@
 #include "frontends/p4/coreLibrary.h"
 #include "frontends/p4/tableKeyNames.h"
 #include "frontends/p4/cloner.h"
-#include "frontends/p4/fromv1.0/converters.h"
+#include "frontends/p4-14/fromv1.0/converters.h"
 #include "frontends/p4-14/header_type.h"
 #include "frontends/p4-14/typecheck.h"
 #include "bf-p4c/common/parse_annotations.h"
@@ -48,10 +60,6 @@ void ProgramStructure::include(cstring filename, IR::Vector<IR::Node> *vector) {
 
     if (filename == "tna.p4")
         options.preprocessor_options += " -D__TARGET_TOFINO__=1";
-#if HAVE_FLATROCK
-    else if (filename == "t5na.p4")
-        options.preprocessor_options += " -D__TARGET_TOFINO__=5";
-#endif  /* HAVE_FLATROCK */
     if (auto preprocessorResult = options.preprocess(); preprocessorResult.has_value()) {
         FILE *file = preprocessorResult.value().get();
 

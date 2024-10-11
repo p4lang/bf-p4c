@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include "bf-p4c/parde/clot/pragma/do_not_use_clot.h"
 
 #include <string>
@@ -11,21 +23,13 @@
 const char *PragmaDoNotUseClot::name = "do_not_use_clot";
 const char *PragmaDoNotUseClot::description =
     "Specifies that a field or all fields in a header will not be allocated to CLOT "
-#if HAVE_CLOUDBREAK
-    "(Tofino 2 or 3 only).";
-#else
     "(Tofino 2 only).";
-#endif  /* HAVE_CLOUDBREAK */
 const char *PragmaDoNotUseClot::help =
     "@pragma do_not_use_clot [pipe] gress inst.node\n"
     "+ attached to P4 header instance\n"
     "\n"
     "Specifies that the indicated node, which may be either a single "
-#if HAVE_CLOUDBREAK
-    "field or a header, will not be allocated to CLOTs when compiling for Tofino 2 or 3. "
-#else
     "field or a header, will not be allocated to CLOTs when compiling for Tofino 2. "
-#endif  /* HAVE_CLOUDBREAK */
     "If a header is specified, this pragma will apply to all of its fields. "
     "If some or all of the fields were previously eligible for CLOT allocation due to being "
     "unused or read-only in the pipeline, the eligible fields will be marked as ineligible and "

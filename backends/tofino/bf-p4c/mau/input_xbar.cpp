@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include "input_xbar.h"
 #include "bf-p4c/device.h"
 #include "bf-p4c/logging/resources.h"
@@ -6,11 +18,8 @@
 #include "bf-p4c/mau/resource.h"
 #include "bf-p4c/mau/resource_estimate.h"
 #include "bf-p4c/mau/tofino/input_xbar.h"
-#if HAVE_FLATROCK
-#include "bf-p4c/mau/flatrock/input_xbar.h"
-#endif
 #include "bf-p4c/phv/phv_fields.h"
-#include "midend/dynamic_hash/dynamic_hash.h"
+#include "dynamic_hash/dynamic_hash.h"
 #include "lib/algorithm.h"
 #include "lib/bitvec.h"
 #include "lib/bitops.h"
@@ -818,11 +827,6 @@ void IXBar::update(const IR::MAU::Table *tbl) {
 }
 
 IXBar *IXBar::create() {
-#if HAVE_FLATROCK
-    // FIXME -- add Device::newIXBar() method?
-    if (Device::currentDevice() == Device::FLATROCK)
-        return new Flatrock::IXBar();
-#endif
     return new Tofino::IXBar();
 }
 

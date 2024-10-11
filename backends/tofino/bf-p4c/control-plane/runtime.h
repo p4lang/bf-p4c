@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #ifndef EXTENSIONS_BF_P4C_CONTROL_PLANE_RUNTIME_H_
 #define EXTENSIONS_BF_P4C_CONTROL_PLANE_RUNTIME_H_
 
@@ -16,7 +28,6 @@ class BFN_Options;
 namespace BFN {
 
 /*
- * JIRA-DOC: P4C-3520 :
  * Certain names are reserved for BF-RT and cannot be used on
  * controls. Pass checks for control names overlapping restricted ones, append
  * to the list as required.
@@ -33,9 +44,8 @@ class CheckReservedNames : public Inspector {
  * \ingroup midend
  * \brief Pass that sets default table size to 512 entries.
  *
- * JIRA-DOC: P4C-3177
  * If no 'size' parameter is set on the table, p4info picks a default value of 1024.
- * p4c/frontends/p4/fromv1.0/v1model.h: const unsigned defaultTableSize = 1024;
+ * p4c/frontends/p4-14/fromv1.0/v1model.h: const unsigned defaultTableSize = 1024;
  * This pass is run again in the MidEnd to modify IR and set this value.
  * BF-RT does not modify program IR used by Midend.
  */

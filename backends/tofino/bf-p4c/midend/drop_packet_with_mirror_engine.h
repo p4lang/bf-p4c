@@ -1,4 +1,16 @@
 /**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
+/**
  * Impact for Large Packets Dropped at Ingress Deparser
  * Description: If the ingress deparser drops a packet it is possible that no
  * learning digest will be generated, and that ingress MAU byte counters and
@@ -10,7 +22,6 @@
  * 100g interface. Workaround: Do not drop packets at the ingress deparser,
  * instead mirror them to a disabled mirroring session to drop them by the
  * mirror block. This fix applies to Tofino 1 and 2.
- * TOF3-DOC: And Tofino 3.
  */
 #ifndef EXTENSIONS_BF_P4C_MIDEND_DROP_PACKET_WITH_MIRROR_ENGINE_H_
 #define EXTENSIONS_BF_P4C_MIDEND_DROP_PACKET_WITH_MIRROR_ENGINE_H_
@@ -74,12 +85,8 @@ class DropPacketWithMirrorEngine : public PassManager {
         addPasses({
             new PassIf([]() {
                 // TOFINO1, 2 has the same hardware bug that need this workaround.
-                // TOF3-DOC: And Tofino 3.
                 return Device::currentDevice() == Device::TOFINO
                     || Device::currentDevice() == Device::JBAY
-#if HAVE_CLOUDBREAK
-                    || Device::currentDevice() == Device::CLOUDBREAK
-#endif
                     ;
             }, {
                 new DropPacketWithMirrorEngine_(),

@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #ifndef EXTENSIONS_BF_P4C_PHV_PHV_SPEC_H_
 #define EXTENSIONS_BF_P4C_PHV_PHV_SPEC_H_
 
@@ -188,8 +200,6 @@ class PhvSpec {
     virtual bool hasParserExtractGroups() const = 0;
 
     /**
-     * TOF5-DOC: The Flatrock PHV Builder must have the same extraction type (packet
-     * TOF5-DOC: data vs non packet data) for a set of 4 x 8b or 2 x 16 containers.
      *
      * @return the ids of every container in the same parser group as the
      * provided container.
@@ -381,49 +391,6 @@ class JBayPhvSpec : public PhvSpec {
     static AddressSpec _physicalDeparserAddresses;
 };
 
-#ifdef HAVE_CLOUDBREAK
-class CloudbreakPhvSpec : public JBayPhvSpec {
-};
-#endif /* HAVE_CLOUDBREAK */
 
-#if HAVE_FLATROCK
-class FlatrockPhvSpec : public PhvSpec {
- public:
-    FlatrockPhvSpec();
-
-    /// @see PhvSpec::parserGroup(unsigned id).
-    bitvec parserGroup(unsigned id) const override;
-
-    /// @see PhvSpec::hasParserExtractGroups().
-    bool hasParserExtractGroups() const override;
-
-    /// @see PhvSpec::parserExtractGroup(unsigned id).
-    bitvec parserExtractGroup(unsigned id) const override;
-
-    /// @see PhvSpec::parserGroupId(const PHV::Container &)
-    unsigned parserGroupId(const PHV::Container &c) const override;
-
-    /// @see PhvSpec::mauGroupId(const PHV::Container &)
-    unsigned mauGroupId(const PHV::Container &c) const override;
-
-    /// @see PhvSpec::deparserGroupId(const PHV::Container &)
-    unsigned deparserGroupId(const PHV::Container &c) const override;
-
-    const bitvec& individuallyAssignedContainers() const override;
-
-    /// @see PhvSpec::physicalAddress(unsigned container_id, BFN::ArchBlockType interface).
-    /// For Flatrock all interfaces are the same.
-    unsigned physicalAddress(unsigned container_id, ArchBlockType_t /*interface*/) const override;
-
-    /// @see PhvSpec::physicalAddressSpec(ArchBlockType_t)
-    /// For Flatrock all interfaces are the same
-    AddressSpec &physicalAddressSpec(ArchBlockType_t /* interface */) const override {
-        return _physicalAddresses;
-    }
-
- private:
-    static AddressSpec _physicalAddresses;
-};
-#endif /* HAVE_FLATROCK */
 
 #endif /* EXTENSIONS_BF_P4C_PHV_PHV_SPEC_H_ */

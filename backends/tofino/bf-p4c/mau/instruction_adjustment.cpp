@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include "bf-p4c/mau/instruction_adjustment.h"
 
 #include <queue>
@@ -447,7 +459,6 @@ const IR::Node *SplitInstructions::preorder(IR::MAU::Instruction *inst) {
     LOG5("Splitting instruction:" << inst);
 
     // Check if this is an operator that cannot be split
-    // JIRA-DOC: (see p4c-2694)
     cstring opcode = inst->name;
     BUG_CHECK(opcode != "saddu" && opcode != "sadds" &&
             opcode != "ssubu" && opcode != "ssubs",
@@ -1370,7 +1381,6 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
             << " SRC2: " << src2 << "(" << src2_writebits << ")");
 
     // Src1 is not sourced from parameters, but instead is equal to the destination
-    // JIRA-DOC: P4C-914
     if (cont_action.implicit_src1) {
         BUG_CHECK(src1 == nullptr, "Src1 found in an implicit_src1 calculation");
         src1 = new IR::MAU::MultiOperand(components, container.toString(), true);
@@ -1381,7 +1391,6 @@ IR::MAU::Instruction *MergeInstructions::build_merge_instruction(PHV::Container 
     }
 
     // Src2 is not sources from parameters, but instead is equal to the destination
-    // JIRA-DOC: BRIG-883
     if (cont_action.implicit_src2) {
         BUG_CHECK(src2 == nullptr, "Src2 found in an implicit_src2 calculation");
         src2 = new IR::MAU::MultiOperand(components, container.toString(), true);

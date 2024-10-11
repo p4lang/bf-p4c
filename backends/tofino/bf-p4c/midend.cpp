@@ -1,4 +1,16 @@
 /**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
+/**
  * \defgroup midend Midend
  * \brief Overview of midend passes
  *
@@ -79,7 +91,7 @@
 #include "frontends/common/constantFolding.h"
 #include "frontends/common/resolveReferences/resolveReferences.h"
 #include "frontends/p4/evaluator/evaluator.h"
-#include "frontends/p4/fromv1.0/v1model.h"
+#include "frontends/p4-14/fromv1.0/v1model.h"
 #include "frontends/p4/moveDeclarations.h"
 #include "frontends/p4/simplify.h"
 #include "frontends/p4/simplifyDefUse.h"
@@ -168,7 +180,6 @@ namespace BFN {
  *
  * Currently the support exists in PSA & V1Model. But as the pass is common to
  * all archs, in future if TNA needs this simply add 'optional' to tofino.p4
- * JIRA-DOC: JIRAs - P4C-3592 / DRV-4743
  *
  * BF-RT API Additions:
  * https://wiki.ith.intel.com/display/BXDHOME/BFRT+Optional+match+support
@@ -310,9 +321,6 @@ class CompileTimeOperations : public P4::CompileTimeOperations {
 #ifdef HAVE_JBAY
         // JBay supports (limited) div/mod in RegisterAction
         if (Device::currentDevice() == Device::JBAY
-#if HAVE_CLOUDBREAK
-            || Device::currentDevice() == Device::CLOUDBREAK
-#endif /* HAVE_CLOUDBREAK */
         ) {
             if (auto st = di->type->to<IR::Type_Specialized>()) {
                 if (st->baseType->path->name.name.endsWith("Action"))
@@ -409,9 +417,6 @@ MidEnd::MidEnd(BFN_Options& options) {
         new P4::TableHit(&refMap, &typeMap, typeChecking),
 #if BAREFOOT_INTERNAL
         new ComputeDefUse,  // otherwise unused; testing for CI coverage
-#endif
-#if HAVE_FLATROCK
-        Device::currentDevice() == Device::FLATROCK ? new MoveToEgress(evaluator) : 0,
 #endif
         evaluator,
         new VisitFunctor([=](const IR::Node *root) -> const IR::Node * {

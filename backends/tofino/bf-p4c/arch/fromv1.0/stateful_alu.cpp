@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include <vector>
 #include <utility>
 
@@ -957,7 +969,6 @@ const IR::Declaration_Instance *P4V1::StatefulAluConverter::convertExternInstanc
         LOG2("Creating apply function for RegisterAction " << ext->name);
         LOG6(ext);
         auto reg_index_width = 32;
-        // JIRA-DOC: P4C-2771 :
         // Frontend fix required before using correct index width
         // auto reg_index_width = info.reg->index_width();
         auto ratype = new IR::Type_Specialized(
@@ -1006,7 +1017,6 @@ const IR::Statement *P4V1::StatefulAluConverter::convertExternCall(
         target = info.reg;
         BUG_CHECK(info.reg, "Extern %s has no associated register", et);
         direct = info.reg->instance_count < 0;
-        // JIRA-DOC: P4C-2771 :
         // Frontend fix required before using correct index width
         // reg_index_width = info.reg->index_width();
     }

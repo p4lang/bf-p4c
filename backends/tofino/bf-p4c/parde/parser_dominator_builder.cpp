@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include "parser_dominator_builder.h"
 
 Visitor::profile_t ParserDominatorBuilder::init_apply(const IR::Node* root) {
@@ -26,8 +38,6 @@ bool ParserDominatorBuilder::preorder(const IR::BFN::ParserState* parser_state) 
     // compiling some P4_14 programs. This is most likely a bug, as all states in the parser should
     // have a path leading to EOP.
     //
-    // JIRA-DOC: This fixes "tofino/extensions/p4_tests/p4_14/customer/rdp/case9757.p4"
-    // JIRA-DOC: failing in CI/CD.
     if (parser_state->transitions.empty())
         parser_graphs[parser_state->gress].add_edge(parser_state, nullptr, nullptr);
 

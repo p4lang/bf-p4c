@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include "bf-p4c/parde/asm_output.h"
 #include "bf-p4c/common/alias.h"
 #include "bf-p4c/common/asm_output.h"
@@ -398,17 +410,6 @@ struct OutputPacketBodyOffset : public Inspector {
     explicit OutputPacketBodyOffset(std::ostream& out) : out(out), indent(1) {}
 
     bool preorder(BFN_MAYBE_UNUSED const IR::BFN::LoweredDeparser* deparser) override {
-#if HAVE_FLATROCK
-        if (Device::currentDevice() == Device::FLATROCK && deparser->gress == EGRESS) {
-            out << indent << "packet_body_offset:" << std::endl;
-            AutoIndent pboIndent(indent);
-
-            out << indent << "hdr: " << payloadHeaderName << std::endl;
-            out << indent << "offset: " << 0 << std::endl;
-            out << indent << "var_off_pos: " << 0 << std::endl;
-            out << indent << "var_off_len: " << 0 << std::endl;
-        }
-#endif  /* HAVE_FLATROCK */
 
         return false;
     }
@@ -423,23 +424,6 @@ struct OutputRemainingBridgeMetadata : public Inspector {
     explicit OutputRemainingBridgeMetadata(std::ostream& out) : out(out), indent(1) {}
 
     bool preorder(BFN_MAYBE_UNUSED const IR::BFN::LoweredDeparser* deparser) override {
-#if HAVE_FLATROCK
-#if 0
-        // The following is a skeleton for Flatrock bridge metadata
-        // transferred through the remaining bridge metadata
-        if (Device::currentDevice() == Device::FLATROCK && deparser->gress == INGRESS) {
-            out << indent << "remaining_bridge_metadata:" << std::endl;
-            AutoIndent rbmIndent(indent);
-
-            out << indent << "config 0:" << std::endl;
-            AutoIndent rbmConfigIndent(indent);
-
-            out << indent << "match: *" << std::endl;
-            out << indent << "start: " << 0 << std::endl;
-            out << indent << "bytes: [ ]" << std::endl;
-        }
-#endif  /* 0 */
-#endif  /* HAVE_FLATROCK */
 
         return false;
     }

@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include "extract_maupipe.h"
 #include <assert.h>
 #include <optional>
@@ -972,7 +984,6 @@ class FixP4Table : public Inspector {
 
         // BEGIN: ALPM_OPT
         // internal table property to implement alpm optimization
-        // JIRA-DOC: (P4C-2282)
         // We choose to implement alpm in the midend as a transformation to
         // atcam and preclassifier tcam based on the intuition that the ALPM
         // extern definition in TNA is a library extern, not a primitive
@@ -1973,14 +1984,7 @@ bool BackendConverter::preorder(const IR::P4Program* program) {
                 dprsr->apply(ExtractDeparser(refMap, typeMap, rv));
                 dprsr->apply(ExtractChecksum(rv));
             } else {
-#if HAVE_FLATROCK
-                // need a dummy (ingress) deparser to track metadata used at end of ingress
-                BUG_CHECK(gress == INGRESS && Device::currentDevice() == Device::FLATROCK,
-                          "missing deparser");
-                rv->thread[gress].deparser = new IR::BFN::Deparser(gress);
-#else
                 BUG("missing deparser");
-#endif
             }
         }
 

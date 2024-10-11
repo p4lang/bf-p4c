@@ -1,7 +1,16 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include "bf-p4c/mau/table_placement.h"
-#if HAVE_FLATROCK
-#include "bf-p4c/mau/flatrock/table_format.h"
-#endif  /* HAVE_FLATROCK */
 
 #ifdef MULTITHREAD
 #include <gc/gc.h>
@@ -1431,8 +1440,6 @@ class DecidePlacement::FinalPlacement {
 
 namespace {
 class StageSummary {
-    // TOF5-DOC: This seems inappropriate for flatrock, which has separate ingress and egress
-    // TOF5-DOC: pipes, but they share tcams.
     std::unique_ptr<IXBar>      ixbar;
     std::unique_ptr<Memories>   mem;
  public:
@@ -1997,16 +2004,6 @@ bool TablePlacement::try_alloc_mem(Placed *next, std::vector<Placed *> whole_sta
     if (shrink_lt)
         current_mem->shrink_allowed_lts();
 
-#ifdef HAVE_FLATROCK
-    if (Device::currentDevice() == Device::FLATROCK) {
-        current_mem->init_shared(next->stage);
-        for (const Placed *p = next->prev; p; p = p->prev) {
-            if (p->stage == next->stage && p->table->gress == next->table->gress)
-                continue;
-            current_mem->fill_placed_scm_table(p->table, &p->resources);
-        }
-    }
-#endif
 
     const IR::MAU::Table *table_to_add = nullptr;
     for (auto *p : whole_stage) {
@@ -2074,7 +2071,6 @@ bool TablePlacement::try_alloc_format(Placed *next, bool gw_linked) {
     const bitvec immediate_mask = next->use.preferred_action_format()->immediate_mask;
     next->resources.table_format.clear();
     gw_linked |= next->use.preferred()->layout.gateway_match;
-    // JIRA-DOC: P4C-3595
     // If the placed table has been split some of the attached tables might
     // have been moved to its part (meter/counters/...)
     // Remove them, so that pack fields for them dont clutter the table
@@ -2382,13 +2378,11 @@ bool TablePlacement::initial_stage_and_entries(Placed *rv, int &furthest_stage) 
             //
             // Atomic modify is supported on Tofino2 through hardware and does
             // not require additinal entries.
-            // TOF3-DOC: Also Tofino3.
             bool disable_atomic_modify;
             t->getAnnotation("disable_atomic_modify"_cs, disable_atomic_modify);
 
             // NOTE: Replace with commented code once driver support is in for
             // Tofino2+ archs
-            // JIRA-DOC: Driver JIRA - DRV-4404
             // if (!disable_atomic_modify && BackendOptions().target == "tofino")
             //     rv->entries += t->layout.partition_count;
             // Similar check in mau/asm_output.cpp -> emit_table_context_json()
@@ -2664,7 +2658,6 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
         // an invalid allocation. The check below will simply exit but a
         // BUG_CHECK here might help identify the skipped conflicts to improve
         // trivial alloc.
-        // JIRA-DOC: Jira - P4C-4401 to fix trivial alloc
         for (auto *p = rv->prev; p; p = p->prev) {
             if (deps.container_conflict(p->table, rv->table)
                     && p->stage == rv->stage
@@ -2689,9 +2682,6 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
     std::vector<Placed *> whole_stage;
     error_message = ""_cs;
     // clone the already-placed tables in this stage so they can be re-placed
-    // TOF5-DOC: TODO -- for Flatrock, memory allocation is global, so perhaps need all tables,
-    // TOF5-DOC: not just those in this stage.  Or perhaps we defer memory alloc until after all
-    // TOF5-DOC: table placement and don't need 'whole_stage' at all.
     for (const Placed **p = &rv->prev; *p && (*p)->stage == rv->stage; ) {
         auto clone = new Placed(**p);
         whole_stage.push_back(clone);
@@ -2846,7 +2836,6 @@ TablePlacement::Placed *TablePlacement::try_place_table(Placed *rv,
                 // unique id suffixes e.g. $st0, $st1 etc. hence if this is
                 // incorrectly set the unique ids generated in memories.cpp will not
                 // match those generated on the table
-                // JIRA-DOC: (P4C-4064)
                 else if (!rv->need_more && rv->stage_split == 0)
                     rv->stage_split = -1;
 
@@ -3153,7 +3142,6 @@ DecidePlacement::place_table(ordered_set<const GroupPlace *>&work, const Placed 
                     if (tbl == pl->table) {
                         parents.insert(gw_match_grp ? gw_match_grp : pl->group);
                     } else if (pl->is_placed(tbl)) {
-                        // JIRA-DOC: Commented out this BUG_CHECK on P4C-4278.
                         // After analysis, inserting a
                         // parent already placed with a different group should be supported.
                         // BUG_CHECK(!gw_match_grp, "Failure attaching gateway to table");
@@ -5150,18 +5138,8 @@ void TransformTables::merge_match_and_gateway(IR::MAU::Table *tbl,
     // Generate the correct table layout from the options
     gw_layout = tbl->layout;
 
-#if HAVE_FLATROCK
-    // if a gateway is to be combined withe a match table, it can't be a hash_action
-    // unless the match table is.  This is only relevant for Flatrock (pre-flatrock,
-    // any gateway would have hash_action == false)
-    // FIXME -- this is definitely a hack, but we should get rid of the whole concept
-    // of "hash_action" as it makes little sense.
-    BUG_CHECK(gw_layout.hash_action == (Device::currentDevice() == Device::FLATROCK),
-              "unexpected value for layout.hash_action on gateway");
-#else
     BUG_CHECK(gw_layout.hash_action == false,
               "unexpected value for layout.hash_action on gateway");
-#endif
     gw_layout.hash_action = false;
 
     // Remove the conditional sequence under the branch

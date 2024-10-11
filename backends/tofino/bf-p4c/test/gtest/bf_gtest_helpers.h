@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #ifndef BF_GTEST_HELPERS_H_
 #define BF_GTEST_HELPERS_H_
 
@@ -196,12 +208,6 @@ class TestCode {
                     CoreP4,     // The core.p4 package.
                     TofinoMin,  // For building an empty tofino_shell() - add only what you need.
                     Tofino1arch, Tofino2arch,  // The regular header files
-#if HAVE_CLOUDBREAK
-                    Tofino3arch,  // Regular TF3 header files
-#endif  // HAVE_CLOUDBREAK
-#if HAVE_FLATROCK
-                    Tofino5arch,  // Regular TF5 header files
-#endif  // HAVE_FLATROCK
                     V1model_2018, V1model_2020};  // The regular header files.
 
     /** See test_bf_gtest_helpers.cpp for example usage of 'TestCode'.

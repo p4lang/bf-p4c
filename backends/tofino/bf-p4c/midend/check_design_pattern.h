@@ -1,4 +1,16 @@
 /**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
+/**
  * \defgroup CheckDesignPattern BFN::CheckDesignPattern
  * \ingroup midend
  * \brief Set of passes that check for design patterns.
@@ -102,7 +114,6 @@ class CheckDirectExternsOnTables: public Modifier {
  * also specified on the table. Throw a compile time error if resources are
  * missing on the table. As otherwise, the appropriate control plane api's do
  * not get generated for that resource.
- * JIRA-DOC: P4C-1994
  */
 class CheckDirectResourceInvocation: public PassManager {
     ActionExterns directExterns;

@@ -1,15 +1,22 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include "bf-p4c/phv/utils/container_equivalence.h"
 
 namespace PHV {
 
 ContainerEquivalenceTracker::ContainerEquivalenceTracker(const PHV::Allocation &alloc)
     : alloc(alloc),
-#if HAVE_CLOUDBREAK
-    restrictW0(Device::currentDevice() == Device::JBAY ||
-                 Device::currentDevice() == Device::CLOUDBREAK)
-#else
     restrictW0(Device::currentDevice() == Device::JBAY)
-#endif
 { }
 
 std::optional<PHV::Container>
@@ -18,8 +25,6 @@ ContainerEquivalenceTracker::find_equivalent_tried_container(PHV::Container c) {
         return find_single(c);
     } else {
         // W0 is special on Tofino 2
-        // TOF3-DOC: and Tofino 3
-        // JIRA-DOC: (due to a hardware bug) (P4C-4589)
         if (c == PHV::Container({PHV::Kind::normal, PHV::Size::b32}, 0))
             return std::nullopt;
         if (!c.is(PHV::Size::b8))
@@ -30,8 +35,6 @@ ContainerEquivalenceTracker::find_equivalent_tried_container(PHV::Container c) {
         // the current container c to be equivalent to some other empty container e if the
         // paired container of e is also empty (the paired container of c needs not be empty
         // as that only means that there are more constrains on c, not less).
-        // TOF3-DOC: Applies to Tofino 3 as well.
-        // JIRA-DOC: (P4C-3033)
         auto equiv = find_single(c);
         if (!equiv)
             return std::nullopt;

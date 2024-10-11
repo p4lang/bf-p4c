@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include "bf-p4c/mau/ixbar_realign.h"
 #include "bf-p4c/mau/table_summary.h"
 #include "bf-p4c/phv/phv_fields.h"
@@ -9,10 +21,6 @@ class IXBarVerify::GetCurrentUse : public MauInspector {
     bool preorder(const IR::MAU::Table *t) override {
         BUG_CHECK(t->is_always_run_action() || t->global_id(), "Table not placed");
         int gress = INGRESS;
-#if HAVE_FLATROCK
-        if (!Device::threadsSharePipe(INGRESS, EGRESS))
-            gress = t->thread();
-#endif
         unsigned stage = t->stage();
         if (!self.ixbar[gress][stage])
             self.ixbar[gress][stage].reset(IXBar::create());
@@ -97,10 +105,6 @@ Visitor::profile_t IXBarVerify::init_apply(const IR::Node *root) {
 }
 
 void IXBarVerify::postorder(IR::MAU::Table *tbl) {
-#ifdef HAVE_FLATROCK
-    if (Device::currentDevice() == Device::FLATROCK)
-        return;         // FIXME -- skip for flatrock for now
-#endif  /* HAVE_FLATROCK */
     currentTable = tbl;
     verify_format(tbl->resources->gateway_ixbar.get());
     verify_format(tbl->resources->match_ixbar.get());

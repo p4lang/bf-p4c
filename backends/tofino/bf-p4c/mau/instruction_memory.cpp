@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include "bf-p4c/mau/instruction_memory.h"
 #include "bf-p4c/mau/resource.h"
 #include "bf-p4c/mau/table_format.h"
@@ -5,9 +17,6 @@
 #include "bf-p4c/device.h"
 
 #include "bf-p4c/mau/tofino/instruction_memory.h"
-#if HAVE_FLATROCK
-#include "bf-p4c/mau/flatrock/instruction_memory.h"
-#endif
 
 GenerateVLIWInstructions::GenerateVLIWInstructions(PhvInfo &p, ActionData::FormatType_t ft,
         SplitAttachedInfo &sai, const IR::MAU::Table* tbl)
@@ -407,10 +416,5 @@ void InstructionMemory::update(const IR::MAU::Table *tbl) {
 }
 
 InstructionMemory *InstructionMemory::create() {
-#if HAVE_FLATROCK
-    // FIXME -- add Device::newIXBar() method?
-    if (Device::currentDevice() == Device::FLATROCK)
-        return new Flatrock::InstructionMemory();
-#endif
     return new Tofino::InstructionMemory();
 }

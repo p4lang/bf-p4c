@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 
 #include <boost/algorithm/string/replace.hpp>
 
@@ -194,9 +206,6 @@ TEST(testBfGtestHelper, TestCodeTestCodeGood) {
     TestCode(TestCode::Hdr::None, "");
     TestCode(TestCode::Hdr::Tofino1arch, "");
     TestCode(TestCode::Hdr::Tofino2arch, "");
-#if HAVE_CLOUDBREAK
-    TestCode(TestCode::Hdr::Tofino3arch, "");
-#endif
     auto blk2018 = TestCode(TestCode::Hdr::V1model_2018, "");
     auto blk2020 = TestCode(TestCode::Hdr::V1model_2020, "");
     EXPECT_NE(blk2018.extract_code().compare(blk2020.extract_code()), 0);

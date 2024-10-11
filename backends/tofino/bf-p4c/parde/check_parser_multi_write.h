@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #ifndef BF_P4C_PARDE_CHECK_PARSER_MULTI_WRITE_H_
 #define BF_P4C_PARDE_CHECK_PARSER_MULTI_WRITE_H_
 
@@ -6,6 +18,8 @@
 #include "bf-p4c/parde/parde_visitor.h"
 #include "bf-p4c/parde/parser_info.h"
 #include "bf-p4c/parde/parser_query.h"
+
+using namespace P4;
 
 /**
  * @ingroup parde

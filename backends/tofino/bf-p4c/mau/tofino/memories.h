@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #ifndef BF_P4C_MAU_TOFINO_MEMORIES_H_
 #define BF_P4C_MAU_TOFINO_MEMORIES_H_
 
@@ -13,7 +25,6 @@
 
 namespace Tofino {
 // Despite the namespace name, this code is shared for Tofino and JBay (Tofino 1/2)
-// TOF3-DOC: It is also shared by Cloudbreak (Tofino 3)
 using namespace P4;
 
 struct Memories : public ::Memories {
@@ -229,7 +240,6 @@ struct Memories : public ::Memories {
         table_alloc *table_link = nullptr;
         // FIXME -- hack to avoid problems in payload calculation when the only reason we
         // have a payload is to set the match address
-        // JIRA-DOC: for P4C-2938
         bool payload_match_addr_only = false;
         table_alloc(const IR::MAU::Table *t, const ::IXBar::Use *mi, const TableFormat::Use *tf,
                     const InstructionMemory::Use *im, const ActionData::Format::Use *af,

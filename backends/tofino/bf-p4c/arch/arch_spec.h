@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #ifndef EXTENSIONS_BF_P4C_ARCH_ARCH_SPEC_H_
 #define EXTENSIONS_BF_P4C_ARCH_ARCH_SPEC_H_
 
@@ -21,7 +33,6 @@ struct IntrinsicParam {
 
 /**
  * This class is the architecture model for tofino devices.
- * TOF5-DOC: It also applies to Flatrock devices.
  * P4-16 architecture file exposes the user-configurable CSRs as
  * intrinsic metadata to P4 programmers. Different generation of
  * devies may have different set of CSRs, which is encapsulated in
@@ -43,12 +54,6 @@ class ArchSpec {
 
  public:
     enum ArchType_t { TNA, T2NA
-#if HAVE_CLOUDBREAK
-        , T3NA
-#endif
-#if HAVE_FLATROCK
-        , T5NA
-#endif
     };
 
     ArchSpec();
@@ -150,20 +155,6 @@ class JBayArchSpec : public ArchSpec {
     JBayArchSpec();
 };
 
-#if HAVE_CLOUDBREAK
-class CloudbreakArchSpec : public ArchSpec {
- public:
-    CloudbreakArchSpec();
-};
-#endif
 
-#if HAVE_FLATROCK
-class FlatrockArchSpec : public ArchSpec {
- public:
-    FlatrockArchSpec();
-
-    void setFlatrockIntrinsicTypes();
-};
-#endif
 
 #endif  /* EXTENSIONS_BF_P4C_ARCH_ARCH_SPEC_H_ */

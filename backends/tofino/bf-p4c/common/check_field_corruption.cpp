@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include "check_field_corruption.h"
 
 bool CheckFieldCorruption::preorder(const IR::BFN::Pipe* pipe) {
@@ -59,9 +71,6 @@ bool CheckFieldCorruption::copackedFieldExtractedSeparately(const FieldDefUse::l
             if (phv.isFieldMutex(other.field(), sl.field())) continue;
 
             if (Device::currentDevice() == Device::JBAY
-#ifdef HAVE_CLOUDBREAK
-                || Device::currentDevice() == Device::CLOUDBREAK
-#endif /* HAVE_CLOUDBREAK */
             ) {
                 if (sl.container_slice().lo / 8 > other.container_slice().hi / 8 ||
                     sl.container_slice().hi / 8 < other.container_slice().lo / 8)
@@ -148,7 +157,6 @@ void CheckFieldCorruption::end_apply() {
             // Are the slices initialized in always-run actions?
             // This should not be needed, but is currently required because defuse
             // analysis doesn't correctly handle ARA tables.
-            // JIRA-DOC: (See: P4C-4331)
             auto read = PHV::FieldUse(PHV::FieldUse::READ);
             const auto &allocs =
                 phv.get_alloc(use.second, PHV::AllocContext::of_unit(use.first), &read);
@@ -176,13 +184,6 @@ void CheckFieldCorruption::end_apply() {
                     }
                 }
             } else {
-#if HAVE_FLATROCK
-                // FIXME: flatrock egress intrinsic is always initialized.
-                if (Device::currentDevice() == Device::FLATROCK) {
-                    warning("Checking uninitialized read not implemented");
-                    continue;
-                }
-#endif
                 // metadata in INGRESS and non bridged metadata in EGRESS will have at least a
                 // ImplicitParserInit def.
                 BUG_CHECK(!field.metadata ||

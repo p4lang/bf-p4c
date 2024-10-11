@@ -1,5 +1,18 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include "check_parser_multi_write.h"
 
+#include "lib/error_reporter.h"
 #include "bf-p4c/common/utils.h"
 #include "bf-p4c/device.h"
 #include "bf-p4c/parde/dump_parser.h"
@@ -139,28 +152,45 @@ struct InferWriteMode : public ParserTransform {
         bool on_loop = std::any_of(example->prev.begin(), example->prev.end(),
                           [=](const IR::BFN::ParserPrimitive* p) { return p == example->curr; });
         // On Tofino 1, we emit only warning unless the field is rewritten on all paths.
-        // JIRA-DOC: for more details, see P4C-2293
         // FIXME: we probably need a better check and pragma-triggered supression
-        auto diagType = Device::currentDevice() != Device::TOFINO || example->is_rewritten_always
-            ? DiagnosticAction::Error : DiagnosticAction::Warn;
         // FIXME(vstill): use ErrorType directly once the appropriate overload is added to p4c
-        auto errorName = ErrorCatalog::getCatalog().getName(ErrorType::ERR_UNSUPPORTED_ON_TARGET);
-        diagnose(diagType, errorName.c_str(),
-            "%1%%2% is assigned in state %3% but has also previous assignment%4%%5%%6%. %7%"
-            "This re-assignment is not supported by Tofino.%8%%9%", "",
-            /* 1 */ first_valid(c_field->getSourceInfo(), example->curr->getSourceInfo()),
-            /* 2 */ c_field->toString(),
-            /* 3 */ field_to_states.write_to_state.at(example->curr),
-            /* 4 */ example->prev.size() > 1 ? "s" : "",
-            /* 5 */ on_loop && example->prev.size() > 1 ? " including assignment" : "",
-            /* 6 */ on_loop ? " in the same state due to a loop" : "",
-            /* 7 */ example->prev.size() - int(on_loop) > 0 ?
-                    "See the following errors for the list of previous assignments. " : "",
-            /* 8 */ example->is_rewritten_always ?
-                    "\nThe field will either always be assigned multiple times or there is a "
-                    "loopback in the parser that always reassigns the field." : "",
-            /* 9 */ example->curr->is<IR::BFN::ChecksumVerify>() ?
-                    CHECKSUM_VERIFY_OR_SUGGESTION : "");
+        if (Device::currentDevice() != Device::TOFINO || example->is_rewritten_always) {
+            error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
+                "%1%%2% is assigned in state %3% but has also previous assignment%4%%5%%6%. %7%"
+                "This re-assignment is not supported by Tofino.%8%%9%",
+                /* 1 */ first_valid(c_field->getSourceInfo(), example->curr->getSourceInfo()),
+                /* 2 */ c_field->toString(),
+                /* 3 */ field_to_states.write_to_state.at(example->curr),
+                /* 4 */ example->prev.size() > 1 ? "s"_cs : ""_cs,
+                /* 5 */ on_loop && example->prev.size() > 1 ? " including assignment"_cs : ""_cs,
+                /* 6 */ on_loop ? " in the same state due to a loop"_cs : ""_cs,
+                /* 7 */ example->prev.size() - int(on_loop) > 0 ?
+                        "See the following errors for the list of previous assignments. "_cs :
+                        ""_cs,
+                /* 8 */ example->is_rewritten_always ?
+                        "\nThe field will either always be assigned multiple times or there "_cs +
+                        "is a loopback in the parser that always reassigns the field."_cs : ""_cs,
+                /* 9 */ example->curr->is<IR::BFN::ChecksumVerify>() ?
+                        CHECKSUM_VERIFY_OR_SUGGESTION : ""_cs);
+        } else {
+            warning(ErrorType::WARN_UNSUPPORTED,
+                "%1%%2% is assigned in state %3% but has also previous assignment%4%%5%%6%. %7%"
+                "This re-assignment is not supported by Tofino.%8%%9%",
+                /* 1 */ first_valid(c_field->getSourceInfo(), example->curr->getSourceInfo()),
+                /* 2 */ c_field->toString(),
+                /* 3 */ field_to_states.write_to_state.at(example->curr),
+                /* 4 */ example->prev.size() > 1 ? "s"_cs : ""_cs,
+                /* 5 */ on_loop && example->prev.size() > 1 ? " including assignment"_cs : ""_cs,
+                /* 6 */ on_loop ? " in the same state due to a loop"_cs : ""_cs,
+                /* 7 */ example->prev.size() - int(on_loop) > 0 ?
+                        "See the following errors for the list of previous assignments. "_cs :
+                        ""_cs,
+                /* 8 */ example->is_rewritten_always ?
+                        "\nThe field will either always be assigned multiple times or there "_cs +
+                        "is a loopback in the parser that always reassigns the field."_cs : ""_cs,
+                /* 9 */ example->curr->is<IR::BFN::ChecksumVerify>() ?
+                        CHECKSUM_VERIFY_OR_SUGGESTION : ""_cs);
+        }
         for (auto p : example->prev) {
             if (p == example->curr)
                 continue;  // skip printing the looped assignment again
@@ -169,10 +199,17 @@ struct InferWriteMode : public ParserTransform {
             // then be possibly ignored if we have reported another error with
             // the same source location.
             auto p_field = p->getWriteDest()->field;
-            diagnose(diagType, nullptr,
-                "%1%%2% previously assigned in state %3%.", "",
-                first_valid(p_field->getSourceInfo(), p->getSourceInfo()),
-                p_field->toString(), ps);
+            if (Device::currentDevice() != Device::TOFINO || example->is_rewritten_always) {
+                error(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
+                    "%1%%2% previously assigned in state %3%.",
+                    first_valid(p_field->getSourceInfo(), p->getSourceInfo()),
+                    p_field->toString(), ps);
+            } else {
+                warning(ErrorType::WARN_UNSUPPORTED,
+                    "%1%%2% previously assigned in state %3%.",
+                    first_valid(p_field->getSourceInfo(), p->getSourceInfo()),
+                    p_field->toString(), ps);
+            }
         }
     }
 
@@ -238,7 +275,6 @@ struct InferWriteMode : public ParserTransform {
     ///         then is_postdominated_by_extract = false
     ///
     /// This is mainly used to detect the cases where we allow unsafe rewrites on Tofino 1
-    /// JIRA-DOC: (see P4C-2293).
     bool is_postdominated_by_extract(const IR::BFN::ParserPrimitive* write,
                                      const ordered_set<const IR::BFN::ParserPrimitive*>& writes) {
         // Get states, parser, graph
@@ -255,9 +291,8 @@ struct InferWriteMode : public ParserTransform {
         if (graph.is_postdominated_by_set(state, states)) {
             // For Tofino 1 produce a warning as this is not translated correctly, but is still
             // allowed
-            // JIRA-DOC: (see P4C-2293).
             if (Device::currentDevice() == Device::TOFINO)
-                warning(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
+                warning(ErrorType::WARN_UNSUPPORTED,
                           "Extract %1% in state %2% is postdominated by extracts of the same "
                           "field.", write->getWriteDest()->field, state->name);
             return true;
@@ -268,9 +303,8 @@ struct InferWriteMode : public ParserTransform {
         if (lb.first && lb.second) {
             // For Tofino 1 produce a warning as this is not translated correctly, but is still
             // allowed
-            // JIRA-DOC: (see P4C-2293).
             if (Device::currentDevice() == Device::TOFINO)
-                warning(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
+                warning(ErrorType::WARN_UNSUPPORTED,
                           "Extract %1% in state %2% is postdominated by extracts of the same field "
                           "within a loopback from %3% to %4%.",
                           write->getWriteDest()->field, state->name, lb.second->name,
@@ -400,7 +434,7 @@ struct InferWriteMode : public ParserTransform {
             } else {
                 auto ps = field_to_states.write_to_state.at(or_counter_example->curr);
 
-                warning(ErrorType::ERR_UNSUPPORTED_ON_TARGET,
+                warning(ErrorType::WARN_UNSUPPORTED,
                         "Tofino does not support clear-on-write semantic on re-assignment to "
                         "field %1% in parser state %2%. Try to use advance() to skip over the"
                         "re-assigned values and only extract them once.",

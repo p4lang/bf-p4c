@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #ifndef BF_P4C_PHV_PHV_FIELDS_H_
 #define BF_P4C_PHV_PHV_FIELDS_H_
 
@@ -142,8 +154,6 @@ class Field : public LiftLess<Field> {
     int             id = 0;
 
     /// Whether the Field is ingress or egress.
-    // TOF5-DOC: FIXME -- for FLATROCK will probably have fields that are both ingress+egress, with
-    // TOF5-DOC: the same allocation for both pipes
     gress_t         gress = INGRESS;
 
     /// @returns true if the Field is a ghost field.
@@ -294,10 +304,6 @@ class Field : public LiftLess<Field> {
     bool            deparsed_bottom_bits_i = false;    /// true when learning digest, no shifter
     bool            deparsed_top_bits_i = false;       /// true when the field must be in the top
                                                        /// 16b of a container.
-                                                       /// TOF5-DOC: flatrock constraint for
-                                                       /// TOF5-DOC: intrinsic metadata that must
-                                                       /// TOF5-DOC: be in bytes 3:2 of
-                                                       /// TOF5-DOC: 32b containers
     bool            exact_containers_i = false;        /// place in container exactly (no holes)
 
     bool            deparsed_to_tm_i = false;          /// true if field is read by TM
@@ -851,8 +857,6 @@ class Field : public LiftLess<Field> {
     /// (1) for field.size <= 8-bit, x = 8 - size;
     /// (2) for 8 < field.size <= 16, x = 16 - size;
     /// (3) for 16 < field.size, x = 7.
-    /// JIRA-DOC: see https://jira.devtools.intel.com/browse/P4C-4469 for more of the
-    /// JIRA-DOC: hardware constraints.
     void setStartBitsToLowerBitsOfBottomByte();
 };
 

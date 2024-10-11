@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include "frontends/p4/methodInstance.h"
 #include "register_read_write.h"
 #include "bf-p4c/common/utils.h"
@@ -24,7 +36,6 @@ bool RegisterReadWrite::CheckRegisterActions::preorder(
 /*
  * Check the number of register actions attached to registers. It cannot exceed 4.
  * This is a Tofino 1/2 HW restriction.
- * TOF3-DOC: And Tofino 3.
  */
 void RegisterReadWrite::CheckRegisterActions::end_apply() {
     for (auto &item : all_register_actions) {
@@ -518,7 +529,6 @@ bool RegisterReadWrite::CollectRegisterReadsWrites::preorder(
             // the error), or have an earlier pass check and give the error.  Maybe
             // CheckRegisterActions in this file (which is what ends up flagging an error
             // in the test we have but might not cover all cases)
-            // JIRA-DOC: p4c-4525
             LOG1("no P4Action context, but there is a Declaration_Instance: " << regAct);
             collectRegReadWrite(call, regAct);
         }
@@ -530,12 +540,8 @@ bool RegisterReadWrite::CollectRegisterReadsWrites::preorder(
 /*
  * Check that all uses of a register within a single action use the same addressing.
  * This is a Tofino 1/2 HW restriction.
- * TOF3-DOC: And Tofino 3.
  */
 void RegisterReadWrite::CollectRegisterReadsWrites::end_apply() {
-#if HAVE_FLATROCK
-    if (Device::currentDevice() == Device::FLATROCK) return;
-#endif  // HAVE_FLATROCK
 
     for (auto &[action, regs_in_action] : self.action_register_calls) {
         const IR::Expression *first_addr = nullptr;

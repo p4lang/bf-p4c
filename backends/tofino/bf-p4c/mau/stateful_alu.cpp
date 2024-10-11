@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include <cmath>
 #include "stateful_alu.h"
 #include "ixbar_expr.h"
@@ -48,47 +60,7 @@ const Device::StatefulAluSpec &JBayDevice::getStatefulAluSpec() const {
 }
 #endif
 
-#if HAVE_CLOUDBREAK
-const Device::StatefulAluSpec &CloudbreakDevice::getStatefulAluSpec() const {
-    static const Device::StatefulAluSpec spec = {
-        /* .CmpMask = */ true,
-        /* .CmpUnits = */ { "cmp0"_cs, "cmp1"_cs, "cmp2"_cs, "cmp3"_cs },
-        /* .MaxSize = */ 128,
-        /* .MaxDualSize = */ 128,
-        /* .MaxPhvInputWidth = */ 64,
-        /* .MaxInstructions = */ 4,
-        /* .MaxInstructionConstWidth = */ 4,
-        /* .MinInstructionConstValue = */ -8,
-        /* .MaxInstructionConstValue = */ 7,
-        /* .OutputWords = */ 4,
-        /* .DivModUnit = */ true,
-        /* .FastClear = */ true,
-        /* .MaxRegfileRows = */ 4
-    };
-    return spec;
-}
-#endif
 
-#if HAVE_FLATROCK
-const Device::StatefulAluSpec &FlatrockDevice::getStatefulAluSpec() const {
-    static const Device::StatefulAluSpec spec = {
-        /* .CmpMask = */ true,
-        /* .CmpUnits = */ { "cmp0"_cs, "cmp1"_cs, "cmp2"_cs, "cmp3"_cs },
-        /* .MaxSize = */ 128,
-        /* .MaxDualSize = */ 128,
-        /* .MaxPhvInputWidth = */ 64,
-        /* .MaxInstructions = */ 4,
-        /* .MaxInstructionConstWidth = */ 4,
-        /* .MinInstructionConstValue = */ -8,
-        /* .MaxInstructionConstValue = */ 7,
-        /* .OutputWords = */ 4,
-        /* .DivModUnit = */ true,
-        /* .FastClear = */ true,
-        /* .MaxRegfileRows = */ 4
-    };
-    return spec;
-}
-#endif
 
 /**
  * @brief This class detects a following pattern:
@@ -599,7 +571,7 @@ void CreateSaluInstruction::postorder(const IR::Function *func) {
         // Action body is empty, insert the nop instruction directly - we don't need
         // to merge any instructions.
         action->action.push_back(new IR::MAU::SaluInstruction("nop"_cs));
-        warning(ErrorType::ERR_EXPECTED,
+        warning(ErrorType::WARN_INVALID,
                 "%1%: Expected stateful action '%2%' to have instructions "
                 "assigned. Please verify the action is valid.",
                 salu, action->name);
@@ -1858,7 +1830,6 @@ void CreateSaluInstruction::assignOutputAlus() {
 
                 // alu0/1 always use bits 31:0, alu2/3 - bits 63:32.
                 // See JBay MAU Micro-Architecture 6.2.12.8 Alu-Output for details.
-                // TOF3-DOC: Same section in CloudBreak MAU Micro-Architecture.
                 const unsigned BOUNDARY = 32;
                 std::vector<int> available_alus;
                 bool ls_bits = true;

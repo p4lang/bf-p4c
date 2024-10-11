@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include "infer_payload_offset.h"
 
 #include <boost/range/adaptor/reversed.hpp>
@@ -488,23 +500,6 @@ class RewriteParde : public PardeTransform {
                 seen_hdr_len_inc_stop = true;
                 state_to_hdr_len_inc_stop[state->name] = stopper;
 
-                #if HAVE_CLOUDBREAK
-                // Needed for cloudbreak
-                // If the current state does not end by shift equal to final header length
-                // amount, then collect all statements that fall after the stopper
-                if (Device::currentDevice() == Device::CLOUDBREAK) {
-                    auto transition = *(state->transitions).begin();
-                    auto stopper_range = stopper->source->range.toUnit<RangeUnit::Byte>();
-                    unsigned final_hdr_count = stopper_range.hi ? stopper_range.hi + 1 : 0;
-
-                    // No need for dontMerge if parsing ends at this state.
-                    if (state->transitions.size() != 1 || !transition->next)
-                        state->dontMerge = true;
-                    if (transition->shift != final_hdr_count) {
-                         orig_state_to_new_state_stmts[state->name] = {};
-                    }
-                }
-                #endif  // HAVE_CLOUDBREAK
                 rv.push_back(stmt);
                 continue;
             }
@@ -702,14 +697,7 @@ class RewriteParde : public PardeTransform {
     // Maps state name to hdr_len_inc_stop statement
     assoc::map<cstring, const IR::BFN::HdrLenIncStop*> state_to_hdr_len_inc_stop;
 
-#if HAVE_CLOUDBREAK
-    // For cloudbreak, a new state needs to be added after the state with hdr_len_inc_stop
-    // This map contains the info needed
-    // Key : State name with hdr_len_inc_stop
-    // Value : statements for new state
-#else
     // Unused
-#endif  /* HAVE_CLOUDBREAK */
     assoc::map <cstring,
         IR::Vector<IR::BFN::ParserPrimitive>> orig_state_to_new_state_stmts;
 
@@ -728,20 +716,6 @@ class InsertStallState : public ParserTransform {
  public:
     const RewriteParde& rewriteParde;
     explicit InsertStallState(const RewriteParde& rewriteParde) : rewriteParde(rewriteParde) { }
-// TOF3-DOC: For Cloudbreak, the hdr_len count stops after the shift_amt is applied in the state
-// TOF3-DOC: where the hdr_len_inc_stop flag is set. Compare this with JBay where there's an
-// TOF3-DOC: explicit hdr_len_inc_final_amt value.
-// TOF3-DOC: So we change the current state to end at the point when hdr_len count stops
-// TOF3-DOC: To add this feature, the following is done to the current state (current state sets
-// TOF3-DOC: hdr_len_inc_stop flag)
-// TOF3-DOC:  - change the shift of the state containing hdr_len_inc_stop equal to
-// TOF3-DOC:    final hdr len count
-// TOF3-DOC: - Make a unconditional transition to a new state that will contain all the statements
-// TOF3-DOC:   that occurs after the hdr_len_inc_stop statement in the current state
-// TOF3-DOC: - Give remaining shift to the new state and add current state's original transition to
-// TOF3-DOC:   new state
-// TOF3-DOC: - Set current state as dont merge. (This is because we want the current state to end
-// TOF3-DOC:   exactly at the point we set it here. Merging of that state can change it)
 
     IR::Node* preorder(IR::BFN::ParserState* state) override {
         if (rewriteParde.orig_state_to_new_state_stmts.count(state->name)) {

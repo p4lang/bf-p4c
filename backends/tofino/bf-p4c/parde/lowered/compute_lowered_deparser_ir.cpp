@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include "compute_lowered_deparser_ir.h"
 
 #include "bf-p4c/common/ir_utils.h"
@@ -56,9 +68,6 @@ ComputeLoweredDeparserIR::getPartialUnit(const IR::BFN::EmitChecksum* emitChecks
             unitConfig->phvs.push_back(input);
         }
     } else if (Device::currentDevice() == Device::JBAY
-#if HAVE_CLOUDBREAK
-               || Device::currentDevice() == Device::CLOUDBREAK
-#endif
     ) {
         std::vector<const IR::BFN::FieldLVal*> groupPov;
         ordered_map<IR::Vector<IR::BFN::FieldLVal>*, const IR::BFN::FieldLVal*> groups;
@@ -121,7 +130,6 @@ IR::BFN::FullChecksumUnitConfig* ComputeLoweredDeparserIR::lowerChecksum(
     }
     fullChecksumUnit->unit = checksumUnit->unit;
     // Only for JbayB0
-    // TOF3-DOC: and Cloudbreak
     if (Device::pardeSpec().numDeparserInvertChecksumUnits()) {
         for (auto nestedCsum : emitChecksum->nested_checksum) {
             IR::BFN::PartialChecksumUnitConfig* nestedUnit = nullptr;
@@ -170,7 +178,6 @@ unsigned int ComputeLoweredDeparserIR::getChecksumUnit(bool nested) {
 }
 
 bool ComputeLoweredDeparserIR::preorder(const IR::BFN::Deparser* deparser) {
-    // TOF5-DOC: Flatrock: metadata packer is output as a deparser
     auto* loweredDeparser = deparser->gress == INGRESS ? igLoweredDeparser : egLoweredDeparser;
 
     // Reset the next checksum unit if needed. On Tofino, each thread has
@@ -320,29 +327,6 @@ bool ComputeLoweredDeparserIR::preorder(const IR::BFN::Deparser* deparser) {
     // Lower deparser parameters from fields to containers.
     for (auto* param : deparser->params) {
         bool skipPOV = false;
-#if HAVE_FLATROCK
-        // Skip Flatrock metadata packer valid_vec fields
-        auto& mdp_vld_vec = Device::get().pardeSpec().mdpValidVecFieldsSet();
-        if (Device::currentDevice() == Device::FLATROCK && deparser->gress == INGRESS) {
-            bool found = mdp_vld_vec.count(std::string(param->name));
-            if (!found) found = mdp_vld_vec.count(param->name + ".$valid");
-            if (!found && param->source) {
-                if (const auto* mem = param->source->field->to<IR::Member>()) {
-                    found = mdp_vld_vec.count(std::string(mem->member.name));
-                }
-            }
-            if (found) {
-                if (param->povBit) {
-                    if (param->source)
-                        skipPOV = true;
-                    else
-                        continue;
-                } else {
-                    continue;
-                }
-            }
-        }
-#endif /* HAVE_FLATROCK */
         if (!param->source) continue;
         auto* loweredSource =
             lowerUnsplittableField(phv, clotInfo, param->source, "deparser parameter");
@@ -352,43 +336,6 @@ bool ComputeLoweredDeparserIR::preorder(const IR::BFN::Deparser* deparser) {
         loweredDeparser->params.push_back(lowered);
     }
 
-#if HAVE_FLATROCK
-    // Build the Flatrock MDP valid vector
-    if (Device::currentDevice() == Device::FLATROCK && deparser->gress == INGRESS) {
-        IR::Vector<IR::BFN::FieldLVal> mdp_vld_vec_fields;
-
-        const auto* pipe = findContext<IR::BFN::Pipe>();
-        auto* tmMeta = getMetadataType(pipe, "ingress_intrinsic_metadata_for_tm");
-        if (!tmMeta) {
-            warning("ig_intr_md_for_tm not defined in ingress control block");
-        } else {
-            for (auto &fname : Device::get().pardeSpec().mdpValidVecFields()) {
-                const IR::Expression* exp = nullptr;
-                const PHV::Field* f = nullptr;
-                if (fname.rfind(".$valid") != std::string::npos)
-                    f = phv.field(tmMeta->name + "." + fname);
-                else
-                    f = phv.field(tmMeta->name + "." + fname + ".$valid");
-                if (f && phv.getTempVar(f)) exp = phv.getTempVar(f);
-                if (!exp) exp = gen_fieldref(tmMeta, fname);
-                mdp_vld_vec_fields.push_back(new IR::BFN::FieldLVal(exp));
-            }
-        }
-
-        // Calculate the containers for the valid vector
-        IR::Vector<IR::BFN::ContainerRef> containers;
-        std::tie(containers, std::ignore) = lowerFields(phv, clotInfo, mdp_vld_vec_fields);
-        loweredDeparser->params.push_back(
-            new IR::BFN::LoweredDeparserParameter("valid_vec", containers));
-
-        // Calculate the containers for POV bits (states/flags)
-        // TODO POV state bits containers to be added here
-        CHECK_NULL(pov_flags_refs);
-        if (pov_flags_refs->size() > 0)
-            loweredDeparser->params.push_back(
-                new IR::BFN::LoweredDeparserParameter("pov", *pov_flags_refs));
-    }
-#endif /* HAVE_FLATROCK */
 
     // Filter padding field out of digest field list
     auto filterPaddingField = [&](const IR::BFN::DigestFieldList* fl) -> IR::BFN::DigestFieldList* {

@@ -1,9 +1,21 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include <libgen.h>
 #include <cstdlib>
 #include <string>
 #include <filesystem>
 
-// #include "../git_sha_version.h"  // for BF_P4C_GIT_SHA
+#include "../git_sha_version.h"  // for BF_P4C_GIT_SHA
 #include "backends/graphs/controls.h"
 #include "backends/graphs/graph_visitor.h"
 #include "backends/graphs/parsers.h"
@@ -118,7 +130,7 @@ void Manifest::serialize() {
     strftime(build_date, 1024, "%c", localtime(&now));
     writer.String(build_date);
     writer.Key("compiler_version");
-    // writer.String(BF_P4C_VERSION " (" BF_P4C_GIT_SHA ")");
+    writer.String(BF_P4C_VERSION " (" BF_P4C_GIT_SHA ")");
     writer.Key("compilation_succeeded");
     writer.Bool(m_success);
     writer.Key("compilation_time");
@@ -235,7 +247,6 @@ void Manifest::serializePipes(Writer& writer) {
     writer.StartArray();  // for each pipe
     for (auto &pipeOutput : m_pipeOutputs) {
         // TODO: have to add this check for a ghost thread profile.
-        // JIRA-DOC: P4C-3327
         if (m_pipes.count(pipeOutput.first)) {
             writer.StartObject();
             writer.Key("pipe_id");
@@ -366,7 +377,6 @@ void Manifest::setPipe(const int pipeID_in, const cstring pipe_name) {
     m_pipes.emplace(m_pipeId, pipe_name);
     // and add implicitly add the pipe outputs so that even if there are no
     // files produced by the compiler, we get the pipe structure.
-    // JIRA-DOC: P4C-2160
     getPipeOutputs(pipeID_in);
 }
 

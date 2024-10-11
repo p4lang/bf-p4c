@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include <fstream>
 #include <regex>
 #include <sstream>
@@ -17,8 +29,6 @@ namespace P4::Test {
  * bits but instead specified in match bits and that SRAM allocation
  * has been adjusted accordignly.
  *
- * JIRA-DOC: The same P4 code is used with p4-tests/p4_16/stf/p4c-4958.stf
- * JIRA-DOC: to validate that packet matching works.
  */
 TEST(MaskExactMatchHashBitsTest, TotalFieldExclusion) {
 // P4 program
@@ -229,8 +239,6 @@ Switch(pipe) main;)";
  * they are specified in match bits.  Also checks that SRAM allocation has
  * been adjusted accordignly.
  *
- * JIRA-DOC: The same P4 code is used with p4-tests/p4_16/stf/p4c-4958_2.stf
- * JIRA-DOC: to validate that packet matching works.
  */
 TEST(MaskExactMatchHashBitsTest, PartialFieldExclusion) {
 // P4 program

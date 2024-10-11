@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #ifndef BF_P4C_PHV_MAKE_CLUSTERS_H_
 #define BF_P4C_PHV_MAKE_CLUSTERS_H_
 
@@ -271,7 +283,6 @@ class Clustering : public PassManager {
     /// }
     /// then normal.f1 and normal.f2 cannot be packed into a W container because
     /// the offset on the buffer is different from the offset of the header.
-    /// JIRA-DOC: see P4C-3254 for more details.
     /// The output of this pass is a set of fieldslice that the header needs to be split after
     /// the fieldslice.
     class CollectInconsistentFlexibleFieldExtract : public Inspector {

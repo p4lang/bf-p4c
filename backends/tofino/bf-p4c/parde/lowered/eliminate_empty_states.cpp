@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include "eliminate_empty_states.h"
 
 #include "bf-p4c/device.h"
@@ -24,7 +36,6 @@ bool EliminateEmptyStates::is_empty(const IR::BFN::ParserState* state) {
 
     auto parser = findOrigCtxt<IR::BFN::Parser>();
     // do not merge loopback state for now, need to maitain loopback pointer TODO
-    // JIRA-DOC: p4-tests/p4_16/compile_only/p4c-2153.p4
     if (parser_info.graph(parser).is_loopback_state(state->name)) return false;
 
     return true;

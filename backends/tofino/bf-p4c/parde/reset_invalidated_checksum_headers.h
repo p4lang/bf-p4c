@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #ifndef BF_P4C_PARDE_RESET_INVALIDATED_CHECKSUM_HEADERS_H_
 #define BF_P4C_PARDE_RESET_INVALIDATED_CHECKSUM_HEADERS_H_
 
@@ -14,7 +26,6 @@
  * the fields will corrupt the checksum calculation.
  * This is only needed for Tofino whose deparser checksum entries
  * are statically configured.
- * JIRA-DOC: See P4C-190.
  */
 
 struct CollectPovBitToFields : public DeparserInspector {

@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include <deque>
 #include <iostream>
 #include <numeric>
@@ -285,7 +297,6 @@ PHV::Allocation::slicesByLiveness(const PHV::Container c, const AllocSlice& sl) 
         bool mutex = phv_i->field_mutex()(slice.field()->id, sl.field()->id);
         // Checking disjoint liveranges may be too conservative due to
         // default [parser, deparser] liveranges
-        // JIRA-DOC: See P4C-4467
         bool liverange_mutex = slice.isLiveRangeDisjoint(sl);
         if (!mutex && !liverange_mutex) rs.insert(slice);
     });

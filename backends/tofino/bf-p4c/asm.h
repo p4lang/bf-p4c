@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #ifndef _EXTENSIONS_BF_P4C_ASM_H_
 #define _EXTENSIONS_BF_P4C_ASM_H_
 
@@ -7,9 +19,6 @@
 #include "bf-p4c/common/bridged_packing.h"
 #include "bf-p4c/common/utils.h"
 #include "bf-p4c/mau/asm_output.h"
-#if HAVE_FLATROCK
-#include "bf-p4c/mau/flatrock/asm_output.h"
-#endif  /* HAVE_FLATROCK */
 #include "bf-p4c/mau/jbay_next_table.h"
 #include "bf-p4c/mau/tofino/asm_output.h"
 #include "bf-p4c/parde/asm_output.h"

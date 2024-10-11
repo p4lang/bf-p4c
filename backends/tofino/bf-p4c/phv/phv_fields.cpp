@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include "bf-p4c/phv/phv_fields.h"
 
 #include <string>
@@ -2025,7 +2037,6 @@ class CollectPardeConstraints : public Inspector {
                     PHV::Field* resubmit_field = phv.field(resubmit_field_expr->field);
                     if (resubmit_field) {
                         resubmit_field->set_exact_containers(true);
-                        // JIRA-DOC: TODO: P4C-1870,
                         // an edge case for resubmit fields,
                         // that if they are in a 8-byte-long
                         // resubmit field list, then they must take the whole container.
@@ -2250,7 +2261,6 @@ bool CollectExtractedTogetherFields::preorder(const IR::BFN::ParserState* state)
 }
 
 /**
- *  JIRA-DOC: This Inspector fixes: https://jira.devtools.intel.com/browse/P4C-2637
  *  If result of some arith ops goes into tempvar, then that tempvar can
  *  get allocated into wider container which makes the instruction alu
  *  work at different width than anticipated by the user. This poses

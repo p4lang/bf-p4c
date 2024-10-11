@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include "bf-p4c/phv/v2/allocator_base.h"
 
 #include <iomanip>
@@ -451,20 +463,12 @@ const AllocError* AllocatorBase::is_container_write_mode_ok(const Allocation& al
     BUG_CHECK(write_mode, "parser write mode not exist for extracted field %1%", f->name);
 
     // W0 is not allowed to be used with clear_on_write
-    // JIRA-DOC: due to a hardware issue (P4C-4589).
     // W0 is a 32-bit container, and it will be the only container of its parser group,
     // so we do not need to check other containers of its parser group.
     bool w0_bug = Device::currentDevice() == Device::JBAY;
-#if HAVE_CLOUDBREAK
-    w0_bug |= Device::currentDevice() == Device::CLOUDBREAK;
-#endif
     if (w0_bug && c == Container({PHV::Kind::normal, PHV::Size::b32}, 0) &&
         write_mode == IR::BFN::ParserWriteMode::CLEAR_ON_WRITE) {
-#if HAVE_CLOUDBREAK
-        *err << "W0 must not be used in clear-on-write mode on either Tofino 2 or Tofino 3.";
-#else
         *err << "W0 must not be used in clear-on-write mode on Tofino 2.";
-#endif  /* HAVE_CLOUDBREAK */
         return err;
     }
 
@@ -480,7 +484,6 @@ const AllocError* AllocatorBase::is_container_write_mode_ok(const Allocation& al
             std::optional<IR::BFN::ParserWriteMode> other_write_mode;
             for (auto e : field_to_states.field_to_writes.at(allocated.field())) {
                 other_write_mode = e->getWriteMode();
-                // JIRA-DOC: See P4C-3033 for more details
                 // In tofino2, all extractions happen using 16b extracts.
                 // So a 16-bit parser extractor extracts over a pair of even and
                 // odd phv 8-bit containers to perform 8-bit extraction.
@@ -1674,9 +1677,6 @@ AllocResult AllocatorBase::alloc_stride(const ScoreContext& ctx,
                 // 8b containers are paired in 16b parser containers. If we have an 8b container,
                 // we need to maintain the high/low half across the strided allocation.
                 if ((Device::currentDevice() == Device::JBAY
-#if HAVE_CLOUDBREAK
-                     || Device::currentDevice() == Device::CLOUDBREAK
-#endif
                     ) &&  // NOLINT(whitespace/parens)
                     prev.type().size() == PHV::Size::b8 && prev.index() % 2)
                     curr = PHV::Container(curr->type(), curr->index() + 1);

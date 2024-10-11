@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 
 #include <ctime>
 #include <algorithm>
@@ -11,9 +23,6 @@
 #include "mau/input_xbar.h"
 #include "mau/instruction_memory.h"
 #include "mau/memories.h"
-#if HAVE_FLATROCK
-#include "mau/flatrock/memories.h"
-#endif  /* HAVE_FLATROCK */
 #include "mau/tofino/memories.h"
 #include "version.h"
 
@@ -253,12 +262,6 @@ void ResourcesLogging::collectTableUsage(cstring name, const IR::MAU::Table *tab
     if (stage >= stageResources.size()) stageResources.resize(stage + 1);
     auto logicalTableId = *table->global_id();  // table name is 'name'
     const TableResourceAlloc *alloc = table->resources;
-#if HAVE_FLATROCK
-    // FIXME -- on flatrock, ingress and egress have independent ids, so the gids are
-    // not unique.  To work around this, we or egress ids with 0x10000 to make them distinct
-    if (Device::currentDevice() == Device::FLATROCK && table->gress == EGRESS)
-        logicalTableId |= 0x10000;
-#endif
 
     if (stageResources[stage].logicalIds.count(logicalTableId)) {
         BUG("Logical id: %d is used twice in stage: %d", logicalTableId, stage);
@@ -416,7 +419,6 @@ ResourcesLogging::HashBitsResourceUsage *ResourcesLogging::logHashBits(unsigned 
     using HashBitUsage = Resources_Schema_Logger::HashBitUsage;
     using ElementUsageHash = Resources_Schema_Logger::ElementUsageHash;
 
-    // TOF5-DOC: FIXME -- groups + single bits makes no sense for flatrock
     const auto nBits = 10 * Tofino::IXBar::HASH_INDEX_GROUPS + Tofino::IXBar::HASH_SINGLE_BITS;
     const auto nFunctions = Tofino::IXBar::HASH_GROUPS;
 
@@ -444,7 +446,6 @@ ResourcesLogging::HashDistResourceUsage *ResourcesLogging::logHashDist(unsigned 
     using HashDistUnitUsage = Resources_Schema_Logger::HashDistributionUnitUsage;
     using ElementUsageHashDistribution = Resources_Schema_Logger::ElementUsageHashDistribution;
 
-    // TOF5-DOC: FIXME -- no hashDist on flatrock -- xcmp hash is used directly
     const auto nHashIds = Tofino::IXBar::HASH_DIST_UNITS;
     const auto nUnitIds = Tofino::IXBar::HASH_DIST_SLICES;
 

@@ -1,9 +1,21 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include "programStructure.h"
 #include "lib/error.h"
 #include "frontends/p4-14/header_type.h"
 #include "frontends/p4-14/typecheck.h"
 #include "frontends/p4/cloner.h"
-#include "frontends/p4/fromv1.0/converters.h"
+#include "frontends/p4-14/fromv1.0/converters.h"
 #include "frontends/p4/simplify.h"
 #include "frontends/p4/unusedDeclarations.h"
 #include "bf-p4c/device.h"
@@ -452,12 +464,6 @@ generate_hash_block_statement(P4V1::ProgramStructure* structure,
         const IR::Primitive *prim,
         const cstring temp, ExpressionConverter &conv, unsigned num_ops) {
     if (BackendOptions().arch == "tna" || BackendOptions().arch == "t2na"
-#if HAVE_CLOUDBREAK
-        || BackendOptions().arch == "t3na"
-#endif
-#if HAVE_FLATROCK
-        || BackendOptions().arch == "t5na"
-#endif
     ) {
         auto st = dynamic_cast<P4V1::TnaProgramStructure*>(structure);
         BUG_CHECK(st != nullptr, "Unable to cast structure to tna programStructure");
@@ -2504,22 +2510,8 @@ void TnaProgramStructure::loadModel() {
         include("tna.p4"_cs, "-D__TARGET_TOFINO__=1"_cs);
     else if (BackendOptions().arch == "t2na")
         include("t2na.p4"_cs, "-D__TARGET_TOFINO__=2"_cs);
-#if HAVE_CLOUDBREAK
-    else if (BackendOptions().arch == "t3na")
-        include("t3na.p4"_cs, "-D__TARGET_TOFINO__=3"_cs);
-#endif
-#if HAVE_FLATROCK
-    else if (BackendOptions().arch == "t5na"_cs)
-        include("tna.p4"_cs, "-D__TARGET_TOFINO__=5"_cs);
-#endif
     else
         error("Must specify either --arch tna or --arch t2na"
-#if HAVE_CLOUDBREAK
-                " or --arch t3na"
-#endif
-#if HAVE_FLATROCK
-                " or --arch t5na"
-#endif
                 "");
 
     // iterate over tna declarations, find the type for intrinsic metadata

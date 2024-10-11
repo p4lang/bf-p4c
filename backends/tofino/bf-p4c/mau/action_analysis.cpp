@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include "action_analysis.h"
 #include "lib/log.h"
 #include "resource.h"
@@ -855,7 +867,6 @@ bool ActionAnalysis::init_phv_alignment(const ActionParam &read, const op_type_t
                         return;
                     }
                     // Get all of the allocated bits for a slice
-                    // JIRA-DOC: (P4C-4811)
                     auto alloc_bits = phv.bits_allocated(alloc.container(), field, tbl, &use);
                     // Get the bits that should be unallocated
                     auto resize_bits = alloc_bits.getslice(start_container_bit, resize_size);
@@ -1503,7 +1514,6 @@ bool ActionAnalysis::TotalAlignment::is_wrapped_shift(PHV::Container container, 
     // implicit_read_bits might not yet be determined.  Therefore at this point,
     // the direct_read_bits may not be the full container, but within the addition of the
     // implicit_read_bits would be.
-    // JIRA-DOC: Noted in p4c-2598
     if (read_bits().popcount() == static_cast<int>(container.size()) ||
         df_src1_mask().popcount() == static_cast<int>(container.size())) {
         if (right_shift == 0) {
@@ -2460,10 +2470,6 @@ void ActionAnalysis::check_constant_to_actiondata(ContainerAction &cont_action,
     if (Device::currentDevice() == Device::JBAY)
         const_src_min = JBAY_CONST_SRC_MIN;
 #endif /* HAVE_JBAY */
-#ifdef HAVE_CLOUDBREAK
-    if (Device::currentDevice() == Device::CLOUDBREAK)
-        const_src_min = JBAY_CONST_SRC_MIN;
-#endif /* HAVE_CLOUDBREAK */
 
     if (cont_action.convert_instr_to_bitmasked_set ||
         cont_action.convert_instr_to_byte_rotate_merge) {
@@ -2825,7 +2831,6 @@ bool ActionAnalysis::ContainerAction::verify_possible(cstring &error_message,
     }
 
     if (!is_from_set() && sources_needed != operands()) {
-        // JIRA-DOC: P4C-4757
         // Some 2/3 operand instructions can have a source which is an uninitialized read. In this
         // case phv may allocate src/dst operands to the same PHV container slice
         // E.g.

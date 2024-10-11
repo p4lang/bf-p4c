@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include "lib/stringify.h"
 #include "bf-p4c/common/asm_output.h"
 #include "bf-p4c/common/utils.h"
@@ -104,7 +116,6 @@ void GenerateDynamicHashJson::gen_hash_dist_json(cstring dyn_hash_name) {
         // FIXME -- HashGenExpressions used directly in SaluActions have no hash_dist
         // associated with them, so we currently can't generate json for them.  For
         // now just leave them out -- runtime will not be able to change the hash function
-        // JIRA-DOC: See p4_tests/p4_16/customer/extreme/p4c-1314.p4
         BUG_CHECK(!all_placed, "No allocation for dyn hash object %s to coordinate against",
                 dyn_hash_name);
 #endif

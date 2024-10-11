@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #ifndef BF_P4C_MAU_INSTRUCTION_ADJUSTMENT_H_
 #define BF_P4C_MAU_INSTRUCTION_ADJUSTMENT_H_
 
@@ -261,8 +273,6 @@ class AdjustStatefulInstructions : public MauTransform {
 
     bool check_bit_positions(std::map<int, le_bitrange> &salu_inputs, le_bitrange field_bits,
         int starting_bit);
-    // TOF5-DOC: FIXME -- these need to be folded into a virtual function on IXBar::Use to support
-    // TOF5-DOC: both tofino and flatrock
     bool verify_on_search_bus(const IR::MAU::StatefulAlu *, const Tofino::IXBar::Use &salu_ixbar,
         const PHV::Field *field, le_bitrange &bits, bool &is_hi);
     bool verify_on_hash_bus(const IR::MAU::StatefulAlu *salu,

@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 
 #include "bf_gtest_helpers.h"
 
@@ -444,18 +456,6 @@ TestCode::TestCode(Hdr header, std::string code,
             o.target = "tofino2"_cs;
             o.arch = "t2na"_cs;
            break;
-#if HAVE_CLOUDBREAK
-        case Hdr::Tofino3arch:
-            o.target = "tofino3"_cs;
-            o.arch = "t3na"_cs;
-            break;
-#endif  /* HAVE_CLOUDBREAK */
-#if HAVE_FLATROCK
-        case Hdr::Tofino5arch:
-            o.target = "tofino5"_cs;
-            o.arch = "t5na"_cs;
-            break;
-#endif  /* HAVE_FLATROCK */
     }
 
     std::vector<char*> argv;
@@ -486,16 +486,6 @@ TestCode::TestCode(Hdr header, std::string code,
         case Hdr::Tofino2arch:
             source << Test::p4headers().tofino2arch_p4;
             break;
-#if HAVE_CLOUDBREAK
-        case Hdr::Tofino3arch:
-            source << Test::p4headers().tofino3arch_p4;
-            break;
-#endif  /* HAVE_CLOUDBREAK */
-#if HAVE_FLATROCK
-        case Hdr::Tofino5arch:
-            source << Test::p4headers().tofino5arch_p4;
-            break;
-#endif  /* HAVE_FLATROCK */
         case Hdr::V1model_2018:
             source << Test::p4headers().v1model_2018_p4;
             break;
@@ -709,11 +699,7 @@ std::string TestCode::extract_asm(CodeBlock blk_type) const {
             oss << *mauasm << "\n";
             break;
         case CodeBlock::HdrAsm:
-#if HAVE_FLATROCK
-            oss << HeaderAsmOutput(backend->get_parser_hdr_seqs());
-#else
             BUG("CodeBlock::HdrAsm is not supported disabled");
-#endif  // HAVE_FLATROCK
             break;
         case CodeBlock::ParserIAsm:
             oss << ParserAsmOutput(pipe, backend->get_phv(), backend->get_clot(), INGRESS);

@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include <libgen.h>
 #include <sys/stat.h>
 
@@ -480,7 +492,6 @@ BFN_Options::BFN_Options() {
         "The default value of N is effectively equivalent to positive infinity.  "
         "Inclusive minimum value: 1 [one].");
 
-    // JIRA-DOC: P4C-5308/P4C-5309
     // FIXME: Temporarily allow manual aliasing of POV bits to address POV bit
     // growth caused by varbit headers. Only a single bit is needed on Tofino 2 if the varbit is
     // allocated to a CLOT.
@@ -517,21 +528,6 @@ std::vector<const char*>* BFN_Options::process(int argc, char* const argv[]) {
         {"tofino2u"_cs, "t2na"_cs},
         {"tofino2a0"_cs, "tna"_cs},
         {"tofino2a0"_cs, "t2na"_cs},
-  #if HAVE_CLOUDBREAK
-        {"tofino3"_cs, "v1model"_cs},
-        {"tofino3"_cs, "tna"_cs},
-        {"tofino3"_cs, "t2na"_cs},
-        {"tofino3"_cs, "t3na"_cs},
-  #endif /* HAVE_CLOUDBREAK */
-  #if HAVE_FLATROCK
-        {"tofino5"_cs, "v1model"_cs},
-  #if BAREFOOT_INTERNAL
-        {"tofino5"_cs, "tna"_cs},
-        {"tofino5"_cs, "t2na"_cs},
-        {"tofino5"_cs, "t3na"_cs},
-  #endif /* BAREFOOT_INTERNAL */
-        {"tofino5"_cs, "t5na"_cs},
-  #endif /* HAVE_FLATROCK */
     };
 
     // !!!!!!!!!!!!
@@ -585,14 +581,6 @@ std::vector<const char*>* BFN_Options::process(int argc, char* const argv[]) {
             preprocessor_options += " -D__TARGET_TOFINO__=2";
             preprocessor_options += " -D__TOFINO2_VARIANT__=" +
                 std::to_string(supportedT2Variants.at(target));
-#if HAVE_CLOUDBREAK
-        } else if (target == "tofino3") {
-            preprocessor_options += " -D__TARGET_TOFINO__=3";
-#endif /* HAVE_CLOUDBREAK */
-#if HAVE_FLATROCK
-        } else if (target == "tofino5") {
-            preprocessor_options += " -D__TARGET_TOFINO__=5";
-#endif /* HAVE_FLATROCK */
         } else {
             BUG("Unknown target %s", target);
         }

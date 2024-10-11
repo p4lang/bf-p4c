@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #ifndef BF_P4C_PARDE_MIRROR_CONST_MIRROR_SESSION_OPT_H_
 #define BF_P4C_PARDE_MIRROR_CONST_MIRROR_SESSION_OPT_H_
 
@@ -17,7 +29,6 @@
  * is reserved for deparse_zero to generate the 10b0 value for mirror_id.
  *
  * This pass can save PHV resource for the following errata implementation:
- * JIRA-DOC: Relevant JIRA ticket: P4C-4688, P4C-4922.
  * Due to the errata, the packet cannot be "fully" dropped in the deparser –
  * this will cause serious problems. Therefore, it needs to be dropped just past
  * the deparser, i.e. in that mirror component (mirroring engine). Compiler

@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include <sstream>
 
 #include <gtest/gtest.h>
@@ -208,7 +220,6 @@ TEST_F(TofinoContainerAction, sanity) {
     ok();
 }
 
-// JIRA-DOC: The following two tests are extracted from P4C-2761.
 // Whether we can correctly synthesize
 // instructions for the action depends on the allocation of f4.
 
@@ -554,7 +565,6 @@ TEST_F(SlidesExamples, c6) {
     // to byte alignment on the action RAM
 }
 
-// JIRA-DOC: Verification for P4C-2491.
 // Test whether an action use multiple action parameters if
 // all action parameters are from the same meter.
 //
@@ -633,7 +643,6 @@ class Dark : public JBayContainerAction {
 };
 
 TEST_F(Dark, test1) {
-    // JIRA-DOC: This one is extracted from P4C-2802
 
     alloc_dst(f1, "DB8"_cs, 0);
     alloc_src(f2, "DB8"_cs, 1);

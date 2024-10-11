@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include <set>
 #include <random>
 #include "asm_output.h"
@@ -295,14 +307,6 @@ void emit_phv_field(
         const LiveRangeReport* lrr) {
     if (Device::currentDevice() == Device::JBAY || BFNContext::get().options().alt_phv_alloc) {
         emit_stage_phv_field(out, field, lrr);
-#if HAVE_CLOUDBREAK
-    } else if (Device::currentDevice() == Device::CLOUDBREAK) {
-        emit_stage_phv_field(out, field, lrr);
-#endif /* HAVE_CLOUDBREAK */
-#if HAVE_FLATROCK
-    } else if (Device::currentDevice() == Device::FLATROCK) {
-        emit_stage_phv_field(out, field, lrr);
-#endif /* HAVE_FLATROCK */
     } else if (Device::currentDevice() == Device::TOFINO) {
         emit_stage_phv_field(out, field, lrr);
     }
@@ -314,13 +318,6 @@ void PhvAsmOutput::emit_gress(std::ostream& out, gress_t gress) const {
     // FIXME -- duplicate the ingress phv
     if (gress == GHOST) gress = INGRESS;
     for (auto &f : phv) {
-#ifdef HAVE_FLATROCK
-        // FIXME -- flatrock will likely want some (most?) fields allocated across both
-        // ingress and egress.  For now we just print all fields in both
-        if (Device::currentDevice() == Device::FLATROCK) {
-            emit_phv_field(out, &f, live_range_report);
-        } else
-#endif
         if (f.gress == gress) {
             emit_phv_field(out, &f, live_range_report);
         }

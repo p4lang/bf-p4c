@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include "drop_packet_with_mirror_engine.h"
 #include "bf-p4c/device.h"
 
@@ -8,9 +20,6 @@ const IR::Node* DropPacketWithMirrorEngine_::preorder(IR::BFN::TnaControl *contr
     // ig_intr_md_for_dprsr.mirror_type is always initialized to zero by parser
     // in tofino1
     if (Device::currentDevice() != Device::JBAY &&
-#if HAVE_CLOUDBREAK
-        Device::currentDevice() != Device::CLOUDBREAK
-#endif  // HAVE_CLOUDBREAK
         ) {
         prune();
         return control; }
@@ -76,7 +85,6 @@ const IR::Node* DropPacketWithMirrorEngine_::postorder(IR::BFN::TnaDeparser *dp)
     auto name = cstring::make_unique(unique_names, "mirror"_cs, '_');
     auto args = new IR::Vector<IR::Argument>();
 #if 0
-    // JIRA-DOC: P4C-1471:
     // FIXME: finalize the syntax for mirror extern. When mirror idx
     // is provided in constructor, do we still support the syntax with
     // if-command. Is the if-command redundant in this example?

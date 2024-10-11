@@ -1,3 +1,15 @@
+/**
+ * Copyright 2013-2024 Intel Corporation.
+ *
+ * This software and the related documents are Intel copyrighted materials, and your use of them
+ * is governed by the express license under which they were provided to you ("License"). Unless
+ * the License provides otherwise, you may not use, modify, copy, publish, distribute, disclose
+ * or transmit this software or the related documents without Intel's prior written permission.
+ *
+ * This software and the related documents are provided as is, with no express or implied
+ * warranties, other than those that are expressly stated in the License.
+ */
+
 #include <array>
 #include <initializer_list>
 #include <optional>
@@ -3284,7 +3296,6 @@ TEST_F(TableDependencyGraphTest, P4C_2716_Test1) {
     // In this example, node_f has to follow node_e and node_b due to predication-based edges
     // node_f, because of logical_deps through control_deps, also must follow node_c and node_d
     // node_f was not found logically after node_c and node_d.
-    // JIRA-DOC: without the fix for P4C-2716
 
     ASSERT_TRUE(test);
     PhvInfo phv;

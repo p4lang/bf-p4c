@@ -1,3 +1,15 @@
+# Copyright 2013-2024 Intel Corporation.
+#
+# This software and the related documents are Intel copyrighted materials,
+# and your use of them is governed by the express license under which they
+# were provided to you ("License"). Unless the License provides otherwise,
+# you may not use, modify, copy, publish, distribute, disclose or transmit this
+# software or the related documents without Intel's prior written permission.
+#
+# This software and the related documents are provided as is, with no
+# express or implied warranties, other than those that are expressly stated
+# in the License.
+
 ####### Barefoot back-end
 
 MESSAGE("-- Adding p4c-barefoot")
@@ -39,16 +51,8 @@ endif()
 # interfaces tools.
 set (INTERFACES_DIR ${BFN_P4C_SOURCE_DIR}/compiler_interfaces)
 set(COMPILER_SCHEMA_TARGETS "${INTERFACES_DIR}/schemas/targets.py")
-if (ENABLE_FLATROCK)
-  set(DEFAULT_SCHEMA_TARGETS "['tofino', 'tofino2', 'tofino2m', 'tofino2u', 'tofino2a0', 'tofino3', 'tofino5']")
-  set(DEFAULT_SCHEMA_P4ARCH "['tna', 't2na', 't3na', 't5na', 'psa', 'PISA', 'v1model']")
-elseif (ENABLE_CLOUDBREAK)
-  set(DEFAULT_SCHEMA_TARGETS "['tofino', 'tofino2', 'tofino2m', 'tofino2u', 'tofino2a0', 'tofino3']")
-  set(DEFAULT_SCHEMA_P4ARCH "['tna', 't2na', 't3na', 'psa', 'PISA', 'v1model']")
-else()
   set(DEFAULT_SCHEMA_TARGETS "['tofino', 'tofino2', 'tofino2m', 'tofino2u', 'tofino2a0']")
   set(DEFAULT_SCHEMA_P4ARCH "['tna', 't2na', 'psa', 'PISA', 'v1model']")
-endif()
 file(WRITE ${COMPILER_SCHEMA_TARGETS} "TARGETS=${DEFAULT_SCHEMA_TARGETS}\n")
 file(APPEND ${COMPILER_SCHEMA_TARGETS} "P4ARCHITECTURES=${DEFAULT_SCHEMA_P4ARCH}\n")
 
@@ -249,7 +253,6 @@ set(QUAL_BF_P4C_IR_SRCS)
 foreach(src IN LISTS BF_P4C_IR_SRCS)
   set(QUAL_BF_P4C_IR_SRCS ${QUAL_BF_P4C_IR_SRCS} ${CMAKE_CURRENT_SOURCE_DIR}/${src})
 endforeach()
-MESSAGE("-- **** TOFINO **** IR sources: " ${QUAL_BF_P4C_IR_SRCS})
 set(EXTENSION_IR_SOURCES ${EXTENSION_IR_SOURCES} ${QUAL_BF_P4C_IR_SRCS} PARENT_SCOPE)
 
 set (BF_P4C_BACKEND_COMMON_SRCS
@@ -264,7 +267,7 @@ set (BF_P4C_BACKEND_COMMON_SRCS
   common/empty_tableseq.cpp
   common/extract_maupipe.cpp
   common/field_defuse.cpp
-  common/flatrock.cpp
+
   common/bridged_packing.cpp
   common/header_stack.cpp
   common/ir_utils.cpp
@@ -293,7 +296,7 @@ set (BF_P4C_BACKEND_COMMON_HDRS
   common/empty_tableseq.h
   common/extract_maupipe.h
   common/field_defuse.h
-  common/flatrock.h
+
   common/front_end_policy.h
   common/bridged_packing.h
   common/header_stack.h
@@ -414,18 +417,6 @@ set (BF_P4C_BACKEND_MAU_TOFINO_SRCS
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_MAU_TOFINO_SRCS}")
 
-if (ENABLE_FLATROCK)
-  set (BF_P4C_BACKEND_MAU_FLATROCK_SRCS
-    mau/flatrock/action_data_bus.cpp
-    mau/flatrock/asm_output.cpp
-    mau/flatrock/input_xbar.cpp
-    mau/flatrock/mau_spec.cpp
-    mau/flatrock/memories.cpp
-    mau/flatrock/table_format.cpp
-    mau/flatrock/table_layout.cpp
-    )
-  add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_MAU_FLATROCK_SRCS}")
-endif (ENABLE_FLATROCK)
 
 set (BF_P4C_BACKEND_MAU_HDRS
   mau/action_analysis.h
@@ -496,17 +487,6 @@ set (BF_P4C_BACKEND_MAU_TOFINO_HDRS
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_MAU_TOFINO_HDRS}")
 
-if (ENABLE_FLATROCK)
-  set (BF_P4C_BACKEND_MAU_FLATROCK_HDRS
-    mau/flatrock/action_data_bus.h
-    mau/flatrock/asm_output.h
-    mau/flatrock/input_xbar.h
-    mau/flatrock/memories.h
-    mau/flatrock/table_format.h
-    mau/flatrock/table_layout.h
-    )
-  add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_MAU_FLATROCK_HDRS}")
-endif (ENABLE_FLATROCK)
 
 set (BF_P4C_BACKEND_PARDE_SRCS
   parde/add_metadata_pov.cpp
@@ -582,7 +562,7 @@ set (BF_P4C_BACKEND_PARDE_HDRS
   parde/extract_parser.h
   parde/extract_deparser.h
   parde/field_packing.h
-  parde/flatrock.h
+
   parde/infer_payload_offset.h
   parde/lower_parser.h
   parde/marshal.h
@@ -624,7 +604,7 @@ set (BF_P4C_BACKEND_PARDE_HDRS
   parde/lowered/extract_simplifier.h
   parde/lowered/helpers.h
   parde/lowered/hoist_common_match_operations.h
-  parde/lowered/lower_flatrock.h
+
   parde/lowered/merge_lowered_parser_states.h
   parde/lowered/rewrite_emit_clot.h
   parde/lowered/split_greedy_parser_states.h
@@ -859,13 +839,7 @@ set (BF_P4C_BACKEND_ARCH_SRCS
   )
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "${BF_P4C_BACKEND_ARCH_SRCS}")
 add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "arch/t2na.cpp")
-if (ENABLE_FLATROCK)
-  list (APPEND BF_P4C_BACKEND_ARCH_SRCS
-    arch/t5na.cpp
-    arch/tna/t5na_program_structure.cpp
-  )
-endif ()
-add_cpplint_files(${CMAKE_CURRENT_SOURCE_DIR} "arch/t5na.cpp")
+
 
 set (BF_P4C_BACKEND_ARCH_HDRS
   arch/arch.h
@@ -888,8 +862,8 @@ set (BF_P4C_BACKEND_ARCH_HDRS
   arch/rewrite_action_selector.h
   arch/tna.h
   arch/t2na.h
-  arch/t5na.h
-  arch/tna/t5na_program_structure.h
+
+
   arch/v1model.h
   arch/fromv1.0/add_metadata_parser_states.h
   arch/fromv1.0/egress_packet_length.h
@@ -963,13 +937,10 @@ set (BF_P4C_IR_DEF_FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/bf-p4c/ir/mau.def
   ${CMAKE_CURRENT_SOURCE_DIR}/bf-p4c/ir/parde.def
   ${CMAKE_CURRENT_SOURCE_DIR}/bf-p4c/ir/parde-lowered.def
-  ${CMAKE_CURRENT_SOURCE_DIR}/bf-p4c/ir/flatrock.def
+
   )
-  
-MESSAGE("CURRNET_SOURCE DIR : "${CMAKE_CURRENT_SOURCE_DIR})
 # publish IR_DEF_FILES upstream
 set (IR_DEF_FILES ${IR_DEF_FILES} ${BF_P4C_IR_DEF_FILES} PARENT_SCOPE)
-MESSAGE("IR_DEF_FILES: "${BF_P4C_IR_DEF_FILES})
 
 # do not add to cpp lint. They are added as part of the p4c-graphs backend
 set (BF_P4C_GRAPHS_HDRS
@@ -1005,24 +976,7 @@ set (p4include_HEADERS
   p4include/dpdk/psa.p4
   )
 
-if (ENABLE_CLOUDBREAK)
-set (p4include_HEADERS
-  ${p4include_HEADERS}
-  p4include/tofino3_specs.p4
-  p4include/tofino3_base.p4
-  p4include/tofino3_arch.p4
-  p4include/t3na.p4
-  )
-endif (ENABLE_CLOUDBREAK)
 
-if (ENABLE_FLATROCK)
-set (p4include_HEADERS
-  ${p4include_HEADERS}
-  p4include/tofino5.p4
-  p4include/tofino5arch.p4
-  p4include/t5na.p4
-  )
-endif (ENABLE_FLATROCK)
 
 set (p4_14include_HEADERS
   p4_14include/tofino/constants.p4
@@ -1041,12 +995,6 @@ set (hack_p4_14include_HEADERS
   p4_14include/tofino2/intrinsic_metadata.p4
   )
 
-if (ENABLE_CLOUDBREAK)
-set (p4_14include_HEADERS
-  ${p4_14include_HEADERS}
-  p4_14include/tofino3/intrinsic_metadata.p4
-  )
-endif (ENABLE_CLOUDBREAK)
 
 set (BF_P4C_SOURCES
   ${BF_P4C_MIDEND_SRCS}
@@ -1062,12 +1010,6 @@ set (BF_P4C_SOURCES
   ${BF_P4C_BACKEND_MIDEND_SRCS}
   ${BF_P4C_BACKEND_MAIN_SRCS}
   )
-if (ENABLE_FLATROCK)
-set (BF_P4C_SOURCES
-  ${BF_P4C_SOURCES}
-  ${BF_P4C_BACKEND_MAU_FLATROCK_SRCS}
-  )
-endif ()
 
 set (P4C_BAREFOOT_SRCS
   frontend.cpp
@@ -1111,11 +1053,6 @@ target_compile_definitions(bfp4c
 target_compile_definitions(bfp4c
   INTERFACE "-DHAVE_JBAY=1"
 )
-if (ENABLE_CLOUDBREAK)
-  target_compile_definitions(bfp4c
-    INTERFACE "-DHAVE_CLOUDBREAK=1"
-  )
-endif()
 if (ENABLE_BAREFOOT_INTERNAL)
   target_compile_definitions(bfp4c
     INTERFACE "-DBAREFOOT_INTERNAL=1"
@@ -1168,25 +1105,6 @@ else()
 endif()
 
 
-if (CLOSED_SOURCE)
-  if (NOT ENABLE_CLOUDBREAK)
-    if (NOT DEFINED EXCLUDE_HEADERS)
-      set (EXCLUDE_HEADERS "tofino3|t3na")
-    else()
-      set (EXCLUDE_HEADERS
-        "${EXCLUDE_HEADERS}|tofino3|t3na")
-    endif (NOT DEFINED EXCLUDE_HEADERS)
-  endif (NOT ENABLE_CLOUDBREAK)
-
-  if (NOT ENABLE_FLATROCK)
-    if (NOT DEFINED EXCLUDE_HEADERS)
-      set (EXCLUDE_HEADERS "tofino5|t5na")
-    else()
-      set (EXCLUDE_HEADERS
-        "${EXCLUDE_HEADERS}|tofino5|t5na")
-    endif (NOT DEFINED EXCLUDE_HEADERS)
-  endif (NOT ENABLE_FLATROCK)
-endif (CLOSED_SOURCE)
 
 install (TARGETS p4c-barefoot
   RUNTIME DESTINATION ${P4C_RUNTIME_OUTPUT_DIRECTORY})
@@ -1278,60 +1196,12 @@ endif()
 add_custom_target(remove_p4_14_for_jbay ALL DEPENDS ${JBAY_TARGET_CFG_FILE})
 add_dependencies(p4c_driver remove_p4_14_for_jbay)
 
-if (ENABLE_CLOUDBREAK)
-  set (CLOUDBREAK_TARGET_CFG_FILE ${P4C_BINARY_DIR}/p4c_src/p4c.tofino3.cfg)
-  set_source_files_properties (${CLOUDBREAK_TARGET_CFG_FILE} PROPERTIES GENERATED TRUE)
-  if (NOT ENABLE_BAREFOOT_INTERNAL)
-    # Remove the P4-14 support for Cloudbreak
-    add_custom_command(OUTPUT ${CLOUDBREAK_TARGET_CFG_FILE}
-      COMMAND sed -e '/v1model/d' -e '/psa_target/d' ${CMAKE_CURRENT_SOURCE_DIR}/driver/p4c.tofino3.cfg > ${CLOUDBREAK_TARGET_CFG_FILE}
-      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/driver/p4c.tofino3.cfg
-      COMMENT "Removing P4-14, and PSA support for Tofino3"
-      )
-  else()
-    add_custom_command(OUTPUT ${CLOUDBREAK_TARGET_CFG_FILE}
-      COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/driver/p4c.tofino3.cfg ${CLOUDBREAK_TARGET_CFG_FILE}
-      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/driver/p4c.tofino3.cfg
-      COMMENT "Copying Tofino3 config"
-      )
-  endif()
-  add_custom_target(remove_p4_14_for_cb ALL DEPENDS ${CLOUDBREAK_TARGET_CFG_FILE})
-  add_dependencies(p4c_driver remove_p4_14_for_cb)
-endif (ENABLE_CLOUDBREAK)
 
-if (ENABLE_FLATROCK)
-  set (FLATROCK_TARGET_CFG_FILE ${P4C_BINARY_DIR}/p4c_src/p4c.tofino5.cfg)
-  set_source_files_properties (${FLATROCK_TARGET_CFG_FILE} PROPERTIES GENERATED TRUE)
-  if (NOT ENABLE_BAREFOOT_INTERNAL)
-    # Remove the P4-14 support for Flatrock
-    add_custom_command(OUTPUT ${FLATROCK_TARGET_CFG_FILE}
-      COMMAND sed -e '/v1model/d' -e '/psa_target/d' ${CMAKE_CURRENT_SOURCE_DIR}/driver/p4c.tofino5.cfg > ${FLATROCK_TARGET_CFG_FILE}
-      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/driver/p4c.tofino5.cfg
-      COMMENT "Removing P4-14, and PSA support for Tofino5"
-      )
-  else()
-    add_custom_command(OUTPUT ${FLATROCK_TARGET_CFG_FILE}
-      COMMAND ${CMAKE_COMMAND} -E copy_if_different ${CMAKE_CURRENT_SOURCE_DIR}/driver/p4c.tofino5.cfg ${FLATROCK_TARGET_CFG_FILE}
-      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/driver/p4c.tofino5.cfg
-      COMMENT "Copying Tofino5 config"
-      )
-  endif()
-  add_custom_target(remove_p4_14_for_ftr ALL DEPENDS ${FLATROCK_TARGET_CFG_FILE})
-  add_dependencies(p4c_driver remove_p4_14_for_ftr)
-endif (ENABLE_FLATROCK)
 
 install (FILES ${DRIVER_FILES} ${JBAY_TARGET_CFG_FILE} ${P4C_DRIVER_MACROS}
   DESTINATION ${P4C_ARTIFACTS_OUTPUT_DIRECTORY}/p4c_src)
 
-if (ENABLE_CLOUDBREAK)
-  install (FILES ${CLOUDBREAK_TARGET_CFG_FILE}
-    DESTINATION ${P4C_ARTIFACTS_OUTPUT_DIRECTORY}/p4c_src)
-endif (ENABLE_CLOUDBREAK)
 
-if (ENABLE_FLATROCK)
-  install (FILES ${FLATROCK_TARGET_CFG_FILE}
-    DESTINATION ${P4C_ARTIFACTS_OUTPUT_DIRECTORY}/p4c_src)
-endif (ENABLE_FLATROCK)
 
 # install the tools that generate logging
 set (LOGGING_FILES
@@ -1380,7 +1250,7 @@ install (PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/dist/p4c-build-logs
   DESTINATION bin)
 
 add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/p4c_src/schema_versions
-  COMMAND ${CMAKE_SOURCE_DIR}/backends/tofino/scripts/extract_schema_versions.sh ${CMAKE_BINARY_DIR}/p4c_src/schema_versions
+  COMMAND ${CMAKE_SOURCE_DIR}/scripts/extract_schema_versions.sh ${CMAKE_BINARY_DIR}/p4c_src/schema_versions
   DEPENDS ${SCHEMA_FILES}
   COMMENT "Extract all used schema versions")
 
@@ -1392,14 +1262,6 @@ install (FILES ${CMAKE_BINARY_DIR}/p4c_src/schema_versions
   DESTINATION share/p4c/p4c_src)
 
 set(SED_RELEASE_FILTERS "-e ''")
-  if (CLOSED_SOURCE)
-  if(NOT ENABLE_CLOUDBREAK)
-    list(APPEND SED_RELEASE_FILTERS "-e '/\\<CLOUDBREAK_ONLY\\>/d'")
-  endif()
-  if(NOT ENABLE_FLATROCK)
-    list(APPEND SED_RELEASE_FILTERS "-e '/\\<FLATROCK_ONLY\\>/d'")
-  endif()
-endif (CLOSED_SOURCE)
 
 # hack to get around the fact that the test scripts expect the backend
 # binary to be in the top level directory. This should go away when we
@@ -1506,34 +1368,6 @@ if (ENABLE_GTESTS)
   set (HEADERS_H_EXTRA_COMMANDS "")
   set (HEADERS_CPP_EXTRA_COMMANDS "")
   set (HEADERS_CPP_EXTRA_DEPENDS "")
-  if (ENABLE_CLOUDBREAK)
-    file(READ   "${BFN_P4INCLUDE_DIR}/tofino3_specs.p4"     TOFINO3_SPECS)
-    file(READ   "${BFN_P4INCLUDE_DIR}/tofino3_arch.p4"      TOFINO3_ARCH)
-    file(GENERATE OUTPUT "${P4C_BINARY_DIR}/p4headers_tofino3.p4"
-        CONTENT "${TOFINO3_SPECS}${TOFINO3_ARCH}")
-    set (HEADERS_H_EXTRA_COMMANDS "${HEADERS_H_EXTRA_COMMANDS \
-        COMMAND ${CMAKE_COMMAND} -E echo \"    std::string tofino3arch_p4;\"     >> \"${P4HEADERS_H}\"")
-    set (HEADERS_CPP_EXTRA_COMMANDS "${HEADERS_CPP_EXTRA_COMMANDS \
-        COMMAND ${CMAKE_C_COMPILER} -E -x c \"${P4C_BINARY_DIR}/p4headers_tofino3.p4\" ${I_P4INCLUDE} >> \"${P4HEADERS_CPP}\"")
-    set (HEADERS_CPP_EXTRA_COMMANDS "${HEADERS_CPP_EXTRA_COMMANDS \
-        COMMAND ${CMAKE_COMMAND} -E echo \"    )\\\"}, std::string{R\\\"(\"                               >> \"${P4HEADERS_CPP}\"")
-    set (HEADERS_CPP_EXTRA_DEPENDS "${HEADERS_CPP_EXTRA_DEPENDS \
-              ${P4C_BINARY_DIR}/p4headers_tofino3.p4")
-  endif (ENABLE_CLOUDBREAK)
-  if (ENABLE_FLATROCK)
-    file(READ   "${BFN_P4INCLUDE_DIR}/tofino5.p4"           TOFINO5_SPECS)
-    file(READ   "${BFN_P4INCLUDE_DIR}/tofino5arch.p4"       TOFINO5_ARCH)
-    file(GENERATE OUTPUT "${P4C_BINARY_DIR}/p4headers_tofino5.p4"
-        CONTENT "${TOFINO5_SPECS}${TOFINO5_ARCH}")
-    set (HEADERS_H_EXTRA_COMMANDS "${HEADERS_H_EXTRA_COMMANDS \
-        COMMAND ${CMAKE_COMMAND} -E echo \"    std::string tofino5arch_p4;\"     >> \"${P4HEADERS_H}\"")
-    set (HEADERS_CPP_EXTRA_COMMANDS "${HEADERS_CPP_EXTRA_COMMANDS \
-        COMMAND ${CMAKE_C_COMPILER} -E -x c \"${P4C_BINARY_DIR}/p4headers_tofino5.p4\" ${I_P4INCLUDE} >> \"${P4HEADERS_CPP}\"")
-    set (HEADERS_CPP_EXTRA_COMMANDS "${HEADERS_CPP_EXTRA_COMMANDS \
-        COMMAND ${CMAKE_COMMAND} -E echo \"    )\\\"}, std::string{R\\\"(\"                               >> \"${P4HEADERS_CPP}\"")
-    set (HEADERS_CPP_EXTRA_DEPENDS "${HEADERS_CPP_EXTRA_DEPENDS \
-              ${P4C_BINARY_DIR}/p4headers_tofino5.p4")
-  endif (ENABLE_FLATROCK)
   add_custom_command (OUTPUT "${P4HEADERS_H}"
       COMMAND ${CMAKE_COMMAND} -E echo "// auto generated file, do not edit" >  "${P4HEADERS_H}"
       COMMAND ${CMAKE_COMMAND} -E echo "#ifndef P4HEADERS_H_"                >> "${P4HEADERS_H}"
@@ -1596,8 +1430,6 @@ if (ENABLE_GTESTS)
   set (GTEST_BF_P4C_SOURCES
     # Currently all gtests need to be built directly into the gtestp4c binary.
     # TODO To use libraries, the whole_archive hack is needed.
-    #      JIRA-DOC: See the example.tar.gz projet in Jira P4C-2940 and
-    #      JIRA-DOC: target_link_test_libs.cmake for implementation.
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/test_bf_gtest_helpers.cpp
 
     ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/action_analysis.cpp
@@ -1696,13 +1528,6 @@ if (ENABLE_GTESTS)
     ${CMAKE_CURRENT_SOURCE_DIR}/test/utils/super_cluster_builder.cpp
     ${BF_P4C_GRAPHS_SRCS}
     )
-  if (ENABLE_FLATROCK)
-    list(APPEND GTEST_BF_P4C_SOURCES
-      ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/flatrock_parser.cpp
-      ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/flatrock_hdr_asm.cpp
-      ${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/flatrock_metadata_packer.cpp
-    )
-  endif()
   if (NOT BUILD_STATIC_BFP4C_LIBS)
       # objlibs cannot be linked, need to add objects here explicitly
       set (GTEST_BF_P4C_SOURCES ${GTEST_BF_P4C_SOURCES}
