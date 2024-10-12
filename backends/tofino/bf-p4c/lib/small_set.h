@@ -152,7 +152,7 @@ class SmallSet {
     const_iterator find(const T& key) const {
         return std::visit(
             [&](auto&& container) -> const_iterator {
-                if constexpr (is_small(container)) {
+                if (is_small(container)) {
                     return const_iterator(vfind(container, key));
                 } else {
                     return const_iterator(container.find(key));
@@ -178,7 +178,7 @@ class SmallSet {
     std::pair<const_iterator, bool> insert(Value&& value) {
         return std::visit(
             [this, &value](auto&& container) -> std::pair<const_iterator, bool> {
-                if constexpr (is_small(container)) {
+                if (is_small(container)) {
                     const auto it = vfind(container, value);
                     if (it == container.end()) {
                         if (container.size() < N) {
@@ -192,12 +192,12 @@ class SmallSet {
                         data = std::move(set);
                         auto [set_it, inserted] =
                             std::get<SetType>(data).insert(std::forward<Value>(value));
-                        return {const_iterator(set_it), inserted};
+                        return std::make_pair(const_iterator(set_it), inserted);
                     }
-                    return {const_iterator(it), false};
+                    return std::make_pair(const_iterator(it), false);
                 } else {
-                    auto [set_it, inserted] = container.insert(std::forward<Value>(value));
-                    return {const_iterator(set_it), inserted};
+		    auto set_it = container.insert(container.end(), std::forward<Value>(value));
+		    return std::make_pair(const_iterator(set_it), true);
                 }
             },
             data);
@@ -227,7 +227,7 @@ class SmallSet {
     std::size_t erase(const T& key) {
         return std::visit(
             [this, &key](auto&& container) -> std::size_t {
-                if constexpr (is_small(container)) {
+                if (is_small(container)) {
                     const auto it = vfind(container, key);
                     if (it != container.end()) {
                         container.erase(it);
@@ -252,7 +252,7 @@ class SmallSet {
     void erase_set(const Set& to_remove) {
         std::visit(
             [&](auto&& container) {
-                if constexpr (is_small(container)) {
+                if (is_small(container)) {
                     container.erase(
                         std::remove_if(container.begin(), container.end(),
                                        [&](const T& key) { return to_remove.count(key); }),
@@ -277,7 +277,7 @@ class SmallSet {
     void reserve(const std::size_t n) {
         std::visit(
             [=](auto&& container) {
-                if constexpr (is_small(container)) {
+                if (is_small(container)) {
                     container.reserve(n);
                 }
             },

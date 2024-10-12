@@ -2736,12 +2736,12 @@ CanPackErrorV2 ActionPhvConstraints::can_pack_v2(
     LOG5("Can pack v2 with " << candidates.size() << " candidates " << indent);
 
     // Allocating zero slices always succeeds...
-    if (candidates.size() == 0) return {CanPackErrorCode::NO_ERROR, ""};
+    if (candidates.size() == 0) return {CanPackErrorCode::NO_ERROR};
 
     // no action will be applied on TPHV container.
     const PHV::Container c = candidates.front().container();
     if (c.type().kind() == PHV::Kind::tagalong) {
-        return {CanPackErrorCode::NO_ERROR, ""};
+        return CanPackErrorV2(CanPackErrorCode::NO_ERROR);
     }
 
     /// TODO: checks inherited from legacy code does not have detailed error message.
@@ -2755,7 +2755,7 @@ CanPackErrorV2 ActionPhvConstraints::can_pack_v2(
     // Check if table placement induced any no pack constraints on fields that are candidates for
     // packing. If yes, packing not possible.
     if (pack_conflicts_present(container_state, candidates))
-        return {CanPackErrorCode::PACK_CONSTRAINT_PRESENT, ""};
+        return {CanPackErrorCode::PACK_CONSTRAINT_PRESENT};
     LOG6("No pack conflicts present");
 
     // Create after-allocation container state.
@@ -2766,7 +2766,7 @@ CanPackErrorV2 ActionPhvConstraints::can_pack_v2(
     // Check if any of the fields are stateful ALU writes and check the data bus alignment
     // constraints.
     if (stateful_destinations_constraints_violated(container_state))
-        return {CanPackErrorCode::STATEFUL_DEST_CONSTRAINT, ""};
+        return {CanPackErrorCode::STATEFUL_DEST_CONSTRAINT};
     LOG6("No stateful destinations constraints violated");
 
     // TODO: we should be able to remove this part by simply disable bit-masked-set
@@ -2776,14 +2776,14 @@ CanPackErrorV2 ActionPhvConstraints::can_pack_v2(
         LOG5(
             "\t\tThis packing requires a bitmasked-set instruction for a slice that reads "
             "special action data. Therefore, this packing is not possible.");
-        return {CanPackErrorCode::BITMASK_CONSTRAINT, ""};
+        return {CanPackErrorCode::BITMASK_CONSTRAINT};
     }
     LOG6("No packing violated for bitmask-set");
 
     // xxx(Deep): This function checks if any field that gets its value from METER_ALU, HASH_DIST,
     // RANDOM, or METER_COLOR is being packed with other fields written in the same action.
     if (!check_speciality_packing(container_state))
-        return {CanPackErrorCode::SPECIALTY_DATA, ""};
+        return {CanPackErrorCode::SPECIALTY_DATA};
     LOG6("No packing violated for speciality data");
 
     const bool mocha_or_dark = c.is(PHV::Kind::dark) || c.is(PHV::Kind::mocha);
@@ -4199,7 +4199,7 @@ CanPackErrorV2 ActionPhvConstraints::check_move_constraints_from_read(
             }
         }
     }
-    return {CanPackErrorCode::NO_ERROR, ""};
+    return {CanPackErrorCode::NO_ERROR};
 }
 
 CanPackErrorCode ActionPhvConstraints::check_ara_move_constraints(

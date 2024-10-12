@@ -10,9 +10,12 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
+#include <boost/bind/bind.hpp>
 #include "bf-p4c/phv/v2/phv_kit.h"
 
 #include "bf-p4c/phv/slicing/phv_slicing_iterator.h"
+
+using namespace boost::placeholders;
 
 namespace PHV {
 namespace v2 {

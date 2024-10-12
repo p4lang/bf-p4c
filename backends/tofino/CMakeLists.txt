@@ -272,7 +272,6 @@ set (BF_P4C_IR_DEF_FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/bf-p4c/ir/mau.def
   ${CMAKE_CURRENT_SOURCE_DIR}/bf-p4c/ir/parde.def
   ${CMAKE_CURRENT_SOURCE_DIR}/bf-p4c/ir/parde-lowered.def
-  ${CMAKE_CURRENT_SOURCE_DIR}/bf-p4c/ir/flatrock.def
   )
   
 # publish IR_DEF_FILES upstream

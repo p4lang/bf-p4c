@@ -119,7 +119,10 @@ void getTrimmedDominators(PHV::UnitSet& candidates,
             }
         }
     }
-    candidates.erase_set(dominatedNodes);
+    for (const auto* u : dominatedNodes) {
+        candidates.erase(u);
+    }
+    // candidates.erase_set(dominatedNodes);
 }
 
 /// Update flowgraph with ARA edges

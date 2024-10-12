@@ -15,6 +15,7 @@
 #include <numeric>
 #include <sstream>
 #include <boost/format.hpp>
+#include <boost/bind/bind.hpp>
 #include <boost/optional/optional_io.hpp>
 #include <boost/range/adaptor/reversed.hpp>
 
@@ -52,6 +53,7 @@ const std::vector<PHV::Size> StateExtractUsage::extractor_sizes = {PHV::Size::b8
 // AllocScore metrics.
 namespace {
 
+using namespace boost::placeholders;
 using MetricName = AllocScore::MetricName;
 
 // general
