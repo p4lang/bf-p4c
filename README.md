@@ -1,3 +1,5 @@
+# CAUTION: This repository only exists for experimenting and will be merged into P4C soon. Please look at https://github.com/p4lang/p4c/pull/4964 for the actual progress on open-sourcing the Tofino compiler.
+
 <!--!
 \page getting_started Getting Started                                    
 -->
