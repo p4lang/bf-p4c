@@ -4,6 +4,7 @@ import sys
 import argparse
 import difflib
 
+
 def replace_namespaces_in_file(file_path, namespaces, dry_run=False):
     try:
         with open(file_path, 'r', encoding='utf-8') as file:
@@ -78,7 +79,7 @@ def replace_namespaces_in_file(file_path, namespaces, dry_run=False):
                     content.splitlines(),
                     fromfile='original',
                     tofile='modified',
-                    lineterm=''
+                    lineterm='',
                 )
                 for line in diff:
                     print(line)
@@ -96,11 +97,16 @@ def replace_namespaces_in_file(file_path, namespaces, dry_run=False):
     except Exception as e:
         print(f"Error processing {file_path}: {e}")
 
+
 def main():
-    parser = argparse.ArgumentParser(description='Replace namespaces in .cpp and .h files and add namespace P4::BFN if needed.')
+    parser = argparse.ArgumentParser(
+        description='Replace namespaces in .cpp and .h files and add namespace P4::BFN if needed.'
+    )
     parser.add_argument('directory', help='Directory to process')
     parser.add_argument('namespaces', nargs='+', help='List of namespaces to replace')
-    parser.add_argument('--dry-run', action='store_true', help='Show changes without modifying files')
+    parser.add_argument(
+        '--dry-run', action='store_true', help='Show changes without modifying files'
+    )
 
     args = parser.parse_args()
 
@@ -121,6 +127,7 @@ def main():
                 replace_namespaces_in_file(file_path, namespaces, dry_run=dry_run)
 
     print("\nReplacement complete.")
+
 
 if __name__ == "__main__":
     main()

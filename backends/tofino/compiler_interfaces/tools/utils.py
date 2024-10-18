@@ -8,6 +8,7 @@ FAILURE = 1
 #  Helpers
 # ----------------------------------------
 
+
 def print_error_and_exit(error_msg):
     print(error_msg, file=sys.stderr)
     sys.exit(FAILURE)
@@ -18,6 +19,7 @@ def next_power_2(n):
     while (2**p) < n:
         p += 1
     return 2**p
+
 
 # Returns True if the current version is >= version need
 def version_check_ge(version_need, current_version):
