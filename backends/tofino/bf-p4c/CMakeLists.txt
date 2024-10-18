@@ -14,14 +14,6 @@
 
 MESSAGE("-- Adding p4c-barefoot")
 
-# Try to find Z3 in the system, only use the static Z3 library.
-set(Z3_MIN_VERSION "4.8.8")
-# TODO: Move this option into the Z3 CMake module.
-set(_z3_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
-set(CMAKE_FIND_LIBRARY_SUFFIXES .a)
-find_package(Z3 ${Z3_MIN_VERSION} REQUIRED)
-set(CMAKE_FIND_LIBRARY_SUFFIXES ${_z3_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES})
-
 # Set dynamic hash include directory
 set(LIBDYNHASH_INCLUDE_DIR "${BFN_P4C_SOURCE_DIR}/bf-utils/include")
 include_directories(${LIBDYNHASH_INCLUDE_DIR})
