@@ -26,11 +26,12 @@ Schema versions:
 3.0.1 - made the per-pipe "compilation_succeeded" be optional
 """
 
-import jsl
-import json
 import inspect
+import json
 import os.path
 import sys
+
+import jsl
 
 MYPATH = os.path.dirname(__file__)
 if not getattr(sys, 'frozen', False):
@@ -39,7 +40,7 @@ if not getattr(sys, 'frozen', False):
     sys.path.append(SCHEMA_PATH)
 
 if os.path.exists(os.path.join(MYPATH, 'targets.py')):
-    from schemas.targets import TARGETS, P4ARCHITECTURES
+    from schemas.targets import P4ARCHITECTURES, TARGETS
 else:
     TARGETS = ['tofino', 'tofino2', 'tofino2h', 'tofino2m', 'tofino2u']
     P4ARCHITECTURES = ['tna', 't2na', 'psa', 'PISA', 'v1model']

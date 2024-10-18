@@ -4,10 +4,10 @@
 power_schema.py: Generates a JSON Schema model for structured power estimation information.
 """
 
-import jsl
-import json
 import inspect
+import json
 
+import jsl
 
 ########################################################
 #   Schema Version

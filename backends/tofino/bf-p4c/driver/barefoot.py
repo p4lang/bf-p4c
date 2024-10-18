@@ -17,16 +17,17 @@
 Takes care of creating output structure and guiding the whole compilation.
 """
 
+import argparse
+import json
 import os
 import os.path
-import argparse
-import sys
-import json
 import re
+import sys
 import time
+
 import p4c_src.bfn_version as p4c_version
-from p4c_src.util import find_file, find_bin
 from p4c_src.driver import BackendDriver
+from p4c_src.util import find_bin, find_file
 
 
 def parse_version(value):

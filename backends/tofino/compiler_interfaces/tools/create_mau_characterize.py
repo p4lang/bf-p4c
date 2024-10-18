@@ -4,8 +4,13 @@
 This script produces a mau.characterize.log from an input mau.json file.
 """
 
-import json, logging, math, os, sys
+import json
+import logging
+import math
+import os
+import sys
 from collections import OrderedDict
+
 from .utils import *
 
 if not getattr(sys, 'frozen', False):
@@ -14,8 +19,8 @@ if not getattr(sys, 'frozen', False):
     SCHEMA_PATH = os.path.join(MYPATH, "../")
     sys.path.append(SCHEMA_PATH)
 
-from schemas.schema_keys import *
 from schemas.schema_enum_values import *
+from schemas.schema_keys import *
 
 # The minimum mau.json schema version required.
 MINIMUM_MAU_JSON_VERSION = "1.0.0"

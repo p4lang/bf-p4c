@@ -4,9 +4,10 @@
 table_graph_schema.py: Generates a JSON schema for table graph data
 """
 
-import jsl
 import json
-from schemas.jgf_schema import JsonGraphFormatSchema, Graph, GraphNode, GraphEdge
+
+import jsl
+from schemas.jgf_schema import Graph, GraphEdge, GraphNode, JsonGraphFormatSchema
 
 ########################################################
 #   Schema Version

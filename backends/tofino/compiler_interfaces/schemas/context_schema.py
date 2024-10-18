@@ -5,12 +5,13 @@ context_schema.py: Generates a JSON Schema model for resource allocation informa
 on the p4 compiler for Tofino.
 """
 
-import jsl
-import json
+import collections
 import inspect
+import json
 import os.path
 import sys
-import collections
+
+import jsl
 
 MYPATH = os.path.dirname(__file__)
 if not getattr(sys, 'frozen', False):

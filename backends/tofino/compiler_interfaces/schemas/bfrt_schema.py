@@ -5,10 +5,11 @@
 # against the JSON schema.
 
 import argparse
-import jsl
 import json
-import jsonschema
 import sys
+
+import jsl
+import jsonschema
 
 ########################################################
 #   Schema Version

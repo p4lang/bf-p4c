@@ -27,18 +27,23 @@
 #     - an archive (if --archive)
 #
 
-from __future__ import print_function, absolute_import
+from __future__ import absolute_import, print_function
 
-import os, os.path, re, sys
 import argparse
+import difflib
 import importlib
 import json
-from multiprocessing import Pool, Queue
-from packaging import version
-import shlex, shutil
+import os
+import os.path
+import re
+import shlex
+import shutil
 import subprocess
+import sys
 import traceback
-import difflib
+from multiprocessing import Pool, Queue
+
+from packaging import version
 
 
 class TestError(Exception):

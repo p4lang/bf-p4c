@@ -4,10 +4,10 @@
 mau_schema.py: Generates a JSON Schema model for structured MAU allocation result information.
 """
 
-import jsl
-import json
 import inspect
+import json
 
+import jsl
 
 ########################################################
 #   Schema Version

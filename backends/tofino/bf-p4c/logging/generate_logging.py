@@ -16,8 +16,13 @@
 # classes that allow logging to a json file that is compatible with the schema.
 #
 
-import argparse, os, sys, re
-import json, jsonschema
+import argparse
+import json
+import os
+import re
+import sys
+
+import jsonschema
 
 debug = 0
 

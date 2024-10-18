@@ -4,8 +4,15 @@
 This script produces a phv.json from an input context.json file.
 """
 
-import json, jsonschema, logging, math, os, sys
+import json
+import logging
+import math
+import os
+import sys
 from collections import OrderedDict
+
+import jsonschema
+
 from .utils import *
 
 if not getattr(sys, 'frozen', False):
@@ -14,8 +21,8 @@ if not getattr(sys, 'frozen', False):
     SCHEMA_PATH = os.path.join(MYPATH, "../")
     sys.path.append(SCHEMA_PATH)
 from schemas.phv_schema import PhvJSONSchema
-from schemas.schema_keys import *
 from schemas.schema_enum_values import *
+from schemas.schema_keys import *
 
 # The minimum context.json schema version required.
 MINIMUM_CONTEXT_JSON_REQUIRED = "1.7.0"

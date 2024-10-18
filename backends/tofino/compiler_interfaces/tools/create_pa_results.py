@@ -4,8 +4,12 @@
 This script produces a pa.results.log from an input context.json file.
 """
 
-import json, logging, os, sys
+import json
+import logging
+import os
+import sys
 from collections import OrderedDict
+
 from .utils import *
 
 if not getattr(sys, 'frozen', False):
@@ -14,8 +18,8 @@ if not getattr(sys, 'frozen', False):
     SCHEMA_PATH = os.path.join(MYPATH, "../")
     sys.path.append(SCHEMA_PATH)
 
-from schemas.schema_keys import *
 from schemas.schema_enum_values import *
+from schemas.schema_keys import *
 
 # The minimum context.json schema version required.
 MINIMUM_CONTEXT_JSON_REQUIRED = "1.7.0"

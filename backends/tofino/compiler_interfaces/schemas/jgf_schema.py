@@ -6,8 +6,9 @@ format so that other JSL documents may extend this schema.
 http://jsongraphformat.info/
 """
 
-import jsl
 import json
+
+import jsl
 
 ########################################################
 #   Schema Version

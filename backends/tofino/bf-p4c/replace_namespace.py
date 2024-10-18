@@ -1,8 +1,8 @@
+import argparse
+import difflib
 import os
 import re
 import sys
-import argparse
-import difflib
 
 
 def replace_namespaces_in_file(file_path, namespaces, dry_run=False):

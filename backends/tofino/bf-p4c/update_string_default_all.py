@@ -1,7 +1,7 @@
-import os
-import sys
 import argparse
 import difflib
+import os
+import sys
 
 
 def process_file(filename, dry_run=False):

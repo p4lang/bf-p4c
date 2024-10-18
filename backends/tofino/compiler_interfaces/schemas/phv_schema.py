@@ -8,11 +8,12 @@ TODO:
 2. Need to model "tagalong" collections for resources group_type.
 """
 
-import jsl
-import json
 import inspect
+import json
 import os.path
 import sys
+
+import jsl
 
 MYPATH = os.path.dirname(__file__)
 if not getattr(sys, 'frozen', False):

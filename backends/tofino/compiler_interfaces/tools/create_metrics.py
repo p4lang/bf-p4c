@@ -4,8 +4,15 @@
 This script produces a metrics file from an input resources.json file.
 """
 
-import json, jsonschema, logging, math, os, sys
+import json
+import logging
+import math
+import os
+import sys
 from collections import OrderedDict
+
+import jsonschema
+
 from .utils import *
 
 if not getattr(sys, 'frozen', False):
@@ -13,10 +20,10 @@ if not getattr(sys, 'frozen', False):
     MYPATH = os.path.dirname(__file__)
     SCHEMA_PATH = os.path.join(MYPATH, "../")
     sys.path.append(SCHEMA_PATH)
-from schemas.phv_schema import PhvJSONSchema
 from schemas.metrics_schema import MetricsJSONSchema
-from schemas.schema_keys import *
+from schemas.phv_schema import PhvJSONSchema
 from schemas.schema_enum_values import *
+from schemas.schema_keys import *
 
 # The minimum resources.json schema version required.
 MINIMUM_RESOURCES_JSON_REQUIRED = "1.0.5"

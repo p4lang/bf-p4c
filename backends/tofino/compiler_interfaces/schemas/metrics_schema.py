@@ -4,11 +4,12 @@
 metrics_schema.py: Generates a JSON Schema model for structured compilation metrics.
 """
 
-import jsl
-import json
 import inspect
+import json
 import os.path
 import sys
+
+import jsl
 
 MYPATH = os.path.dirname(__file__)
 if not getattr(sys, 'frozen', False):

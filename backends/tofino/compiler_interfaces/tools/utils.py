@@ -1,5 +1,7 @@
 from __future__ import print_function
-import unicodedata, sys
+
+import sys
+import unicodedata
 
 SUCCESS = 0
 FAILURE = 1

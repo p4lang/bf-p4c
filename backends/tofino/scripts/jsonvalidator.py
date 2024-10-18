@@ -10,10 +10,12 @@
 #
 # \TODO: add support for passing a generated schema as an argument.
 
+import argparse
+import json
 import os
 import sys
-import argparse
-import json, jsonschema
+
+import jsonschema
 
 
 class JSONValidator:

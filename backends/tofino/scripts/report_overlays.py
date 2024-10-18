@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
-import re
 import argparse
+import re
 import sys
 
 # Structure is:

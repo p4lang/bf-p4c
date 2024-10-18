@@ -4,9 +4,10 @@
 resources_schema.py: Generates a JSON Schema model for structured resource allocation result information.
 """
 
-import jsl
-import json
 import inspect
+import json
+
+import jsl
 
 ########################################################
 #   Schema Version

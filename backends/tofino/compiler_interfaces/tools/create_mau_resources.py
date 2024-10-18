@@ -4,8 +4,12 @@
 This script produces a mau.resources.log from an input resources.json file.
 """
 
-import json, logging, os, sys
+import json
+import logging
+import os
+import sys
 from collections import OrderedDict
+
 from .utils import *
 
 if not getattr(sys, 'frozen', False):
@@ -14,8 +18,8 @@ if not getattr(sys, 'frozen', False):
     SCHEMA_PATH = os.path.join(MYPATH, "../")
     sys.path.append(SCHEMA_PATH)
 
-from schemas.schema_keys import *
 from schemas.schema_enum_values import *
+from schemas.schema_keys import *
 
 # The minimum resources.json schema version required.
 MINIMUM_RESOURCES_JSON_REQUIRED = "1.1.0"
