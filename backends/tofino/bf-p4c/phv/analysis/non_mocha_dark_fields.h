@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef P4C_EXTENSIONS_BF_P4C_PHV_ANALYSIS_NON_MOCHA_DARK_FIELDS_H_
-#define P4C_EXTENSIONS_BF_P4C_PHV_ANALYSIS_NON_MOCHA_DARK_FIELDS_H_
+#ifndef P4C_BACKENDS_TOFINO_BF_P4C_PHV_ANALYSIS_NON_MOCHA_DARK_FIELDS_H_
+#define P4C_BACKENDS_TOFINO_BF_P4C_PHV_ANALYSIS_NON_MOCHA_DARK_FIELDS_H_
 
 #include "bf-p4c/common/field_defuse.h"
 #include "bf-p4c/mau/action_analysis.h"
@@ -68,4 +68,4 @@ class NonMochaDarkFields : public Inspector {
     const FieldMap &getNonDark() const { return nonDark; }
 };
 
-#endif /* P4C_EXTENSIONS_BF_P4C_PHV_ANALYSIS_NON_MOCHA_DARK_FIELDS_H_ */
+#endif /* P4C_BACKENDS_TOFINO_BF_P4C_PHV_ANALYSIS_NON_MOCHA_DARK_FIELDS_H_ */

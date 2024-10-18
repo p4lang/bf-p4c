@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef EXTENSIONS_BF_P4C_MAU_IXBAR_INFO_H_
-#define EXTENSIONS_BF_P4C_MAU_IXBAR_INFO_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_MAU_IXBAR_INFO_H_
+#define BACKENDS_TOFINO_BF_P4C_MAU_IXBAR_INFO_H_
 
 #include <array>
 
@@ -46,4 +46,4 @@ class CollectIXBarInfo : public MauInspector {
 
 }  // namespace BFN
 
-#endif /* EXTENSIONS_BF_P4C_MAU_IXBAR_INFO_H_ */
+#endif /* BACKENDS_TOFINO_BF_P4C_MAU_IXBAR_INFO_H_ */

@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef EXTENSIONS_BF_P4C_PARDE_LOWERED_COMPUTE_LOWERED_PARSER_IR_H_
-#define EXTENSIONS_BF_P4C_PARDE_LOWERED_COMPUTE_LOWERED_PARSER_IR_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_PARDE_LOWERED_COMPUTE_LOWERED_PARSER_IR_H_
+#define BACKENDS_TOFINO_BF_P4C_PARDE_LOWERED_COMPUTE_LOWERED_PARSER_IR_H_
 
 #include "bf-p4c/parde/allocate_parser_checksum.h"
 #include "bf-p4c/parde/clot/clot_info.h"
@@ -85,4 +85,4 @@ struct ComputeLoweredParserIR : public ParserInspector {
 
 }  // namespace Parde::Lowered
 
-#endif /* EXTENSIONS_BF_P4C_PARDE_LOWERED_COMPUTE_LOWERED_PARSER_IR_H_ */
+#endif /* BACKENDS_TOFINO_BF_P4C_PARDE_LOWERED_COMPUTE_LOWERED_PARSER_IR_H_ */

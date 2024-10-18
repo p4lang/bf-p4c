@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef _EXTENSIONS_BF_P4C_LOGGING_RESOURCES_CLOT_H_
-#define _EXTENSIONS_BF_P4C_LOGGING_RESOURCES_CLOT_H_
+#ifndef _BACKENDS_TOFINO_BF_P4C_LOGGING_RESOURCES_CLOT_H_
+#define _BACKENDS_TOFINO_BF_P4C_LOGGING_RESOURCES_CLOT_H_
 
 /* clang-format off */
 #include <map>
@@ -66,4 +66,4 @@ class ClotResourcesLogging : public ParserInspector {
 
 }  // namespace BFN
 
-#endif /* _EXTENSIONS_BF_P4C_LOGGING_RESOURCES_CLOT_H_ */
+#endif /* _BACKENDS_TOFINO_BF_P4C_LOGGING_RESOURCES_CLOT_H_ */

@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef EXTENSIONS_BF_P4C_PARDE_LOWER_PARSER_H_
-#define EXTENSIONS_BF_P4C_PARDE_LOWER_PARSER_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_PARDE_LOWER_PARSER_H_
+#define BACKENDS_TOFINO_BF_P4C_PARDE_LOWER_PARSER_H_
 
 #include "bf-p4c/parde/parser_header_sequences.h"
 #include "common/utils.h"
@@ -56,4 +56,4 @@ class LowerParser : public Logging::PassManager {
                          PhvLogging::CollectDefUseInfo *defuseInfo);
 };
 
-#endif /* EXTENSIONS_BF_P4C_PARDE_LOWER_PARSER_H_ */
+#endif /* BACKENDS_TOFINO_BF_P4C_PARDE_LOWER_PARSER_H_ */

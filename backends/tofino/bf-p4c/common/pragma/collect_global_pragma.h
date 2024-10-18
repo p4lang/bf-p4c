@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef EXTENSIONS_BF_P4C_COMMON_PRAGMA_COLLECT_GLOBAL_PRAGMA_H_
-#define EXTENSIONS_BF_P4C_COMMON_PRAGMA_COLLECT_GLOBAL_PRAGMA_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_COMMON_PRAGMA_COLLECT_GLOBAL_PRAGMA_H_
+#define BACKENDS_TOFINO_BF_P4C_COMMON_PRAGMA_COLLECT_GLOBAL_PRAGMA_H_
 
 #include <vector>
 
@@ -50,4 +50,4 @@ class CollectGlobalPragma : public Inspector {
     const IR::Annotation *exists(const char *pragma_name) const;
 };
 
-#endif /* EXTENSIONS_BF_P4C_COMMON_PRAGMA_COLLECT_GLOBAL_PRAGMA_H_ */
+#endif /* BACKENDS_TOFINO_BF_P4C_COMMON_PRAGMA_COLLECT_GLOBAL_PRAGMA_H_ */

@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef EXTENSIONS_BF_P4C_PARDE_CLOT_CLOT_CANDIDATE_H_
-#define EXTENSIONS_BF_P4C_PARDE_CLOT_CLOT_CANDIDATE_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_PARDE_CLOT_CLOT_CANDIDATE_H_
+#define BACKENDS_TOFINO_BF_P4C_PARDE_CLOT_CLOT_CANDIDATE_H_
 
 #include "bf-p4c/lib/cmp.h"
 #include "clot_info.h"
@@ -145,4 +145,4 @@ class ClotCandidate : public LiftLess<ClotCandidate> {
     std::string print() const;
 };
 
-#endif /* EXTENSIONS_BF_P4C_PARDE_CLOT_CLOT_CANDIDATE_H_ */
+#endif /* BACKENDS_TOFINO_BF_P4C_PARDE_CLOT_CLOT_CANDIDATE_H_ */

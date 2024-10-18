@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef EXTENSIONS_BF_P4C_PARDE_COMMON_ALLOCATORS_H_
-#define EXTENSIONS_BF_P4C_PARDE_COMMON_ALLOCATORS_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_PARDE_COMMON_ALLOCATORS_H_
+#define BACKENDS_TOFINO_BF_P4C_PARDE_COMMON_ALLOCATORS_H_
 
 #include "bf-p4c/common/ir_utils.h"
 #include "bf-p4c/parde/clot/clot_info.h"
@@ -455,4 +455,4 @@ class LoweredParserMatchAllocator {
     bool spill_selects = false;
 };
 
-#endif /* EXTENSIONS_BF_P4C_PARDE_COMMON_ALLOCATORS_H_ */
+#endif /* BACKENDS_TOFINO_BF_P4C_PARDE_COMMON_ALLOCATORS_H_ */

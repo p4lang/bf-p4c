@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef EXTENSIONS_BF_P4C_ARCH_PSA_PROGRAMSTRUCTURE_H_
-#define EXTENSIONS_BF_P4C_ARCH_PSA_PROGRAMSTRUCTURE_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_ARCH_PSA_PROGRAMSTRUCTURE_H_
+#define BACKENDS_TOFINO_BF_P4C_ARCH_PSA_PROGRAMSTRUCTURE_H_
 
 #include "bf-p4c/arch/program_structure.h"
 #include "bf-p4c/arch/psa/psa_model.h"
@@ -133,4 +133,4 @@ struct ProgramStructure : BFN::ProgramStructure {
 
 }  // namespace BFN
 
-#endif /* EXTENSIONS_BF_P4C_ARCH_PSA_PROGRAMSTRUCTURE_H_ */
+#endif /* BACKENDS_TOFINO_BF_P4C_ARCH_PSA_PROGRAMSTRUCTURE_H_ */

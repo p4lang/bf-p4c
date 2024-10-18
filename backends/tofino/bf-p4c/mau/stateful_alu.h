@@ -84,8 +84,8 @@
  *         4. BFN::AttachTables::DefineGlobalRefs
  */
 
-#ifndef EXTENSIONS_BF_P4C_MAU_STATEFUL_ALU_H_
-#define EXTENSIONS_BF_P4C_MAU_STATEFUL_ALU_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_MAU_STATEFUL_ALU_H_
+#define BACKENDS_TOFINO_BF_P4C_MAU_STATEFUL_ALU_H_
 
 #include <map>
 #include <vector>
@@ -456,4 +456,4 @@ class FixupStatefulAlu : public PassManager {
     }
 };
 
-#endif /* EXTENSIONS_BF_P4C_MAU_STATEFUL_ALU_H_ */
+#endif /* BACKENDS_TOFINO_BF_P4C_MAU_STATEFUL_ALU_H_ */

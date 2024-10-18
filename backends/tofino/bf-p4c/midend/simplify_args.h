@@ -61,8 +61,8 @@
  *        }
  *
  */
-#ifndef EXTENSIONS_BF_P4C_MIDEND_SIMPLIFY_ARGS_H_
-#define EXTENSIONS_BF_P4C_MIDEND_SIMPLIFY_ARGS_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_MIDEND_SIMPLIFY_ARGS_H_
+#define BACKENDS_TOFINO_BF_P4C_MIDEND_SIMPLIFY_ARGS_H_
 
 #include "bf-p4c/midend/check_header_alignment.h"
 #include "bf-p4c/midend/copy_header.h"
@@ -328,4 +328,4 @@ class SimplifyEmitArgs : public PassManager {
 
 }  // namespace BFN
 
-#endif /* EXTENSIONS_BF_P4C_MIDEND_SIMPLIFY_ARGS_H_ */
+#endif /* BACKENDS_TOFINO_BF_P4C_MIDEND_SIMPLIFY_ARGS_H_ */

@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef EXTENSIONS_BF_P4C_BF_P4C_OPTIONS_H_
-#define EXTENSIONS_BF_P4C_BF_P4C_OPTIONS_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_BF_P4C_OPTIONS_H_
+#define BACKENDS_TOFINO_BF_P4C_BF_P4C_OPTIONS_H_
 
 #include "frontends/common/applyOptionsPragmas.h"
 #include "frontends/common/options.h"
@@ -219,4 +219,4 @@ class BFNOptionPragmaParser : public P4::P4COptionPragmaParser {
     std::optional<CommandLineOptions> parseCompilerOption(const IR::Annotation *annotation);
 };
 
-#endif /* EXTENSIONS_BF_P4C_BF_P4C_OPTIONS_H_ */
+#endif /* BACKENDS_TOFINO_BF_P4C_BF_P4C_OPTIONS_H_ */

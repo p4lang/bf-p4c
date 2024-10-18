@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef EXTENSIONS_BF_P4C_MAU_ACTION_ANALYSIS_H_
-#define EXTENSIONS_BF_P4C_MAU_ACTION_ANALYSIS_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_MAU_ACTION_ANALYSIS_H_
+#define BACKENDS_TOFINO_BF_P4C_MAU_ACTION_ANALYSIS_H_
 
 #include "bf-p4c/ir/bitrange.h"
 #include "bf-p4c/ir/tofino_write_context.h"
@@ -679,4 +679,4 @@ class ActionAnalysis : public MauInspector, TofinoWriteContext {
 
 std::ostream &operator<<(std::ostream &out, const ActionAnalysis &);
 
-#endif /* EXTENSIONS_BF_P4C_MAU_ACTION_ANALYSIS_H_ */
+#endif /* BACKENDS_TOFINO_BF_P4C_MAU_ACTION_ANALYSIS_H_ */

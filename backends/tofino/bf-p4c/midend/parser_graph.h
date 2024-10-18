@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef EXTENSIONS_BF_P4C_MIDEND_PARSER_GRAPH_H_
-#define EXTENSIONS_BF_P4C_MIDEND_PARSER_GRAPH_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_MIDEND_PARSER_GRAPH_H_
+#define BACKENDS_TOFINO_BF_P4C_MIDEND_PARSER_GRAPH_H_
 
 #include <boost/graph/adjacency_list.hpp>
 
@@ -143,4 +143,4 @@ class P4ParserGraphs : public graphs::ParserGraphs {
     bool dumpDot;
 };
 
-#endif /* EXTENSIONS_BF_P4C_MIDEND_PARSER_GRAPH_H_ */
+#endif /* BACKENDS_TOFINO_BF_P4C_MIDEND_PARSER_GRAPH_H_ */

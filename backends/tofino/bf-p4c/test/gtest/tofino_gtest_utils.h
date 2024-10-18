@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef EXTENSIONS_BF_P4C_TEST_GTEST_TOFINO_GTEST_UTILS_H_
-#define EXTENSIONS_BF_P4C_TEST_GTEST_TOFINO_GTEST_UTILS_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_TEST_GTEST_TOFINO_GTEST_UTILS_H_
+#define BACKENDS_TOFINO_BF_P4C_TEST_GTEST_TOFINO_GTEST_UTILS_H_
 
 #include <optional>
 #include <string>
@@ -85,4 +85,4 @@ class JBayBackendTest : public BackendTest {
 
 }  // namespace P4::Test
 
-#endif /* EXTENSIONS_BF_P4C_TEST_GTEST_TOFINO_GTEST_UTILS_H_ */
+#endif /* BACKENDS_TOFINO_BF_P4C_TEST_GTEST_TOFINO_GTEST_UTILS_H_ */

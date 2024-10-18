@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef EXTENSIONS_BF_P4C_COMMON_PARSE_ANNOTATIONS_H_
-#define EXTENSIONS_BF_P4C_COMMON_PARSE_ANNOTATIONS_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_COMMON_PARSE_ANNOTATIONS_H_
+#define BACKENDS_TOFINO_BF_P4C_COMMON_PARSE_ANNOTATIONS_H_
 
 #include "bf-p4c/common/pragma/all_pragmas.h"
 #include "frontends/p4/parseAnnotations.h"
@@ -182,4 +182,4 @@ class ParseAnnotations : public P4::ParseAnnotations {
 
 }  // namespace BFN
 
-#endif /* EXTENSIONS_BF_P4C_COMMON_PARSE_ANNOTATIONS_H_ */
+#endif /* BACKENDS_TOFINO_BF_P4C_COMMON_PARSE_ANNOTATIONS_H_ */

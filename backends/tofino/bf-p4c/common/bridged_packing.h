@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef EXTENSIONS_BF_P4C_COMMON_BRIDGED_PACKING_H_
-#define EXTENSIONS_BF_P4C_COMMON_BRIDGED_PACKING_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_COMMON_BRIDGED_PACKING_H_
+#define BACKENDS_TOFINO_BF_P4C_COMMON_BRIDGED_PACKING_H_
 
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/common/extract_maupipe.h"
@@ -1035,4 +1035,4 @@ class SubstitutePackedHeaders : public PassManager {
     const IR::ToplevelBlock *getToplevelBlock() const { return evaluator->toplevel; }
 };
 
-#endif /* EXTENSIONS_BF_P4C_COMMON_BRIDGED_PACKING_H_ */
+#endif /* BACKENDS_TOFINO_BF_P4C_COMMON_BRIDGED_PACKING_H_ */

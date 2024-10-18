@@ -38,8 +38,8 @@
  * that these rules can be reinforced, and error message are generated to steer
  * programmer in the right direction.
  */
-#ifndef EXTENSIONS_BF_P4C_MIDEND_CHECK_DESIGN_PATTERN_H_
-#define EXTENSIONS_BF_P4C_MIDEND_CHECK_DESIGN_PATTERN_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_MIDEND_CHECK_DESIGN_PATTERN_H_
+#define BACKENDS_TOFINO_BF_P4C_MIDEND_CHECK_DESIGN_PATTERN_H_
 
 #include "bf-p4c-options.h"
 #include "frontends/common/resolveReferences/referenceMap.h"
@@ -155,4 +155,4 @@ class CheckDesignPattern : public PassManager {
 
 }  // namespace BFN
 
-#endif  // EXTENSIONS_BF_P4C_MIDEND_CHECK_DESIGN_PATTERN_H_
+#endif  // BACKENDS_TOFINO_BF_P4C_MIDEND_CHECK_DESIGN_PATTERN_H_

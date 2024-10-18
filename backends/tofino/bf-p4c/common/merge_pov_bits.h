@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef EXTENSIONS_BF_P4C_COMMON_MERGE_POV_BITS_H_
-#define EXTENSIONS_BF_P4C_COMMON_MERGE_POV_BITS_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_COMMON_MERGE_POV_BITS_H_
+#define BACKENDS_TOFINO_BF_P4C_COMMON_MERGE_POV_BITS_H_
 
 #include "bf-p4c/parde/parde_visitor.h"
 #include "bf-p4c/parde/parser_info.h"
@@ -63,4 +63,4 @@ class MergePovBits : public PassManager {
 
 }  // namespace BFN
 
-#endif /* EXTENSIONS_BF_P4C_COMMON_MERGE_POV_BITS_H_ */
+#endif /* BACKENDS_TOFINO_BF_P4C_COMMON_MERGE_POV_BITS_H_ */

@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef EXTENSIONS_BF_P4C_DEVICE_H_
-#define EXTENSIONS_BF_P4C_DEVICE_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_DEVICE_H_
+#define BACKENDS_TOFINO_BF_P4C_DEVICE_H_
 
 #include "arch/arch_spec.h"
 #include "ir/gress.h"
@@ -324,4 +324,4 @@ class JBayA0Device : public JBayDevice {
     cstring get_name() const override { return "Tofino2A0"_cs; }
 };
 
-#endif /* EXTENSIONS_BF_P4C_DEVICE_H_ */
+#endif /* BACKENDS_TOFINO_BF_P4C_DEVICE_H_ */

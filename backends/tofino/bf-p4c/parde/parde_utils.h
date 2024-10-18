@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef EXTENSIONS_BF_P4C_PARDE_PARDE_UTILS_H_
-#define EXTENSIONS_BF_P4C_PARDE_PARDE_UTILS_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_PARDE_PARDE_UTILS_H_
+#define BACKENDS_TOFINO_BF_P4C_PARDE_PARDE_UTILS_H_
 
 #include "bf-p4c/device.h"
 
@@ -120,4 +120,4 @@ inline unsigned get_state_shift(const IR::BFN::ParserState *state) {
     return state_shift;
 }
 
-#endif /* EXTENSIONS_BF_P4C_PARDE_PARDE_UTILS_H_ */
+#endif /* BACKENDS_TOFINO_BF_P4C_PARDE_PARDE_UTILS_H_ */

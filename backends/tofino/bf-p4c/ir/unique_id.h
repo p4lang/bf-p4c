@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef EXTENSIONS_BF_P4C_IR_UNIQUE_ID_H_
-#define EXTENSIONS_BF_P4C_IR_UNIQUE_ID_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_IR_UNIQUE_ID_H_
+#define BACKENDS_TOFINO_BF_P4C_IR_UNIQUE_ID_H_
 
 #include <iostream>
 
@@ -194,4 +194,4 @@ std::ostream &operator<<(std::ostream &out, const UniqueId &ui);
 
 }  // namespace P4
 
-#endif /* EXTENSIONS_BF_P4C_IR_UNIQUE_ID_H_ */
+#endif /* BACKENDS_TOFINO_BF_P4C_IR_UNIQUE_ID_H_ */

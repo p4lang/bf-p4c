@@ -13,8 +13,8 @@
 /**
  *  Detects multiple pipelines in a program
  */
-#ifndef EXTENSIONS_BF_P4C_MIDEND_COLLECT_PIPELINES_H_
-#define EXTENSIONS_BF_P4C_MIDEND_COLLECT_PIPELINES_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_MIDEND_COLLECT_PIPELINES_H_
+#define BACKENDS_TOFINO_BF_P4C_MIDEND_COLLECT_PIPELINES_H_
 
 #include <set>
 #include <unordered_map>
@@ -112,4 +112,4 @@ class CollectPipelines : public Inspector {
 
 }  // namespace BFN
 
-#endif  // EXTENSIONS_BF_P4C_MIDEND_COLLECT_PIPELINES_H_
+#endif  // BACKENDS_TOFINO_BF_P4C_MIDEND_COLLECT_PIPELINES_H_

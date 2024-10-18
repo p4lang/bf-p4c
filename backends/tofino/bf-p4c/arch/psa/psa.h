@@ -15,8 +15,8 @@
  * \ingroup ArchTranslation
  * \brief Set of passes that translate PSA architecture.
  */
-#ifndef EXTENSIONS_BF_P4C_ARCH_PSA_PSA_H_
-#define EXTENSIONS_BF_P4C_ARCH_PSA_PSA_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_ARCH_PSA_PSA_H_
+#define BACKENDS_TOFINO_BF_P4C_ARCH_PSA_PSA_H_
 
 #include <optional>
 
@@ -50,4 +50,4 @@ class PortableSwitchTranslation : public PassManager {
 
 }  // namespace BFN
 
-#endif /* EXTENSIONS_BF_P4C_ARCH_PSA_PSA_H_ */
+#endif /* BACKENDS_TOFINO_BF_P4C_ARCH_PSA_PSA_H_ */

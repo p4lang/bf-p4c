@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef EXTENSIONS_BF_P4C_PHV_ANALYSIS_LIVE_RANGE_SHRINKING_H_
-#define EXTENSIONS_BF_P4C_PHV_ANALYSIS_LIVE_RANGE_SHRINKING_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_PHV_ANALYSIS_LIVE_RANGE_SHRINKING_H_
+#define BACKENDS_TOFINO_BF_P4C_PHV_ANALYSIS_LIVE_RANGE_SHRINKING_H_
 
 #include "bf-p4c/common/field_defuse.h"
 #include "bf-p4c/common/map_tables_to_actions.h"
@@ -224,4 +224,4 @@ class LiveRangeShrinking : public PassManager {
                                 const MauBacktracker &bt);
 };
 
-#endif /* EXTENSIONS_BF_P4C_PHV_ANALYSIS_LIVE_RANGE_SHRINKING_H_ */
+#endif /* BACKENDS_TOFINO_BF_P4C_PHV_ANALYSIS_LIVE_RANGE_SHRINKING_H_ */

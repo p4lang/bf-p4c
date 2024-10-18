@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef EXTENSIONS_BF_P4C_MIDEND_REGISTER_READ_WRITE_H_
-#define EXTENSIONS_BF_P4C_MIDEND_REGISTER_READ_WRITE_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_MIDEND_REGISTER_READ_WRITE_H_
+#define BACKENDS_TOFINO_BF_P4C_MIDEND_REGISTER_READ_WRITE_H_
 
 #include "bf-p4c/midend/copy_header.h"
 #include "bf-p4c/midend/type_checker.h"
@@ -207,4 +207,4 @@ class RegisterReadWrite : public PassManager {
 
 }  // namespace BFN
 
-#endif  // EXTENSIONS_BF_P4C_MIDEND_REGISTER_READ_WRITE_H_
+#endif  // BACKENDS_TOFINO_BF_P4C_MIDEND_REGISTER_READ_WRITE_H_

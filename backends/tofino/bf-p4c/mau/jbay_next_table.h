@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef EXTENSIONS_BF_P4C_MAU_JBAY_NEXT_TABLE_H_
-#define EXTENSIONS_BF_P4C_MAU_JBAY_NEXT_TABLE_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_MAU_JBAY_NEXT_TABLE_H_
+#define BACKENDS_TOFINO_BF_P4C_MAU_JBAY_NEXT_TABLE_H_
 
 #include "bf-p4c/lib/dyn_vector.h"
 #include "bf-p4c/mau/memories.h"
@@ -259,4 +259,4 @@ struct LongBranchAllocFailed : public Backtrack::trigger {
     LongBranchAllocFailed() : trigger(OK) {}
 };
 
-#endif /* EXTENSIONS_BF_P4C_MAU_JBAY_NEXT_TABLE_H_ */
+#endif /* BACKENDS_TOFINO_BF_P4C_MAU_JBAY_NEXT_TABLE_H_ */

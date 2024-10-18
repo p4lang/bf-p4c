@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef EXTENSIONS_BF_P4C_CONTROL_PLANE_RUNTIME_H_
-#define EXTENSIONS_BF_P4C_CONTROL_PLANE_RUNTIME_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_CONTROL_PLANE_RUNTIME_H_
+#define BACKENDS_TOFINO_BF_P4C_CONTROL_PLANE_RUNTIME_H_
 
 #include "ir/ir.h"
 
@@ -64,4 +64,4 @@ void generateRuntime(const IR::P4Program *program, const BFN_Options &options);
 
 }  // namespace BFN
 
-#endif /* EXTENSIONS_BF_P4C_CONTROL_PLANE_RUNTIME_H_ */
+#endif /* BACKENDS_TOFINO_BF_P4C_CONTROL_PLANE_RUNTIME_H_ */

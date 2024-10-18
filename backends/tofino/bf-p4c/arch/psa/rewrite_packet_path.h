@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef EXTENSIONS_BF_P4C_ARCH_PSA_REWRITE_PACKET_PATH_H_
-#define EXTENSIONS_BF_P4C_ARCH_PSA_REWRITE_PACKET_PATH_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_ARCH_PSA_REWRITE_PACKET_PATH_H_
+#define BACKENDS_TOFINO_BF_P4C_ARCH_PSA_REWRITE_PACKET_PATH_H_
 
 #include "bf-p4c/arch/program_structure.h"
 #include "bf-p4c/arch/psa/programStructure.h"
@@ -31,4 +31,4 @@ struct RewritePacketPath : public PassManager {
 
 }  // namespace BFN
 
-#endif /* EXTENSIONS_BF_P4C_ARCH_PSA_REWRITE_PACKET_PATH_H_ */
+#endif /* BACKENDS_TOFINO_BF_P4C_ARCH_PSA_REWRITE_PACKET_PATH_H_ */

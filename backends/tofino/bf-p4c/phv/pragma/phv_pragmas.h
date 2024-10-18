@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef EXTENSIONS_BF_P4C_PHV_PRAGMA_PHV_PRAGMAS_H_
-#define EXTENSIONS_BF_P4C_PHV_PRAGMA_PHV_PRAGMAS_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_PHV_PRAGMA_PHV_PRAGMAS_H_
+#define BACKENDS_TOFINO_BF_P4C_PHV_PRAGMA_PHV_PRAGMAS_H_
 
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/phv/pragma/pa_alias.h"
@@ -149,4 +149,4 @@ class Pragmas : public PassManager {
 
 }  // namespace PHV
 
-#endif /* EXTENSIONS_BF_P4C_PHV_PRAGMA_PHV_PRAGMAS_H_ */
+#endif /* BACKENDS_TOFINO_BF_P4C_PHV_PRAGMA_PHV_PRAGMAS_H_ */

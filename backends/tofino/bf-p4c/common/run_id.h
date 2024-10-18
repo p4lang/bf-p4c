@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef _EXTENSIONS_BF_P4C_COMMON_RUN_ID_H_
-#define _EXTENSIONS_BF_P4C_COMMON_RUN_ID_H_
+#ifndef _BACKENDS_TOFINO_BF_P4C_COMMON_RUN_ID_H_
+#define _BACKENDS_TOFINO_BF_P4C_COMMON_RUN_ID_H_
 
 #include <string>
 
@@ -32,4 +32,4 @@ class RunId {
     void operator=(RunId const &) = delete;
 };
 
-#endif /* _EXTENSIONS_BF_P4C_COMMON_RUN_ID_H_ */
+#endif /* _BACKENDS_TOFINO_BF_P4C_COMMON_RUN_ID_H_ */

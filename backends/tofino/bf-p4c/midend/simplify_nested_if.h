@@ -31,8 +31,8 @@
 #include "ir/ir.h"
 #include "ir/pattern.h"
 
-#ifndef _EXTENSIONS_BF_P4C_MIDEND_SIMPLIFY_NESTED_IF_H_
-#define _EXTENSIONS_BF_P4C_MIDEND_SIMPLIFY_NESTED_IF_H_
+#ifndef _BACKENDS_TOFINO_BF_P4C_MIDEND_SIMPLIFY_NESTED_IF_H_
+#define _BACKENDS_TOFINO_BF_P4C_MIDEND_SIMPLIFY_NESTED_IF_H_
 
 namespace P4 {
 
@@ -209,4 +209,4 @@ class SimplifyNestedIf : public PassManager {
 
 }  // namespace P4
 
-#endif /* _EXTENSIONS_BF_P4C_MIDEND_SIMPLIFY_NESTED_IF_H_ */
+#endif /* _BACKENDS_TOFINO_BF_P4C_MIDEND_SIMPLIFY_NESTED_IF_H_ */

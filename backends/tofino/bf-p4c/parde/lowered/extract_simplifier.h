@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef EXTENSIONS_BF_P4C_PARDE_LOWERED_EXTRACT_SIMPLIFIER_H_
-#define EXTENSIONS_BF_P4C_PARDE_LOWERED_EXTRACT_SIMPLIFIER_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_PARDE_LOWERED_EXTRACT_SIMPLIFIER_H_
+#define BACKENDS_TOFINO_BF_P4C_PARDE_LOWERED_EXTRACT_SIMPLIFIER_H_
 
 #include <boost/range/adaptor/reversed.hpp>
 
@@ -77,4 +77,4 @@ struct ExtractSimplifier {
 
 }  // namespace Parde::Lowered
 
-#endif /* EXTENSIONS_BF_P4C_PARDE_LOWERED_EXTRACT_SIMPLIFIER_H_ */
+#endif /* BACKENDS_TOFINO_BF_P4C_PARDE_LOWERED_EXTRACT_SIMPLIFIER_H_ */

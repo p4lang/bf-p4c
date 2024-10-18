@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef EXTENSIONS_BF_P4C_LOGGING_CONSTRAINED_FIELDS_H_
-#define EXTENSIONS_BF_P4C_LOGGING_CONSTRAINED_FIELDS_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_LOGGING_CONSTRAINED_FIELDS_H_
+#define BACKENDS_TOFINO_BF_P4C_LOGGING_CONSTRAINED_FIELDS_H_
 
 #include <map>
 
@@ -142,4 +142,4 @@ class ConstrainedFieldMapBuilder {
                                         const std::list<PHV::SuperCluster *> &groups);
 };
 
-#endif /* EXTENSIONS_BF_P4C_LOGGING_CONSTRAINED_FIELDS_H_ */
+#endif /* BACKENDS_TOFINO_BF_P4C_LOGGING_CONSTRAINED_FIELDS_H_ */

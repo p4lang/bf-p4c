@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef EXTENSIONS_BF_P4C_PHV_PRAGMA_PA_ALIAS_H_
-#define EXTENSIONS_BF_P4C_PHV_PRAGMA_PA_ALIAS_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_PHV_PRAGMA_PA_ALIAS_H_
+#define BACKENDS_TOFINO_BF_P4C_PHV_PRAGMA_PA_ALIAS_H_
 
 #include <map>
 #include <optional>
@@ -95,4 +95,4 @@ class PragmaAlias : public Inspector, public Pragma::PrettyPrint {
 std::ostream &operator<<(std::ostream &out, const PragmaAlias &pa_a);
 std::ostream &operator<<(std::ostream &, const PragmaAlias::AliasDestination &dest);
 
-#endif /* EXTENSIONS_BF_P4C_PHV_PRAGMA_PA_ALIAS_H_ */
+#endif /* BACKENDS_TOFINO_BF_P4C_PHV_PRAGMA_PA_ALIAS_H_ */

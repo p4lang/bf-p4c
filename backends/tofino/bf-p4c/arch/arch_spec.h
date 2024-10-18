@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef EXTENSIONS_BF_P4C_ARCH_ARCH_SPEC_H_
-#define EXTENSIONS_BF_P4C_ARCH_ARCH_SPEC_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_ARCH_ARCH_SPEC_H_
+#define BACKENDS_TOFINO_BF_P4C_ARCH_ARCH_SPEC_H_
 
 #include "bf-p4c/ir/gress.h"
 #include "ir/ir.h"
@@ -151,4 +151,4 @@ class JBayArchSpec : public ArchSpec {
     JBayArchSpec();
 };
 
-#endif /* EXTENSIONS_BF_P4C_ARCH_ARCH_SPEC_H_ */
+#endif /* BACKENDS_TOFINO_BF_P4C_ARCH_ARCH_SPEC_H_ */

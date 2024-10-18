@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef EXTENSIONS_BF_P4C_ARCH_PSA_PSA_MODEL_H_
-#define EXTENSIONS_BF_P4C_ARCH_PSA_PSA_MODEL_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_ARCH_PSA_PSA_MODEL_H_
+#define BACKENDS_TOFINO_BF_P4C_ARCH_PSA_PSA_MODEL_H_
 
 #include "frontends/common/model.h"
 #include "frontends/p4/coreLibrary.h"
@@ -519,4 +519,4 @@ class PsaModel : public ::Model::Model {
 
 }  // namespace BFN
 
-#endif /* EXTENSIONS_BF_P4C_ARCH_PSA_PSA_MODEL_H_ */
+#endif /* BACKENDS_TOFINO_BF_P4C_ARCH_PSA_PSA_MODEL_H_ */

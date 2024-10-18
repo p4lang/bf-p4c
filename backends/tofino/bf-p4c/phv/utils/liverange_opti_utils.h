@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef EXTENSIONS_BF_P4C_PHV_UTILS_LIVERANGE_OPTI_UTILS_H_
-#define EXTENSIONS_BF_P4C_PHV_UTILS_LIVERANGE_OPTI_UTILS_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_PHV_UTILS_LIVERANGE_OPTI_UTILS_H_
+#define BACKENDS_TOFINO_BF_P4C_PHV_UTILS_LIVERANGE_OPTI_UTILS_H_
 
 #include "bf-p4c/phv/analysis/dominator_tree.h"
 #include "bf-p4c/phv/utils/slice_alloc.h"
@@ -46,4 +46,4 @@ ordered_map<gress_t, FlowGraph> update_flowgraph(const PHV::UnitSet &g_units,
                                                  const ordered_map<gress_t, FlowGraph> &flgraphs,
                                                  const PHV::Transaction &transact, bool &canUseARA);
 
-#endif /*  EXTENSIONS_BF_P4C_PHV_UTILS_LIVERANGE_OPTI_UTILS_H_  */
+#endif /*  BACKENDS_TOFINO_BF_P4C_PHV_UTILS_LIVERANGE_OPTI_UTILS_H_  */

@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef EXTENSIONS_BF_P4C_PARDE_CLOT_PSEUDOHEADER_H_
-#define EXTENSIONS_BF_P4C_PARDE_CLOT_PSEUDOHEADER_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_PARDE_CLOT_PSEUDOHEADER_H_
+#define BACKENDS_TOFINO_BF_P4C_PARDE_CLOT_PSEUDOHEADER_H_
 
 #include "bf-p4c/phv/phv_fields.h"
 #include "field_slice_set.h"
@@ -41,4 +41,4 @@ class Pseudoheader : public LiftLess<Pseudoheader> {
     bool operator<(const Pseudoheader &other) const { return id < other.id; }
 };
 
-#endif /* EXTENSIONS_BF_P4C_PARDE_CLOT_PSEUDOHEADER_H_ */
+#endif /* BACKENDS_TOFINO_BF_P4C_PARDE_CLOT_PSEUDOHEADER_H_ */

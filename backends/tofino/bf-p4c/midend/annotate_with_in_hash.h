@@ -45,8 +45,8 @@
  *
  * Also see the limitations of the \@in_hash annotation.
  */
-#ifndef EXTENSIONS_BF_P4C_MIDEND_ANNOTATE_WITH_IN_HASH_H_
-#define EXTENSIONS_BF_P4C_MIDEND_ANNOTATE_WITH_IN_HASH_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_MIDEND_ANNOTATE_WITH_IN_HASH_H_
+#define BACKENDS_TOFINO_BF_P4C_MIDEND_ANNOTATE_WITH_IN_HASH_H_
 
 #include "bf-p4c/midend/type_checker.h"
 #include "ir/ir.h"
@@ -90,4 +90,4 @@ class AnnotateWithInHash : public PassManager {
 
 }  // namespace BFN
 
-#endif  // EXTENSIONS_BF_P4C_MIDEND_ANNOTATE_WITH_IN_HASH_H_
+#endif  // BACKENDS_TOFINO_BF_P4C_MIDEND_ANNOTATE_WITH_IN_HASH_H_

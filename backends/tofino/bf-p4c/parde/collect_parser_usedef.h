@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef EXTENSIONS_BF_P4C_PARDE_COLLECT_PARSER_USEDEF_H_
-#define EXTENSIONS_BF_P4C_PARDE_COLLECT_PARSER_USEDEF_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_PARDE_COLLECT_PARSER_USEDEF_H_
+#define BACKENDS_TOFINO_BF_P4C_PARDE_COLLECT_PARSER_USEDEF_H_
 
 #include <optional>
 
@@ -763,4 +763,4 @@ struct ParserCopyProp : public PassManager {
     }
 };
 
-#endif /* EXTENSIONS_BF_P4C_PARDE_COLLECT_PARSER_USEDEF_H_ */
+#endif /* BACKENDS_TOFINO_BF_P4C_PARDE_COLLECT_PARSER_USEDEF_H_ */

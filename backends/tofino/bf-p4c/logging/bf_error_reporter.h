@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef _EXTENSIONS_BF_P4C_LOGGING_BF_ERROR_REPORTER_H_
-#define _EXTENSIONS_BF_P4C_LOGGING_BF_ERROR_REPORTER_H_
+#ifndef _BACKENDS_TOFINO_BF_P4C_LOGGING_BF_ERROR_REPORTER_H_
+#define _BACKENDS_TOFINO_BF_P4C_LOGGING_BF_ERROR_REPORTER_H_
 
 #include "ir/ir.h"
 #include "lib/error_reporter.h"
@@ -79,4 +79,4 @@ class BfErrorReporter : public ErrorReporter {
     CheckResult verify_checks() const;
 };
 
-#endif /* _EXTENSIONS_BF_P4C_LOGGING_BF_ERROR_REPORTER_H_ */
+#endif /* _BACKENDS_TOFINO_BF_P4C_LOGGING_BF_ERROR_REPORTER_H_ */

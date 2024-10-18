@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef EXTENSIONS_BF_P4C_PHV_PRAGMA_PA_MUTUALLY_EXCLUSIVE_H_
-#define EXTENSIONS_BF_P4C_PHV_PRAGMA_PA_MUTUALLY_EXCLUSIVE_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_PHV_PRAGMA_PA_MUTUALLY_EXCLUSIVE_H_
+#define BACKENDS_TOFINO_BF_P4C_PHV_PRAGMA_PA_MUTUALLY_EXCLUSIVE_H_
 
 #include <map>
 #include <optional>
@@ -62,4 +62,4 @@ class PragmaMutuallyExclusive : public Inspector {
 
 std::ostream &operator<<(std::ostream &out, const PragmaMutuallyExclusive &pa_me);
 
-#endif /* EXTENSIONS_BF_P4C_PHV_PRAGMA_PA_MUTUALLY_EXCLUSIVE_H_ */
+#endif /* BACKENDS_TOFINO_BF_P4C_PHV_PRAGMA_PA_MUTUALLY_EXCLUSIVE_H_ */

@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef EXTENSIONS_BF_P4C_COMMON_PRAGMA_ALL_PRAGMAS_H_
-#define EXTENSIONS_BF_P4C_COMMON_PRAGMA_ALL_PRAGMAS_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_COMMON_PRAGMA_ALL_PRAGMAS_H_
+#define BACKENDS_TOFINO_BF_P4C_COMMON_PRAGMA_ALL_PRAGMAS_H_
 
 #include "bf-p4c/common/pragma/pragma.h"
 #include "bf-p4c/parde/clot/pragma/do_not_use_clot.h"
@@ -132,4 +132,4 @@ DEFINE_PRAGMA_CLASS(PragmaActionSelectorHashFieldCalcOutputWidth);
 DEFINE_PRAGMA_CLASS(Pragma);
 */
 
-#endif /* EXTENSIONS_BF_P4C_COMMON_PRAGMA_ALL_PRAGMAS_H_ */
+#endif /* BACKENDS_TOFINO_BF_P4C_COMMON_PRAGMA_ALL_PRAGMAS_H_ */

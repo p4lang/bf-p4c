@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef EXTENSIONS_BF_P4C_PARDE_DUMP_PARSER_H_
-#define EXTENSIONS_BF_P4C_PARDE_DUMP_PARSER_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_PARDE_DUMP_PARSER_H_
+#define BACKENDS_TOFINO_BF_P4C_PARDE_DUMP_PARSER_H_
 
 #include <sys/stat.h>
 
@@ -326,4 +326,4 @@ class DumpParser : public Visitor, public DotDumper {
     bool log;
 };
 
-#endif /* EXTENSIONS_BF_P4C_PARDE_DUMP_PARSER_H_ */
+#endif /* BACKENDS_TOFINO_BF_P4C_PARDE_DUMP_PARSER_H_ */

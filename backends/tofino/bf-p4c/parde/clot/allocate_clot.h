@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef EXTENSIONS_BF_P4C_PARDE_CLOT_ALLOCATE_CLOT_H_
-#define EXTENSIONS_BF_P4C_PARDE_CLOT_ALLOCATE_CLOT_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_PARDE_CLOT_ALLOCATE_CLOT_H_
+#define BACKENDS_TOFINO_BF_P4C_PARDE_CLOT_ALLOCATE_CLOT_H_
 
 #include "clot_info.h"
 
@@ -43,4 +43,4 @@ class ClotAdjuster : public Visitor {
     void end_apply(const IR::Node *root) override;
 };
 
-#endif /* EXTENSIONS_BF_P4C_PARDE_CLOT_ALLOCATE_CLOT_H_ */
+#endif /* BACKENDS_TOFINO_BF_P4C_PARDE_CLOT_ALLOCATE_CLOT_H_ */

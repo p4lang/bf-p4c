@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef EXTENSIONS_BF_P4C_PARDE_CLOT_MERGE_DESUGARED_VARBIT_VALIDS_H_
-#define EXTENSIONS_BF_P4C_PARDE_CLOT_MERGE_DESUGARED_VARBIT_VALIDS_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_PARDE_CLOT_MERGE_DESUGARED_VARBIT_VALIDS_H_
+#define BACKENDS_TOFINO_BF_P4C_PARDE_CLOT_MERGE_DESUGARED_VARBIT_VALIDS_H_
 
 #include "ir/pass_manager.h"
 #include "ir/visitor.h"
@@ -31,4 +31,4 @@ class MergeDesugaredVarbitValids : public PassManager {
                                         PragmaAlias &pragma);
 };
 
-#endif /* EXTENSIONS_BF_P4C_PARDE_CLOT_MERGE_DESUGARED_VARBIT_VALIDS_H_ */
+#endif /* BACKENDS_TOFINO_BF_P4C_PARDE_CLOT_MERGE_DESUGARED_VARBIT_VALIDS_H_ */

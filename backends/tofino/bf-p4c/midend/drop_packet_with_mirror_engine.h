@@ -23,8 +23,8 @@
  * instead mirror them to a disabled mirroring session to drop them by the
  * mirror block. This fix applies to Tofino 1 and 2.
  */
-#ifndef EXTENSIONS_BF_P4C_MIDEND_DROP_PACKET_WITH_MIRROR_ENGINE_H_
-#define EXTENSIONS_BF_P4C_MIDEND_DROP_PACKET_WITH_MIRROR_ENGINE_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_MIDEND_DROP_PACKET_WITH_MIRROR_ENGINE_H_
+#define BACKENDS_TOFINO_BF_P4C_MIDEND_DROP_PACKET_WITH_MIRROR_ENGINE_H_
 
 #include "bf-p4c/common/pragma/all_pragmas.h"
 #include "bf-p4c/common/pragma/collect_global_pragma.h"
@@ -97,4 +97,4 @@ class DropPacketWithMirrorEngine : public PassManager {
 
 }  // namespace BFN
 
-#endif /* EXTENSIONS_BF_P4C_MIDEND_DROP_PACKET_WITH_MIRROR_ENGINE_H_ */
+#endif /* BACKENDS_TOFINO_BF_P4C_MIDEND_DROP_PACKET_WITH_MIRROR_ENGINE_H_ */

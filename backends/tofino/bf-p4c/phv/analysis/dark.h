@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef EXTENSIONS_BF_P4C_PHV_ANALYSIS_DARK_H_
-#define EXTENSIONS_BF_P4C_PHV_ANALYSIS_DARK_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_PHV_ANALYSIS_DARK_H_
+#define BACKENDS_TOFINO_BF_P4C_PHV_ANALYSIS_DARK_H_
 
 #include "bf-p4c/common/field_defuse.h"
 #include "bf-p4c/mau/mau_visitor.h"
@@ -85,4 +85,4 @@ class CollectDarkCandidates : public PassManager {
     }
 };
 
-#endif /*  EXTENSIONS_BF_P4C_PHV_ANALYSIS_DARK_H_  */
+#endif /*  BACKENDS_TOFINO_BF_P4C_PHV_ANALYSIS_DARK_H_  */

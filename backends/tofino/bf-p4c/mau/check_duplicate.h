@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef EXTENSIONS_BF_P4C_MAU_CHECK_DUPLICATE_H_
-#define EXTENSIONS_BF_P4C_MAU_CHECK_DUPLICATE_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_MAU_CHECK_DUPLICATE_H_
+#define BACKENDS_TOFINO_BF_P4C_MAU_CHECK_DUPLICATE_H_
 
 #include "ir/dump.h"
 
@@ -59,4 +59,4 @@ class CheckDuplicateAttached : public Inspector {
     }
 };
 
-#endif /* EXTENSIONS_BF_P4C_MAU_CHECK_DUPLICATE_H_ */
+#endif /* BACKENDS_TOFINO_BF_P4C_MAU_CHECK_DUPLICATE_H_ */

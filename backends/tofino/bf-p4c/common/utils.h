@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef EXTENSIONS_BF_P4C_COMMON_UTILS_H_
-#define EXTENSIONS_BF_P4C_COMMON_UTILS_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_COMMON_UTILS_H_
+#define BACKENDS_TOFINO_BF_P4C_COMMON_UTILS_H_
 
 #include <iostream>
 
@@ -81,4 +81,4 @@ std::tuple<bool, cstring, int, int> get_key_slice_info(const cstring &input);
 const IR::Vector<IR::Expression> *getListExprComponents(const IR::Node &node);
 
 bool is_starter_pistol_table(const cstring &tableName);
-#endif /* EXTENSIONS_BF_P4C_COMMON_UTILS_H_ */
+#endif /* BACKENDS_TOFINO_BF_P4C_COMMON_UTILS_H_ */

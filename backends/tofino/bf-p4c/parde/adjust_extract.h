@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef EXTENSIONS_BF_P4C_PARDE_ADJUST_EXTRACT_H_
-#define EXTENSIONS_BF_P4C_PARDE_ADJUST_EXTRACT_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_PARDE_ADJUST_EXTRACT_H_
+#define BACKENDS_TOFINO_BF_P4C_PARDE_ADJUST_EXTRACT_H_
 
 #include "bf-p4c/parde/parde_visitor.h"
 #include "bf-p4c/phv/phv_fields.h"
@@ -45,4 +45,4 @@ class AdjustExtract : public PardeModifier {
     explicit AdjustExtract(const PhvInfo &phv) : phv(phv) {}
 };
 
-#endif /* EXTENSIONS_BF_P4C_PARDE_ADJUST_EXTRACT_H_ */
+#endif /* BACKENDS_TOFINO_BF_P4C_PARDE_ADJUST_EXTRACT_H_ */

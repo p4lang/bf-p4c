@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef EXTENSIONS_BF_P4C_ARCH_FROMV1_0_STATEFUL_ALU_H_
-#define EXTENSIONS_BF_P4C_ARCH_FROMV1_0_STATEFUL_ALU_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_ARCH_FROMV1_0_STATEFUL_ALU_H_
+#define BACKENDS_TOFINO_BF_P4C_ARCH_FROMV1_0_STATEFUL_ALU_H_
 
 #include "frontends/p4-14/fromv1.0/converters.h"
 
@@ -48,4 +48,4 @@ class StatefulAluConverter : public ExternConverter {
 }  // namespace P4V1
 }  // namespace P4
 
-#endif /* EXTENSIONS_BF_P4C_ARCH_FROMV1_0_STATEFUL_ALU_H_ */
+#endif /* BACKENDS_TOFINO_BF_P4C_ARCH_FROMV1_0_STATEFUL_ALU_H_ */

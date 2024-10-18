@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef EXTENSIONS_BF_P4C_PHV_FIELDSLICE_LIVE_RANGE_H_
-#define EXTENSIONS_BF_P4C_PHV_FIELDSLICE_LIVE_RANGE_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_PHV_FIELDSLICE_LIVE_RANGE_H_
+#define BACKENDS_TOFINO_BF_P4C_PHV_FIELDSLICE_LIVE_RANGE_H_
 
 #include <algorithm>
 
@@ -245,4 +245,4 @@ class FieldSliceLiveRangeDB : public IFieldSliceLiveRangeDB, public PassManager 
 
 }  // namespace PHV
 
-#endif /* EXTENSIONS_BF_P4C_PHV_FIELDSLICE_LIVE_RANGE_H_ */
+#endif /* BACKENDS_TOFINO_BF_P4C_PHV_FIELDSLICE_LIVE_RANGE_H_ */

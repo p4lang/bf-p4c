@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef EXTENSIONS_BF_P4C_CONTROL_PLANE_BFRUNTIME_ARCH_HANDLER_H_
-#define EXTENSIONS_BF_P4C_CONTROL_PLANE_BFRUNTIME_ARCH_HANDLER_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_CONTROL_PLANE_BFRUNTIME_ARCH_HANDLER_H_
+#define BACKENDS_TOFINO_BF_P4C_CONTROL_PLANE_BFRUNTIME_ARCH_HANDLER_H_
 
 #include <iostream>
 #include <optional>
@@ -2462,4 +2462,4 @@ struct PSAArchHandlerBuilder : public P4::ControlPlaneAPI::P4RuntimeArchHandlerB
 };
 
 }  // namespace BFN
-#endif /* EXTENSIONS_BF_P4C_CONTROL_PLANE_BFRUNTIME_ARCH_HANDLER_H_ */
+#endif /* BACKENDS_TOFINO_BF_P4C_CONTROL_PLANE_BFRUNTIME_ARCH_HANDLER_H_ */

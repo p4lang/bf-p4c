@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef EXTENSIONS_BF_P4C_COMMON_ALLOC_H_
-#define EXTENSIONS_BF_P4C_COMMON_ALLOC_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_COMMON_ALLOC_H_
+#define BACKENDS_TOFINO_BF_P4C_COMMON_ALLOC_H_
 
 #include <stdlib.h>
 
@@ -238,4 +238,4 @@ class Alloc3D : public Alloc3Dbase<T> {
 
 }  // namespace BFN
 
-#endif /* EXTENSIONS_BF_P4C_COMMON_ALLOC_H_ */
+#endif /* BACKENDS_TOFINO_BF_P4C_COMMON_ALLOC_H_ */

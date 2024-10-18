@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef EXTENSIONS_BF_P4C_MAU_POWER_SPEC_H_
-#define EXTENSIONS_BF_P4C_MAU_POWER_SPEC_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_MAU_POWER_SPEC_H_
+#define BACKENDS_TOFINO_BF_P4C_MAU_POWER_SPEC_H_
 
 /**
  * This class encapsulates MAU power-related elements of the target device model,
@@ -235,4 +235,4 @@ class JBayUMauPowerSpec : public JBayMauPowerSpec {
     JBayUMauPowerSpec() {}
 };
 
-#endif /* EXTENSIONS_BF_P4C_MAU_POWER_SPEC_H_ */
+#endif /* BACKENDS_TOFINO_BF_P4C_MAU_POWER_SPEC_H_ */

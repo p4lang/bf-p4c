@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef EXTENSIONS_BF_P4C_PHV_ANALYSIS_DOMINATOR_TREE_H_
-#define EXTENSIONS_BF_P4C_PHV_ANALYSIS_DOMINATOR_TREE_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_PHV_ANALYSIS_DOMINATOR_TREE_H_
+#define BACKENDS_TOFINO_BF_P4C_PHV_ANALYSIS_DOMINATOR_TREE_H_
 
 #include "bf-p4c/mau/mau_visitor.h"
 #include "bf-p4c/mau/table_flow_graph.h"
@@ -120,4 +120,4 @@ class BuildDominatorTree : public MauInspector {
      */
     bool isDominator(cstring t1, gress_t gress, cstring t2) const;
 };
-#endif /* EXTENSIONS_BF_P4C_PHV_ANALYSIS_DOMINATOR_TREE_H_ */
+#endif /* BACKENDS_TOFINO_BF_P4C_PHV_ANALYSIS_DOMINATOR_TREE_H_ */

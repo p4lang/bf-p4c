@@ -15,8 +15,8 @@
  * \ingroup midend
  * \brief Set of passes that simplify if statements.
  */
-#ifndef EXTENSIONS_BF_P4C_MIDEND_SIMPLIFYIFSTATEMENT_H_
-#define EXTENSIONS_BF_P4C_MIDEND_SIMPLIFYIFSTATEMENT_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_MIDEND_SIMPLIFYIFSTATEMENT_H_
+#define BACKENDS_TOFINO_BF_P4C_MIDEND_SIMPLIFYIFSTATEMENT_H_
 
 #include "frontends/common/resolveReferences/resolveReferences.h"
 #include "frontends/p4/simplify.h"
@@ -70,4 +70,4 @@ class SimplifyIfStatement : public PassManager {
 
 }  // namespace P4
 
-#endif /* EXTENSIONS_BF_P4C_MIDEND_SIMPLIFYIFSTATEMENT_H_ */
+#endif /* BACKENDS_TOFINO_BF_P4C_MIDEND_SIMPLIFYIFSTATEMENT_H_ */

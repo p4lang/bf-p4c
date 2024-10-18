@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef _EXTENSIONS_BF_P4C_LOGGING_FILELOG_H_
-#define _EXTENSIONS_BF_P4C_LOGGING_FILELOG_H_
+#ifndef _BACKENDS_TOFINO_BF_P4C_LOGGING_FILELOG_H_
+#define _BACKENDS_TOFINO_BF_P4C_LOGGING_FILELOG_H_
 
 #include <sys/stat.h>
 
@@ -107,4 +107,4 @@ class FileLog {
 
 }  // end namespace Logging
 
-#endif /* _EXTENSIONS_BF_P4C_LOGGING_FILELOG_H_ */
+#endif /* _BACKENDS_TOFINO_BF_P4C_LOGGING_FILELOG_H_ */

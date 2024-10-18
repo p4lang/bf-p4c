@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef EXTENSIONS_BF_P4C_PHV_ANALYSIS_MUTEX_OVERLAY_H_
-#define EXTENSIONS_BF_P4C_PHV_ANALYSIS_MUTEX_OVERLAY_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_PHV_ANALYSIS_MUTEX_OVERLAY_H_
+#define BACKENDS_TOFINO_BF_P4C_PHV_ANALYSIS_MUTEX_OVERLAY_H_
 
 #include <iostream>
 
@@ -315,4 +315,4 @@ class MutexOverlay : public PassManager {
     }
 };
 
-#endif /* EXTENSIONS_BF_P4C_PHV_ANALYSIS_MUTEX_OVERLAY_H_  */
+#endif /* BACKENDS_TOFINO_BF_P4C_PHV_ANALYSIS_MUTEX_OVERLAY_H_  */

@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef EXTENSIONS_BF_P4C_PHV_FINALIZE_STAGE_ALLOCATION_H_
-#define EXTENSIONS_BF_P4C_PHV_FINALIZE_STAGE_ALLOCATION_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_PHV_FINALIZE_STAGE_ALLOCATION_H_
+#define BACKENDS_TOFINO_BF_P4C_PHV_FINALIZE_STAGE_ALLOCATION_H_
 
 #include "bf-p4c/common/field_defuse.h"
 #include "bf-p4c/mau/table_dependency_graph.h"
@@ -90,4 +90,4 @@ class FinalizeStageAllocation : public PassManager {
     explicit FinalizeStageAllocation(PhvInfo &p, const FieldDefUse &u, const DependencyGraph &d);
 };
 
-#endif /*  EXTENSIONS_BF_P4C_PHV_FINALIZE_STAGE_ALLOCATION_H_  */
+#endif /*  BACKENDS_TOFINO_BF_P4C_PHV_FINALIZE_STAGE_ALLOCATION_H_  */

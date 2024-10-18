@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef EXTENSIONS_BF_P4C_PARDE_CLOT_DEPARSE_GRAPH_H_
-#define EXTENSIONS_BF_P4C_PARDE_CLOT_DEPARSE_GRAPH_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_PARDE_CLOT_DEPARSE_GRAPH_H_
+#define BACKENDS_TOFINO_BF_P4C_PARDE_CLOT_DEPARSE_GRAPH_H_
 
 #include "bf-p4c/lib/boost_graph.h"
 #include "bf-p4c/phv/phv_fields.h"
@@ -94,4 +94,4 @@ class DeparseGraph {
     DeparseGraph() : reachability(g) {}
 };
 
-#endif /* EXTENSIONS_BF_P4C_PARDE_CLOT_DEPARSE_GRAPH_H_ */
+#endif /* BACKENDS_TOFINO_BF_P4C_PARDE_CLOT_DEPARSE_GRAPH_H_ */

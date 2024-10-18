@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef EXTENSIONS_BF_P4C_COMMON_MAP_TABLES_TO_ACTIONS_H_
-#define EXTENSIONS_BF_P4C_COMMON_MAP_TABLES_TO_ACTIONS_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_COMMON_MAP_TABLES_TO_ACTIONS_H_
+#define BACKENDS_TOFINO_BF_P4C_COMMON_MAP_TABLES_TO_ACTIONS_H_
 
 #include "bf-p4c/phv/utils/utils.h"
 #include "ir/ir.h"
@@ -53,4 +53,4 @@ class MapTablesToActions : public Inspector {
     std::optional<const IR::MAU::Table *> getTableForAction(const IR::MAU::Action *act) const;
 };
 
-#endif /*  EXTENSIONS_BF_P4C_COMMON_MAP_TABLES_TO_ACTIONS_H_  */
+#endif /*  BACKENDS_TOFINO_BF_P4C_COMMON_MAP_TABLES_TO_ACTIONS_H_  */

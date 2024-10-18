@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef EXTENSIONS_BF_P4C_MAU_DYNAMIC_DEP_METRICS_H_
-#define EXTENSIONS_BF_P4C_MAU_DYNAMIC_DEP_METRICS_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_MAU_DYNAMIC_DEP_METRICS_H_
+#define BACKENDS_TOFINO_BF_P4C_MAU_DYNAMIC_DEP_METRICS_H_
 
 #include <functional>
 
@@ -48,4 +48,4 @@ class DynamicDependencyMetrics {
     double average_cds_chain_length(const IR::MAU::Table *tbl) const;
 };
 
-#endif /* EXTENSIONS_BF_P4C_MAU_DYNAMIC_DEP_METRICS_H_ */
+#endif /* BACKENDS_TOFINO_BF_P4C_MAU_DYNAMIC_DEP_METRICS_H_ */

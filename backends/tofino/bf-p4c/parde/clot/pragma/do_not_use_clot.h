@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef EXTENSIONS_BF_P4C_PARDE_CLOT_PRAGMA_DO_NOT_USE_CLOT_H_
-#define EXTENSIONS_BF_P4C_PARDE_CLOT_PRAGMA_DO_NOT_USE_CLOT_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_PARDE_CLOT_PRAGMA_DO_NOT_USE_CLOT_H_
+#define BACKENDS_TOFINO_BF_P4C_PARDE_CLOT_PRAGMA_DO_NOT_USE_CLOT_H_
 
 #include <map>
 #include <optional>
@@ -58,4 +58,4 @@ class PragmaDoNotUseClot : public Inspector {
 
 std::ostream &operator<<(std::ostream &out, const PragmaDoNotUseClot &do_not_use_clot);
 
-#endif /* EXTENSIONS_BF_P4C_PARDE_CLOT_PRAGMA_DO_NOT_USE_CLOT_H_ */
+#endif /* BACKENDS_TOFINO_BF_P4C_PARDE_CLOT_PRAGMA_DO_NOT_USE_CLOT_H_ */

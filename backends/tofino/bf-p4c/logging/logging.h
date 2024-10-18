@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef _EXTENSIONS_BF_P4C_LOGGING_LOGGING_H_
-#define _EXTENSIONS_BF_P4C_LOGGING_LOGGING_H_
+#ifndef _BACKENDS_TOFINO_BF_P4C_LOGGING_LOGGING_H_
+#define _BACKENDS_TOFINO_BF_P4C_LOGGING_LOGGING_H_
 
 #include <string.h>
 #include <time.h>
@@ -66,4 +66,4 @@ class Logger : public rapidjson::Document {
 };
 }  // end namespace Logging
 
-#endif /* _EXTENSIONS_BF_P4C_LOGGING_LOGGING_H_ */
+#endif /* _BACKENDS_TOFINO_BF_P4C_LOGGING_LOGGING_H_ */

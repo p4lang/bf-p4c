@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef EXTENSIONS_BF_P4C_PHV_ANALYSIS_JBAY_PHV_ANALYSIS_H_
-#define EXTENSIONS_BF_P4C_PHV_ANALYSIS_JBAY_PHV_ANALYSIS_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_PHV_ANALYSIS_JBAY_PHV_ANALYSIS_H_
+#define BACKENDS_TOFINO_BF_P4C_PHV_ANALYSIS_JBAY_PHV_ANALYSIS_H_
 
 #include <optional>
 
@@ -119,4 +119,4 @@ class JbayPhvAnalysis : public Inspector {
         : phv(p), uses(u), dg(g), /* defuse(du), */ actions(a) {}
 };
 
-#endif /* EXTENSIONS_BF_P4C_PHV_ANALYSIS_JBAY_PHV_ANALYSIS_H_ */
+#endif /* BACKENDS_TOFINO_BF_P4C_PHV_ANALYSIS_JBAY_PHV_ANALYSIS_H_ */

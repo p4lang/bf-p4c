@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef EXTENSIONS_BF_P4C_COMMON_IR_UTILS_H_
-#define EXTENSIONS_BF_P4C_COMMON_IR_UTILS_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_COMMON_IR_UTILS_H_
+#define BACKENDS_TOFINO_BF_P4C_COMMON_IR_UTILS_H_
 
 #include "ir/ir.h"
 
@@ -54,4 +54,4 @@ class CatchBacktrack : public Backtrack {
     explicit CatchBacktrack(std::function<void()> f) : fn([f](BT *) { f(); }) {}
 };
 
-#endif /* EXTENSIONS_BF_P4C_COMMON_IR_UTILS_H_ */
+#endif /* BACKENDS_TOFINO_BF_P4C_COMMON_IR_UTILS_H_ */

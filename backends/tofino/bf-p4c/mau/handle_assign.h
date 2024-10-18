@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef EXTENSIONS_BF_P4C_MAU_HANDLE_ASSIGN_H_
-#define EXTENSIONS_BF_P4C_MAU_HANDLE_ASSIGN_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_MAU_HANDLE_ASSIGN_H_
+#define BACKENDS_TOFINO_BF_P4C_MAU_HANDLE_ASSIGN_H_
 
 #include "bf-p4c/mau/ixbar_expr.h"
 #include "bf-p4c/mau/mau_visitor.h"
@@ -124,4 +124,4 @@ class AssignActionHandle : public PassManager {
     }
 };
 
-#endif /* EXTENSIONS_BF_P4C_MAU_HANDLE_ASSIGN_H_ */
+#endif /* BACKENDS_TOFINO_BF_P4C_MAU_HANDLE_ASSIGN_H_ */

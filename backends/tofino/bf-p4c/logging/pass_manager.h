@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef _EXTENSIONS_BF_P4C_LOGGING_PASS_MANAGER_H_
-#define _EXTENSIONS_BF_P4C_LOGGING_PASS_MANAGER_H_
+#ifndef _BACKENDS_TOFINO_BF_P4C_LOGGING_PASS_MANAGER_H_
+#define _BACKENDS_TOFINO_BF_P4C_LOGGING_PASS_MANAGER_H_
 
 #include "bf-p4c/bf-p4c-options.h"
 #include "bf-p4c/logging/filelog.h"
@@ -73,4 +73,4 @@ class PassManager : public ::PassManager {
 };
 }  // end namespace Logging
 
-#endif  // _EXTENSIONS_BF_P4C_LOGGING_PASS_MANAGER_H_
+#endif  // _BACKENDS_TOFINO_BF_P4C_LOGGING_PASS_MANAGER_H_

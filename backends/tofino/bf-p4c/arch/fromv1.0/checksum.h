@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef EXTENSIONS_BF_P4C_ARCH_FROMV1_0_CHECKSUM_H_
-#define EXTENSIONS_BF_P4C_ARCH_FROMV1_0_CHECKSUM_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_ARCH_FROMV1_0_CHECKSUM_H_
+#define BACKENDS_TOFINO_BF_P4C_ARCH_FROMV1_0_CHECKSUM_H_
 
 #include "bf-p4c/arch/intrinsic_metadata.h"
 #include "bf-p4c/lib/assoc.h"
@@ -809,4 +809,4 @@ class InsertChecksumError : public PassManager {
 
 }  // namespace BFN::V1
 
-#endif /* EXTENSIONS_BF_P4C_ARCH_FROMV1_0_CHECKSUM_H_ */
+#endif /* BACKENDS_TOFINO_BF_P4C_ARCH_FROMV1_0_CHECKSUM_H_ */

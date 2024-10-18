@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef EXTENSIONS_BF_P4C_PARDE_CLOT_CLOT_H_
-#define EXTENSIONS_BF_P4C_PARDE_CLOT_CLOT_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_PARDE_CLOT_CLOT_H_
+#define BACKENDS_TOFINO_BF_P4C_PARDE_CLOT_CLOT_H_
 
 #include <map>
 #include <set>
@@ -182,4 +182,4 @@ std::ostream &operator<<(std::ostream &out, const Clot *clot);
 P4::JSONGenerator &operator<<(P4::JSONGenerator &out, const Clot &clot);
 P4::JSONGenerator &operator<<(P4::JSONGenerator &out, const Clot *clot);
 
-#endif /* EXTENSIONS_BF_P4C_PARDE_CLOT_CLOT_H_ */
+#endif /* BACKENDS_TOFINO_BF_P4C_PARDE_CLOT_CLOT_H_ */

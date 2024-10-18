@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef EXTENSIONS_BF_P4C_LIB_ERROR_MACROS_H_
-#define EXTENSIONS_BF_P4C_LIB_ERROR_MACROS_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_LIB_ERROR_MACROS_H_
+#define BACKENDS_TOFINO_BF_P4C_LIB_ERROR_MACROS_H_
 
 /// Report an error if condition e is false.
 #define ERROR_CHECK(e, ...)                 \
@@ -37,4 +37,4 @@
         ::diagnose(DiagnosticAction::Error, DIAGNOSTIC_NAME, __VA_ARGS__); \
     } while (0)
 
-#endif /* EXTENSIONS_BF_P4C_LIB_ERROR_MACROS_H_ */
+#endif /* BACKENDS_TOFINO_BF_P4C_LIB_ERROR_MACROS_H_ */

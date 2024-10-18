@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef EXTENSIONS_BF_P4C_MIDEND_COPY_HEADER_H_
-#define EXTENSIONS_BF_P4C_MIDEND_COPY_HEADER_H_
+#ifndef BACKENDS_TOFINO_BF_P4C_MIDEND_COPY_HEADER_H_
+#define BACKENDS_TOFINO_BF_P4C_MIDEND_COPY_HEADER_H_
 
 #include "frontends/p4/typeChecking/typeChecker.h"
 #include "ir/ir.h"
@@ -30,4 +30,4 @@ class CopyHeaders : public PassRepeated {
 
 }  // namespace BFN
 
-#endif /* EXTENSIONS_BF_P4C_MIDEND_COPY_HEADER_H_ */
+#endif /* BACKENDS_TOFINO_BF_P4C_MIDEND_COPY_HEADER_H_ */

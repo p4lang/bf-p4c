@@ -10,8 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-#ifndef _EXTENSIONS_BF_P4C_LOGGING_EVENT_LOGGER_H_
-#define _EXTENSIONS_BF_P4C_LOGGING_EVENT_LOGGER_H_
+#ifndef _BACKENDS_TOFINO_BF_P4C_LOGGING_EVENT_LOGGER_H_
+#define _BACKENDS_TOFINO_BF_P4C_LOGGING_EVENT_LOGGER_H_
 
 #include <ctime>
 #include <functional>
@@ -259,4 +259,4 @@ class EventLogger {
 #define LOG_DECISION8(description, chosen, why) LOG_DECISION(8, description, chosen, why);
 #define LOG_DECISION9(description, chosen, why) LOG_DECISION(9, description, chosen, why);
 
-#endif /* _EXTENSIONS_BF_P4C_LOGGING_EVENT_LOGGER_H_ */
+#endif /* _BACKENDS_TOFINO_BF_P4C_LOGGING_EVENT_LOGGER_H_ */
