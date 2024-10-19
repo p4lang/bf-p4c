@@ -27,12 +27,12 @@ namespace BFN {
  * If not we can still allow it, but only if the index width is appropriately increased/decreased.
  */
 class CheckRegisterActions : public Inspector {
-    P4::TypeMap* typeMap;
+    P4::TypeMap *typeMap;
 
-    bool preorder(const IR::Declaration_Instance* di) override;
+    bool preorder(const IR::Declaration_Instance *di) override;
 
  public:
-    explicit CheckRegisterActions(P4::TypeMap* typeMap) : typeMap(typeMap) {}
+    explicit CheckRegisterActions(P4::TypeMap *typeMap) : typeMap(typeMap) {}
 };
 
 }  // namespace BFN

@@ -13,8 +13,8 @@
 #ifndef EXTENSIONS_BF_P4C_MIDEND_COPY_HEADER_H_
 #define EXTENSIONS_BF_P4C_MIDEND_COPY_HEADER_H_
 
-#include "ir/ir.h"
 #include "frontends/p4/typeChecking/typeChecker.h"
+#include "ir/ir.h"
 
 // Whilst the original PR consolidated code, moving it out of the back-end and
 // canonicalising the IR sooner, it caused ripples that caused issue to the PHV allocator.
@@ -25,8 +25,7 @@ namespace BFN {
 
 class CopyHeaders : public PassRepeated {
  public:
-    CopyHeaders(P4::ReferenceMap* refMap, P4::TypeMap* typeMap,
-                P4::TypeChecking* typeChecking);
+    CopyHeaders(P4::ReferenceMap *refMap, P4::TypeMap *typeMap, P4::TypeChecking *typeChecking);
 };
 
 }  // namespace BFN
