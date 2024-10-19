@@ -13,13 +13,13 @@
 #ifndef EXTENSIONS_BF_P4C_ARCH_FROMV1_0_V1_PROGRAM_STRUCTURE_H_
 #define EXTENSIONS_BF_P4C_ARCH_FROMV1_0_V1_PROGRAM_STRUCTURE_H_
 
+#include "bf-p4c/arch/program_structure.h"
+#include "bf-p4c/ir/gress.h"
+#include "frontends/common/resolveReferences/resolveReferences.h"
+#include "frontends/p4/evaluator/evaluator.h"
 #include "ir/ir.h"
 #include "ir/namemap.h"
 #include "lib/ordered_set.h"
-#include "frontends/common/resolveReferences/resolveReferences.h"
-#include "frontends/p4/evaluator/evaluator.h"
-#include "bf-p4c/arch/program_structure.h"
-#include "bf-p4c/ir/gress.h"
 
 namespace BFN {
 
@@ -45,4 +45,4 @@ struct ProgramStructure : BFN::ProgramStructure {
 
 }  // namespace BFN
 
-#endif  /* EXTENSIONS_BF_P4C_ARCH_FROMV1_0_V1_PROGRAM_STRUCTURE_H_ */
+#endif /* EXTENSIONS_BF_P4C_ARCH_FROMV1_0_V1_PROGRAM_STRUCTURE_H_ */

@@ -18,12 +18,12 @@
 #include "bf-p4c/phv/pragma/phv_pragmas.h"
 
 #define DEFINE_PRAGMA_CLASS(cname)      \
-  class cname {                         \
-   public:                              \
-     static const char *name;           \
-     static const char *description;    \
-     static const char *help;           \
-  }
+    class cname {                       \
+     public:                            \
+        static const char *name;        \
+        static const char *description; \
+        static const char *help;        \
+    }
 
 DEFINE_PRAGMA_CLASS(PragmaAdjustByteCount);
 DEFINE_PRAGMA_CLASS(PragmaAlpm);
@@ -132,4 +132,4 @@ DEFINE_PRAGMA_CLASS(PragmaActionSelectorHashFieldCalcOutputWidth);
 DEFINE_PRAGMA_CLASS(Pragma);
 */
 
-#endif  /* EXTENSIONS_BF_P4C_COMMON_PRAGMA_ALL_PRAGMAS_H_ */
+#endif /* EXTENSIONS_BF_P4C_COMMON_PRAGMA_ALL_PRAGMAS_H_ */

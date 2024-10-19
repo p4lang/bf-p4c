@@ -24,7 +24,7 @@ using namespace P4;
 /// standard P4Runtime implementation (with no support for TNA-specific
 /// extensions). Displays a warning to the user for each extern instance that
 /// cannot be converted.
-P4::P4RuntimeAPI convertToStdP4Runtime(const P4::P4RuntimeAPI& p4RuntimeInput);
+P4::P4RuntimeAPI convertToStdP4Runtime(const P4::P4RuntimeAPI &p4RuntimeInput);
 
 }  // namespace BFN
 

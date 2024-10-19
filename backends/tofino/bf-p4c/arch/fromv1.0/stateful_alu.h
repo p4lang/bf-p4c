@@ -23,9 +23,9 @@ class StatefulAluConverter : public ExternConverter {
     struct reg_info {
         const IR::Register *reg = nullptr;
         const IR::Type::Bits *utype = nullptr;  // salu alu type
-        const IR::Type *rtype = nullptr;  // layout type
+        const IR::Type *rtype = nullptr;        // layout type
     };
-    std::map<const IR::Register *, reg_info>        cache;
+    std::map<const IR::Register *, reg_info> cache;
     const IR::ActionProfile *getSelectorProfile(P4V1::ProgramStructure *,
                                                 const IR::Declaration_Instance *);
     reg_info getRegInfo(P4V1::ProgramStructure *, const IR::Declaration_Instance *,
@@ -33,14 +33,16 @@ class StatefulAluConverter : public ExternConverter {
     const IR::Type::Bits *findUType(const IR::Declaration_Instance *, const IR::Type ** = nullptr);
     StatefulAluConverter();
     static StatefulAluConverter singleton;
+
  public:
-    const IR::Type_Extern *convertExternType(P4V1::ProgramStructure *,
-                const IR::Type_Extern *, cstring) override;
-    const IR::Declaration_Instance *convertExternInstance(P4V1::ProgramStructure *,
-                const IR::Declaration_Instance *, cstring,
-                IR::IndexedVector<IR::Declaration> *) override;
+    const IR::Type_Extern *convertExternType(P4V1::ProgramStructure *, const IR::Type_Extern *,
+                                             cstring) override;
+    const IR::Declaration_Instance *convertExternInstance(
+        P4V1::ProgramStructure *, const IR::Declaration_Instance *, cstring,
+        IR::IndexedVector<IR::Declaration> *) override;
     const IR::Statement *convertExternCall(P4V1::ProgramStructure *,
-                const IR::Declaration_Instance *, const IR::Primitive *) override;
+                                           const IR::Declaration_Instance *,
+                                           const IR::Primitive *) override;
 };
 
 }  // namespace P4V1
