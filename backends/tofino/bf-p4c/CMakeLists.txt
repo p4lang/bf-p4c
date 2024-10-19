@@ -1376,7 +1376,7 @@ if (ENABLE_GTESTS)
                                 "${CMAKE_CURRENT_SOURCE_DIR}/test/gtest/tofino_gtest_utils.cpp")
                                 # test_bf_gtest_helpers should be in its own testlib - & requies 'whole_archive' hack!
                                 # Leave it in GTEST_BF_P4C_SOURCES for now.
-  target_link_libraries (bf_gtest_support PRIVATE absl::flat_hash_map PRIVATE absl::flat_hash_set)
+  target_link_libraries (bf_gtest_support PRIVATE absl::flat_hash_map PRIVATE absl::flat_hash_set ${P4C_LIB_DEPS})
   target_include_directories (bf_gtest_support PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/test/gtest}" PRIVATE "${P4C_BINARY_DIR}")
   add_dependencies (bf_gtest_support p4headers_h p4headers_cpp ir-generated gtest frontend-parser-gen)  # Indirectly we #include "ir/gen-tree-macro.h" and "p4parser.hpp"
 
