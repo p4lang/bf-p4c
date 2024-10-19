@@ -35,5 +35,3 @@ class CoalesceLearning : public DeparserModifier {
 };
 
 #endif /* EXTENSIONS_BF_P4C_PARDE_COALESCE_LEARNING_H_ */
-
-
