@@ -1,4 +1,4 @@
-#include "bfutils/dynamic_hash/bfn_hash_algorithm.h"
+#include "bf-utils/include/dynamic_hash/bfn_hash_algorithm.h"
 
 #include <errno.h>
 #include <limits.h>

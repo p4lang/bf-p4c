@@ -1,4 +1,4 @@
-#include "bfutils/dynamic_hash/dynamic_hash.h"
+#include "bf-utils/include/dynamic_hash/dynamic_hash.h"
 
 #include <assert.h>
 #include <inttypes.h>
