@@ -926,9 +926,7 @@ set (p4include_HEADERS
   p4include/tofino2_base.p4
   p4include/tofino2_arch.p4
   p4include/t2na.p4
-  p4include/psa.p4
-  p4include/bmv2/psa.p4
-  p4include/dpdk/psa.p4
+  p4include/tofino/psa.p4
   )
 
 
