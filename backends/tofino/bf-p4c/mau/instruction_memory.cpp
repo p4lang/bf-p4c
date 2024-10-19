@@ -10,6 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
+/* clang-format off */
+
 #include "bf-p4c/mau/instruction_memory.h"
 #include "bf-p4c/mau/resource.h"
 #include "bf-p4c/mau/table_format.h"
@@ -398,3 +400,5 @@ void InstructionMemory::update(const IR::MAU::Table *tbl) {
 }
 
 InstructionMemory *InstructionMemory::create() { return new Tofino::InstructionMemory(); }
+
+/* clang-format on */

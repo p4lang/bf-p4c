@@ -10,6 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
+/* clang-format off */
+
 #include "bf-p4c/device.h"
 #include "resources_parser.h"
 
@@ -218,3 +220,5 @@ const ParserResourcesLogging::ParserResources *ParserResourcesLogging::getLogger
 }
 
 }  // namespace BFN
+
+/* clang-format on */

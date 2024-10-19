@@ -13,6 +13,8 @@
 #ifndef BF_P4C_MAU_RESOURCE_H_
 #define BF_P4C_MAU_RESOURCE_H_
 
+/* clang-format off */
+
 #include <map>
 
 #include "bf-p4c/lib/autoclone.h"
@@ -79,5 +81,7 @@ struct TableResourceAlloc {
 };
 
 std::ostream &operator<<(std::ostream &, const TableResourceAlloc &);
+
+/* clang-format on */
 
 #endif /* BF_P4C_MAU_RESOURCE_H_ */

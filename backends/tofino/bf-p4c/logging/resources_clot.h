@@ -13,11 +13,13 @@
 #ifndef _EXTENSIONS_BF_P4C_LOGGING_RESOURCES_CLOT_H_
 #define _EXTENSIONS_BF_P4C_LOGGING_RESOURCES_CLOT_H_
 
+/* clang-format off */
 #include <map>
 #include <vector>
 #include "ir/ir.h"
 
 #include "resources_schema.h"
+/* clang-format on */
 
 using Logging::Resources_Schema_Logger;
 class ClotInfo;  // Forward declaration

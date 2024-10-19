@@ -10,6 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
+/* clang-format off */
+
 #include "bf-p4c/midend/fold_constant_hashes.h"
 #include <boost/optional/optional_io.hpp>
 #include <boost/range/adaptor/reversed.hpp>

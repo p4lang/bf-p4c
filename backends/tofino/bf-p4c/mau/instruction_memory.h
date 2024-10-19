@@ -10,6 +10,7 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
+/* clang-format off */
 #ifndef BF_P4C_MAU_INSTRUCTION_MEMORY_H_
 #define BF_P4C_MAU_INSTRUCTION_MEMORY_H_
 
@@ -171,3 +172,4 @@ struct InstructionMemory {
 };
 
 #endif /* BF_P4C_MAU_INSTRUCTION_MEMORY_H_ */
+/* clang-format on */

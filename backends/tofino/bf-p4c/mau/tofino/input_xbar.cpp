@@ -10,6 +10,7 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
+/* clang-format off */
 #include "input_xbar.h"
 #include "bf-p4c/common/slice.h"
 #include "bf-p4c/device.h"
@@ -30,6 +31,7 @@
 #include "lib/log.h"
 #include "lib/safe_vector.h"
 
+/* clang-format on */
 constexpr le_bitrange Tofino::IXBar::SELECT_BIT_RANGE;
 // = le_bitrange(RAM_SELECT_BIT_START, METER_ALU_HASH_BITS-1);
 

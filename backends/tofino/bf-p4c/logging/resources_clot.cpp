@@ -10,6 +10,8 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
+/* clang-format off */
+
 #include <numeric>
 #include <initializer_list>
 #include "bf-p4c/common/asm_output.h"  // canon_name
@@ -225,3 +227,5 @@ ClotResourcesLogging::ClotResourcesLogging(const ClotInfo &clotInfo) : clotInfo(
 }
 
 }  // namespace BFN
+
+/* clang-format on */

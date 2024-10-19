@@ -10,6 +10,7 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
+/* clang-format off */
 #include <iterator>
 #include <string>
 #include <boost/range/adaptors.hpp>
@@ -2044,3 +2045,5 @@ AllocateParserMatchRegisters::AllocateParserMatchRegisters(const PhvInfo &phv) {
                new RemoveEmptyStartStateAndMatchExtract, new RemoveEmptyStallState,
                LOGGING(4) ? new DumpParser("after_parser_match_alloc") : nullptr});
 }
+
+/* clang-format on */

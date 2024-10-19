@@ -13,13 +13,14 @@
 #ifndef BF_P4C_MAU_TOFINO_ACTION_DATA_BUS_H_
 #define BF_P4C_MAU_TOFINO_ACTION_DATA_BUS_H_
 
+/* clang-format off */
 #include "bf-p4c/mau/action_data_bus.h"
 #include "bf-p4c/mau/table_layout.h"
 #include "bf-p4c/mau/action_format.h"
 #include "lib/autoclone.h"
 #include "lib/safe_vector.h"
 #include "bf-p4c/common/alloc.h"
-
+/* clang-format on */
 namespace Tofino {
 
 using namespace P4;

@@ -10,6 +10,7 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
+/* clang-format off */
 #include <exception>
 #include "ir/ir.h"
 #include "ir/json_loader.h"
@@ -587,3 +588,5 @@ IR::MAU::HashFunction *IR::MAU::HashFunction::fromJSON(JSONLoader &json) {
     json.load("extend", rv->extend);
     return rv;
 }
+
+/* clang-format on */

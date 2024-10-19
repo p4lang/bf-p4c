@@ -10,6 +10,7 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
+/* clang-format off */
 
 #include <ctime>
 #include <algorithm>
@@ -29,6 +30,7 @@
 #include "resources.h"
 #include "resources_parser.h"
 #include "resources_clot.h"
+
 
 namespace std {
     std::string to_string(BFN::Resources::HashBitResource::UsageType type) {
@@ -929,3 +931,5 @@ ResourcesLogging::MauStageResourceUsage *ResourcesLogging::logStage(int stageNo)
 }
 
 }  // namespace BFN
+
+/* clang-format on */
