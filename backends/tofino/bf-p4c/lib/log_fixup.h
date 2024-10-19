@@ -25,9 +25,10 @@ class logfix {
         }
         return out;
     }
+
  public:
     explicit logfix(std::string s) : text(s) {}
     explicit logfix(const std::stringstream &ss) : text(ss.str()) {}
 };
 
-#endif  /* EXTENSIONS_BF_P4C_LIB_LOG_FIXUP_H_ */
+#endif /* EXTENSIONS_BF_P4C_LIB_LOG_FIXUP_H_ */

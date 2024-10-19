@@ -13,8 +13,8 @@
 #ifndef EXTENSIONS_BF_P4C_IR_CONTROL_FLOW_VISITOR_H_
 #define EXTENSIONS_BF_P4C_IR_CONTROL_FLOW_VISITOR_H_
 
-#include "ir/ir.h"
 #include "frontends/common/resolveReferences/resolveReferences.h"
+#include "ir/ir.h"
 
 namespace BFN {
 
