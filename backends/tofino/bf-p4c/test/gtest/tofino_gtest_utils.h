@@ -38,37 +38,35 @@ const char *t2na_header();
 
 struct MidendTestCase {
     /// Create a test case that requires the frontend and the midend to run.
-    static std::optional<MidendTestCase>
-    create(const std::string& source);
+    static std::optional<MidendTestCase> create(const std::string &source);
 
     /// The output of the midend.
-    const IR::P4Program* program;
+    const IR::P4Program *program;
 
     /// The output of the frontend.
-    const IR::P4Program* frontendProgram;
+    const IR::P4Program *frontendProgram;
 };
 
 struct TofinoPipeTestCase {
     /// Create a test case that requires extract_maupipe() to run.
-    static std::optional<TofinoPipeTestCase>
-    create(const std::string& source);
+    static std::optional<TofinoPipeTestCase> create(const std::string &source);
 
     /// Create a test case that requires extract_maupipe() to run, and apply
     /// CreateThreadLocalInstances.
-    static std::optional<TofinoPipeTestCase>
-    createWithThreadLocalInstances(const std::string& source);
+    static std::optional<TofinoPipeTestCase> createWithThreadLocalInstances(
+        const std::string &source);
 
     /// The output of extract_maupipe().
-    const IR::BFN::Pipe* pipe;
+    const IR::BFN::Pipe *pipe;
 
     /// The output of the frontend.
-    const IR::P4Program* frontendProgram;
+    const IR::P4Program *frontendProgram;
 };
 
 /// A GTest fixture base class for backend targets.
 class BackendTest : public ::testing::Test {
  protected:
-    BackendTest() : autoBFNContext(new BFNContext()) { }
+    BackendTest() : autoBFNContext(new BFNContext()) {}
 
     AutoCompileContext autoBFNContext;
 };

@@ -26,15 +26,15 @@ namespace Parde::Lowered {
  * leaving the state, we can safely eliminate this state.
  */
 struct EliminateEmptyStates : public ParserTransform {
-    const CollectParserInfo& parser_info;
+    const CollectParserInfo &parser_info;
 
-    explicit EliminateEmptyStates(const CollectParserInfo& pi) : parser_info(pi) {}
+    explicit EliminateEmptyStates(const CollectParserInfo &pi) : parser_info(pi) {}
 
-    bool is_empty(const IR::BFN::ParserState* state);
+    bool is_empty(const IR::BFN::ParserState *state);
 
-    const IR::BFN::Transition* get_unconditional_transition(const IR::BFN::ParserState* state);
+    const IR::BFN::Transition *get_unconditional_transition(const IR::BFN::ParserState *state);
 
-    IR::Node* preorder(IR::BFN::Transition* transition) override;
+    IR::Node *preorder(IR::BFN::Transition *transition) override;
 };
 
 }  // namespace Parde::Lowered

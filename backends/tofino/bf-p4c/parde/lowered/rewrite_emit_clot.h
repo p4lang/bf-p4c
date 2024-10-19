@@ -28,13 +28,13 @@ namespace Parde::Lowered {
  * removed from the emit list and are replace by EmitClot objects.
  */
 struct RewriteEmitClot : public DeparserModifier {
-    RewriteEmitClot(const PhvInfo& phv, ClotInfo& clotInfo) : phv(phv), clotInfo(clotInfo) {}
+    RewriteEmitClot(const PhvInfo &phv, ClotInfo &clotInfo) : phv(phv), clotInfo(clotInfo) {}
 
  private:
-    bool preorder(IR::BFN::Deparser* deparser) override;
+    bool preorder(IR::BFN::Deparser *deparser) override;
 
-    const PhvInfo& phv;
-    ClotInfo& clotInfo;
+    const PhvInfo &phv;
+    ClotInfo &clotInfo;
 };
 
 }  // namespace Parde::Lowered

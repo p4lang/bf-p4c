@@ -66,7 +66,7 @@ struct SplitGreedyParserStates : public Transform {
      * has to be done prior to calling this function.
      *
      */
-    IR::BFN::ParserState* split_state(IR::BFN::ParserState* state, cstring new_state_name);
+    IR::BFN::ParserState *split_state(IR::BFN::ParserState *state, cstring new_state_name);
 
     /**
      * @brief Split statements from vector "in" such that the "last" vector
@@ -125,10 +125,10 @@ struct SplitGreedyParserStates : public Transform {
      *        include only non-conflicting partial_hdr_err_proc values.
      *
      */
-    bool state_pkt_too_short_verify(const IR::BFN::ParserState* state,
+    bool state_pkt_too_short_verify(const IR::BFN::ParserState *state,
                                     bool &select_args_incompatible);
 
-    IR::BFN::ParserState* postorder(IR::BFN::ParserState* state) override;
+    IR::BFN::ParserState *postorder(IR::BFN::ParserState *state) override;
 };
 
 }  // namespace Parde::Lowered

@@ -23,7 +23,7 @@ namespace Parde::Lowered {
  *        to avoid a stall.
  */
 class ComputeBufferRequirements : public ParserModifier {
-    void postorder(IR::BFN::LoweredParserMatch* match) override;
+    void postorder(IR::BFN::LoweredParserMatch *match) override;
 };
 
 }  // namespace Parde::Lowered

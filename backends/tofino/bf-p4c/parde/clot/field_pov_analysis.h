@@ -13,8 +13,8 @@
 #ifndef EXTENSIONS_BF_P4C_PARDE_CLOT_FIELD_POV_ANALYSIS_H_
 #define EXTENSIONS_BF_P4C_PARDE_CLOT_FIELD_POV_ANALYSIS_H_
 
-#include "bf-p4c/parde/parser_info.h"
 #include "bf-p4c/parde/clot/clot_info.h"
+#include "bf-p4c/parde/parser_info.h"
 
 /* This pass is a parser data flow analysis to find if a field is extracted from
  * the packet in every path that sets the field's valid bit. If there exists a path
@@ -43,22 +43,21 @@
  * are added in pov_extracted_without_fields.
  */
 class FieldPovAnalysis : public Inspector {
-    ClotInfo& clotInfo;
-    const PhvInfo& phv;
-    std::set<const IR::BFN::Parser*> parsers;
-    std::map<const PHV::Field*, std::set<const PHV::Field*>> pov_to_fields;
+    ClotInfo &clotInfo;
+    const PhvInfo &phv;
+    std::set<const IR::BFN::Parser *> parsers;
+    std::map<const PHV::Field *, std::set<const PHV::Field *>> pov_to_fields;
 
     /// Mapping of state to `<field_vec, pov_vec>`. Refer to above comment for more info.
     std::map<cstring, std::pair<bitvec, bitvec>> state_to_field_pov;
-    bool preorder(const IR::BFN::Parser* parser) override;
-    bool preorder(const IR::BFN::EmitField* emit) override;
+    bool preorder(const IR::BFN::Parser *parser) override;
+    bool preorder(const IR::BFN::EmitField *emit) override;
     void end_apply() override;
 
  public:
-    std::set<const PHV::Field*> pov_extracted_without_fields;
-    FieldPovAnalysis(ClotInfo& clotInfo, const PhvInfo& phv) :
-    clotInfo(clotInfo), phv(phv) { }
-    Visitor::profile_t init_apply(const IR::Node* root) override {
+    std::set<const PHV::Field *> pov_extracted_without_fields;
+    FieldPovAnalysis(ClotInfo &clotInfo, const PhvInfo &phv) : clotInfo(clotInfo), phv(phv) {}
+    Visitor::profile_t init_apply(const IR::Node *root) override {
         profile_t rv = Inspector::init_apply(root);
         pov_to_fields.clear();
         state_to_field_pov.clear();
