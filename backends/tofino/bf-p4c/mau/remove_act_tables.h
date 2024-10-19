@@ -43,7 +43,7 @@ class DoRemoveActionTables : public Transform {
     const AnalyzeActionTables *analysis;
 
  public:
-    DoRemoveActionTables(const AnalyzeActionTables *a) : analysis(a) {}
+    explicit DoRemoveActionTables(const AnalyzeActionTables *a) : analysis(a) {}
 
  private:
     const IR::Node *postorder(const IR::MAU::Table *t) override;

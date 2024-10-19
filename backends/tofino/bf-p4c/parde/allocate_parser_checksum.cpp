@@ -131,7 +131,7 @@ class ElimDeadParserChecksums : public ParserModifier {
     const ordered_set<const IR::BFN::ParserPrimitive *> &to_elim;
 
  public:
-    ElimDeadParserChecksums(const ordered_set<const IR::BFN::ParserPrimitive *> &to_elim)
+    explicit ElimDeadParserChecksums(const ordered_set<const IR::BFN::ParserPrimitive *> &to_elim)
         : to_elim(to_elim) {}
 
     bool preorder(IR::BFN::ParserState *state) override {

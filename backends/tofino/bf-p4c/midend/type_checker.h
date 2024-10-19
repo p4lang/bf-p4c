@@ -28,7 +28,7 @@ class TypeInference : public P4::TypeInference {
     P4::TypeMap *typeMap;
 
  public:
-    TypeInference(P4::TypeMap *typeMap, bool readOnly = false)
+    explicit TypeInference(P4::TypeMap *typeMap, bool readOnly = false)
         : P4::TypeInference(typeMap, readOnly), typeMap(typeMap) {}
 
     const IR::Node *postorder(IR::BFN::ReinterpretCast *) override;

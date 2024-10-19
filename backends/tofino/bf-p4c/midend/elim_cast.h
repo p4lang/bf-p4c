@@ -56,7 +56,7 @@ namespace BFN {
  */
 class IgnoreKeyElementTransform : public Transform {
  public:
-    const IR::Node *preorder(IR::KeyElement *n) final override {
+    const IR::Node *preorder(IR::KeyElement *n) final {
         prune();
         return n;
     }

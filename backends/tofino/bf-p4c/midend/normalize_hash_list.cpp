@@ -429,7 +429,6 @@ const IR::Node *PickUpHasher::postorder(IR::P4Control *control_) {
 NormalizeHashList::NormalizeHashList(::P4::ReferenceMap *ref_map_, ::P4::TypeMap *type_map_,
                                      ::P4::TypeChecking *type_checking_) {
     addPasses({type_checking_, new PickUpHasher(ref_map_, type_map_),
-
                /* -- new variables are created, clear the map and move local declarations */
                new P4::ClearTypeMap(type_map_), type_checking_});
 }

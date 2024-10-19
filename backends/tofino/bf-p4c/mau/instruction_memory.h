@@ -10,10 +10,10 @@
  * warranties, other than those that are expressly stated in the License.
  */
 
-/* clang-format off */
 #ifndef BF_P4C_MAU_INSTRUCTION_MEMORY_H_
 #define BF_P4C_MAU_INSTRUCTION_MEMORY_H_
 
+/* clang-format off */
 #include "bf-p4c/mau/table_layout.h"
 #include "bf-p4c/ir/gress.h"
 #include "bf-p4c/common/alloc.h"
@@ -171,5 +171,6 @@ struct InstructionMemory {
     static InstructionMemory *create();
 };
 
-#endif /* BF_P4C_MAU_INSTRUCTION_MEMORY_H_ */
 /* clang-format on */
+
+#endif /* BF_P4C_MAU_INSTRUCTION_MEMORY_H_ */

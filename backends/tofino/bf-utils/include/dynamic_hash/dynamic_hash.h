@@ -1,5 +1,5 @@
-#ifndef _BF_DYNAMIC_HASH_H_
-#define _BF_DYNAMIC_HASH_H_
+#ifndef BACKENDS_TOFINO_BF_UTILS_INCLUDE_DYNAMIC_HASH_DYNAMIC_HASH_H_
+#define BACKENDS_TOFINO_BF_UTILS_INCLUDE_DYNAMIC_HASH_DYNAMIC_HASH_H_
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -213,4 +213,4 @@ void determine_tofino_regs(const ixbar_init_t *ixbar_init, const ixbar_input_t *
 }
 #endif
 
-#endif /* _BF_DYNAMIC_HASH_H_ */
+#endif /* BACKENDS_TOFINO_BF_UTILS_INCLUDE_DYNAMIC_HASH_DYNAMIC_HASH_H_ */

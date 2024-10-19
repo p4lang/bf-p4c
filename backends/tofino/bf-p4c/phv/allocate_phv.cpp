@@ -3033,7 +3033,6 @@ std::optional<PHV::Transaction> CoreAllocation::tryAllocSliceList(
             // TODO: check the new slices are consistent among themselves before trying to
             // allocate them
             if (!check(candidate_slices)) continue;
-
         }  // if (Device::phvSpec().hasParserExtractGroups())
 
         // check pa_container_type constraints for candidates after dark overlay.

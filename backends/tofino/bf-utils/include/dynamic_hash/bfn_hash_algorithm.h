@@ -1,5 +1,5 @@
-#ifndef _BF_UTILS_ALGORITHM_H_
-#define _BF_UTILS_ALGORITHM_H_
+#ifndef BACKENDS_TOFINO_BF_UTILS_INCLUDE_DYNAMIC_HASH_BFN_HASH_ALGORITHM_H_
+#define BACKENDS_TOFINO_BF_UTILS_INCLUDE_DYNAMIC_HASH_BFN_HASH_ALGORITHM_H_
 
 #ifndef __KERNEL__
 #include <stdbool.h>
@@ -427,4 +427,4 @@ void calculate_crc(bfn_hash_algorithm_t *alg, uint32_t hash_output_bits, uint8_t
 }
 #endif
 
-#endif /* _BF_UTILS_ALGORITHM_H_ */
+#endif /* BACKENDS_TOFINO_BF_UTILS_INCLUDE_DYNAMIC_HASH_BFN_HASH_ALGORITHM_H_ */
