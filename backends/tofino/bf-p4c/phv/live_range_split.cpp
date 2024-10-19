@@ -633,7 +633,7 @@ void LiveRangeSplit::report(const ContainerSequences &splits) {
     unsigned i = 0;
     for (const auto &seq : splits) {
         LOG_DEBUG1("\tsplit " << i++);
-        for (const auto cs : seq) {
+        for (const auto &cs : seq) {
             LOG_DEBUG1("\t\t" << cs.container << "[" << cs.range.lo << ":" << cs.range.hi << "] {"
                               << cs.lr.start << ", " << cs.lr.end << "}");
         }

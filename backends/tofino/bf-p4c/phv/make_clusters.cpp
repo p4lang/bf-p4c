@@ -1604,14 +1604,14 @@ Visitor::profile_t Clustering::UpdateSameContainerAllocConstraint::init_apply(
         ordered_set<PHV::FieldSlice> rot_has_no_split;
         // collect all no split fieldslice either because it has no split annotation or there is a
         // fieldslice in the same rotational cluster that has no split annotation.
-        for (const auto fs : sc->slices()) {
+        for (const auto &fs : sc->slices()) {
             if (fs.field()->no_split()) {
                 LOG6(fs << "is no split");
                 auto rot = sc->cluster(fs);
                 rot_has_no_split.insert(rot.slices().begin(), rot.slices().end());
             }
         }
-        for (const auto fs : rot_has_no_split) {
+        for (const auto &fs : rot_has_no_split) {
             LOG6(fs << " is rot no split");
         }
 

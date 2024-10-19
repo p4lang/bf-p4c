@@ -78,4 +78,4 @@ class PlainWriterAdapter : public Writer {
 
 }  // namespace Logging
 
-#endif  /* _EXTENSIONS_BF_P4C_LOGGING_RAPIDJSON_ADAPTER_H_ */
+#endif /* _EXTENSIONS_BF_P4C_LOGGING_RAPIDJSON_ADAPTER_H_ */

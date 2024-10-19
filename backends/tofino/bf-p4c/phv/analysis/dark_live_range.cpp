@@ -173,7 +173,7 @@ void DarkLiveRange::setFieldLiveMap(const PHV::Field* f) {
     }
 
     // Set live range for every def of the field.
-    for (const FieldDefUse::locpair def : defuse.getAllDefs(f->id)) {
+    for (const FieldDefUse::locpair &def : defuse.getAllDefs(f->id)) {
         const IR::BFN::Unit* def_unit = def.first;
         // If the field is specified as pa_no_init, and it has an uninitialized read, we ignore the
         // compiler-inserted parser initialization.
