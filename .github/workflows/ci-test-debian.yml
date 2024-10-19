@@ -22,6 +22,7 @@ jobs:
       IMAGE_TYPE: test
       BUILD_GENERATOR: Ninja
       ENABLE_TOFINO: ON
+      CMAKE_UNITY_BUILD: OFF
     steps:
       - uses: actions/checkout@v4
         with:
