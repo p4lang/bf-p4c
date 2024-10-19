@@ -58,9 +58,7 @@ struct XbarByteResource {
 // same bit can be the select bits/RAM line bit for two different ways in the same
 // table, then they can be shared
 struct HashBitResource {
-    enum class UsageType {
-        WaySelect = 0, WayLineSelect, SelectionBit, DistBit, Gateway
-    };
+    enum class UsageType { WaySelect = 0, WayLineSelect, SelectionBit, DistBit, Gateway };
 
     struct Usage {
         int value;
@@ -99,14 +97,14 @@ struct ActionBusByteResource {
 };
 
 struct MemoriesResource {
-    const IR::MAU::Table     *table;
-    std::string              tableName;
-    std::string              gatewayName;
+    const IR::MAU::Table *table;
+    std::string tableName;
+    std::string gatewayName;
     const TableResourceAlloc *use;
 
     MemoriesResource(const IR::MAU::Table *table, const std::string &name,
-                     const std::string &gwname, const TableResourceAlloc *use) :
-        table(table), tableName(name), gatewayName(gwname), use(use) {}
+                     const std::string &gwname, const TableResourceAlloc *use)
+        : table(table), tableName(name), gatewayName(gwname), use(use) {}
 };
 
 struct IMemColorResource {
@@ -121,12 +119,12 @@ struct StageResources {
     ordered_map<int, cstring> logicalIds;  // Map table logical ids to table names
     ordered_map<int, std::set<XbarByteResource>> xbarBytes;
     // key is (hashBitNumber, hashFunction)
-    ordered_map<std::pair<int, int>, HashBitResource>  hashBits;
+    ordered_map<std::pair<int, int>, HashBitResource> hashBits;
     // key is (hashId, unitId)
     ordered_map<std::pair<int, int>, HashDistResource> hashDist;
-    ordered_map<int, ActionBusByteResource>            actionBusBytes;
-    ordered_map<int, std::vector<IMemColorResource>>   imemColor;
-    std::vector<MemoriesResource>                      memories;
+    ordered_map<int, ActionBusByteResource> actionBusBytes;
+    ordered_map<int, std::vector<IMemColorResource>> imemColor;
+    std::vector<MemoriesResource> memories;
 };
 }  // end namespace Resources
 
@@ -150,9 +148,9 @@ class ResourcesLogging : public Inspector {
     using ClotResourceUsage = Resources_Schema_Logger::ClotResourceUsage;
     using ElementUsage = Resources_Schema_Logger::ElementUsage;
     using ExactMatchResultBusResourceUsage =
-                                        Resources_Schema_Logger::ExactMatchResultBusResourceUsage;
+        Resources_Schema_Logger::ExactMatchResultBusResourceUsage;
     using ExactMatchSearchBusResourceUsage =
-                                        Resources_Schema_Logger::ExactMatchSearchBusResourceUsage;
+        Resources_Schema_Logger::ExactMatchSearchBusResourceUsage;
     using HashBitsResourceUsage = Resources_Schema_Logger::HashBitsResourceUsage;
     using HashDistResourceUsage = Resources_Schema_Logger::HashDistributionResourceUsage;
     using LogicalTableResourceUsage = Resources_Schema_Logger::LogicalTableResourceUsage;
@@ -173,11 +171,11 @@ class ResourcesLogging : public Inspector {
 
  protected:
     const ClotInfo &clotInfo;  // ClotInfo reference is only passed to CLOT resource logger
-    std::string filePath;  // path to logged file
+    std::string filePath;      // path to logged file
     std::string manifestPath;  // path from manifest to logged file
     std::vector<Resources::StageResources> stageResources;  // Data for logging are collected here
-    const ParserResources *parserResources = nullptr;  // Logged data for parser
-    std::vector<ClotResourceUsage*> clotResources;  // Logged data for clots
+    const ParserResources *parserResources = nullptr;       // Logged data for parser
+    std::vector<ClotResourceUsage *> clotResources;         // Logged data for clots
 
     /**
      *  Prepares the object and collects data for parser and clot usage.
@@ -204,10 +202,10 @@ class ResourcesLogging : public Inspector {
     void collectHashDistUsage(unsigned int stage, const Tofino::IXBar::HashDistUse &hd_use);
 
     void collectActionBusBytesUsage(unsigned int stage, const TableResourceAlloc *res,
-                                        cstring tableName);
+                                    cstring tableName);
 
-    void collectVliwUsage(unsigned int stage, const InstructionMemory::Use &alloc,
-                            gress_t gress, cstring tableName);
+    void collectVliwUsage(unsigned int stage, const InstructionMemory::Use &alloc, gress_t gress,
+                          cstring tableName);
 
     XbarResourceUsage *logXbarBytes(unsigned stageNo) const;
 
@@ -215,10 +213,10 @@ class ResourcesLogging : public Inspector {
 
     HashDistResourceUsage *logHashDist(unsigned stageNo) const;
 
-    void logMemories(unsigned int stage, RamResourceUsage *ramsRes,
-                    MapRamResourceUsage *mapRamsRes, GatewayResourceUsage *gatewaysRes,
-                    StashResourceUsage *stashesRes, MeterAluResourceUsage *meterRes,
-                    StatisticAluResourceUsage *statisticsRes, TcamResourceUsage *tcamsRes) const;
+    void logMemories(unsigned int stage, RamResourceUsage *ramsRes, MapRamResourceUsage *mapRamsRes,
+                     GatewayResourceUsage *gatewaysRes, StashResourceUsage *stashesRes,
+                     MeterAluResourceUsage *meterRes, StatisticAluResourceUsage *statisticsRes,
+                     TcamResourceUsage *tcamsRes) const;
 
     LogicalTableResourceUsage *logLogicalTables(int stageNo) const;
 
@@ -238,9 +236,9 @@ class ResourcesLogging : public Inspector {
 
  public:
     // Only need this for public interface, rest is done in preorder and end_apply
-    ResourcesLogging(const ClotInfo &clotInfo,
-                     const std::string &filename,
-                     const std::string &outdir) : clotInfo(clotInfo), filePath(filename) {
+    ResourcesLogging(const ClotInfo &clotInfo, const std::string &filename,
+                     const std::string &outdir)
+        : clotInfo(clotInfo), filePath(filename) {
         manifestPath = filename.substr(outdir.size() + 1);
     }
 };

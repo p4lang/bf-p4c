@@ -40,11 +40,11 @@
  */
 
 struct AllocateParserMatchRegisters : public PassManager {
-    explicit AllocateParserMatchRegisters(const PhvInfo& phv);
+    explicit AllocateParserMatchRegisters(const PhvInfo &phv);
 
  private:
     /// Iteration count for allocation
     int iteration = 0;
 };
 
-#endif  /* EXTENSIONS_BF_P4C_PARDE_ALLOCATE_PARSER_MATCH_REGISTER_H_ */
+#endif /* EXTENSIONS_BF_P4C_PARDE_ALLOCATE_PARSER_MATCH_REGISTER_H_ */

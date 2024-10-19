@@ -33,33 +33,33 @@ class ClotResourcesLogging : public ParserInspector {
  protected:
     const ClotInfo &clotInfo;
     ClotResourceUsage *clotLogger = nullptr;
-    std::vector<ClotResourceUsage*> clotUsages = std::vector<ClotResourceUsage*>(2);
+    std::vector<ClotResourceUsage *> clotUsages = std::vector<ClotResourceUsage *>(2);
     bool collected = false;
     std::map<unsigned, unsigned> clotTagToChecksumUnit;
-    std::vector<std::map<unsigned, std::vector<ClotUsage*>>> usageData;
+    std::vector<std::map<unsigned, std::vector<ClotUsage *>>> usageData;
 
     bool usingClots() const;
 
-    std::vector<ClotUsage*> &getUsageData(gress_t gress, unsigned tag);
+    std::vector<ClotUsage *> &getUsageData(gress_t gress, unsigned tag);
 
-    bool preorder(const IR::BFN::LoweredParserState* state);
+    bool preorder(const IR::BFN::LoweredParserState *state);
     void end_apply() override;
 
-    void collectClotUsages(const IR::BFN::LoweredParserMatch* match,
-                           const IR::BFN::LoweredParserState* state, gress_t gress);
+    void collectClotUsages(const IR::BFN::LoweredParserMatch *match,
+                           const IR::BFN::LoweredParserState *state, gress_t gress);
 
-    void collectExtractClotInfo(const IR::BFN::LoweredExtractClot* extract,
-                                const IR::BFN::LoweredParserState* state, gress_t gress);
+    void collectExtractClotInfo(const IR::BFN::LoweredExtractClot *extract,
+                                const IR::BFN::LoweredParserState *state, gress_t gress);
 
     void logClotUsages();
 
-    ClotUsage* logExtractClotInfo(cstring parser_state, bool hasChecksum,
-                                  int length, int offset, unsigned tag, const Clot* clot);
+    ClotUsage *logExtractClotInfo(cstring parser_state, bool hasChecksum, int length, int offset,
+                                  unsigned tag, const Clot *clot);
 
  public:
-    std::vector<ClotResourceUsage*> getLoggers();
+    std::vector<ClotResourceUsage *> getLoggers();
 
-    explicit ClotResourcesLogging(const ClotInfo& clotInfo);
+    explicit ClotResourcesLogging(const ClotInfo &clotInfo);
 };
 
 }  // namespace BFN
