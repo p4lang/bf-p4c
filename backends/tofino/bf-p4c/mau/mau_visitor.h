@@ -48,12 +48,27 @@ class MauModifier : public Modifier {
 
 class MauTransform : public Transform {
     /// for traversing backend IR
-    IR::Node *preorder(IR::BFN::AbstractParser *p) override { prune(); return p; }
-    IR::Node *preorder(IR::BFN::AbstractDeparser *d) override { prune(); return d; }
+    IR::Node *preorder(IR::BFN::AbstractParser *p) override {
+        prune();
+        return p;
+    }
+    IR::Node *preorder(IR::BFN::AbstractDeparser *d) override {
+        prune();
+        return d;
+    }
     /// for traversing midend IR
-    IR::Node *preorder(IR::P4Parser *p) override { prune(); return p; }
-    IR::Node *preorder(IR::BFN::TnaParser *p) override { prune(); return p; }
-    IR::Node *preorder(IR::BFN::TnaDeparser *p) override { prune(); return p; }
+    IR::Node *preorder(IR::P4Parser *p) override {
+        prune();
+        return p;
+    }
+    IR::Node *preorder(IR::BFN::TnaParser *p) override {
+        prune();
+        return p;
+    }
+    IR::Node *preorder(IR::BFN::TnaDeparser *p) override {
+        prune();
+        return p;
+    }
 };
 
 #endif /* EXTENSIONS_BF_P4C_MAU_MAU_VISITOR_H_ */

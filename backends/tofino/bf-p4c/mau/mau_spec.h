@@ -35,7 +35,6 @@ class TofinoIMemSpec : public IMemSpec {
     int map_table_entries() const override;
 };
 
-
 class IXBarSpec {
  public:
     /* --- common --- */
@@ -74,7 +73,6 @@ class IXBarSpec {
     virtual int resilientModeHashBits() const;
     virtual int ternaryBytesPerBigGroup() const;
     virtual int tofinoMeterAluByteOffset() const;
-
 
     virtual int getExactOrdBase(int group) const = 0;
     virtual int getTernaryOrdBase(int group) const = 0;
@@ -161,7 +159,6 @@ class TofinoIXBarSpec : public IXBarSpec {
     int xcmpMatchTotalBytes() const override;
 };
 
-
 class TofinoMauSpec : public MauSpec {
     const TofinoIXBarSpec ixbar_;
     const TofinoIMemSpec imem_;
@@ -181,7 +178,5 @@ class JBayMauSpec : public MauSpec {
     const IXBarSpec &getIXBarSpec() const override;
     const IMemSpec &getIMemSpec() const override;
 };
-
-
 
 #endif /* EXTENSIONS_BF_P4C_MAU_MAU_SPEC_H_ */

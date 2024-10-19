@@ -28,14 +28,12 @@ using namespace P4;
 class AnalyzeActionTables : public MAU::Inspector {
  public:
     AnalyzeActionTables() {}
-    bool isCandidate(const IR::MAU::Table *t) const {
-        return _candidates.
-    }
+    bool isCandidate(const IR::MAU::Table *t) const { return _candidates. }
 
  private:
-    bool preorder(IR::P4Control* control) override;
-    bool preorder(const IR::MAU::Table* t) override;
-    bool preorder(IR::P4Action* action) override;
+    bool preorder(IR::P4Control *control) override;
+    bool preorder(const IR::MAU::Table *t) override;
+    bool preorder(IR::P4Action *action) override;
 
     std::set<cstring> _candidates;
 };
@@ -48,7 +46,7 @@ class DoRemoveActionTables : public Transform {
     DoRemoveActionTables(const AnalyzeActionTables *a) : analysis(a) {}
 
  private:
-    const IR::Node *postorder(const IR::MAU::Table* t) override;
+    const IR::Node *postorder(const IR::MAU::Table *t) override;
 };
 
 class RemoveActionTables : public PassManager {
@@ -62,5 +60,4 @@ class RemoveActionTables : public PassManager {
     }
 };
 
-
-#endif  /* _EXTENSIONS_BF_P4C_MAU_REMOVE_ACT_TABLES_H_ */
+#endif /* _EXTENSIONS_BF_P4C_MAU_REMOVE_ACT_TABLES_H_ */
