@@ -606,9 +606,9 @@ std::string to_string(const code &a) {
 }
 
 bool FieldDefUse::isUsedInParser(const PHV::Field *f) const {
-    for (const FieldDefUse::locpair def : getAllDefs(f->id))
+    for (const FieldDefUse::locpair &def : getAllDefs(f->id))
         if (def.first->is<IR::BFN::ParserState>() || def.first->is<IR::BFN::Parser>()) return true;
-    for (const FieldDefUse::locpair use : getAllUses(f->id))
+    for (const FieldDefUse::locpair &use : getAllUses(f->id))
         if (use.first->is<IR::BFN::ParserState>() || use.first->is<IR::BFN::Parser>()) return true;
     return false;
 }

@@ -410,8 +410,10 @@ void IXBar::clear() {
     memset(hash_single_bit_inuse, 0, sizeof(hash_single_bit_inuse));
     memset(hash_group_use, 0, sizeof(hash_group_use));
     memset(hash_group_parity_use, 0, sizeof(hash_group_parity_use));
-    memset(hash_dist_inuse, 0, sizeof(hash_dist_inuse));
-    memset(hash_dist_bit_inuse, 0, sizeof(hash_dist_bit_inuse));
+    for (int i = 0; i < HASH_TABLES; ++i) {
+        hash_dist_inuse[i] = bitvec();
+        hash_dist_bit_inuse[i] = bitvec();
+    }
     memset(hash_dist_groups, -1, sizeof(hash_dist_groups));
 }
 
