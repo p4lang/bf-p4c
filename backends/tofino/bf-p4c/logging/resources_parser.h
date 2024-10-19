@@ -27,17 +27,17 @@ namespace BFN {
  */
 class ParserResourcesLogging : public ParserInspector {
  public:
-    using ElementUsage          = Resources_Schema_Logger::ElementUsage;
-    using ParserResources       = Resources_Schema_Logger::ParserResources;
-    using ParserResourceUsage   = Resources_Schema_Logger::ParserResourceUsage;
-    using Phase0ResourceUsage   = Resources_Schema_Logger::Phase0ResourceUsage;
+    using ElementUsage = Resources_Schema_Logger::ElementUsage;
+    using ParserResources = Resources_Schema_Logger::ParserResources;
+    using ParserResourceUsage = Resources_Schema_Logger::ParserResourceUsage;
+    using Phase0ResourceUsage = Resources_Schema_Logger::Phase0ResourceUsage;
 
     using ParserStateTransition = Resources_Schema_Logger::ParserStateTransitionResourceUsage;
 
-    using ClotExtracts   = ParserStateTransition::Clot_Extracts;
-    using StateExtracts  = ParserStateTransition::Extracts;
+    using ClotExtracts = ParserStateTransition::Clot_Extracts;
+    using StateExtracts = ParserStateTransition::Extracts;
     using StateMatchesOn = ParserStateTransition::MatchesOn;
-    using StateSavesTo   = ParserStateTransition::SavesTo;
+    using StateSavesTo = ParserStateTransition::SavesTo;
 
  private:
     struct ParserLogData {
@@ -51,32 +51,31 @@ class ParserResourcesLogging : public ParserInspector {
     std::map<cstring, ParserLogData> parsers;
 
     std::map<cstring, int> stateIds;
-    std::map<const IR::BFN::LoweredParserMatch*, int> tcamIds[2];
-    int nextTcamId[2] = { 0 };  // Next TCAM ID value array
+    std::map<const IR::BFN::LoweredParserMatch *, int> tcamIds[2];
+    int nextTcamId[2] = {0};  // Next TCAM ID value array
 
     /// A parser match is a parser state.
-    bool preorder(const IR::BFN::LoweredParserState* state) override;
-    bool preorder(const IR::BFN::LoweredParser* parser) override;
+    bool preorder(const IR::BFN::LoweredParserState *state) override;
+    bool preorder(const IR::BFN::LoweredParser *parser) override;
     void end_apply() override { collected = true; }
 
-    std::vector<ParserStateTransition*>
-    logStateTransitionsByMatch(const std::string &nextStateName,
-                         const IR::BFN::LoweredParserState* prevState,
-                         const IR::BFN::LoweredParserMatch* match);
+    std::vector<ParserStateTransition *> logStateTransitionsByMatch(
+        const std::string &nextStateName, const IR::BFN::LoweredParserState *prevState,
+        const IR::BFN::LoweredParserMatch *match);
 
-    int getTcamId(const IR::BFN::LoweredParserMatch* match, gress_t gress);
+    int getTcamId(const IR::BFN::LoweredParserMatch *match, gress_t gress);
 
     int getStateId(const std::string &state);
 
-    void logStateExtracts(const IR::BFN::LoweredParserMatch* match,
-                          std::vector<StateExtracts*> &result);
+    void logStateExtracts(const IR::BFN::LoweredParserMatch *match,
+                          std::vector<StateExtracts *> &result);
 
-    void logStateMatches(const IR::BFN::LoweredParserState* prevState,
-                         const IR::BFN::LoweredParserMatch* match,
-                         std::vector<StateMatchesOn*> &result);
+    void logStateMatches(const IR::BFN::LoweredParserState *prevState,
+                         const IR::BFN::LoweredParserMatch *match,
+                         std::vector<StateMatchesOn *> &result);
 
-    void logStateSaves(const IR::BFN::LoweredParserMatch* match,
-                       std::vector<StateSavesTo*> &result);
+    void logStateSaves(const IR::BFN::LoweredParserMatch *match,
+                       std::vector<StateSavesTo *> &result);
 
  public:
     ParserResourcesLogging() {
