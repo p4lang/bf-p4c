@@ -35,4 +35,4 @@ struct FrontEndPolicy : P4::FrontEndPolicy {
 
 }  // namespace BFN
 
-#endif  /* EXTENSIONS_BF_P4C_COMMON_FRONT_END_POLICY_H_ */
+#endif /* EXTENSIONS_BF_P4C_COMMON_FRONT_END_POLICY_H_ */

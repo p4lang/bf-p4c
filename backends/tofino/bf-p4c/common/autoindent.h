@@ -19,12 +19,13 @@
 /// amount when it's destroyed.
 /// TODO: This should live in indent.h.
 struct AutoIndent {
-    explicit AutoIndent(indent_t& indent, int indentBy = 1)
-      : indent(indent), indentBy(indentBy) { indent += indentBy; }
+    explicit AutoIndent(indent_t &indent, int indentBy = 1) : indent(indent), indentBy(indentBy) {
+        indent += indentBy;
+    }
     ~AutoIndent() { indent -= indentBy; }
 
  private:
-    indent_t& indent;
+    indent_t &indent;
     int indentBy;
 };
 

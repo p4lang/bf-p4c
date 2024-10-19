@@ -12,10 +12,10 @@
 
 #ifndef EXTENSIONS_BF_P4C_COMMON_PRAGMA_H_
 #define EXTENSIONS_BF_P4C_COMMON_PRAGMA_H_
-#include <cstring>
 #include <algorithm>
-#include <iostream>
+#include <cstring>
 #include <iomanip>
+#include <iostream>
 #include <set>
 #include <string>
 
@@ -43,8 +43,8 @@ class Pragma {
                 std::string chunk = std::string(str).substr(0, width);
                 auto newline = chunk.find('\n');
                 if (newline != std::string::npos) {
-                    res += chunk.substr(0, newline+1);
-                    str += newline+1;
+                    res += chunk.substr(0, newline + 1);
+                    str += newline + 1;
                 } else if (strlen(str) < width) {
                     res += str;
                     break;  // no need to go further
@@ -53,7 +53,7 @@ class Pragma {
                     auto lastspace = chunk.rfind(' ');
                     if (lastspace != std::string::npos) {
                         res += chunk.substr(0, lastspace) + "\n";
-                        str += lastspace+1;
+                        str += lastspace + 1;
                     } else {
                         // no space? unlikely, so then we just print the string
                         res += chunk + "\n";
@@ -67,7 +67,8 @@ class Pragma {
         auto formatPragma = [format](const Pragma *p, std::ostream &o) {
             o << std::endl;
             o << p->name() << ": " << format(p->description(), 80 - (strlen(p->name()) + 3))
-              << std::endl << std::endl;
+              << std::endl
+              << std::endl;
             o << format(p->help(), 80) << std::endl;
         };
 

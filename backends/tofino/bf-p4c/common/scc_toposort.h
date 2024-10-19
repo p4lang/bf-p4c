@@ -61,4 +61,4 @@ class SccTopoSorter {
     void validate_node_id(int i) const;
 };
 
-#endif  /* EXTENSIONS_BF_P4C_COMMON_SCC_TOPOSORT_H_ */
+#endif /* EXTENSIONS_BF_P4C_COMMON_SCC_TOPOSORT_H_ */
