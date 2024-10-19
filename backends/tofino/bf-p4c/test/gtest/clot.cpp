@@ -98,10 +98,10 @@ struct SliceSpec {
     std::optional<le_bitrange> slice;
 
     SliceSpec(const char *fieldName)  // NOLINT(runtime/explicit)
-        : fieldName(fieldName),  // NOLINT(runtime/explicit)
+        : fieldName(fieldName),       // NOLINT(runtime/explicit)
           slice(std::nullopt) {}
     SliceSpec(const cstring fieldName)  // NOLINT(runtime/explicit)
-        : fieldName(fieldName),  // NOLINT(runtime/explicit)
+        : fieldName(fieldName),         // NOLINT(runtime/explicit)
           slice(std::nullopt) {}
 
     SliceSpec(const char *fieldName, le_bitrange slice) : fieldName(fieldName), slice(slice) {}
