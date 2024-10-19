@@ -13,7 +13,7 @@
 #ifndef _EXTENSIONS_BF_P4C_LOGGING_RESOURCES_PARSER_H_
 #define _EXTENSIONS_BF_P4C_LOGGING_RESOURCES_PARSER_H_
 
-#include "ir/ir.h"
+#include "ir/ir.h"  // clang-format off
 #include "bf-p4c/parde/parde_visitor.h"
 #include "resources_schema.h"
 
