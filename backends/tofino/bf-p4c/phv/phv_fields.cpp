@@ -336,7 +336,8 @@ const PHV::Field *PhvInfo::field(const IR::Expression *e, le_bitrange *bits) con
         } else {
             // This can happen after a placement failure when we're trying to generate
             // minimal context.json to aid deubgging.  So we don't want to crash out
-            /*BUG("TempVar %s not in PhvInfo", tv->name);*/ }
+            /* BUG("TempVar %s not in PhvInfo", tv->name); */
+        }
     }
     if (auto *pad = e->to<IR::Padding>()) {
         if (auto *rv = getref(all_fields, pad->name)) {
