@@ -21,6 +21,8 @@ jobs:
       CTEST_PARALLEL_LEVEL: 4
       IMAGE_TYPE: test
       BUILD_GENERATOR: Ninja
+      ENABLE_TOFINO: ON
+      CMAKE_UNITY_BUILD: OFF
     steps:
       - uses: actions/checkout@v4
         with:
@@ -61,6 +63,7 @@ jobs:
       ENABLE_GTESTS: ${{ matrix.gtest }}
       CMAKE_UNITY_BUILD: ${{ matrix.unity }}
       BUILD_GENERATOR: Ninja
+      ENABLE_TOFINO: ON
     steps:
       - uses: actions/checkout@v4
         with:
